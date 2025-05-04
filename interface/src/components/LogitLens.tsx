@@ -7,7 +7,7 @@ import {
     Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Workbench } from "@/components/Workbench";
+import { PromptBuilder } from "@/components/PromptBuilder";
 import { ChatHistory } from "@/components/ChatHistory";
 import { Conversation } from "@/components/workbench/conversation.types";
 import { ModelSelector } from "./ModelSelector";
@@ -22,15 +22,19 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import config from "@/lib/config";
+import { WorkbenchMode } from "./WorkbenchMode";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
+type WorkbenchMode = "logit-lens" | "activation-patching";
 
 interface LogitLensProps {
     modelLoadStatus: ModelLoadStatus;
-    setModelLoadStatus: (status: ModelLoadStatus) => void;
+    setModelLoadStatus: (status: ModelLoadStatus) => void;  
+    workbenchMode: WorkbenchMode;
+    setWorkbenchMode: (mode: WorkbenchMode) => void;
 }
 
-export function LogitLens({modelLoadStatus, setModelLoadStatus}: LogitLensProps) {
+export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode}: LogitLensProps) {
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
     const [savedConversations, setSavedConversations] = useState<Conversation[]>([]);
@@ -178,7 +182,7 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus}: LogitLensProps)
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
                 <div className="p-4 border-b flex items-center justify-between">
-                    <h1 className="text-lg font-medium">Logit Lens</h1>
+                    <WorkbenchMode workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" disabled={true}>
                             <Code size={16} />
@@ -246,7 +250,7 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus}: LogitLensProps)
                             </div>
                         </div>
 
-                        <Workbench
+                        <PromptBuilder
                             conversations={activeConversations}
                             onUpdateConversation={handleUpdateConversation}
                             onSaveConversation={handleSaveConversation}

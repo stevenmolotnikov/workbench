@@ -6,12 +6,15 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { LogitLens } from "@/components/LogitLens";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ActivationPatching } from "./ActivationPatching";
 
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
+type WorkbenchMode = "logit-lens" | "activation-patching";
 
 export function Playground() {
     const [modelLoadStatus, setModelLoadStatus] = useState<ModelLoadStatus>('loading');
+    const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>("logit-lens");
 
     const getStatusMessage = () => {
         if (modelLoadStatus === 'loading') {
@@ -84,8 +87,12 @@ export function Playground() {
                     <ModeToggle />
                 </nav>
             </header>
-
-            <LogitLens modelLoadStatus={modelLoadStatus} setModelLoadStatus={setModelLoadStatus} />
+            {workbenchMode === "logit-lens" && (
+                <LogitLens modelLoadStatus={modelLoadStatus} setModelLoadStatus={setModelLoadStatus} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
+            )}
+            {workbenchMode === "activation-patching" && (
+                <ActivationPatching modelLoadStatus={modelLoadStatus} setModelLoadStatus={setModelLoadStatus} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
+            )}
         </div>
     );
 }

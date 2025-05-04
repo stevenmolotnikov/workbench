@@ -8,7 +8,7 @@ import { Conversation } from "@/components/workbench/conversation.types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-interface WorkbenchProps {
+interface PromptBuilderProps {
     conversations: Conversation[];
     onUpdateConversation: (id: string, updates: Partial<Conversation>) => void;
     onSaveConversation: (id: string) => void;
@@ -16,13 +16,13 @@ interface WorkbenchProps {
     onIDChange: (id: string, newID: string) => void;
 }
 
-export function Workbench({
+export function PromptBuilder({
     conversations,
     onUpdateConversation,
     onSaveConversation,
     onDeleteConversation,
     onIDChange,
-}: WorkbenchProps) {
+}: PromptBuilderProps) {
     const toggleConversation = (id: string, isExpanded: boolean) => {
         onUpdateConversation(id, { isExpanded: !isExpanded });
     };
