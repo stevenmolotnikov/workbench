@@ -2,7 +2,7 @@ import os
 import tomllib
 from typing import Dict
 
-from nnsight import LanguageModel
+from nnsight import LanguageModel, CONFIG
 
 from .schema import ModelsConfig
 
@@ -13,12 +13,6 @@ class AppState:
         self.config = self._load()
 
     def _login(self):
-        """Set NDIF API key."""
-        from nnsight import CONFIG
-
-        # ndif_key = "018cf72e1e3b427f8067e4bf4d9c0aac"
-        # ndif_key = modal.Secret.from_name("ndif")
-
         CONFIG.set_default_api_key(os.environ["NDIF_KEY"])
 
     def get_model(self, model_name: str):
@@ -26,15 +20,21 @@ class AppState:
 
     def get_config(self):
         return self.config
-    
+
     def _load(self):
-        with open("/root/config.toml", "rb") as f:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_dir, "config.toml")
+        
+        with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
 
         for _, cfg in config.models.items():
             # Load model if served
             if cfg.serve:
-                model = LanguageModel(cfg.name, rename=cfg.rename, token=os.environ["HF_TOKEN"])
+                hf_token = os.environ["HF_TOKEN"]
+                model = LanguageModel(
+                    cfg.name, rename=cfg.rename, token=hf_token
+                )
                 self.models[cfg.name] = model
 
         return config
