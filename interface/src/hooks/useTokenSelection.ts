@@ -1,9 +1,9 @@
 import { useState } from 'react';
-
+import { TokenData } from '@/types/tokenizer';
 
 interface UseTokenSelectionProps {
     onTokenSelection?: (indices: number[]) => void;
-    counterId: number;
+    counterId?: number;
     onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
 }
 
@@ -20,6 +20,43 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
         }
         return null;
     };
+
+    const getGroupInformation = (i: number, tokenData: TokenData) => {
+        const isHighlighted = highlightedTokens.includes(i);
+        const isPrevHighlighted = i > 0 && highlightedTokens.includes(i - 1);
+        const isNextHighlighted = i < tokenData.tokens.length - 1 && highlightedTokens.includes(i + 1);
+        
+        // Determine if this token is part of a group
+        const isGroupStart = isHighlighted && !isPrevHighlighted;
+        const isGroupEnd = isHighlighted && !isNextHighlighted;
+        
+        // Calculate group ID
+        let groupId = -1;
+        if (isHighlighted) {
+            if (isGroupStart) {
+                // Find the end of this group
+                let groupEnd = i;
+                while (groupEnd < tokenData.tokens.length - 1 && highlightedTokens.includes(groupEnd + 1)) {
+                    groupEnd++;
+                }
+                groupId = i; // Use start index as group ID
+            } else {
+                // Find the start of this group
+                let groupStart = i;
+                while (groupStart > 0 && highlightedTokens.includes(groupStart - 1)) {
+                    groupStart--;
+                }
+                groupId = groupStart;
+            }
+        }
+
+        return {
+            isHighlighted,
+            groupId,
+            isGroupStart,
+            isGroupEnd
+        }
+    }
 
     const unhighlightTokens = (tokens: number[]) => {
         setHighlightedTokens([...highlightedTokens.filter(id => !tokens.includes(id))]);
@@ -84,6 +121,7 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
-        counterId
+        counterId,
+        getGroupInformation
     };
 } 

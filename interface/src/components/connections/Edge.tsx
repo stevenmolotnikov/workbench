@@ -27,6 +27,22 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
             ref={svgRef}
             className="w-full h-full absolute"
         >
+            {/* Define arrow marker */}
+            <defs>
+                <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="9"
+                    refY="3.5"
+                    orient="auto"
+                >
+                    <polygon
+                        points="0 0, 10 3.5, 0 7"
+                        fill="#3b82f6"
+                    />
+                </marker>
+            </defs>
             {connections.map((conn, i) => (
                 <g key={i}>
                     {/* Clickable area (invisible) */}
@@ -48,6 +64,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                         fill="none"
                         stroke={selectedEdgeIndex === i ? "#3b82f6" : "#3b82f6"}
                         strokeWidth={selectedEdgeIndex === i ? "2" : "1"}
+                        markerEnd="url(#arrowhead)"
                     />
                 </g>
             ))}
@@ -68,6 +85,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                         stroke="#3b82f6"
                         strokeWidth="1"
                         strokeDasharray="5,5"
+                        markerEnd="url(#arrowhead)"
                     />
                 </g>
             )}

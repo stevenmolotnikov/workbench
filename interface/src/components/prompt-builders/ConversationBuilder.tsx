@@ -3,7 +3,7 @@
 import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { TokenCounter } from "@/components/prompt-builders/TokenCounter";
+import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { Message } from "@/components/workbench/conversation.types";
 
 interface ConversationBuilderProps {
@@ -77,7 +77,7 @@ export function ConversationBuilder({
                     </div>
                 </div>
             ) : (
-                <TokenCounter text={tokenCounterContent} model={modelName} onTokenSelection={onTokenSelection} />
+                <TokenArea text={tokenCounterContent} model={modelName} onTokenSelection={onTokenSelection} />
             )}
         </div>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { Textarea } from "@/components/ui/textarea";
-import { TokenCounter } from "@/components/prompt-builders/TokenCounter";
+import { TokenArea } from "@/components/prompt-builders/TokenArea";
 
 interface SinglePromptBuilderProps {
     prompt: string;
@@ -30,7 +30,7 @@ export function SinglePromptBuilder({
                     />
                 </div>
             ) : (
-                <TokenCounter text={!isExpanded ? prompt : null} model={modelName} onTokenSelection={onTokenSelection} />
+                <TokenArea text={!isExpanded ? prompt : null} model={modelName} onTokenSelection={onTokenSelection} />
             )}
         </div>
     );

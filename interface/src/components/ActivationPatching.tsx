@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModelSelector } from "./ModelSelector";
-import { PatchingArea } from "@/components/connections/PatchingArea";
+import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 import { LogitLensResponse } from "@/components/workbench/conversation.types";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
@@ -81,7 +81,7 @@ export function ActivationPatching({modelLoadStatus, setModelLoadStatus, workben
                             </div>
                         </div>
 
-                        <PatchingArea />
+                        <PatchingWorkbench />
                     </div>
 
                     {/* Container for charts */}

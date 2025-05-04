@@ -2,26 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
-
 import { PreTrainedTokenizer } from '@huggingface/transformers';
 import { useTokenSelection } from "@/hooks/useTokenSelection";
+import { TokenData, TokenizerOutput } from "@/types/tokenizer";
+import { cn } from "@/lib/utils";
 
-interface TokenCounterProps {
+interface TokenAreaProps {
     text: string | { role: string; content: string }[] | null;
     isLoading?: boolean;
     onTokenSelection?: (indices: number[]) => void;
-}
-
-interface TokenData {
-    count: number;
-    tokens: { id: number, text: string }[];
 }
 
 // Use dynamic import for transformers.js to avoid build errors
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-export function TokenCounter({ text, isLoading = false, onTokenSelection }: TokenCounterProps) {
+export function TokenArea({ text, isLoading = false, onTokenSelection }: TokenAreaProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -56,7 +52,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                 setIsLocalLoading(true);
                 setError(null);
 
-                let textToTokenize: string | null = null;
+                let textToTokenize: TokenizerOutput | null = null;
                 if (Array.isArray(text)) {
                     // If text is an array of message objects, apply chat template
                     textToTokenize = await tokenizer.apply_chat_template(text, { tokenize: false });
@@ -64,12 +60,10 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                     textToTokenize = text;
                 }
 
-                if (textToTokenize && textToTokenize.trim()) {
+                if (textToTokenize && typeof textToTokenize === 'string' && textToTokenize.trim()) {
                     // Process in browser only
                     if (typeof window !== 'undefined') {
                         const tokens = await tokenizer.tokenize(textToTokenize, { add_special_tokens: false });
-
-                        console.log('tokens', tokens);
 
                         if (!isMounted) return;
 
@@ -110,7 +104,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
         };
     }, [text]);
 
-    const { highlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove } = useTokenSelection({
+    const { highlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove, getGroupInformation } = useTokenSelection({
         onTokenSelection
     });
 
@@ -134,7 +128,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
     );
 
     const renderError = () => (
-        <div className="text-red-500 p-4">
+        <div className="text-red-500 text-xs p-4">
             {error}
         </div>
     );
@@ -145,50 +139,41 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
         return (
             <>
                 <div
-                    className="max-h-40 overflow-y-auto custom-scrollbar select-none"
+                    className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
                     ref={containerRef}
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseUp}
-                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
-                    <div className="flex flex-wrap pt-1">
-                        {tokenData.tokens.map((token, i) => {
-                            const fixedText = fixToken(token.text);
-                            const isHighlighted = highlightedTokens.includes(i);
-                            const highlightStyle = 'bg-primary/50 border-primary/50';
-                            const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50';
-                            const key = `token-${i}`;
-                            const commonProps = {
-                                'data-token-id': i,
-                                style: { userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties,
-                            };
+                    {tokenData.tokens.map((token, i) => {
+                        const fixedText = fixToken(token.text);
+                        const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(i, tokenData);
+                        const highlightStyle = 'bg-primary/50 border-primary/50';
+                        const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50';
 
-                            if (fixedText === '\\n') {
-                                return (
-                                    <div
-                                        key={key}
-                                        {...commonProps}
-                                        className={`text-xs w-full rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
-                                        style={{ ...commonProps.style, flexBasis: '100%' }}
-                                    >
-                                        {fixedText}
-                                    </div>
-                                );
-                            } else {
-                                return (
-                                    <div
-                                        key={key}
-                                        {...commonProps}
-                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
-                                    >
-                                        {fixedText}
-                                    </div>
-                                );
-                            }
-                        })}
-                    </div>
+                        const styles = cn(
+                            'text-xs whitespace-pre border select-none',
+                            !isHighlighted && 'rounded',
+                            isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
+                            isHighlighted && isGroupEnd && !isGroupStart && 'rounded-r',
+                            isHighlighted && isGroupStart && isGroupEnd && 'rounded',
+                            isHighlighted && !isGroupStart && !isGroupEnd && 'rounded-none',
+                            isHighlighted ? highlightStyle : 'border-transparent',
+                            hoverStyle,
+                            fixedText === '\\n' ? 'w-full' : 'w-fit'
+                        );
+
+                        return (
+                            <div
+                                key={`token-${i}`}
+                                data-token-id={i}
+                                className={styles}
+                            >
+                                {fixedText}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <Separator className="my-2" />
@@ -206,7 +191,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
     };
 
     return (
-        <div className=" p-4">
+        <div className="p-4">
             {isLoading || isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error
