@@ -6,6 +6,7 @@ import { PreTrainedTokenizer, Tensor } from '@huggingface/transformers';
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { Conversation } from "../workbench/conversation.types";
 
+import { Route, RouteOff } from "lucide-react";
 import { useConnection } from '../../hooks/useConnection';
 import { Edges } from './Edge';
 import { Button } from "../ui/button";
@@ -15,8 +16,8 @@ interface TokenCounterProps {
     model: string;
     onTokenSelection?: (indices: number[]) => void;
     isConnecting?: boolean;
-    connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
-    connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
 }
 
 interface TokenData {
@@ -163,8 +164,8 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                 <div
                     className="max-h-40 overflow-y-auto custom-scrollbar select-none"
                     ref={containerRef}
-                    onMouseDown={isConnecting ? connectionMouseDown : handleMouseDown}
-                    onMouseUp={isConnecting ? connectionMouseUp : handleMouseUp}
+                    onMouseDown={isConnecting ? (e) => connectionMouseDown?.(e, 0) : handleMouseDown}
+                    onMouseUp={isConnecting ? (e) => connectionMouseUp?.(e, 0) : handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseUp}
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
@@ -174,7 +175,7 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                             const fixedText = fixToken(token.text);
                             const isHighlighted = highlightedTokens.includes(i);
                             const highlightStyle = 'bg-primary/50 border-primary/50';
-                            const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50';
+                            const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50 cursor-text';
                             const key = `token-${i}`;
                             const commonProps = {
                                 'data-token-id': i,
@@ -186,7 +187,7 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                                     <div
                                         key={key}
                                         {...commonProps}
-                                        className={`text-xs w-full rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
+                                        className={`text-xs w-full rounded whitespace-pre border select-none ${isHighlighted && isConnecting ? 'cursor-grab' : ''} ${isHighlighted ? highlightStyle : 'border-transparent'} ${isConnecting ? '' : hoverStyle}`}
                                         style={{ ...commonProps.style, flexBasis: '100%' }}
                                     >
                                         {fixedText}
@@ -197,7 +198,7 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                                     <div
                                         key={key}
                                         {...commonProps}
-                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
+                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted && isConnecting ? 'cursor-grab' : ''} ${isHighlighted ? highlightStyle : 'border-transparent'} ${isConnecting ? '' : hoverStyle}`}
                                     >
                                         {fixedText}
                                     </div>
@@ -211,7 +212,7 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
     };
 
     return (
-        <div className="p-4 border rounded">
+        <div className="p-4 h-32 border rounded">
             {isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error
@@ -247,8 +248,8 @@ export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne,
 
 
     return (
-        <div className="relative">
-            <div className="absolute inset-0 pointer-events-none">
+        <div className="relative " onClick={handleBackgroundClick}>
+            <div className="absolute inset-0 pointer-events-none" >
                 <Edges
                     connections={connections}
                     isDragging={isDragging}
@@ -265,23 +266,27 @@ export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne,
                     model={convOne.model}
                     onTokenSelection={onTokenSelectionOne}
                     isConnecting={isConnecting}
-                    connectionMouseDown={handleBoxMouseDown}
-                    connectionMouseUp={handleBoxMouseUp}
+                    connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
+                    connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
                 />
                 <TokenCounter
                     text={convTwo.prompt}
                     model={convTwo.model}
                     onTokenSelection={onTokenSelectionTwo}
                     isConnecting={isConnecting}
-                    connectionMouseDown={handleBoxMouseDown}
-                    connectionMouseUp={handleBoxMouseUp}
+                    connectionMouseDown={(e) => handleBoxMouseDown(e, 1)}
+                    connectionMouseUp={(e) => handleBoxMouseUp(e, 1)}
                 />
+                <div className="flex justify-end">
+                    <Button
+                        onClick={() => setIsConnecting(!isConnecting)}
+                        size="icon"
+                    >
+                        {isConnecting ? <RouteOff /> : <Route />}
+                    </Button>
+                </div>
             </div>
-            <Button
-                onClick={() => setIsConnecting(!isConnecting)}
-            >
-                {isConnecting ? 'Disconnect' : 'Connect'}
-            </Button>
+
         </div>
     )
 }

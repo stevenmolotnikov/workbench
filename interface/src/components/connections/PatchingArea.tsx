@@ -34,18 +34,17 @@ export function PatchingArea() {
             />
 
 
-
             <div className="flex flex-col p-4 gap-4 border-t">
                 <Textarea
                     value={convOne.prompt}
                     onChange={(e) => setConvOne(prev => ({ ...prev, prompt: e.target.value }))}
-                    className="mt-1 h-48 resize-none"
+                    className="h-32 resize-none"
                     placeholder="Enter your prompt here..."
                 />
                 <Textarea
                     value={convTwo.prompt}
                     onChange={(e) => setConvTwo(prev => ({ ...prev, prompt: e.target.value }))}
-                    className="mt-1 h-48 resize-none"
+                    className="h-32 resize-none"
                     placeholder="Enter your prompt here..."
                 />
             </div>

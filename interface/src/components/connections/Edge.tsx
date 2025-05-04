@@ -1,7 +1,4 @@
-interface Connection {
-    start: { x: number; y: number };
-    end: { x: number; y: number };
-}
+import { Connection } from "@/types/activation-patching";
 
 interface EdgeProps {
     connections: Connection[];
@@ -28,6 +25,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                     stroke={selectedEdgeIndex === i ? "#bfdbfe" : "#e5e5e5"}
                     strokeWidth={selectedEdgeIndex === i ? "3" : "2"}
                     className="cursor-pointer"
+                    pointerEvents="auto"
                     onClick={(e) => {
                         e.stopPropagation();
                         onEdgeSelect(i);
@@ -43,6 +41,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                     stroke="white"
                     strokeWidth="2"
                     strokeDasharray="5,5"
+                    pointerEvents="auto"
                 />
             )}
         </svg>

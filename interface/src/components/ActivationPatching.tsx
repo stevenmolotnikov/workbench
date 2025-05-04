@@ -7,17 +7,12 @@ import {
     Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ChatHistory } from "@/components/ChatHistory";
-import { Conversation } from "@/components/workbench/conversation.types";
 import { ModelSelector } from "./ModelSelector";
 import { PatchingArea } from "@/components/connections/PatchingArea";
 import { LogitLensResponse } from "@/components/workbench/conversation.types";
 
-import { cn } from "@/lib/utils";
 import { ChartSelector } from "@/components/charts/ChartSelector";
-import config from "@/lib/config";
 import { WorkbenchMode } from "./WorkbenchMode";
-import { TextTokenConnector } from "@/components/connections/TextTokenConnector";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -46,7 +41,7 @@ export function ActivationPatching({modelLoadStatus, setModelLoadStatus, workben
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div className="w-64 border-r ">
-                TBD
+                
             </div>
 
             {/* Main content */}
@@ -87,7 +82,6 @@ export function ActivationPatching({modelLoadStatus, setModelLoadStatus, workben
                         </div>
 
                         <PatchingArea />
-                        {/* <TextTokenConnector /> */}
                     </div>
 
                     {/* Container for charts */}

@@ -18,13 +18,28 @@ export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) 
         return null;
     };
 
+    const unhighlightTokens = (tokens: number[]) => {
+        setHighlightedTokens([...highlightedTokens.filter(id => !tokens.includes(id))]);
+    }
+
     const handleMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0) return;
         setIsSelecting(true);
         const tokenId = getTokenIdFromEvent(e);
         if (tokenId !== null) {
-            setStartToken(tokenId);
-            setHighlightedTokens([tokenId]);
+            if (highlightedTokens.includes(tokenId)) {
+                unhighlightTokens([tokenId]);
+            } else {
+                // If Ctrl/Cmd is pressed, add to existing selection
+                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                    setStartToken(tokenId);
+                    setHighlightedTokens([...highlightedTokens, tokenId]);
+                } else {
+                    // Start new selection
+                    setStartToken(tokenId);
+                    setHighlightedTokens([tokenId]);
+                }
+            }
         }
     };
 
@@ -38,14 +53,20 @@ export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) 
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isSelecting || startToken === null) return;
-
+        
         const currentToken = getTokenIdFromEvent(e);
         if (currentToken === null) return;
 
         const start = Math.min(startToken, currentToken);
         const end = Math.max(startToken, currentToken);
         const newHighlightedTokens = Array.from({ length: end - start + 1 }, (_, i) => start + i);
-        setHighlightedTokens(newHighlightedTokens);
+        
+        // If Ctrl/Cmd is pressed, add to existing selection
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            setHighlightedTokens([...highlightedTokens, ...newHighlightedTokens]);
+        } else {
+            setHighlightedTokens(newHighlightedTokens);
+        }
     };
 
     return {
