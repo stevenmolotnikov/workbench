@@ -1,15 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Separator } from "@/components/ui/separator";
 
-import { PreTrainedTokenizer } from '@huggingface/transformers';
+import { PreTrainedTokenizer, Tensor } from '@huggingface/transformers';
 import { useTokenSelection } from "@/hooks/useTokenSelection";
+import { Conversation } from "../workbench/conversation.types";
+
+import { useConnection } from '../../hooks/useConnection';
+import { Edges } from './Edge';
+import { Button } from "../ui/button";
 
 interface TokenCounterProps {
     text: string | { role: string; content: string }[] | null;
-    isLoading?: boolean;
+    model: string;
     onTokenSelection?: (indices: number[]) => void;
+    isConnecting?: boolean;
+    connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
+    connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 interface TokenData {
@@ -17,11 +24,24 @@ interface TokenData {
     tokens: { id: number, text: string }[];
 }
 
+type BatchEncoding = {
+    input_ids: number[] | number[][] | Tensor;
+    attention_mask: number[] | number[][] | Tensor;
+    token_type_ids?: number[] | number[][] | Tensor;
+}
+
+type TokenizerOutput =
+    | string
+    | Tensor
+    | number[]
+    | number[][]
+    | BatchEncoding;
+
 // Use dynamic import for transformers.js to avoid build errors
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-export function TokenCounter({ text, isLoading = false, onTokenSelection }: TokenCounterProps) {
+function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionMouseDown, connectionMouseUp }: TokenCounterProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -56,7 +76,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                 setIsLocalLoading(true);
                 setError(null);
 
-                let textToTokenize: string | null = null;
+                let textToTokenize: TokenizerOutput | null = null;
                 if (Array.isArray(text)) {
                     // If text is an array of message objects, apply chat template
                     textToTokenize = await tokenizer.apply_chat_template(text, { tokenize: false });
@@ -64,7 +84,7 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                     textToTokenize = text;
                 }
 
-                if (textToTokenize && textToTokenize.trim()) {
+                if (textToTokenize && typeof textToTokenize === 'string' && textToTokenize.trim()) {
                     // Process in browser only
                     if (typeof window !== 'undefined') {
                         const tokens = await tokenizer.tokenize(textToTokenize, { add_special_tokens: false });
@@ -126,10 +146,6 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
             <div className="text-xs text-muted-foreground">
                 loading...
             </div>
-            <Separator className="my-2" />
-            <div className="flex items-center justify-between text-xs">
-                <span>Token Count: ?</span>
-            </div>
         </>
     );
 
@@ -147,13 +163,13 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                 <div
                     className="max-h-40 overflow-y-auto custom-scrollbar select-none"
                     ref={containerRef}
-                    onMouseDown={handleMouseDown}
-                    onMouseUp={handleMouseUp}
+                    onMouseDown={isConnecting ? connectionMouseDown : handleMouseDown}
+                    onMouseUp={isConnecting ? connectionMouseUp : handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseUp}
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                 >
-                    <div className="flex flex-wrap pt-1">
+                    <div className="flex flex-wrap">
                         {tokenData.tokens.map((token, i) => {
                             const fixedText = fixToken(token.text);
                             const isHighlighted = highlightedTokens.includes(i);
@@ -190,24 +206,13 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
                         })}
                     </div>
                 </div>
-
-                <Separator className="my-2" />
-
-                <div className="flex items-center justify-between text-xs">
-                    <span>Token Count: {tokenData.count}</span>
-                    {highlightedTokens.length > 0 && (
-                        <span className="text-xs ml-1">
-                            ({highlightedTokens.length} selected)
-                        </span>
-                    )}
-                </div>
             </>
         );
     };
 
     return (
-        <div className=" p-4">
-            {isLoading || isLocalLoading || isTokenizerLoading
+        <div className="p-4 border rounded">
+            {isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error
                     ? renderError()
@@ -215,4 +220,68 @@ export function TokenCounter({ text, isLoading = false, onTokenSelection }: Toke
             }
         </div>
     );
+}
+
+
+interface ConnectableTokenCounterProps {
+    convOne: Conversation;
+    convTwo: Conversation;
+    onTokenSelectionOne?: (indices: number[]) => void;
+    onTokenSelectionTwo?: (indices: number[]) => void;
+}
+
+export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne, onTokenSelectionTwo }: ConnectableTokenCounterProps) {
+
+    const [isConnecting, setIsConnecting] = useState(false);
+    const {
+        connections,
+        isDragging,
+        currentConnection,
+        selectedEdgeIndex,
+        svgRef,
+        handleBoxMouseDown,
+        handleBoxMouseUp,
+        handleEdgeSelect,
+        handleBackgroundClick,
+    } = useConnection();
+
+
+    return (
+        <div className="relative">
+            <div className="absolute inset-0 pointer-events-none">
+                <Edges
+                    connections={connections}
+                    isDragging={isDragging}
+                    currentConnection={currentConnection}
+                    svgRef={svgRef}
+                    onEdgeSelect={handleEdgeSelect}
+                    selectedEdgeIndex={selectedEdgeIndex}
+                />
+            </div>
+
+            <div className="flex flex-col p-4 gap-4">
+                <TokenCounter
+                    text={convOne.prompt}
+                    model={convOne.model}
+                    onTokenSelection={onTokenSelectionOne}
+                    isConnecting={isConnecting}
+                    connectionMouseDown={handleBoxMouseDown}
+                    connectionMouseUp={handleBoxMouseUp}
+                />
+                <TokenCounter
+                    text={convTwo.prompt}
+                    model={convTwo.model}
+                    onTokenSelection={onTokenSelectionTwo}
+                    isConnecting={isConnecting}
+                    connectionMouseDown={handleBoxMouseDown}
+                    connectionMouseUp={handleBoxMouseUp}
+                />
+            </div>
+            <Button
+                onClick={() => setIsConnecting(!isConnecting)}
+            >
+                {isConnecting ? 'Disconnect' : 'Connect'}
+            </Button>
+        </div>
+    )
 }

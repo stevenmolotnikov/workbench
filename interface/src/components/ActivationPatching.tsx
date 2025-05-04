@@ -87,7 +87,7 @@ export function ActivationPatching({modelLoadStatus, setModelLoadStatus, workben
                         </div>
 
                         <PatchingArea />
-                        <TextTokenConnector />
+                        {/* <TextTokenConnector /> */}
                     </div>
 
                     {/* Container for charts */}

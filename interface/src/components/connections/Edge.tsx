@@ -25,7 +25,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                     y1={conn.start.y}
                     x2={conn.end.x}
                     y2={conn.end.y}
-                    stroke={selectedEdgeIndex === i ? "blue" : "black"}
+                    stroke={selectedEdgeIndex === i ? "#bfdbfe" : "#e5e5e5"}
                     strokeWidth={selectedEdgeIndex === i ? "3" : "2"}
                     className="cursor-pointer"
                     onClick={(e) => {
@@ -40,7 +40,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                     y1={currentConnection.start.y}
                     x2={currentConnection.end.x}
                     y2={currentConnection.end.y}
-                    stroke="black"
+                    stroke="white"
                     strokeWidth="2"
                     strokeDasharray="5,5"
                 />

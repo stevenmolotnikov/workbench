@@ -25,7 +25,11 @@ export function useConnection(): UseConnectionReturn {
     const svgRef = useRef<SVGSVGElement>(null);
 
     const handleBoxMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
+        const target = e.target as HTMLElement;
+        const tokenElement = target.closest('[data-token-id]');
+        if (!tokenElement) return;
+
+        const rect = tokenElement.getBoundingClientRect();
         const svgRect = svgRef.current?.getBoundingClientRect();
         
         if (svgRect) {
@@ -54,7 +58,15 @@ export function useConnection(): UseConnectionReturn {
 
     const handleBoxMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
         if (isDragging && currentConnection.start) {
-            const rect = e.currentTarget.getBoundingClientRect();
+            const target = e.target as HTMLElement;
+            const tokenElement = target.closest('[data-token-id]');
+            if (!tokenElement) {
+                setIsDragging(false);
+                setCurrentConnection({});
+                return;
+            }
+
+            const rect = tokenElement.getBoundingClientRect();
             const svgRect = svgRef.current?.getBoundingClientRect();
             
             if (svgRect) {
