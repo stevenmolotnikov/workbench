@@ -1,10 +1,13 @@
 import { useState } from 'react';
 
+
 interface UseTokenSelectionProps {
     onTokenSelection?: (indices: number[]) => void;
+    counterId: number;
+    onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
 }
 
-export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) {
+export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighlight }: UseTokenSelectionProps) {
     const [highlightedTokens, setHighlightedTokens] = useState<number[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
@@ -20,6 +23,12 @@ export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) 
 
     const unhighlightTokens = (tokens: number[]) => {
         setHighlightedTokens([...highlightedTokens.filter(id => !tokens.includes(id))]);
+        // Call onTokenUnhighlight for each unhighlighted token
+        if (onTokenUnhighlight) {
+            tokens.forEach(tokenIndex => {
+                onTokenUnhighlight(tokenIndex, counterId);
+            });
+        }
     }
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -36,6 +45,7 @@ export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) 
                     setHighlightedTokens([...highlightedTokens, tokenId]);
                 } else {
                     // Start new selection
+                    unhighlightTokens(highlightedTokens);
                     setStartToken(tokenId);
                     setHighlightedTokens([tokenId]);
                 }
@@ -74,5 +84,6 @@ export function useTokenSelection({ onTokenSelection }: UseTokenSelectionProps) 
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
+        counterId
     };
 } 

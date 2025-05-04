@@ -11,6 +11,7 @@ interface UseConnectionReturn {
     handleBoxMouseUp: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
     handleEdgeSelect: (index: number) => void;
     handleBackgroundClick: () => void;
+    removeConnection: (tokenIndex: number, counterIndex: number) => void;
 }
 
 export function useConnection(): UseConnectionReturn {
@@ -24,27 +25,76 @@ export function useConnection(): UseConnectionReturn {
         return tokenElement.classList.contains('bg-primary/50');
     }
 
+    const removeConnection = (tokenIndex: number, counterIndex: number) => {
+        setConnections(prev => prev.filter(conn => conn.start.tokenIndex !== tokenIndex && conn.start.counterIndex !== counterIndex));
+    }
+
+    const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement) => {
+        // Find all tokens in the group
+        const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
+        if (groupTokens.length <= 1) {
+            return tokenElement.getBoundingClientRect().left + tokenElement.getBoundingClientRect().width / 2;
+        }
+
+        // Group tokens by their vertical position (line)
+        const lineGroups = new Map<number, HTMLElement[]>();
+        groupTokens.forEach(token => {
+            const rect = token.getBoundingClientRect();
+            // Round to nearest pixel to account for small floating point differences
+            const lineY = Math.round(rect.top);
+            if (!lineGroups.has(lineY)) {
+                lineGroups.set(lineY, []);
+            }
+            lineGroups.get(lineY)!.push(token as HTMLElement);
+        });
+
+        // Find the line that contains our current token
+        const currentRect = tokenElement.getBoundingClientRect();
+        const currentLineY = Math.round(currentRect.top);
+        const currentLineTokens = lineGroups.get(currentLineY) || [];
+
+        // Calculate center for the current line
+        const lineBounds = currentLineTokens.reduce((bounds, token) => {
+            const tokenRect = token.getBoundingClientRect();
+            return {
+                left: Math.min(bounds.left, tokenRect.left),
+                right: Math.max(bounds.right, tokenRect.right)
+            };
+        }, { left: Infinity, right: -Infinity });
+
+        return (lineBounds.left + lineBounds.right) / 2;
+    };
+
     const handleBoxMouseDown = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         const target = e.target as HTMLElement;
-        // Closest moves up parent elements until it finds a [data-token-id] element
-        const tokenElement = target.closest('[data-token-id]');
+        const tokenElement = target.closest('[data-token-id]') as HTMLElement;
         if (!tokenElement) return;
 
         // Check if the token is highlighted
         if (!isHighlighted(tokenElement)) return;
 
         const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
+        const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
         if (tokenIndex === -1) return;
+
+        // Don't connect if has already been connected
+        if (checkIfAlreadyConnected(tokenIndex)) return;
 
         const rect = tokenElement.getBoundingClientRect();
         const svgRect = svgRef.current?.getBoundingClientRect();
-        
+
         if (svgRect) {
             setIsDragging(true);
+            
+            // Calculate x position based on group or single token
+            const x = groupId !== -1 ? 
+                calculateGroupCenter(groupId, tokenElement) : 
+                rect.left + rect.width / 2;
+
             setCurrentConnection({
                 start: {
-                    x: rect.left + rect.width / 2 - svgRect.left,
-                    y: rect.top + rect.height / 2 - svgRect.top,
+                    x: x - svgRect.left,
+                    y: rect.bottom - svgRect.top,
                     tokenIndex,
                     counterIndex
                 }
@@ -67,24 +117,35 @@ export function useConnection(): UseConnectionReturn {
         }
     }, [isDragging]);
 
+    const checkIfAlreadyConnected = (tokenIndex: number) => {
+        return connections.some(conn => 
+            conn.start.tokenIndex === tokenIndex || conn.end.tokenIndex === tokenIndex
+        );
+    }
+
     const handleBoxMouseUp = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         if (isDragging && currentConnection.start) {
             const target = e.target as HTMLElement;
-            const tokenElement = target.closest('[data-token-id]');
+            const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+            
+            // Only connect to token elements
             if (!tokenElement) {
                 setIsDragging(false);
                 setCurrentConnection({});
                 return;
             }
-
+            
+            // Don't connect to unhighlighted tokens
             if (!isHighlighted(tokenElement)) {
                 setIsDragging(false);
                 setCurrentConnection({});
                 return;
             }
 
+            // Don't connect if it has already been connected
             const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
-            if (tokenIndex === -1) {
+            const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
+            if (checkIfAlreadyConnected(tokenIndex)) {
                 setIsDragging(false);
                 setCurrentConnection({});
                 return;
@@ -99,15 +160,21 @@ export function useConnection(): UseConnectionReturn {
 
             const rect = tokenElement.getBoundingClientRect();
             const svgRect = svgRef.current?.getBoundingClientRect();
-            
+
             if (svgRect) {
+                // Calculate x position based on group or single token
+                const x = groupId !== -1 ? 
+                    calculateGroupCenter(groupId, tokenElement) : 
+                    rect.left + rect.width / 2;
+
+                // Use the top of the token for the second counter
                 const endPoint = {
-                    x: rect.left + rect.width / 2 - svgRect.left,
-                    y: rect.top + rect.height / 2 - svgRect.top,
+                    x: x - svgRect.left,
+                    y: rect.top - svgRect.top,
                     tokenIndex,
                     counterIndex
                 };
-                
+
                 setConnections(prev => [...prev, {
                     start: currentConnection.start,
                     end: endPoint
@@ -120,7 +187,7 @@ export function useConnection(): UseConnectionReturn {
 
     useEffect(() => {
         window.addEventListener('mousemove', handleMouseMove);
-        
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Backspace' && selectedEdgeIndex !== null) {
                 setConnections(prev => prev.filter((_, i) => i !== selectedEdgeIndex));
@@ -129,7 +196,7 @@ export function useConnection(): UseConnectionReturn {
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        
+
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('keydown', handleKeyDown);
@@ -154,5 +221,6 @@ export function useConnection(): UseConnectionReturn {
         handleBoxMouseUp,
         handleEdgeSelect,
         handleBackgroundClick,
+        removeConnection,
     };
 }

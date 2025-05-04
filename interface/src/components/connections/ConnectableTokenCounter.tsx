@@ -18,6 +18,8 @@ interface TokenCounterProps {
     isConnecting?: boolean;
     connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
     connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    counterId?: number;
+    onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
 }
 
 interface TokenData {
@@ -42,7 +44,7 @@ type TokenizerOutput =
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionMouseDown, connectionMouseUp }: TokenCounterProps) {
+function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionMouseDown, connectionMouseUp, counterId, onTokenUnhighlight }: TokenCounterProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -132,7 +134,13 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
     }, [text]);
 
     const { highlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove } = useTokenSelection({
-        onTokenSelection
+        onTokenSelection,
+        counterId,
+        onTokenUnhighlight: (tokenIndex, counterIndex) => {
+            if (onTokenUnhighlight) {
+                onTokenUnhighlight(tokenIndex, counterIndex);
+            }
+        }
     });
 
     const fixToken = (token: string) => {
@@ -174,13 +182,45 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                         {tokenData.tokens.map((token, i) => {
                             const fixedText = fixToken(token.text);
                             const isHighlighted = highlightedTokens.includes(i);
+                            const isPrevHighlighted = i > 0 && highlightedTokens.includes(i - 1);
+                            const isNextHighlighted = i < tokenData.tokens.length - 1 && highlightedTokens.includes(i + 1);
+                            
+                            // Determine if this token is part of a group
+                            const isGroupStart = isHighlighted && !isPrevHighlighted;
+                            const isGroupEnd = isHighlighted && !isNextHighlighted;
+                            
+                            // Calculate group ID
+                            let groupId = -1;
+                            if (isHighlighted) {
+                                if (isGroupStart) {
+                                    // Find the end of this group
+                                    let groupEnd = i;
+                                    while (groupEnd < tokenData.tokens.length - 1 && highlightedTokens.includes(groupEnd + 1)) {
+                                        groupEnd++;
+                                    }
+                                    groupId = i; // Use start index as group ID
+                                } else {
+                                    // Find the start of this group
+                                    let groupStart = i;
+                                    while (groupStart > 0 && highlightedTokens.includes(groupStart - 1)) {
+                                        groupStart--;
+                                    }
+                                    groupId = groupStart;
+                                }
+                            }
+                            
                             const highlightStyle = 'bg-primary/50 border-primary/50';
                             const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50 cursor-text';
                             const key = `token-${i}`;
                             const commonProps = {
                                 'data-token-id': i,
+                                'data-group-id': groupId,
                                 style: { userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties,
                             };
+
+                            // Add group styling classes
+                            const groupStyle = isHighlighted ? 
+                                `${isGroupStart ? 'rounded-l' : ''} ${isGroupEnd ? 'rounded-r' : ''} ${!isGroupStart && !isGroupEnd ? 'rounded-none' : ''}` : '';
 
                             if (fixedText === '\\n') {
                                 return (
@@ -198,7 +238,7 @@ function TokenCounter({ text, model, onTokenSelection, isConnecting, connectionM
                                     <div
                                         key={key}
                                         {...commonProps}
-                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted && isConnecting ? 'cursor-grab' : ''} ${isHighlighted ? highlightStyle : 'border-transparent'} ${isConnecting ? '' : hoverStyle}`}
+                                        className={`text-xs w-fit whitespace-pre border select-none ${isHighlighted && isConnecting ? 'cursor-grab' : ''} ${isHighlighted ? highlightStyle : 'border-transparent'} ${isConnecting ? '' : hoverStyle} ${groupStyle}`}
                                     >
                                         {fixedText}
                                     </div>
@@ -244,6 +284,7 @@ export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne,
         handleBoxMouseUp,
         handleEdgeSelect,
         handleBackgroundClick,
+        removeConnection,
     } = useConnection();
 
 
@@ -268,6 +309,8 @@ export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne,
                     isConnecting={isConnecting}
                     connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
                     connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
+                    counterId={0}
+                    onTokenUnhighlight={removeConnection}
                 />
                 <TokenCounter
                     text={convTwo.prompt}
@@ -276,6 +319,8 @@ export function ConnectableTokenCounter({ convOne, convTwo, onTokenSelectionOne,
                     isConnecting={isConnecting}
                     connectionMouseDown={(e) => handleBoxMouseDown(e, 1)}
                     connectionMouseUp={(e) => handleBoxMouseUp(e, 1)}
+                    counterId={1}
+                    onTokenUnhighlight={removeConnection}
                 />
                 <div className="flex justify-end">
                     <Button

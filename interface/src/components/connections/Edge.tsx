@@ -9,6 +9,18 @@ interface EdgeProps {
     selectedEdgeIndex: number | null;
 }
 
+function createStepPath(start: { x: number; y: number }, end: { x: number; y: number }): string {
+    // Calculate the midpoint for the vertical-horizontal-vertical pattern
+    const midY = (start.y + end.y) / 2;
+    
+    // Create control points that encourage vertical-horizontal-vertical movement
+    const controlPoint1 = { x: start.x, y: midY };
+    const controlPoint2 = { x: end.x, y: midY };
+    
+    // Create a cubic Bezier curve path that follows vertical-horizontal-vertical pattern
+    return `M ${start.x} ${start.y} C ${controlPoint1.x} ${controlPoint1.y}, ${controlPoint2.x} ${controlPoint2.y}, ${end.x} ${end.y}`;
+}
+
 export function Edges({ connections, isDragging, currentConnection, svgRef, onEdgeSelect, selectedEdgeIndex }: EdgeProps) {
     return (
         <svg
@@ -16,33 +28,48 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
             className="w-full h-full absolute"
         >
             {connections.map((conn, i) => (
-                <line
-                    key={i}
-                    x1={conn.start.x}
-                    y1={conn.start.y}
-                    x2={conn.end.x}
-                    y2={conn.end.y}
-                    stroke={selectedEdgeIndex === i ? "#bfdbfe" : "#e5e5e5"}
-                    strokeWidth={selectedEdgeIndex === i ? "3" : "2"}
-                    className="cursor-pointer"
-                    pointerEvents="auto"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onEdgeSelect(i);
-                    }}
-                />
+                <g key={i}>
+                    {/* Clickable area (invisible) */}
+                    <path
+                        d={createStepPath(conn.start, conn.end)}
+                        fill="none"
+                        stroke="transparent"
+                        strokeWidth="8"
+                        className="cursor-pointer"
+                        pointerEvents="auto"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdgeSelect(i);
+                        }}
+                    />
+                    {/* Visible stroke */}
+                    <path
+                        d={createStepPath(conn.start, conn.end)}
+                        fill="none"
+                        stroke={selectedEdgeIndex === i ? "#3b82f6" : "#3b82f6"}
+                        strokeWidth={selectedEdgeIndex === i ? "2" : "1"}
+                    />
+                </g>
             ))}
             {isDragging && currentConnection.start && currentConnection.end && (
-                <line
-                    x1={currentConnection.start.x}
-                    y1={currentConnection.start.y}
-                    x2={currentConnection.end.x}
-                    y2={currentConnection.end.y}
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    pointerEvents="auto"
-                />
+                <g>
+                    {/* Clickable area (invisible) */}
+                    <path
+                        d={createStepPath(currentConnection.start, currentConnection.end)}
+                        fill="none"
+                        stroke="transparent"
+                        strokeWidth="8"
+                        pointerEvents="auto"
+                    />
+                    {/* Visible stroke */}
+                    <path
+                        d={createStepPath(currentConnection.start, currentConnection.end)}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth="1"
+                        strokeDasharray="5,5"
+                    />
+                </g>
             )}
         </svg>
     );
