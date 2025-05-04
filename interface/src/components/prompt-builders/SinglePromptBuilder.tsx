@@ -1,7 +1,7 @@
 "use client";
 
 import { Textarea } from "@/components/ui/textarea";
-import { TokenCounter } from "@/components/TokenCounter";
+import { TokenCounter } from "@/components/prompt-builders/TokenCounter";
 
 interface SinglePromptBuilderProps {
     prompt: string;

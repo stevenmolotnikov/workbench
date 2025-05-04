@@ -12,6 +12,7 @@ import {
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { Model } from "./workbench/conversation.types";
 import { cn } from "@/lib/utils";
+import config from "@/lib/config";
 
 interface ModelSelectorProps {
     modelName: string;
@@ -39,7 +40,7 @@ export function ModelSelector({ modelName, setModelName, setModelType, setLoaded
 
     const fetchModels = async () => {
         try {
-            const response = await fetch('https://cadentj--nnsight-backend-fastapi-app.modal.run/models');
+            const response = await fetch(config.getApiUrl(config.endpoints.models));
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

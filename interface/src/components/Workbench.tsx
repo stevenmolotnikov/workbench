@@ -2,8 +2,8 @@
 
 import { Trash, Save, Sparkle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ConversationBuilder } from "@/components/ConversationBuilder";
-import { SinglePromptBuilder } from "@/components/SinglePromptBuilder";
+import { ConversationBuilder } from "@/components/prompt-builders/ConversationBuilder";
+import { SinglePromptBuilder } from "@/components/prompt-builders/SinglePromptBuilder";
 import { Conversation } from "@/components/workbench/conversation.types";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

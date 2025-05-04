@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
-import { Message } from "./workbench/conversation.types";
+import { Message } from "../workbench/conversation.types";
+import config from "@/lib/config";
 
 interface TokenCounterProps {
     text: string | Message[] | null;
@@ -31,7 +32,7 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
 
         setIsLoading(true);
         try {
-            const response = await fetch('https://cadentj--nnsight-backend-fastapi-app.modal.run/api/tokenize', {
+            const response = await fetch(config.getApiUrl(config.endpoints.tokenize), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

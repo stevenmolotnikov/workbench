@@ -3,7 +3,7 @@
 import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { TokenCounter } from "@/components/TokenCounter";
+import { TokenCounter } from "@/components/prompt-builders/TokenCounter";
 import { Message } from "@/components/workbench/conversation.types";
 
 interface ConversationBuilderProps {
