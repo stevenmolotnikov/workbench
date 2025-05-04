@@ -91,29 +91,6 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
         setActiveConversations(prev => [...prev, newActiveConversation]);
     };
 
-    const getStatusMessage = () => {
-        if (modelLoadStatus === 'loading') {
-            return (
-                <div>
-                    The backend is hosted as a deployment on <a href="https://modal.com" className="text-blue-500">Modal</a>.
-                    We're starting up a container for your session.
-                </div>
-            );
-        } else if (modelLoadStatus === 'success') {
-            return (
-                <div>
-                    Some things might be slow, but they'll warm up soon enough!
-                </div>
-            );
-        } else if (modelLoadStatus === 'error') {
-            return (
-                <div>
-                    Could not connect to the backend. Reach out to Caden, he probably turned it off.
-                </div>
-            );
-        }
-    }
-
     // Update handleSaveConversation to find the conversation in activeConversations
     const handleSaveConversation = (id: string) => {
         const conversationToSave = activeConversations.find(conv => conv.id === id);

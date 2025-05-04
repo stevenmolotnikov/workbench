@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Message } from "../workbench/conversation.types";
 import config from "@/lib/config";
+import { useTokenSelection } from "@/hooks/useTokenSelection";
 
 interface TokenCounterProps {
     text: string | Message[] | null;
@@ -17,19 +18,14 @@ interface TokenResponse {
 
 export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProps) {
     const [tokenData, setTokenData] = useState<string[] | null>(null);
-    const [highlightedTokens, setHighlightedTokens] = useState<number[]>([]);
-    const [isSelecting, setIsSelecting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [startToken, setStartToken] = useState<number | null>(null);
+
+    const { highlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove } = useTokenSelection({
+        onTokenSelection
+    });
 
     const fetchTokenData = async (currentText: string | Message[] | null, model: string) => {
-        // if (!currentText || (Array.isArray(currentText) && currentText.length === 0)) {
-        //     setTokenData(null);
-        //     setIsLoading(false);
-        //     return;
-        // }
-
         setIsLoading(true);
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.tokenize), {
@@ -64,45 +60,6 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
         };
     }, [text, model]);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (e.button !== 0) return;
-        setIsSelecting(true);
-        const tokenId = getTokenIdFromEvent(e);
-        if (tokenId !== null) {
-            setStartToken(tokenId);
-            setHighlightedTokens([tokenId]);
-        }
-    };
-
-    const handleMouseUp = () => {
-        setIsSelecting(false);
-        if (onTokenSelection) {
-            onTokenSelection(highlightedTokens.length > 0 ? highlightedTokens : [-1]);
-        }
-        setStartToken(null);
-    };
-
-    const getTokenIdFromEvent = (e: React.MouseEvent): number | null => {
-        const target = e.target as HTMLElement;
-        const tokenElement = target.closest('[data-token-id]');
-        if (tokenElement) {
-            return parseInt(tokenElement.getAttribute('data-token-id') || '0', 10);
-        }
-        return null;
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isSelecting || startToken === null) return;
-
-        const currentToken = getTokenIdFromEvent(e);
-        if (currentToken === null) return;
-
-        const start = Math.min(startToken, currentToken);
-        const end = Math.max(startToken, currentToken);
-        const newHighlightedTokens = Array.from({ length: end - start + 1 }, (_, i) => start + i);
-        setHighlightedTokens(newHighlightedTokens);
-    };
-
     const fixToken = (token: string) => {
         token = token.replace("Ġ", ' ');
         token = token.replace("<0x0A>", '\\n');
@@ -122,7 +79,6 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
                         <span>Token Count: ?</span>
                     </div>
                 </>
-
             );
         }
         if (!tokenData) return null;
@@ -155,8 +111,7 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
                                     <div
                                         key={key}
                                         {...commonProps}
-                                        className={`text-xs w-full rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'
-                                            } ${hoverStyle}`}
+                                        className={`text-xs w-full rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
                                         style={{ ...commonProps.style, flexBasis: '100%' }}
                                     >
                                         {fixedText}
@@ -167,8 +122,7 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
                                     <div
                                         key={key}
                                         {...commonProps}
-                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'
-                                            } ${hoverStyle}`}
+                                        className={`text-xs w-fit rounded whitespace-pre border select-none ${isHighlighted ? highlightStyle : 'border-transparent'} ${hoverStyle}`}
                                     >
                                         {fixedText}
                                     </div>
@@ -183,7 +137,7 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
                 <div className="flex items-center justify-between text-xs">
                     <span>Token Count: {tokenData.length}</span>
                     {highlightedTokens.length > 0 && (
-                        <span className="text-xs  ml-1">
+                        <span className="text-xs ml-1">
                             ({highlightedTokens.length} selected)
                         </span>
                     )}
@@ -193,7 +147,7 @@ export function TokenCounter({ text, model, onTokenSelection }: TokenCounterProp
     };
 
     return (
-        <div className=" p-4">
+        <div className="p-4">
             {renderContent()}
         </div>
     );

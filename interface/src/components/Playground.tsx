@@ -14,7 +14,7 @@ type WorkbenchMode = "logit-lens" | "activation-patching";
 
 export function Playground() {
     const [modelLoadStatus, setModelLoadStatus] = useState<ModelLoadStatus>('loading');
-    const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>("logit-lens");
+    const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>("activation-patching");
 
     const getStatusMessage = () => {
         if (modelLoadStatus === 'loading') {

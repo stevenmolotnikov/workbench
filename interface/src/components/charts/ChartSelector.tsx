@@ -159,7 +159,7 @@ export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto p-4 ">
                 <div className={`grid ${getLayoutGrid()} gap-4 h-full`}>
                     {Array.from({ length: getBoxCount() }).map((_, index) => (
                         <div key={index} className="h-full relative">

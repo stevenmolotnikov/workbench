@@ -19,7 +19,7 @@ interface WorkbenchModeProps {
 
 export function WorkbenchMode({workbenchMode, setWorkbenchMode}: WorkbenchModeProps) {
   return (
-    <Select value={workbenchMode} onValueChange={setWorkbenchMode}  defaultValue="logit-lens">
+    <Select value={workbenchMode} onValueChange={setWorkbenchMode}  defaultValue="activation-patching">
       <SelectTrigger className="w-[180px] -my-1">
         <SelectValue placeholder="Select a mode" />
       </SelectTrigger>
