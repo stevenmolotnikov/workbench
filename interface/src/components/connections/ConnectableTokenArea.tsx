@@ -192,7 +192,7 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
     };
 
     return (
-        <div className="p-4 h-full border bg-card border-dashed rounded">
+        <div>
             {isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error

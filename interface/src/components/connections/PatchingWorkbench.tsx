@@ -15,10 +15,10 @@ import config from "@/lib/config";
 
 interface PatchingWorkbenchProps {
     connectionsHook: ReturnType<typeof useConnection>;
-    convOne: Conversation;
-    convTwo: Conversation;
-    setConvOne: (conv: Conversation) => void;
-    setConvTwo: (conv: Conversation) => void;
+    source: Conversation;
+    destination: Conversation;
+    setSource: (conv: Conversation) => void;
+    setDestination: (conv: Conversation) => void;
 }
 
 interface Prediction {
@@ -27,7 +27,7 @@ interface Prediction {
     str_indices: string[];
 }
 
-export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOne, setConvTwo }: PatchingWorkbenchProps) {
+export function PatchingWorkbench({ connectionsHook, source, destination, setSource, setDestination }: PatchingWorkbenchProps) {
 
     const defaultPrediction: Prediction = {
         id: "",
@@ -36,8 +36,10 @@ export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOn
     }
 
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
-    const [convOnePrediction, setConvOnePrediction] = useState<Prediction>(defaultPrediction);
-    const [convTwoPrediction, setConvTwoPrediction] = useState<Prediction>(defaultPrediction);
+    const [sourcePrediction, setSourcePrediction] = useState<Prediction>(defaultPrediction);
+    const [destinationPrediction, setDestinationPrediction] = useState<Prediction>(defaultPrediction);
+
+
 
     const {
         connections,
@@ -61,12 +63,12 @@ export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOn
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    conversations: [convOne, convTwo]
+                    conversations: [source, destination]
                 }),
             });
             const data = await response.json();
-            setConvOnePrediction(data.results[0]);
-            setConvTwoPrediction(data.results[1]);
+            setSourcePrediction(data.results[0]);
+            setDestinationPrediction(data.results[1]);
         } catch (error) {
             console.error('Error sending request:', error);
         } finally {
@@ -74,6 +76,31 @@ export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOn
 
         }
     };
+
+    const tokenArea = (which: string, text: string, model: string, prediction: Prediction) => {
+        return (
+            <div className="flex flex-col h-full  bg-card p-4 rounded-md border">
+                <div className="flex flex-row justify-between items-center pb-2">
+                    <span className="text-xs"> {which}</span>
+                    <span className="text-xs">
+                        Prediction: {prediction.str_indices.length > 0 ? prediction.str_indices[0] : "N/A"}
+                        ({prediction.indices.length > 0 ? prediction.indices[0] : ""})
+                    </span>
+
+                </div>
+
+                <ConnectableTokenArea
+                    text={text}
+                    model={model}
+                    isConnecting={isConnecting}
+                    connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
+                    connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
+                    counterId={0}
+                    onTokenUnhighlight={removeConnection}
+                />
+            </div>
+        )
+    }
 
     return (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -89,8 +116,8 @@ export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOn
                     />
                 </div>
 
-                <div className="flex flex-col p-4 h-full">
-                    <div className="flex items-center justify-between pb-2">
+                <div className="flex flex-col p-4 gap-4  h-full">
+                    <div className="flex items-center justify-between">
                         <h2 className="text-sm font-medium">Tokenized Text</h2>
                         <div className="flex items-center gap-2">
                             <Button
@@ -118,57 +145,25 @@ export function PatchingWorkbench({ connectionsHook, convOne, convTwo, setConvOn
                         </div>
                     </div>
 
-
-                    <ConnectableTokenArea
-                        text={convOne.prompt}
-                        model={convOne.model}
-                        isConnecting={isConnecting}
-                        connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
-                        connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
-                        counterId={0}
-                        onTokenUnhighlight={removeConnection}
-                    />
-                    <div className="flex flex-row justify-between items-center py-1 pb-3">
-                        <span className="text-xs"> Source</span>
-                        <span className="text-xs">
-                            Prediction: {convOnePrediction.str_indices.length > 0 ? convOnePrediction.str_indices[0] : "N/A"} 
-                            ({convOnePrediction.indices.length > 0 ? convOnePrediction.indices[0] : ""})
-                        </span>
-                    </div>
-
-
-
-                    <ConnectableTokenArea
-                        text={convTwo.prompt}
-                        model={convTwo.model}
-                        isConnecting={isConnecting}
-                        connectionMouseDown={(e) => handleBoxMouseDown(e, 1)}
-                        connectionMouseUp={(e) => handleBoxMouseUp(e, 1)}
-                        counterId={1}
-                        onTokenUnhighlight={removeConnection}
-                    />
-                    <div className="flex flex-row justify-between items-center py-1 pb-3">
-                        <span className="text-xs"> Destination</span>
-                        <span className="text-xs">
-                            Prediction: {convTwoPrediction.str_indices.length > 0 ? convTwoPrediction.str_indices[0] : "N/A"} 
-                            ({convTwoPrediction.indices.length > 0 ? convTwoPrediction.indices[0] : ""})
-                        </span>
-                    </div>
+                    {tokenArea("Source", source.prompt, source.model, sourcePrediction)}
+                    {tokenArea("Destination", destination.prompt, destination.model, destinationPrediction)}
 
                 </div>
 
             </div>
+            
+
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
-                <h2 className="text-sm font-medium flex items-center">Text Entry</h2>
+                {/* <h2 className="text-sm font-medium flex items-center">Text Entry</h2> */}
                 <Textarea
-                    value={convOne.prompt}
-                    onChange={(e) => setConvOne(prev => ({ ...prev, prompt: e.target.value }))}
+                    value={source.prompt}
+                    onChange={(e) => setSource(prev => ({ ...prev, prompt: e.target.value }))}
                     className="flex-1 resize-none h-full"
                     placeholder="Enter your prompt here..."
                 />
                 <Textarea
-                    value={convTwo.prompt}
-                    onChange={(e) => setConvTwo(prev => ({ ...prev, prompt: e.target.value }))}
+                    value={destination.prompt}
+                    onChange={(e) => setDestination(prev => ({ ...prev, prompt: e.target.value }))}
                     className="flex-1 resize-none h-full"
                     placeholder="Enter your prompt here..."
                 />

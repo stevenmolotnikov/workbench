@@ -12,6 +12,11 @@ import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { useConnection } from "@/hooks/useConnection";
 import config from "@/lib/config";
+import GridAnimation from "@/components/charts/GridAnimation";
+import { GridAnimationProvider } from "@/components/charts/GridAnimationContext";
+
+
+import ComponentDropdown from "./ComponentDropdown";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -47,8 +52,13 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         selectedTokenIndices: [],
     }
 
-    const [convOne, setConvOne] = useState<Conversation>(defaultConversation);
-    const [convTwo, setConvTwo] = useState<Conversation>({ ...defaultConversation, id: "2" });
+    
+
+    const [source, setSource] = useState<Conversation>(defaultConversation);
+    const [destination, setDestination] = useState<Conversation>({ ...defaultConversation, id: "2" });
+    const [position, setPosition] = useState("bottom")
+
+    const [patchTokens, setPatchTokens] = useState(false);
 
     const connectionsHook = useConnection();
 
@@ -65,8 +75,8 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
                 body: JSON.stringify({
                     connections: connectionsHook.connections,
                     model: modelName,
-                    source: convOne,
-                    destination: convTwo,
+                    source: source,
+                    destination: destination,
                     submodule: "blocks",
                     correct_id: 1,
                     incorrect_id: 2,
@@ -84,45 +94,46 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
     };
 
     return (
+        <GridAnimationProvider>
+            <div className="flex flex-1 min-h-0">
+                {/* Left sidebar */}
+                <div className="w-64 border-r ">
+                    <ChatHistory savedConversations={[]} onLoadConversation={() => { }} activeConversationIds={[]} />
+                </div>
 
-        <div className="flex flex-1 min-h-0">
-            {/* Left sidebar */}
-            <div className="w-64 border-r ">
-                <ChatHistory savedConversations={[]} onLoadConversation={() => { }} activeConversationIds={[]} />
-            </div>
+                {/* Main content */}
+                <div className="flex-1 flex flex-col">
+                    {/* Top bar within main content */}
+                    <WorkbenchMode workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} handleRun={handleRun} />
 
-            {/* Main content */}
-            <div className="flex-1 flex flex-col">
-                {/* Top bar within main content */}
-                <WorkbenchMode workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} handleRun={handleRun} />
+                    <div className="flex flex-1 min-h-0">
+                        <div className="w-[40%] border-r flex flex-col">
+                            <div className="p-4 border-b">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-sm font-medium">Model</h2>
+                                    <div className="flex items-center gap-2">
+                                        <ModelSelector
+                                            modelName={modelName}
+                                            setModelName={setModelName}
+                                            setModelType={setModelType}
+                                            setLoaded={handleModelLoadStatusUpdate}
+                                        />
+                                        <ComponentDropdown />
 
-                <div className="flex flex-1 min-h-0">
-                    <div className="w-[40%] border-r flex flex-col">
-                        <div className="p-4 border-b">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-medium">Model</h2>
-                                <div className="flex items-center gap-2">
-                                    <ModelSelector
-                                        modelName={modelName}
-                                        setModelName={setModelName}
-                                        setModelType={setModelType}
-                                        setLoaded={handleModelLoadStatusUpdate}
-                                    />
 
+
+                                    </div>
 
                                 </div>
-
                             </div>
+
+                            <PatchingWorkbench connectionsHook={connectionsHook} source={source} destination={destination} setSource={setSource} setDestination={setDestination} />
                         </div>
 
-                        <PatchingWorkbench connectionsHook={connectionsHook} convOne={convOne} convTwo={convTwo} setConvOne={setConvOne} setConvTwo={setConvTwo} />
+                        {/* <GridAnimation /> */}
                     </div>
-
-                    {/* Container for charts */}
-                    <ChartSelector chartData={chartData} isLoading={isLoading} />
                 </div>
             </div>
-        </div>
-
+        </GridAnimationProvider>
     );
 }
