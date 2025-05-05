@@ -1,3 +1,9 @@
+# STANDARD NAMING:
+# model.layers.i.attn
+# model.layers.i.mlp
+# model.ln_f
+# model.lm_head
+
 [models]
 
 [models.one]
@@ -16,6 +22,7 @@ chat = false
 
 [models.two.rename]
 norm = "ln_f"
+self_attn = "attn"
 
 # [models.three]
 # name = "meta-llama/Meta-Llama-3.1-8B-Instruct"

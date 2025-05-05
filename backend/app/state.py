@@ -4,7 +4,15 @@ from typing import Dict
 
 from nnsight import LanguageModel, CONFIG
 
-from .schema import ModelsConfig
+from .schema.config import ModelsConfig
+
+
+def process_name(name):
+    """Fix named_modules names."""
+    if name != "":
+        assert name.startswith(".")
+    return name[1:]
+
 
 class AppState:
     def __init__(self):
@@ -24,17 +32,35 @@ class AppState:
     def _load(self):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_dir, "config.toml")
-        
+
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
+
+        hf_token = os.environ["HF_TOKEN"]
 
         for _, cfg in config.models.items():
             # Load model if served
             if cfg.serve:
-                hf_token = os.environ["HF_TOKEN"]
                 model = LanguageModel(
                     cfg.name, rename=cfg.rename, token=hf_token
                 )
+                model = self._process_model(model)
                 self.models[cfg.name] = model
 
         return config
+
+    def _process_model(self, model):
+        """Add a get_submodule method to the model. The existing 
+        method returns a Torch module rather than an Envoy
+        """
+
+        module_dict = {
+            process_name(name): module for name, module in model.named_modules()
+        }
+
+        def get_submodule(name):
+            return module_dict[name]
+        
+        setattr(model, "get_submodule", get_submodule)
+
+        return model

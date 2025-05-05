@@ -1,4 +1,5 @@
 from .lens import router as lens
-from .tokenize import router as tokenize
+from .patch import router as patch
+from .models import router as models
 
-__all__ = ["lens", "tokenize"]
+__all__ = ["lens", "patch", "models"]

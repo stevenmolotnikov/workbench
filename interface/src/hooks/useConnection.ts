@@ -12,6 +12,7 @@ interface UseConnectionReturn {
     handleEdgeSelect: (index: number) => void;
     handleBackgroundClick: () => void;
     removeConnection: (tokenIndex: number, counterIndex: number) => void;
+    clearConnections: () => void;
 }
 
 export function useConnection(): UseConnectionReturn {
@@ -21,12 +22,18 @@ export function useConnection(): UseConnectionReturn {
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
+    const clearConnections = () => {
+        setConnections([]);
+    }
+
     const isHighlighted = (tokenElement: HTMLElement) => {
         return tokenElement.classList.contains('bg-primary/50');
     }
 
     const removeConnection = (tokenIndex: number, counterIndex: number) => {
-        setConnections(prev => prev.filter(conn => conn.start.tokenIndex !== tokenIndex && conn.start.counterIndex !== counterIndex));
+        setConnections(prev => prev.filter(conn => 
+            !conn.start.tokenIndices.includes(tokenIndex) && conn.start.counterIndex !== counterIndex
+        ));
     }
 
     const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement) => {
@@ -65,6 +72,18 @@ export function useConnection(): UseConnectionReturn {
         return (lineBounds.left + lineBounds.right) / 2;
     };
 
+    const checkIfAlreadyConnected = (tokenIndices: number[]) => {
+        return connections.some(conn => 
+            conn.start.tokenIndices.some(idx => tokenIndices.includes(idx)) || 
+            conn.end.tokenIndices.some(idx => tokenIndices.includes(idx))
+        );
+    }
+
+    const getGroupTokenIndices = (groupId: number): number[] => {
+        const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
+        return groupTokens.map(token => parseInt(token.getAttribute('data-token-id') || '-1')).filter(idx => idx !== -1);
+    }
+
     const handleBoxMouseDown = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         const target = e.target as HTMLElement;
         const tokenElement = target.closest('[data-token-id]') as HTMLElement;
@@ -77,8 +96,11 @@ export function useConnection(): UseConnectionReturn {
         const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
         if (tokenIndex === -1) return;
 
+        // Get all token indices in the group
+        const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
+
         // Don't connect if has already been connected
-        if (checkIfAlreadyConnected(tokenIndex)) return;
+        if (checkIfAlreadyConnected(tokenIndices)) return;
 
         const rect = tokenElement.getBoundingClientRect();
         const svgRect = svgRef.current?.getBoundingClientRect();
@@ -95,7 +117,7 @@ export function useConnection(): UseConnectionReturn {
                 start: {
                     x: x - svgRect.left,
                     y: rect.bottom - svgRect.top,
-                    tokenIndex,
+                    tokenIndices,
                     counterIndex
                 }
             });
@@ -110,18 +132,12 @@ export function useConnection(): UseConnectionReturn {
                 end: {
                     x: e.clientX - svgRect.left,
                     y: e.clientY - svgRect.top,
-                    tokenIndex: -1, // Will be set on mouse up
+                    tokenIndices: [], // Will be set on mouse up
                     counterIndex: -1 // Will be set on mouse up
                 }
             }));
         }
     }, [isDragging]);
-
-    const checkIfAlreadyConnected = (tokenIndex: number) => {
-        return connections.some(conn => 
-            conn.start.tokenIndex === tokenIndex || conn.end.tokenIndex === tokenIndex
-        );
-    }
 
     const handleBoxMouseUp = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         if (isDragging && currentConnection.start) {
@@ -142,10 +158,14 @@ export function useConnection(): UseConnectionReturn {
                 return;
             }
 
-            // Don't connect if it has already been connected
             const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
             const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
-            if (checkIfAlreadyConnected(tokenIndex)) {
+            
+            // Get all token indices in the group
+            const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
+
+            // Don't connect if it has already been connected
+            if (checkIfAlreadyConnected(tokenIndices)) {
                 setIsDragging(false);
                 setCurrentConnection({});
                 return;
@@ -171,7 +191,7 @@ export function useConnection(): UseConnectionReturn {
                 const endPoint = {
                     x: x - svgRect.left,
                     y: rect.top - svgRect.top,
-                    tokenIndex,
+                    tokenIndices,
                     counterIndex
                 };
 
@@ -222,5 +242,6 @@ export function useConnection(): UseConnectionReturn {
         handleEdgeSelect,
         handleBackgroundClick,
         removeConnection,
+        clearConnections,
     };
 }

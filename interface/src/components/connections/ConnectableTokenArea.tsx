@@ -127,8 +127,8 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
 
     const renderLoading = () => (
         <>
-            <div className="text-xs text-muted-foreground">
-                loading...
+            <div className="text-sm text-muted-foreground">
+                Loading Tokenizer...
             </div>
         </>
     );
@@ -160,7 +160,7 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
                         const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50 cursor-text';
 
                         const styles = cn(
-                            'text-xs whitespace-pre border select-none',
+                            'text-sm whitespace-pre border select-none',
                             (isHighlighted && isConnecting) && 'cursor-grab',
                             !isHighlighted && 'rounded',
                             isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
@@ -192,7 +192,7 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
     };
 
     return (
-        <div className="p-4 h-32 border rounded">
+        <div className="p-4 h-full border bg-card border-dashed rounded">
             {isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error

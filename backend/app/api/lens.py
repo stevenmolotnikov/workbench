@@ -3,12 +3,12 @@ from collections import defaultdict
 from fastapi import APIRouter, Request
 import torch as t
 
-from ..schema import LensRequest, LensResponse
+from ..schema.lens import LensRequest, LensResponse
 from ..state import AppState
 
 router = APIRouter()
 
-def _logit_lens(model, model_tasks):
+def logit_lens(model, model_tasks):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))[:,]
 
@@ -46,7 +46,7 @@ def _logit_lens(model, model_tasks):
 
     return all_results
 
-def _process_results(model, results):
+def process_results(model, results):
     processed_results = []
     for layer_results in results:
         # Cast to Python primatives and get Proxy values
@@ -69,7 +69,7 @@ def _process_results(model, results):
     return processed_results
 
 
-def logit_lens(lens_request: LensRequest, state: AppState):
+def preprocess(lens_request: LensRequest, state: AppState):
     # Batch prompts for the same model
     tasks = defaultdict(list)
     for conversation in lens_request.conversations:
@@ -83,10 +83,10 @@ def logit_lens(lens_request: LensRequest, state: AppState):
     all_results = []
     for model_name, model_tasks in tasks.items():
         model = state.get_model(model_name)
-        results = _logit_lens(model, model_tasks)
+        results = logit_lens(model, model_tasks)
 
         for instance_idx, instance_results in enumerate(results):
-            processed_results = _process_results(model, instance_results)
+            processed_results = process_results(model, instance_results)
             all_results.append({
                 "model_name": f"{model_name} | {instance_idx}",
                 "layer_results": processed_results,
@@ -98,4 +98,4 @@ def logit_lens(lens_request: LensRequest, state: AppState):
 @router.post("/lens")
 async def lens(lens_request: LensRequest, request: Request):
     state = request.app.state.m
-    return logit_lens(lens_request, state)
+    return preprocess(lens_request, state)

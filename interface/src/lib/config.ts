@@ -4,13 +4,14 @@
 
 const config = {
     // Backend API URL - can be overridden by NEXT_PUBLIC_BACKEND_URL environment variable
-    backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://0.0.0.0:8000',
+    backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
     
     // API endpoints
     endpoints: {
         lens: '/api/lens',
         models: '/models',
-        tokenize: '/api/tokenize',
+        patch: '/api/patch',
+        execute: '/api/execute',
     },
     
     // Helper function to get full API URL
