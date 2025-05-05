@@ -62,7 +62,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                     <path
                         d={createStepPath(conn.start, conn.end)}
                         fill="none"
-                        stroke={selectedEdgeIndex === i ? "#3b82f6" : "#3b82f6"}
+                        stroke={ "#3b82f6"}
                         strokeWidth={selectedEdgeIndex === i ? "2" : "1"}
                         markerEnd="url(#arrowhead)"
                     />
@@ -76,7 +76,7 @@ export function Edges({ connections, isDragging, currentConnection, svgRef, onEd
                         fill="none"
                         stroke="transparent"
                         strokeWidth="8"
-                        pointerEvents="auto"
+                        pointerEvents="none"
                     />
                     {/* Visible stroke */}
                     <path

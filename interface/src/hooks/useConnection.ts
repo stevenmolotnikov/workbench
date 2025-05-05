@@ -22,6 +22,19 @@ export function useConnection(): UseConnectionReturn {
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
+    // Add effect to change cursor style when dragging
+    useEffect(() => {
+        if (isDragging) {
+            document.body.style.cursor = 'pointer';
+        } else {
+            document.body.style.cursor = 'default';
+        }
+        
+        return () => {
+            document.body.style.cursor = 'default';
+        };
+    }, [isDragging]);
+
     const clearConnections = () => {
         setConnections([]);
     }
@@ -100,7 +113,10 @@ export function useConnection(): UseConnectionReturn {
         const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
 
         // Don't connect if has already been connected
-        if (checkIfAlreadyConnected(tokenIndices)) return;
+        if (checkIfAlreadyConnected(tokenIndices)) {
+            console.log("already connected");
+            return;
+        };
 
         const rect = tokenElement.getBoundingClientRect();
         const svgRect = svgRef.current?.getBoundingClientRect();
@@ -143,6 +159,8 @@ export function useConnection(): UseConnectionReturn {
         if (isDragging && currentConnection.start) {
             const target = e.target as HTMLElement;
             const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+
+            console.log("up")
             
             // Only connect to token elements
             if (!tokenElement) {
@@ -215,11 +233,27 @@ export function useConnection(): UseConnectionReturn {
             }
         };
 
+        const handleWindowMouseUp = (e: MouseEvent) => {
+            if (isDragging) {
+                // Only clear if we're not over a valid token
+                const target = e.target as HTMLElement;
+                const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+                
+                if (!tokenElement || !isHighlighted(tokenElement)) {
+                    setIsDragging(false);
+                    setCurrentConnection({});
+                }
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('mouseup', handleWindowMouseUp);
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('mouseup', handleWindowMouseUp);
         };
     }, [isDragging, selectedEdgeIndex, handleMouseMove]);
 

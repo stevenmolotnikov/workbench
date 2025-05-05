@@ -12,7 +12,9 @@ import { ChatHistory } from "@/components/ChatHistory";
 import { Conversation } from "@/components/workbench/conversation.types";
 import { ModelSelector } from "./ModelSelector";
 import { LogitLensResponse } from "@/components/workbench/conversation.types";
+import { Textarea } from "@/components/ui/textarea";
 
+import { Layout } from "@/types/layout";
 import { cn } from "@/lib/utils";
 import { ChartSelector } from "@/components/charts/ChartSelector";
 import {
@@ -29,12 +31,20 @@ type WorkbenchMode = "logit-lens" | "activation-patching";
 
 interface LogitLensProps {
     modelLoadStatus: ModelLoadStatus;
-    setModelLoadStatus: (status: ModelLoadStatus) => void;  
+    setModelLoadStatus: (status: ModelLoadStatus) => void;
     workbenchMode: WorkbenchMode;
     setWorkbenchMode: (mode: WorkbenchMode) => void;
 }
 
-export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode}: LogitLensProps) {
+interface Annotation {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    timestamp: number;
+}
+
+export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode }: LogitLensProps) {
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
     const [savedConversations, setSavedConversations] = useState<Conversation[]>([]);
@@ -42,6 +52,11 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
 
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    
+    // Lifted state for annotations
+    const [annotations, setAnnotations] = useState<Annotation[]>([]);
+    const [activeAnnotation, setActiveAnnotation] = useState<{x: number, y: number} | null>(null);
+    const [annotationText, setAnnotationText] = useState("");
 
     const handleRun = async () => {
         setIsLoading(true);
@@ -54,7 +69,7 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
                 },
                 body: JSON.stringify({ conversations: activeConversations }),
             });
-            const data: LogitLensResponse = await response.json();
+            const data = await response.json();
             setChartData(data);
         } catch (error) {
             console.error('Error sending request:', error);
@@ -137,6 +152,33 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
         ));
     };
 
+    const [layout, setLayout] = useState<Layout>("1x1");
+
+    // Annotation handlers
+    const addAnnotation = () => {
+        if (!activeAnnotation || !annotationText.trim()) return;
+        
+        const newAnnotation: Annotation = {
+          id: Date.now().toString(),
+          x: activeAnnotation.x,
+          y: activeAnnotation.y,
+          text: annotationText.trim(),
+          timestamp: Date.now(),
+        };
+        
+        setAnnotations(prev => [...prev, newAnnotation]);
+        setActiveAnnotation(null);
+        setAnnotationText("");
+    };
+
+    const cancelAnnotation = () => {
+        setActiveAnnotation(null);
+        setAnnotationText("");
+    };
+
+    const deleteAnnotation = (id: string) => {
+        setAnnotations(prev => prev.filter(a => a.id !== id));
+    };
 
     // Handler to update model load status based on boolean from child
     const handleModelLoadStatusUpdate = (success: boolean) => {
@@ -158,28 +200,9 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <div className="p-4 border-b flex items-center justify-between">
-                    <WorkbenchMode workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" disabled={true}>
-                            <Code size={16} />
-                            Code
-                        </Button>
-                        <Button
-                            size="sm"
-                            onClick={handleRun}
-                            className={cn({
-                                "opacity-50": activeConversations.length === 0
-                            })}
-                        >
-                            <Play size={16} />
-                            Run
-                        </Button>
-                    </div>
-                </div>
-
+                <WorkbenchMode setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
                 <div className="flex flex-1 min-h-0">
-                    <div className="w-[40%] border-r flex flex-col">
+                    <div className="w-[35%] border-r flex flex-col">
                         <div className="p-4 border-b">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-sm font-medium">Model</h2>
@@ -237,7 +260,75 @@ export function LogitLens({modelLoadStatus, setModelLoadStatus, workbenchMode, s
                     </div>
 
                     {/* Container for charts */}
-                    <ChartSelector chartData={chartData} isLoading={isLoading} />
+                    <div className="w-[35%] border-r flex flex-col">
+                        <ChartSelector 
+                            layout={layout} 
+                            chartData={chartData} 
+                            isLoading={isLoading}
+                            annotations={annotations}
+                            setAnnotations={setAnnotations}
+                            activeAnnotation={activeAnnotation}
+                            setActiveAnnotation={setActiveAnnotation}
+                            annotationText={annotationText}
+                            setAnnotationText={setAnnotationText}
+                            addAnnotation={addAnnotation}
+                            cancelAnnotation={cancelAnnotation}
+                            deleteAnnotation={deleteAnnotation}
+                        />
+                    </div>
+
+                    {/* Annotations panel */}
+                    <div className="w-[30%] flex flex-col">
+                        <div className="p-4 border-b">
+                            <h2 className="text-sm font-medium">Annotations</h2>
+                        </div>
+                        <div className="flex-1 overflow-auto p-4">
+                            {/* Annotation input form */}
+                            {activeAnnotation && (
+                                <div className="mb-6 p-4 border rounded-md">
+                                    <p className="text-sm font-medium mb-2">Add Annotation at Layer {activeAnnotation.x}</p>
+                                    <Textarea
+                                        className="w-full mb-3"
+                                        placeholder="Enter your annotation here..."
+                                        value={annotationText}
+                                        onChange={(e) => setAnnotationText(e.target.value)}
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" onClick={cancelAnnotation}>
+                                            Cancel
+                                        </Button>
+                                        <Button size="sm" onClick={addAnnotation}>
+                                            Add
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Annotations list */}
+                            {annotations.length === 0 && !activeAnnotation ? (
+                                <p className="text-sm text-muted-foreground">No annotations yet. Click on a chart to add annotations.</p>
+                            ) : (
+                                <div className="flex flex-col gap-3">
+                                    {annotations.map((annotation) => (
+                                        <div key={annotation.id} className="flex items-start justify-between rounded-md border p-3 text-sm">
+                                            <div>
+                                                <p className="font-medium mb-1">Layer: {annotation.x}</p>
+                                                <p>{annotation.text}</p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0"
+                                                onClick={() => deleteAnnotation(annotation.id)}
+                                            >
+                                                &times;
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

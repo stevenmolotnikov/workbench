@@ -12,11 +12,10 @@ import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { useConnection } from "@/hooks/useConnection";
 import config from "@/lib/config";
-import GridAnimation from "@/components/charts/GridAnimation";
-import { GridAnimationProvider } from "@/components/charts/GridAnimationContext";
 
 
 import ComponentDropdown from "./ComponentDropdown";
+import { Layout } from "@/types/layout";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -52,15 +51,15 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         selectedTokenIndices: [],
     }
 
-    
+
 
     const [source, setSource] = useState<Conversation>(defaultConversation);
     const [destination, setDestination] = useState<Conversation>({ ...defaultConversation, id: "2" });
-    const [position, setPosition] = useState("bottom")
+    // const [position, setPosition] = useState("bottom");
 
-    const [patchTokens, setPatchTokens] = useState(false);
-
+    // const [patchTokens, setPatchTokens] = useState(false);
     const connectionsHook = useConnection();
+    const [layout, setLayout] = useState<Layout>("1x1");
 
     const handleRun = async () => {
         setChartData(null);
@@ -94,46 +93,44 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
     };
 
     return (
-        <GridAnimationProvider>
-            <div className="flex flex-1 min-h-0">
-                {/* Left sidebar */}
-                <div className="w-64 border-r ">
-                    <ChatHistory savedConversations={[]} onLoadConversation={() => { }} activeConversationIds={[]} />
-                </div>
+        <div className="flex flex-1 min-h-0">
+            {/* Left sidebar */}
+            <div className="w-64 border-r ">
+                <ChatHistory savedConversations={[]} onLoadConversation={() => { }} activeConversationIds={[]} />
+            </div>
 
-                {/* Main content */}
-                <div className="flex-1 flex flex-col">
-                    {/* Top bar within main content */}
-                    <WorkbenchMode workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} handleRun={handleRun} />
+            {/* Main content */}
+            <div className="flex-1 flex flex-col">
+                {/* Top bar within main content */}
+                <WorkbenchMode setLayout={setLayout} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} handleRun={handleRun} />
 
-                    <div className="flex flex-1 min-h-0">
-                        <div className="w-[40%] border-r flex flex-col">
-                            <div className="p-4 border-b">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-sm font-medium">Model</h2>
-                                    <div className="flex items-center gap-2">
-                                        <ModelSelector
-                                            modelName={modelName}
-                                            setModelName={setModelName}
-                                            setModelType={setModelType}
-                                            setLoaded={handleModelLoadStatusUpdate}
-                                        />
-                                        <ComponentDropdown />
-
+                <div className="flex flex-1 min-h-0">
+                    <div className="w-[40%] border-r flex flex-col">
+                        <div className="p-4 border-b">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-medium">Model</h2>
+                                <div className="flex items-center gap-2">
+                                    <ModelSelector
+                                        modelName={modelName}
+                                        setModelName={setModelName}
+                                        setModelType={setModelType}
+                                        setLoaded={handleModelLoadStatusUpdate}
+                                    />
+                                    <ComponentDropdown />
 
 
-                                    </div>
 
                                 </div>
-                            </div>
 
-                            <PatchingWorkbench connectionsHook={connectionsHook} source={source} destination={destination} setSource={setSource} setDestination={setDestination} />
+                            </div>
                         </div>
 
-                        {/* <GridAnimation /> */}
+                        <PatchingWorkbench connectionsHook={connectionsHook} source={source} destination={destination} setSource={setSource} setDestination={setDestination} />
                     </div>
+
+                    <ChartSelector layout={layout} chartData={chartData} isLoading={isLoading} />
                 </div>
             </div>
-        </GridAnimationProvider>
+        </div>
     );
 }

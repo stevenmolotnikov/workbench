@@ -13,7 +13,7 @@ interface ConnectableTokenAreaProps {
     isConnecting?: boolean;
     connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
     connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
-    counterId?: number;
+    counterId: number;
     onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
 }
 
@@ -67,8 +67,6 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
                     // Process in browser only
                     if (typeof window !== 'undefined') {
                         const tokens = await tokenizer.tokenize(textToTokenize, { add_special_tokens: false });
-
-                        console.log('tokens', tokens);
 
                         if (!isMounted) return;
 
@@ -139,6 +137,16 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
         </div>
     );
 
+    const mouseDownHandler = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isConnecting && counterId === 0) {
+            connectionMouseDown?.(e, counterId);
+        } else if (isConnecting && counterId !== 0) {
+            return;
+        } else {
+            handleMouseDown(e);
+        }
+    }
+
     const renderContent = () => {
         if (!tokenData) return null;
 
@@ -147,8 +155,8 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
                 <div
                     className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
                     ref={containerRef}
-                    onMouseDown={isConnecting ? (e) => connectionMouseDown?.(e, 0) : handleMouseDown}
-                    onMouseUp={isConnecting ? (e) => connectionMouseUp?.(e, 0) : handleMouseUp}
+                    onMouseDown={mouseDownHandler}
+                    onMouseUp={isConnecting ? (e) => connectionMouseUp?.(e, counterId) : handleMouseUp}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseUp}
                 >
@@ -161,7 +169,7 @@ export function ConnectableTokenArea({ text, model, isConnecting, connectionMous
 
                         const styles = cn(
                             'text-sm whitespace-pre border select-none',
-                            (isHighlighted && isConnecting) && 'cursor-grab',
+                            (isHighlighted && isConnecting && counterId === 0) && 'cursor-pointer',
                             !isHighlighted && 'rounded',
                             isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
                             isHighlighted && isGroupEnd && !isGroupStart && 'rounded-r',

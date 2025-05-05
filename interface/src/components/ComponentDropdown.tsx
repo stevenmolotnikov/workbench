@@ -11,25 +11,14 @@ import {
 import { Button } from "./ui/button";
 import { ChartArea } from "lucide-react";
 import { useState } from "react";
-import { useGridAnimation } from "@/components/charts/GridAnimationContext";
 
 export default function ComponentDropdown() {
     const [patchTokens, setPatchTokens] = useState(false);
     const [position, setPosition] = useState("top");
 
-    const { currentLayout, setCurrentLayout, triggerAnimation, isAnimating } = useGridAnimation()
-
-    const handlePatchTokensChange = (checked: boolean) => {
-        setPatchTokens(checked);
-        setCurrentLayout(checked ? "grid" : "line");
-    }
 
     return (
-        <DropdownMenu onOpenChange={(open) => {
-            if (open) {
-                triggerAnimation();
-            }
-        }}>
+        <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button className="h-8 w-8" size="icon">
                     <ChartArea />
@@ -38,7 +27,7 @@ export default function ComponentDropdown() {
             <DropdownMenuContent className="w-56">
                 <DropdownMenuCheckboxItem
                     checked={patchTokens}
-                    onCheckedChange={handlePatchTokensChange}
+                    onCheckedChange={setPatchTokens}
                 >
                     Patch Tokens
                 </DropdownMenuCheckboxItem>

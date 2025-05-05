@@ -77,7 +77,7 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
         }
     };
 
-    const tokenArea = (which: string, text: string, model: string, prediction: Prediction) => {
+    const tokenArea = (counterId: number, which: string, text: string, model: string, prediction: Prediction) => {
         return (
             <div className="flex flex-col h-full  bg-card p-4 rounded-md border">
                 <div className="flex flex-row justify-between items-center pb-2">
@@ -93,9 +93,9 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
                     text={text}
                     model={model}
                     isConnecting={isConnecting}
-                    connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
-                    connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
-                    counterId={0}
+                    connectionMouseDown={(e) => handleBoxMouseDown(e, counterId)}
+                    connectionMouseUp={(e) => handleBoxMouseUp(e, counterId)}
+                    counterId={counterId}
                     onTokenUnhighlight={removeConnection}
                 />
             </div>
@@ -145,8 +145,8 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
                         </div>
                     </div>
 
-                    {tokenArea("Source", source.prompt, source.model, sourcePrediction)}
-                    {tokenArea("Destination", destination.prompt, destination.model, destinationPrediction)}
+                    {tokenArea(0, "Source", source.prompt, source.model, sourcePrediction)}
+                    {tokenArea(1, "Destination", destination.prompt, destination.model, destinationPrediction)}
 
                 </div>
 

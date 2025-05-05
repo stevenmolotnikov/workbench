@@ -4,24 +4,23 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LogitLensModes } from "@/components/workbench/modes"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { LayoutGrid } from "lucide-react"
+import { Layout } from "@/types/layout"
 import { TestChart } from "@/components/charts/TestChart"
 import { Plus } from "lucide-react"
 import { LogitLensResponse } from "../workbench/conversation.types"
 
 
-interface ChartSelectorProps {
+interface SelectorProps {
     setConfiguringPosition: (position: number | null) => void;
     isChartSelected: (index: number) => boolean;
     handleAddChart: (index: number) => void;
 }
 
 
-function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: ChartSelectorProps) {
+function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: SelectorProps) {
     return (
 
-        <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-background/50 backdrop-blur-sm"
@@ -29,12 +28,12 @@ function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: C
             ></div>
             {/* Selection Panel */}
             <Card className="relative max-w-md w-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <CardTitle>Select Visualization</CardTitle>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="p-1 h-auto"
+                        className="p-1 h-auto rounded-full"
                         onClick={() => setConfiguringPosition(null)}
                     >
                         <X className="h-4 w-4" />
@@ -46,7 +45,7 @@ function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: C
                             <Card
                                 key={index}
                                 className={cn(
-                                    "flex flex-col items-center transition-colors border",
+                                    "flex flex-col items-center transition-colors rounded-md border",
                                     isChartSelected(index)
                                         ? "opacity-50 cursor-not-allowed bg-muted/30"
                                         : "cursor-pointer hover:bg-muted/60 hover:border-muted-foreground/50"
@@ -73,17 +72,43 @@ function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: C
     );
 }
 
-
-type Layout = "1x1" | "1x2" | "2x2";
-
-interface ChartSelectorProps {
-    chartData: LogitLensResponse;
-    isLoading: boolean;
+interface Annotation {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    timestamp: number;
 }
 
-export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
+interface ChartSelectorProps {
+    layout: Layout;
+    chartData: LogitLensResponse | null;
+    isLoading: boolean;
+    annotations: Annotation[];
+    setAnnotations: (annotations: Annotation[]) => void;
+    activeAnnotation: {x: number, y: number} | null;
+    setActiveAnnotation: (annotation: {x: number, y: number} | null) => void;
+    annotationText: string;
+    setAnnotationText: (text: string) => void;
+    addAnnotation: () => void;
+    cancelAnnotation: () => void;
+    deleteAnnotation: (id: string) => void;
+}
 
-    const [layout, setLayout] = useState<Layout>("1x1")
+export function ChartSelector({
+    layout, 
+    chartData, 
+    isLoading,
+    annotations,
+    setAnnotations,
+    activeAnnotation,
+    setActiveAnnotation,
+    annotationText,
+    setAnnotationText,
+    addAnnotation,
+    cancelAnnotation,
+    deleteAnnotation
+}: ChartSelectorProps) {
     const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([])
     const [configuringPosition, setConfiguringPosition] = useState<number | null>(null)
 
@@ -95,10 +120,8 @@ export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
         switch (layout) {
             case "1x1":
                 return "grid-cols-1";
-            case "1x2":
-                return "grid-cols-2";
-            case "2x2":
-                return "grid-cols-2 grid-rows-2";
+            case "2x1":
+                return "grid-rows-2";
             default:
                 return "grid-cols-1";
         }
@@ -108,10 +131,8 @@ export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
         switch (layout) {
             case "1x1":
                 return 1;
-            case "1x2":
+            case "2x1":
                 return 2;
-            case "2x2":
-                return 4;
             default:
                 return 1;
         }
@@ -140,25 +161,6 @@ export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
     return (
         <div className="flex-1 flex flex-col overflow-hidden custom-scrollbar bg-muted relative">
             {/* Padded container for charts only */}
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="gap-2 z-10 absolute bottom-2 right-2">
-                        <LayoutGrid size={16} />
-                        Layout
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => setLayout("1x1")}>
-                        1x1
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLayout("1x2")}>
-                        1x2
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLayout("2x2")}>
-                        2x2
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
             <div className="flex-1 overflow-auto p-4 ">
                 <div className={`grid ${getLayoutGrid()} gap-4 h-full`}>
                     {Array.from({ length: getBoxCount() }).map((_, index) => (
@@ -176,6 +178,15 @@ export function ChartSelector({chartData, isLoading}: ChartSelectorProps) {
                                         description={LogitLensModes[selectedModes[index]!].description}
                                         data={chartData}
                                         isLoading={isLoading}
+                                        annotations={annotations}
+                                        setAnnotations={setAnnotations}
+                                        activeAnnotation={activeAnnotation}
+                                        setActiveAnnotation={setActiveAnnotation}
+                                        annotationText={annotationText}
+                                        setAnnotationText={setAnnotationText}
+                                        addAnnotation={addAnnotation}
+                                        cancelAnnotation={cancelAnnotation}
+                                        deleteAnnotation={deleteAnnotation}
                                     />
                                 </div>
                             ) : (
