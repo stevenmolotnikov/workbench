@@ -4,18 +4,22 @@ import { useState } from "react";
 
 import { ModelSelector } from "./ModelSelector";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
-import { LogitLensResponse } from "@/components/workbench/conversation.types";
-import { Conversation } from "@/components/workbench/conversation.types";
+import { LogitLensResponse } from "@/types/session";
+import { Conversation } from "@/types/session";
 import { ChatHistory } from "@/components/ChatHistory";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { useConnection } from "@/hooks/useConnection";
+import { useConversations } from "@/hooks/useConversations";
+import { useAnnotations } from "@/hooks/useAnnotations";
 import config from "@/lib/config";
 
+import { ResizableLayout } from "@/components/Layout";
 
 import ComponentDropdown from "./ComponentDropdown";
 import { Layout } from "@/types/layout";
+import { Annotations } from "@/components/charts/Annotations";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -31,9 +35,31 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
 
+    const {
+        savedConversations,
+        activeConversations,
+        handleLoadConversation,
+        handleSaveConversation,
+        handleDeleteConversation,
+        handleUpdateConversation,
+        handleIDChange
+    } = useConversations();
+
+    const {
+        annotations,
+        setAnnotations,
+        activeAnnotation,
+        setActiveAnnotation,
+        annotationText,
+        setAnnotationText,
+        addAnnotation,
+        cancelAnnotation,
+        deleteAnnotation
+    } = useAnnotations();
 
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [layout, setLayout] = useState<Layout>("1x1");
 
     // Handler to update model load status based on boolean from child
     const handleModelLoadStatusUpdate = (success: boolean) => {
@@ -51,20 +77,16 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         selectedTokenIndices: [],
     }
 
-
-
     const [source, setSource] = useState<Conversation>(defaultConversation);
     const [destination, setDestination] = useState<Conversation>({ ...defaultConversation, id: "2" });
     // const [position, setPosition] = useState("bottom");
 
     // const [patchTokens, setPatchTokens] = useState(false);
     const connectionsHook = useConnection();
-    const [layout, setLayout] = useState<Layout>("1x1");
 
     const handleRun = async () => {
+        setIsLoading(true);
         setChartData(null);
-
-        console.log(modelName);
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.patch), {
                 method: 'POST',
@@ -82,13 +104,13 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
                     patch_tokens: true,
                 }),
             });
-            // const data: PatchResponse = await response.json();
-            // setChartData(data);
+            const data = await response.json();
+            setChartData(data);
         } catch (error) {
             console.error('Error sending request:', error);
             setChartData(null);
         } finally {
-            console.log("Done");
+            setIsLoading(false);
         }
     };
 
@@ -96,40 +118,73 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div className="w-64 border-r ">
-                <ChatHistory savedConversations={[]} onLoadConversation={() => { }} activeConversationIds={[]} />
+                <ChatHistory
+                    savedConversations={savedConversations}
+                    onLoadConversation={handleLoadConversation}
+                    activeConversationIds={activeConversations.map(conv => conv.id)}
+                />
             </div>
 
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <WorkbenchMode setLayout={setLayout} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} handleRun={handleRun} />
+                <WorkbenchMode setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
 
-                <div className="flex flex-1 min-h-0">
-                    <div className="w-[40%] border-r flex flex-col">
-                        <div className="p-4 border-b">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-medium">Model</h2>
-                                <div className="flex items-center gap-2">
-                                    <ModelSelector
-                                        modelName={modelName}
-                                        setModelName={setModelName}
-                                        setModelType={setModelType}
-                                        setLoaded={handleModelLoadStatusUpdate}
-                                    />
-                                    <ComponentDropdown />
-
-
-
+                <ResizableLayout
+                    workbench={
+                        <div className="h-full flex flex-col">
+                            <div className="p-4 border-b">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-sm font-medium">Model</h2>
+                                    <div className="flex items-center gap-2">
+                                        <ModelSelector
+                                            modelName={modelName}
+                                            setModelName={setModelName}
+                                            setModelType={setModelType}
+                                            setLoaded={handleModelLoadStatusUpdate}
+                                        />
+                                        <ComponentDropdown />
+                                    </div>
                                 </div>
-
                             </div>
+
+                            <PatchingWorkbench 
+                                connectionsHook={connectionsHook} 
+                                source={source} 
+                                destination={destination} 
+                                setSource={setSource} 
+                                setDestination={setDestination} 
+                            />
                         </div>
-
-                        <PatchingWorkbench connectionsHook={connectionsHook} source={source} destination={destination} setSource={setSource} setDestination={setDestination} />
-                    </div>
-
-                    <ChartSelector layout={layout} chartData={chartData} isLoading={isLoading} />
-                </div>
+                    }
+                    charts={
+                        <ChartSelector
+                            layout={layout}
+                            chartData={chartData}
+                            isLoading={isLoading}
+                            annotations={annotations}
+                            setAnnotations={setAnnotations}
+                            activeAnnotation={activeAnnotation}
+                            setActiveAnnotation={setActiveAnnotation}
+                            annotationText={annotationText}
+                            setAnnotationText={setAnnotationText}
+                            addAnnotation={addAnnotation}
+                            cancelAnnotation={cancelAnnotation}
+                            deleteAnnotation={deleteAnnotation}
+                        />
+                    }
+                    annotations={
+                        <Annotations
+                            annotations={annotations}
+                            activeAnnotation={activeAnnotation}
+                            annotationText={annotationText}
+                            setAnnotationText={setAnnotationText}
+                            addAnnotation={addAnnotation}
+                            cancelAnnotation={cancelAnnotation}
+                            deleteAnnotation={deleteAnnotation}
+                        />
+                    }
+                />
             </div>
         </div>
     );

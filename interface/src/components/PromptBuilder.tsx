@@ -4,7 +4,7 @@ import { Trash, Save, Sparkle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConversationBuilder } from "@/components/prompt-builders/ConversationBuilder";
 import { SinglePromptBuilder } from "@/components/prompt-builders/SinglePromptBuilder";
-import { Conversation } from "@/components/workbench/conversation.types";
+import { Conversation } from "@/types/session";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 

@@ -4,7 +4,7 @@ import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
-import { Message } from "@/components/workbench/conversation.types";
+import { Message } from "@/types/session";
 
 interface ConversationBuilderProps {
     messages: Message[];

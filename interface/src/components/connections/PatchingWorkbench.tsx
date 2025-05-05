@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Conversation } from "../workbench/conversation.types";
+import { Conversation } from "@/types/session";
 
 import { Route, RouteOff, RotateCcw, Sparkle } from "lucide-react";
 import { useConnection } from '../../hooks/useConnection';

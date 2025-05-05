@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Layout } from "@/types/layout"
 import { TestChart } from "@/components/charts/TestChart"
 import { Plus } from "lucide-react"
-import { LogitLensResponse } from "../workbench/conversation.types"
+import { LogitLensResponse } from "@/types/session"
 
 
 interface SelectorProps {
@@ -159,7 +159,7 @@ export function ChartSelector({
 
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden custom-scrollbar bg-muted relative">
+        <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
             {/* Padded container for charts only */}
             <div className="flex-1 overflow-auto p-4 ">
                 <div className={`grid ${getLayoutGrid()} gap-4 h-full`}>

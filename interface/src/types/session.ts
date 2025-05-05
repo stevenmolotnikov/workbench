@@ -34,3 +34,11 @@ export interface Model {
     name: string;
     type: "chat" | "base";
 }
+
+export interface Annotation {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    timestamp: number;
+}
