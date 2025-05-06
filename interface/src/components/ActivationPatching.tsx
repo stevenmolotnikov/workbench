@@ -4,21 +4,18 @@ import { useState } from "react";
 
 import { ModelSelector } from "./ModelSelector";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
-import { LogitLensResponse } from "@/types/session";
-import { Conversation } from "@/types/session";
-import { ChatHistory } from "@/components/ChatHistory";
-
+import { Completion } from "@/types/workspace";
+import { LogitLensResponse } from "@/types/lens";
 import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { useConnection } from "@/hooks/useConnection";
-import { useConversations } from "@/hooks/useConversations";
 import { useAnnotations } from "@/hooks/useAnnotations";
 import config from "@/lib/config";
 
 import { ResizableLayout } from "@/components/Layout";
 
 import ComponentDropdown from "./ComponentDropdown";
-import { Layout } from "@/types/layout";
+import { Layout } from "@/types/workspace";
 import { Annotations } from "@/components/charts/Annotations";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
@@ -35,15 +32,6 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
 
-    const {
-        savedConversations,
-        activeConversations,
-        handleLoadConversation,
-        handleSaveConversation,
-        handleDeleteConversation,
-        handleUpdateConversation,
-        handleIDChange
-    } = useConversations();
 
     const {
         annotations,
@@ -66,22 +54,16 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         setModelLoadStatus(success ? 'success' : 'error');
     };
 
-    const defaultConversation: Conversation = {
-        id: "1",
-        type: "base",
-        messages: [],
-        isExpanded: true,
-        model: "EleutherAI/gpt-j-6b",
-        name: "Test",
-        prompt: "",
-        selectedTokenIndices: [],
+    const makeDefaultCompletion = (name: string): Completion => {
+        return {
+            id: name,
+            prompt: ""
+        }
     }
 
-    const [source, setSource] = useState<Conversation>(defaultConversation);
-    const [destination, setDestination] = useState<Conversation>({ ...defaultConversation, id: "2" });
-    // const [position, setPosition] = useState("bottom");
+    const [source, setSource] = useState<Completion>(makeDefaultCompletion("source"));
+    const [destination, setDestination] = useState<Completion>(makeDefaultCompletion("destination"));
 
-    // const [patchTokens, setPatchTokens] = useState(false);
     const connectionsHook = useConnection();
 
     const handleRun = async () => {
@@ -118,11 +100,11 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div className="w-64 border-r ">
-                <ChatHistory
+                {/* <ChatHistory
                     savedConversations={savedConversations}
                     onLoadConversation={handleLoadConversation}
                     activeConversationIds={activeConversations.map(conv => conv.id)}
-                />
+                /> */}
             </div>
 
             {/* Main content */}

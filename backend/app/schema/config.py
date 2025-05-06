@@ -7,7 +7,6 @@ class ModelConfig(BaseModel):
     """Configuration for an individual model."""
 
     name: str
-    serve: bool
     chat: bool
     rename: Dict[str, str]
 
@@ -15,6 +14,7 @@ class ModelConfig(BaseModel):
 class ModelsConfig(BaseModel):
     """Root configuration containing all models."""
 
+    remote: bool
     models: Dict[str, ModelConfig]
 
     def get_model_list(self) -> List[str]:
@@ -25,5 +25,4 @@ class ModelsConfig(BaseModel):
                 "type": "chat" if model.chat else "base",
             }
             for model in self.models.values()
-            if model.serve
         ]

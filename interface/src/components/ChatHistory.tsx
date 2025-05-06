@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, MessagesSquare, FileText, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Conversation } from "@/types/session";
+import { Conversation } from "@/types/workspace";
 import {
     Tooltip,
     TooltipContent,

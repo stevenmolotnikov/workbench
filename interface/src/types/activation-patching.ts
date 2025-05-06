@@ -1,3 +1,11 @@
+import { Annotation } from "@/types/workspace";
+
+export interface ActivationPatchingWorkspace {
+    id: string;
+    annotations: Annotation[];
+    connections: Connection[];
+}
+
 export interface Connection {
     start: { 
         x: number; 

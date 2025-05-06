@@ -15,13 +15,15 @@ def process_name(name):
 
 
 class AppState:
-    def __init__(self):
-        self._login()
-        self.models: Dict[str, LanguageModel] = {}
-        self.config = self._load()
-
-    def _login(self):
+    def __init__(self, config_path: str):
+        # Set NDIF key
         CONFIG.set_default_api_key(os.environ["NDIF_KEY"])
+
+        # Defaults
+        self.models: Dict[str, LanguageModel] = {}
+        self.remote = False
+
+        self.config = self._load(config_path)
 
     def get_model(self, model_name: str):
         return self.models[model_name]
@@ -29,23 +31,22 @@ class AppState:
     def get_config(self):
         return self.config
 
-    def _load(self):
+    def _load(self, config_path: str):
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, "config.toml")
+        config_path = os.path.join(current_dir, config_path)
 
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
 
+        self.remote = config.remote
         hf_token = os.environ["HF_TOKEN"]
 
         for _, cfg in config.models.items():
-            # Load model if served
-            if cfg.serve:
-                model = LanguageModel(
-                    cfg.name, rename=cfg.rename, token=hf_token
-                )
-                model = self._process_model(model)
-                self.models[cfg.name] = model
+            model = LanguageModel(
+                cfg.name, rename=cfg.rename, token=hf_token
+            )
+            model = self._process_model(model)
+            self.models[cfg.name] = model
 
         return config
 

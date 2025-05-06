@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
-import { Model } from "@/types/session";
+import { Model } from "@/types/workspace";
 import { cn } from "@/lib/utils";
 import config from "@/lib/config";
 

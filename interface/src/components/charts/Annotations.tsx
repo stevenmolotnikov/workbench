@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Annotation } from "@/types/session";
+import { Annotation } from "@/types/workspace";
 
 
 interface AnnotationsProps {

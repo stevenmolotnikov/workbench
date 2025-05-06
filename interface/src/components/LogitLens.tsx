@@ -5,27 +5,22 @@ import {
     Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PromptBuilder } from "@/components/PromptBuilder";
-import { ChatHistory } from "@/components/ChatHistory";
+import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { ModelSelector } from "./ModelSelector";
-import { LogitLensResponse } from "@/types/session";
+import { LogitLensResponse } from "@/types/lens";
 
-import { Layout } from "@/types/layout";
-import { cn } from "@/lib/utils";
+import { Layout } from "@/types/workspace";
+
 import { ChartSelector } from "@/components/charts/ChartSelector";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import config from "@/lib/config";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { Annotations } from "@/components/charts/Annotations";
 
 import { ResizableLayout } from "@/components/Layout";
-import { useConversations } from "@/hooks/useConversations";
+import { useLensCompletions } from "@/hooks/useLensCompletions";
 import { useAnnotations } from "@/hooks/useAnnotations";
+
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
 
@@ -36,30 +31,22 @@ interface LogitLensProps {
     setWorkbenchMode: (mode: WorkbenchMode) => void;
 }
 
-interface Annotation {
-    id: string;
-    x: number;
-    y: number;
-    text: string;
-    timestamp: number;
-}
-
 export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode }: LogitLensProps) {
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
-    
+
     const {
-        savedConversations,
-        activeConversations,
-        handleLoadConversation,
-        handleSaveConversation,
-        handleDeleteConversation,
-        handleUpdateConversation,
-        handleIDChange
-    } = useConversations();
+        activeCompletions,
+        handleDeleteCompletion,
+        handleUpdateCompletion,
+        handleNewCompletion
+    } = useLensCompletions();
+
 
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
+
 
     const {
         annotations,
@@ -76,13 +63,14 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
     const handleRun = async () => {
         setIsLoading(true);
         setChartData(null);
+
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.lens), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ conversations: activeConversations }),
+                body: JSON.stringify({ completions: activeCompletions }),
             });
             const data = await response.json();
             setChartData(data);
@@ -106,11 +94,11 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div className="w-64 border-r ">
-                <ChatHistory
+                {/* <ChatHistory
                     savedConversations={savedConversations}
                     onLoadConversation={handleLoadConversation}
                     activeConversationIds={activeConversations.map(conv => conv.id)}
-                />
+                /> */}
             </div>
 
             {/* Main content */}
@@ -133,65 +121,40 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                                             setLoaded={handleModelLoadStatusUpdate}
                                         />
 
-                                        <TooltipProvider>
-                                            <Tooltip delayDuration={0} >
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        size="sm"
-                                                        className={cn("w-100", {
-                                                            "opacity-50": activeConversations.some(conv => conv.id === "Untitled")
-                                                        })}
-                                                        onClick={() => handleLoadConversation({
-                                                            name: "Untitled",
-                                                            type: modelType,
-                                                            model: modelName,
-                                                            id: "Untitled",
-                                                            messages: [{ role: "user", content: "" }],
-                                                            prompt: "",
-                                                            isExpanded: true,
-                                                            isNew: true,
-                                                            selectedTokenIndices: [-1]
-                                                        })}
-                                                    >
-                                                        New
-                                                        <Plus size={16} />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                {activeConversations.some(conv => conv.id === "Untitled") && (
-                                                    <TooltipContent side="right">
-                                                        <p>'Untitled' already exists.</p>
-                                                    </TooltipContent>
-                                                )}
-                                            </Tooltip>
-                                        </TooltipProvider>
+                                        <Button
+                                            size="sm"
+                                            className="w-100"
+                                            onClick={() => handleNewCompletion(modelName)}
+                                        >
+                                            New
+                                            <Plus size={16} />
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
 
                             <PromptBuilder
-                                conversations={activeConversations}
-                                onUpdateConversation={handleUpdateConversation}
-                                onSaveConversation={handleSaveConversation}
-                                onDeleteConversation={handleDeleteConversation}
-                                onIDChange={handleIDChange}
+                                completions={activeCompletions}
+                                onUpdateCompletion={handleUpdateCompletion}
+                                onDeleteCompletion={handleDeleteCompletion}
                             />
                         </div>
                     }
                     charts={
                         <ChartSelector
-                                layout={layout}
-                                chartData={chartData}
-                                isLoading={isLoading}
-                                annotations={annotations}
-                                setAnnotations={setAnnotations}
-                                activeAnnotation={activeAnnotation}
-                                setActiveAnnotation={setActiveAnnotation}
-                                annotationText={annotationText}
-                                setAnnotationText={setAnnotationText}
-                                addAnnotation={addAnnotation}
-                                cancelAnnotation={cancelAnnotation}
-                                deleteAnnotation={deleteAnnotation}
-                            />
+                            layout={layout}
+                            chartData={chartData}
+                            isLoading={isLoading}
+                            annotations={annotations}
+                            setAnnotations={setAnnotations}
+                            activeAnnotation={activeAnnotation}
+                            setActiveAnnotation={setActiveAnnotation}
+                            annotationText={annotationText}
+                            setAnnotationText={setAnnotationText}
+                            addAnnotation={addAnnotation}
+                            cancelAnnotation={cancelAnnotation}
+                            deleteAnnotation={deleteAnnotation}
+                        />
                     }
                     annotations={
                         <Annotations

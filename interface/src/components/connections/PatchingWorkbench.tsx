@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Conversation } from "@/types/session";
+import { Completion, Prediction } from "@/types/workspace";
 
 import { Route, RouteOff, RotateCcw, Sparkle } from "lucide-react";
 import { useConnection } from '../../hooks/useConnection';
@@ -15,16 +15,10 @@ import config from "@/lib/config";
 
 interface PatchingWorkbenchProps {
     connectionsHook: ReturnType<typeof useConnection>;
-    source: Conversation;
-    destination: Conversation;
-    setSource: (conv: Conversation) => void;
-    setDestination: (conv: Conversation) => void;
-}
-
-interface Prediction {
-    id: string;
-    indices: number[];
-    str_indices: string[];
+    source: Completion;
+    destination: Completion;
+    setSource: (conv: Completion) => void;
+    setDestination: (conv: Completion) => void;
 }
 
 export function PatchingWorkbench({ connectionsHook, source, destination, setSource, setDestination }: PatchingWorkbenchProps) {
@@ -38,8 +32,6 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
     const [sourcePrediction, setSourcePrediction] = useState<Prediction>(defaultPrediction);
     const [destinationPrediction, setDestinationPrediction] = useState<Prediction>(defaultPrediction);
-
-
 
     const {
         connections,
@@ -77,7 +69,7 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
         }
     };
 
-    const tokenArea = (counterId: number, which: string, text: string, model: string, prediction: Prediction) => {
+    const tokenArea = (counterId: number, which: string, text: string, prediction: Prediction) => {
         return (
             <div className="flex flex-col h-full  bg-card p-4 rounded-md border">
                 <div className="flex flex-row justify-between items-center pb-2">
@@ -91,7 +83,6 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
 
                 <ConnectableTokenArea
                     text={text}
-                    model={model}
                     isConnecting={isConnecting}
                     connectionMouseDown={(e) => handleBoxMouseDown(e, counterId)}
                     connectionMouseUp={(e) => handleBoxMouseUp(e, counterId)}
@@ -145,8 +136,8 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
                         </div>
                     </div>
 
-                    {tokenArea(0, "Source", source.prompt, source.model, sourcePrediction)}
-                    {tokenArea(1, "Destination", destination.prompt, destination.model, destinationPrediction)}
+                    {tokenArea(0, "Source", source.prompt, sourcePrediction)}
+                    {tokenArea(1, "Destination", destination.prompt, destinationPrediction)}
 
                 </div>
 
@@ -154,7 +145,6 @@ export function PatchingWorkbench({ connectionsHook, source, destination, setSou
             
 
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
-                {/* <h2 className="text-sm font-medium flex items-center">Text Entry</h2> */}
                 <Textarea
                     value={source.prompt}
                     onChange={(e) => setSource(prev => ({ ...prev, prompt: e.target.value }))}

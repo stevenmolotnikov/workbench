@@ -1,15 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Separator } from "@/components/ui/separator";
 import { PreTrainedTokenizer } from '@huggingface/transformers';
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenData, TokenizerOutput } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 
+interface Prediction {
+    str_indices: string[];
+    indices: number[];
+}
+
 interface TokenAreaProps {
     text: string | { role: string; content: string }[] | null;
     isLoading?: boolean;
+    prediction: Prediction;
     onTokenSelection?: (indices: number[]) => void;
 }
 
@@ -17,7 +22,7 @@ interface TokenAreaProps {
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-export function TokenArea({ text, isLoading = false, onTokenSelection }: TokenAreaProps) {
+export function TokenArea({ prediction, text, isLoading = false, onTokenSelection }: TokenAreaProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -61,7 +66,6 @@ export function TokenArea({ text, isLoading = false, onTokenSelection }: TokenAr
                 }
 
                 if (textToTokenize && typeof textToTokenize === 'string' && textToTokenize.trim()) {
-                    // Process in browser only
                     if (typeof window !== 'undefined') {
                         const tokens = await tokenizer.tokenize(textToTokenize, { add_special_tokens: false });
 
@@ -117,18 +121,14 @@ export function TokenArea({ text, isLoading = false, onTokenSelection }: TokenAr
 
     const renderLoading = () => (
         <>
-            <div className="text-xs text-muted-foreground">
-                loading...
-            </div>
-            <Separator className="my-2" />
-            <div className="flex items-center justify-between text-xs">
-                <span>Token Count: ?</span>
+            <div className="text-sm text-muted-foreground">
+                Loading Tokenizer...
             </div>
         </>
     );
 
     const renderError = () => (
-        <div className="text-red-500 text-xs p-4">
+        <div className="text-red-500 text-sm">
             {error}
         </div>
     );
@@ -137,61 +137,49 @@ export function TokenArea({ text, isLoading = false, onTokenSelection }: TokenAr
         if (!tokenData) return null;
 
         return (
-            <>
-                <div
-                    className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
-                    ref={containerRef}
-                    onMouseDown={handleMouseDown}
-                    onMouseUp={handleMouseUp}
-                    onMouseMove={handleMouseMove}
-                    onMouseLeave={handleMouseUp}
-                >
-                    {tokenData.tokens.map((token, i) => {
-                        const fixedText = fixToken(token.text);
-                        const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(i, tokenData);
-                        const highlightStyle = 'bg-primary/50 border-primary/50';
-                        const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50';
+            <div
+                className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
+                ref={containerRef}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseUp}
+            >
+                {tokenData.tokens.map((token, i) => {
+                    const fixedText = fixToken(token.text);
+                    const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(i, tokenData);
+                    const highlightStyle = 'bg-primary/50 border-primary/50';
+                    const hoverStyle = 'hover:bg-primary/50 hover:border-primary/50';
 
-                        const styles = cn(
-                            'text-xs whitespace-pre border select-none',
-                            !isHighlighted && 'rounded',
-                            isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
-                            isHighlighted && isGroupEnd && !isGroupStart && 'rounded-r',
-                            isHighlighted && isGroupStart && isGroupEnd && 'rounded',
-                            isHighlighted && !isGroupStart && !isGroupEnd && 'rounded-none',
-                            isHighlighted ? highlightStyle : 'border-transparent',
-                            hoverStyle,
-                            fixedText === '\\n' ? 'w-full' : 'w-fit'
-                        );
+                    const styles = cn(
+                        'text-sm whitespace-pre border select-none',
+                        !isHighlighted && 'rounded',
+                        isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
+                        isHighlighted && isGroupEnd && !isGroupStart && 'rounded-r',
+                        isHighlighted && isGroupStart && isGroupEnd && 'rounded',
+                        isHighlighted && !isGroupStart && !isGroupEnd && 'rounded-none',
+                        isHighlighted ? highlightStyle : 'border-transparent',
+                        hoverStyle,
+                        fixedText === '\\n' ? 'w-full' : 'w-fit'
+                    );
 
-                        return (
-                            <div
-                                key={`token-${i}`}
-                                data-token-id={i}
-                                className={styles}
-                            >
-                                {fixedText}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <Separator className="my-2" />
-
-                <div className="flex items-center justify-between text-xs">
-                    <span>Token Count: {tokenData.count}</span>
-                    {highlightedTokens.length > 0 && (
-                        <span className="text-xs ml-1">
-                            ({highlightedTokens.length} selected)
-                        </span>
-                    )}
-                </div>
-            </>
+                    return (
+                        <div
+                            key={`token-${i}`}
+                            data-token-id={i}
+                            className={styles}
+                        >
+                            {fixedText}
+                        </div>
+                    );
+                })}
+            </div>
         );
     };
 
     return (
-        <div className="p-4">
+
+        <div className="flex flex-col h-full bg-card p-4 rounded-md border">
             {isLoading || isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error

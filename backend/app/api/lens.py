@@ -8,12 +8,12 @@ from ..state import AppState
 
 router = APIRouter()
 
-def logit_lens(model, model_tasks):
+def logit_lens(model, model_tasks, remote: bool):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))[:,]
 
     all_results = []
-    with model.trace(remote=True) as tracer:
+    with model.trace(remote=remote) as tracer:
         for task in model_tasks:
             # Get user queried indices
             idxs = task["selected_token_indices"]
@@ -72,18 +72,18 @@ def process_results(model, results):
 def preprocess(lens_request: LensRequest, state: AppState):
     # Batch prompts for the same model
     tasks = defaultdict(list)
-    for conversation in lens_request.conversations:
+    for completion in lens_request.completions:
         task = {
-            "prompt": conversation.prompt,
-            "selected_token_indices": conversation.selectedTokenIndices,
+            "prompt": completion.prompt,
+            "selected_token_indices": completion.selectedTokenIndices,
         }
-        tasks[conversation.model].append(task)
+        tasks[completion.model].append(task)
 
     # Compute logit lens for each model
     all_results = []
     for model_name, model_tasks in tasks.items():
         model = state.get_model(model_name)
-        results = logit_lens(model, model_tasks)
+        results = logit_lens(model, model_tasks, state.remote)
 
         for instance_idx, instance_results in enumerate(results):
             processed_results = process_results(model, instance_results)

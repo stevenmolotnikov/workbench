@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface ConnectableTokenAreaProps {
     text: string | { role: string; content: string }[] | null;
-    model: string;
+    model?: string;
     isConnecting?: boolean;
     connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
     connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;

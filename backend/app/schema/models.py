@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from .base import Conversation
+from .base import Completion
 
 class ExecuteRequest(BaseModel):
-    conversations: List[Conversation]
+    completions: List[Completion]

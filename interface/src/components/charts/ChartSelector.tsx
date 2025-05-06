@@ -4,10 +4,10 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LogitLensModes } from "@/components/workbench/modes"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Layout } from "@/types/layout"
+import { Layout } from "@/types/workspace"
 import { TestChart } from "@/components/charts/TestChart"
 import { Plus } from "lucide-react"
-import { LogitLensResponse } from "@/types/session"
+import { LogitLensResponse } from "@/types/lens"
 
 
 interface SelectorProps {

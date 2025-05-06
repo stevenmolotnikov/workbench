@@ -2,7 +2,7 @@ from typing import List, Literal
 
 from pydantic import BaseModel, model_validator
 
-from .base import Conversation
+from .base import Completion
 
 class Point(BaseModel):
     token_index: List[int]
@@ -14,8 +14,8 @@ class Connection(BaseModel):
 
 class PatchRequest(BaseModel):
     model: str
-    source: Conversation
-    destination: Conversation
+    source: Completion
+    destination: Completion
     connections: List[Connection]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
     patch_tokens: bool

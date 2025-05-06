@@ -7,7 +7,7 @@ from ..state import AppState
 router = APIRouter()
 
 
-def patch_tokens(model, patch_request, submodules):
+def patch_tokens(model, patch_request, submodules, remote: bool):
     source_prompt = patch_request.source.prompt
     destination_tokens = model.tokenizer.encode(
         patch_request.destination.prompt
@@ -21,7 +21,7 @@ def patch_tokens(model, patch_request, submodules):
 
     eps = 1e-6
 
-    with model.session(remote=True):
+    with model.session(remote=remote):
         source_activations = []
 
         with model.trace(source_prompt):
@@ -67,11 +67,11 @@ def patch_tokens(model, patch_request, submodules):
         return results
 
 
-def patch_blocks(model, patch_request, submodules):
+def patch_blocks(model, patch_request, submodules, remote: bool):
     pass
 
 
-def patch_heads(model, patch_request, submodules):
+def patch_heads(model, patch_request, submodules, remote: bool):
     pass
 
 
@@ -87,11 +87,11 @@ def activation_patching(patch_request: PatchRequest, state: AppState):
             submodules = model.model.layers
 
     if patch_request.patch_tokens:
-        return patch_tokens(model, patch_request, submodules)
+        return patch_tokens(model, patch_request, submodules, state.remote)
     elif patch_request.submodule == "blocks":
-        return patch_blocks(model, patch_request, submodules)
+        return patch_blocks(model, patch_request, submodules, state.remote)
     elif patch_request.submodule == "heads":
-        return patch_heads(model, patch_request, submodules)
+        return patch_heads(model, patch_request, submodules, state.remote)
 
 
 @router.post("/patch")

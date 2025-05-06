@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LayoutGrid } from "lucide-react"
-import { Layout } from "@/types/layout";
+import { Layout } from "@/types/workspace";
 
 type WorkbenchMode = "logit-lens" | "activation-patching";
 

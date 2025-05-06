@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import lens, patch, models
 from .state import AppState
 
-def _fastapi_app():
+def _fastapi_app(config_path: str = "config.toml"):
     app = FastAPI()
 
     app.add_middleware(
@@ -15,15 +15,13 @@ def _fastapi_app():
         allow_headers=["*"],
         expose_headers=["*"],
         max_age=3600,
-    )
-
-    
+    )    
 
     app.include_router(lens, prefix="/api")
     app.include_router(patch, prefix="/api")
     app.include_router(models, prefix="/api")
     
-    app.state.m = AppState()
+    app.state.m = AppState(config_path)
 
     @app.get("/models")
     async def get_models():

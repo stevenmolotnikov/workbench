@@ -4,11 +4,12 @@
 # model.ln_f
 # model.lm_head
 
+remote = true
+
 [models]
 
 [models.one]
 name = "EleutherAI/gpt-j-6b"
-serve = true
 chat = false
 
 [models.one.rename]
@@ -17,7 +18,6 @@ h = "layers"
 
 [models.two]
 name = "meta-llama/Meta-Llama-3.1-8B"
-serve = true
 chat = false
 
 [models.two.rename]
@@ -26,7 +26,6 @@ self_attn = "attn"
 
 # [models.three]
 # name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
-# serve = false
 # chat = true
 
 # [models.three.rename]
@@ -34,7 +33,6 @@ self_attn = "attn"
 
 # [models.four]
 # name = "meta-llama/Meta-Llama-3.1-70B"
-# serve = true
 # chat = false
 
 # [models.four.rename]
@@ -42,7 +40,6 @@ self_attn = "attn"
 
 # [models.five]
 # name = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
-# serve = true
 # chat = false
 
 # [models.five.rename]
@@ -50,7 +47,6 @@ self_attn = "attn"
 
 # [models.six]
 # name = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B"
-# serve = true
 # chat = false
 
 # [models.six.rename]

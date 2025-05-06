@@ -1,0 +1,25 @@
+export type Layout = "1x1" | "2x1";
+
+export interface Prediction {
+    id: string;
+    indices: number[];
+    str_indices: string[];
+}
+
+export interface Completion { 
+    id: string;
+    prompt: string;
+}
+
+export interface Model {
+    name: string;
+    type: "chat" | "base";
+}
+
+export interface Annotation {
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+    timestamp: number;
+}

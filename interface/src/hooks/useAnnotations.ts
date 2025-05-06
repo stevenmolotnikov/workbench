@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Annotation } from '@/types/session';
+import { Annotation } from '@/types/workspace';
 
 export function useAnnotations() {
     const [annotations, setAnnotations] = useState<Annotation[]>([]);

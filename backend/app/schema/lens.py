@@ -2,13 +2,12 @@ from typing import List
 
 from pydantic import BaseModel
 
-from .base import Conversation
+from .base import Completion
 
 class LayerResults(BaseModel):
     layer_idx: int
     pred_probs: List[float]
     preds: List[str]
-
 
 class ModelResults(BaseModel):
     model_name: str
@@ -17,5 +16,10 @@ class ModelResults(BaseModel):
 class LensResponse(BaseModel):
     model_results: List[ModelResults]
 
+class LensCompletion(Completion):
+    model: str
+    name: str
+    selectedTokenIndices: List[int]
+
 class LensRequest(BaseModel):
-    conversations: List[Conversation]
+    completions: List[LensCompletion]

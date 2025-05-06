@@ -1,0 +1,18 @@
+# STANDARD NAMING:
+# model.layers.i.attn
+# model.layers.i.mlp
+# model.ln_f
+# model.lm_head
+
+remote = false
+
+[models]
+
+[models.one]
+name = "EleutherAI/pythia-70m-deduped"
+chat = false
+
+[models.one.rename]
+gpt_neox = "model"
+embed_out = "lm_head"
+final_layer_norm = "ln_f"
