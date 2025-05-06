@@ -6,23 +6,40 @@ export function useAnnotations() {
     const [activeAnnotation, setActiveAnnotation] = useState<{ x: number, y: number } | null>(null);
     const [annotationText, setAnnotationText] = useState("");
 
+    const handleSetActiveAnnotation = (coords: { x: number, y: number } | null) => {
+        if (coords) {
+            const newAnnotation: Annotation = {
+                id: Date.now().toString(),
+                x: coords.x,
+                y: coords.y,
+                text: "",
+                timestamp: Date.now(),
+            };
+            setAnnotations(prev => [...prev, newAnnotation]);
+        }
+        setActiveAnnotation(coords);
+    };
+
     const addAnnotation = () => {
-        if (!activeAnnotation || !annotationText.trim()) return;
+        if (!annotationText.trim()) return;
 
-        const newAnnotation: Annotation = {
-            id: Date.now().toString(),
-            x: activeAnnotation.x,
-            y: activeAnnotation.y,
-            text: annotationText.trim(),
-            timestamp: Date.now(),
-        };
-
-        setAnnotations(prev => [...prev, newAnnotation]);
+        setAnnotations(prev => {
+            const updated = [...prev];
+            const lastIndex = updated.length - 1;
+            if (lastIndex >= 0) {
+                updated[lastIndex] = {
+                    ...updated[lastIndex],
+                    text: annotationText.trim()
+                };
+            }
+            return updated;
+        });
         setActiveAnnotation(null);
         setAnnotationText("");
     };
 
     const cancelAnnotation = () => {
+        setAnnotations(prev => prev.slice(0, -1));
         setActiveAnnotation(null);
         setAnnotationText("");
     };
@@ -35,11 +52,11 @@ export function useAnnotations() {
         annotations,
         setAnnotations,
         activeAnnotation,
-        setActiveAnnotation,
+        setActiveAnnotation: handleSetActiveAnnotation,
         annotationText,
         setAnnotationText,
         addAnnotation,
         cancelAnnotation,
         deleteAnnotation
     };
-} 
+}

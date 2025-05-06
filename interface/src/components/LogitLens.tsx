@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Plus,
 } from "lucide-react";
@@ -33,7 +33,7 @@ interface LogitLensProps {
 
 export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode }: LogitLensProps) {
     const [modelType, setModelType] = useState<"chat" | "base">("base");
-    const [modelName, setModelName] = useState<string>("EleutherAI/gpt-j-6b");
+    const [modelName, setModelName] = useState<string>("");
 
     const {
         activeCompletions,
@@ -42,15 +42,19 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
         handleNewCompletion
     } = useLensCompletions();
 
+    // Add a completion when model successfully loads
+    useEffect(() => {
+        if (modelLoadStatus === 'success' && modelName !== "") {
+            handleNewCompletion(modelName);
+        }
+    }, [modelLoadStatus]); // Only run when model load status changes
 
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
 
-
     const {
         annotations,
-        setAnnotations,
         activeAnnotation,
         setActiveAnnotation,
         annotationText,
@@ -73,6 +77,8 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                 body: JSON.stringify({ completions: activeCompletions }),
             });
             const data = await response.json();
+
+            console.log(data);
             setChartData(data);
         } catch (error) {
             console.error('Error sending request:', error);
@@ -146,14 +152,7 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                             chartData={chartData}
                             isLoading={isLoading}
                             annotations={annotations}
-                            setAnnotations={setAnnotations}
-                            activeAnnotation={activeAnnotation}
                             setActiveAnnotation={setActiveAnnotation}
-                            annotationText={annotationText}
-                            setAnnotationText={setAnnotationText}
-                            addAnnotation={addAnnotation}
-                            cancelAnnotation={cancelAnnotation}
-                            deleteAnnotation={deleteAnnotation}
                         />
                     }
                     annotations={

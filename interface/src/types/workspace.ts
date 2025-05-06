@@ -23,3 +23,13 @@ export interface Annotation {
     text: string;
     timestamp: number;
 }
+
+interface TokenPrediction {
+    str_idxs: string[];
+    values: number[];
+    indices: number[];
+}
+
+export interface TokenPredictions {
+    [token_index: number]: TokenPrediction;
+}

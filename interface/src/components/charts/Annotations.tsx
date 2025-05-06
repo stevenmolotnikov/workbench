@@ -56,7 +56,7 @@ export function Annotations({
                     <p className="text-sm text-muted-foreground">No annotations yet. Click on a chart to add annotations.</p>
                 ) : (
                     <div className="flex flex-col gap-3">
-                        {annotations.map((annotation) => (
+                        {annotations.map((annotation) => annotation.text !== "" && (
                             <div key={annotation.id} className="flex items-start justify-between rounded-md border p-3 text-sm">
                                 <div>
                                     <p className="font-medium mb-1">Layer: {annotation.x}</p>

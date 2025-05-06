@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Trash, Sparkle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
@@ -7,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
-// import { ConversationBuilder } from "@/components/prompt-builders/ConversationBuilder";
+import { TokenPredictions } from "@/types/workspace";
+import config from "@/lib/config";
 
 interface PromptBuilderProps {
     completions: LensCompletion[];
@@ -24,8 +26,34 @@ export function PromptBuilder({
         onUpdateCompletion(id, updates);
     };
 
+    const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
+
     const handleTokenSelection = (id: string, indices: number[]) => {
         onUpdateCompletion(id, { selectedTokenIndices: indices });
+    };
+
+    const runConversation = async (completion: LensCompletion) => {
+        console.log(completion);
+        try {
+            const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    completion: completion,
+                    model: completion.model,
+                    selected_token_indices: completion.selectedTokenIndices
+                }),
+            });
+            const data: TokenPredictions = await response.json();
+            setPredictions(data);
+        } catch (error) {
+            console.error('Error sending request:', error);
+        } finally {
+            console.log("Done");
+
+        }
     };
 
     return (
@@ -52,7 +80,7 @@ export function PromptBuilder({
                             </Button>
                             <Button
                                 size="icon"
-                                onClick={() => {console.log("clicked")}}
+                                onClick={() => {runConversation(compl)}}
                             >
                                 <Sparkle size={16} />
                             </Button>
@@ -68,7 +96,11 @@ export function PromptBuilder({
                                 placeholder="Enter your prompt here..."
                             />
                         </div>
-                        <TokenArea text={compl.prompt} onTokenSelection={(indices) => handleTokenSelection(compl.id, indices)} />
+                        <TokenArea 
+                            text={compl.prompt} 
+                            predictions={predictions || {}} 
+                            onTokenSelection={(indices) => handleTokenSelection(compl.id, indices)} 
+                        />
                     </div>
                 </Card>
             ))}

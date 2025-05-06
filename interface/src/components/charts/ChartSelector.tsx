@@ -85,29 +85,15 @@ interface ChartSelectorProps {
     chartData: LogitLensResponse | null;
     isLoading: boolean;
     annotations: Annotation[];
-    setAnnotations: (annotations: Annotation[]) => void;
-    activeAnnotation: {x: number, y: number} | null;
-    setActiveAnnotation: (annotation: {x: number, y: number} | null) => void;
-    annotationText: string;
-    setAnnotationText: (text: string) => void;
-    addAnnotation: () => void;
-    cancelAnnotation: () => void;
-    deleteAnnotation: (id: string) => void;
+    setActiveAnnotation: (annotation: { x: number, y: number } | null) => void;
 }
 
 export function ChartSelector({
-    layout, 
-    chartData, 
+    layout,
+    chartData,
     isLoading,
     annotations,
-    setAnnotations,
-    activeAnnotation,
     setActiveAnnotation,
-    annotationText,
-    setAnnotationText,
-    addAnnotation,
-    cancelAnnotation,
-    deleteAnnotation
 }: ChartSelectorProps) {
     const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([])
     const [configuringPosition, setConfiguringPosition] = useState<number | null>(null)
@@ -179,14 +165,7 @@ export function ChartSelector({
                                         data={chartData}
                                         isLoading={isLoading}
                                         annotations={annotations}
-                                        setAnnotations={setAnnotations}
-                                        activeAnnotation={activeAnnotation}
                                         setActiveAnnotation={setActiveAnnotation}
-                                        annotationText={annotationText}
-                                        setAnnotationText={setAnnotationText}
-                                        addAnnotation={addAnnotation}
-                                        cancelAnnotation={cancelAnnotation}
-                                        deleteAnnotation={deleteAnnotation}
                                     />
                                 </div>
                             ) : (

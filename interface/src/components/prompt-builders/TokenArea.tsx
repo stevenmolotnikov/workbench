@@ -5,16 +5,17 @@ import { PreTrainedTokenizer } from '@huggingface/transformers';
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenData, TokenizerOutput } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
-
-interface Prediction {
-    str_indices: string[];
-    indices: number[];
-}
+import { TokenPredictions } from "@/types/workspace";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TokenAreaProps {
     text: string | { role: string; content: string }[] | null;
     isLoading?: boolean;
-    prediction: Prediction;
+    predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
 }
 
@@ -22,10 +23,11 @@ interface TokenAreaProps {
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-export function TokenArea({ prediction, text, isLoading = false, onTokenSelection }: TokenAreaProps) {
+export function TokenArea({ predictions, text, isLoading = false, onTokenSelection }: TokenAreaProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [hoveredTokenIndex, setHoveredTokenIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Load tokenizer once (when component mounts)
@@ -163,14 +165,36 @@ export function TokenArea({ prediction, text, isLoading = false, onTokenSelectio
                         fixedText === '\\n' ? 'w-full' : 'w-fit'
                     );
 
+                    const tokenPredictions = predictions[i];
+                    const showPredictions = isHighlighted && tokenPredictions;
+
                     return (
-                        <div
-                            key={`token-${i}`}
-                            data-token-id={i}
-                            className={styles}
-                        >
-                            {fixedText}
-                        </div>
+                        <Popover key={`token-${i}`} open={showPredictions && hoveredTokenIndex === i}>
+                            <PopoverTrigger asChild>
+                                <div
+                                    data-token-id={i}
+                                    className={styles}
+                                    onMouseEnter={() => setHoveredTokenIndex(i)}
+                                    onMouseLeave={() => setHoveredTokenIndex(null)}
+                                >
+                                    {fixedText}
+                                </div>
+                            </PopoverTrigger>
+                            {showPredictions && (
+                                <PopoverContent className="w-40 max-w-60 p-2">
+                                    <div className="space-y-1">
+                                        {tokenPredictions.str_idxs.map((str, idx) => (
+                                            <div key={idx} className="flex justify-between text-sm">
+                                                <span>{str}</span>
+                                                <span className="text-muted-foreground">
+                                                    {tokenPredictions.values[idx].toFixed(4)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </PopoverContent>
+                            )}
+                        </Popover>
                     );
                 })}
             </div>

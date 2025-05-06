@@ -12,6 +12,7 @@ const config = {
         models: '/models',
         patch: '/api/patch',
         execute: '/api/execute',
+        executeSelected: '/api/execute_selected',
     },
     
     // Helper function to get full API URL
