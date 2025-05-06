@@ -8,7 +8,7 @@ import { Layout } from "@/types/workspace"
 import { TestChart } from "@/components/charts/TestChart"
 import { Plus } from "lucide-react"
 import { LogitLensResponse } from "@/types/lens"
-
+import { Annotation } from "@/types/workspace"
 
 interface SelectorProps {
     setConfiguringPosition: (position: number | null) => void;
@@ -70,14 +70,6 @@ function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: S
             </Card>
         </div>
     );
-}
-
-interface Annotation {
-    id: string;
-    x: number;
-    y: number;
-    text: string;
-    timestamp: number;
 }
 
 interface ChartSelectorProps {

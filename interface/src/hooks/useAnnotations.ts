@@ -8,6 +8,15 @@ export function useAnnotations() {
 
     const handleSetActiveAnnotation = (coords: { x: number, y: number } | null) => {
         if (coords) {
+            // Remove the last annotation if it has no text
+            setAnnotations(prev => {
+                const updated = [...prev];
+                if (updated.length > 0 && !updated[updated.length - 1].text) {
+                    updated.pop();
+                }
+                return updated;
+            });
+
             const newAnnotation: Annotation = {
                 id: Date.now().toString(),
                 x: coords.x,
