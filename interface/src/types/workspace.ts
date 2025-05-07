@@ -28,6 +28,7 @@ export interface ChartMode {
     name: string;
     description: string;
     icon: React.ReactNode;
+    chartType: "heatmap" | "line";
 }
 
 

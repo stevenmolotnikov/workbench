@@ -9,6 +9,7 @@ import { Plus } from "lucide-react"
 import { LogitLensResponse } from "@/types/lens"
 import { Heatmap } from "@/components/charts/Heatmap"
 import { Annotation, ChartMode } from "@/types/workspace"
+import { ActivationPatchingResponse } from "@/types/activation-patching"
 
 
 interface SelectorProps {
@@ -75,7 +76,7 @@ function Selector({ modes, setConfiguringPosition, isChartSelected, handleAddCha
 
 interface ChartSelectorProps {
     layout: Layout;
-    chartData: LogitLensResponse | null;
+    chartData: LogitLensResponse | ActivationPatchingResponse | null;
     isLoading: boolean;
     annotations: Annotation[];
     activeAnnotation: { x: number, y: number } | null;
@@ -153,15 +154,6 @@ export function ChartSelector({
         setChartData(null);
     }
 
-    const demoHeatmapData = [
-        [1, 2, 3],
-        [4, 5, 6],
-        [7, 8, 9]
-    ]
-
-    const demoRowLabels = ["Layer 1", "Layer 2", "Layer 3"]
-    const demoColLabels = ["Token 1", "Token 2", "Token 3"]
-
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
             {/* Padded container for charts only */}
@@ -177,22 +169,26 @@ export function ChartSelector({
                                     >
                                         <X className="h-4 w-4 text-muted-foreground" />
                                     </button>
-                                    {/* <TestChart
-                                        title={modes[selectedModes[index]!].name}
-                                        description={modes[selectedModes[index]!].description}
-                                        data={chartData}
-                                        isLoading={isLoading}
-                                        annotations={annotations}
-                                        setActiveAnnotation={setActiveAnnotation}
-                                    /> */}
-                                    <Heatmap 
-                                        data={demoHeatmapData}
-                                        rowLabels={demoRowLabels}
-                                        colLabels={demoColLabels}
-                                        activeAnnotation={activeAnnotation}
-                                        setActiveAnnotation={setActiveAnnotation}
-                                        annotations={annotations}
-                                    />
+
+                                    {modes[selectedModes[index]!].chartType === "heatmap" ? (
+                                        <Heatmap
+                                            data={chartData?.results}
+                                            rowLabels={chartData?.rowLabels}
+                                            colLabels={chartData?.colLabels}
+                                            activeAnnotation={activeAnnotation}
+                                            setActiveAnnotation={setActiveAnnotation}
+                                            annotations={annotations}
+                                        />
+                                    ) : (
+                                        <TestChart
+                                            title={modes[selectedModes[index]!].name}
+                                            description={modes[selectedModes[index]!].description}
+                                            data={chartData}
+                                            isLoading={isLoading}
+                                            annotations={annotations}
+                                            setActiveAnnotation={setActiveAnnotation}
+                                        />
+                                    )}
                                 </div>
                             ) : (
                                 <div

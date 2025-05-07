@@ -5,18 +5,18 @@ import { useState } from "react";
 import { ModelSelector } from "./ModelSelector";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 import { Completion } from "@/types/workspace";
-import { LogitLensResponse } from "@/types/lens";
 import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMode } from "./WorkbenchMode";
 import { useConnection } from "@/hooks/useConnection";
 import { useAnnotations } from "@/hooks/useAnnotations";
 import config from "@/lib/config";
+import { WorkspaceHistory } from "@/components/WorkspaceHistory";
 
 import { ResizableLayout } from "@/components/Layout";
 
 import { Layout } from "@/types/workspace";
 import { Annotations } from "@/components/charts/Annotations";
-import { ActivationPatchingRequest, ActivationPatchingModes } from "@/types/activation-patching";
+import { ActivationPatchingRequest, ActivationPatchingModes, ActivationPatchingWorkspace, ActivationPatchingResponse } from "@/types/activation-patching";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -35,8 +35,8 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
 
     const {
         annotations,
-        setAnnotations,
         activeAnnotation,
+        setAnnotations,
         setActiveAnnotation,
         annotationText,
         setAnnotationText,
@@ -45,7 +45,23 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         deleteAnnotation
     } = useAnnotations();
 
-    const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
+
+    const demoHeatmapData = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+
+    const demoRowLabels = ["Layer 1", "Layer 2", "Layer 3"]
+    const demoColLabels = ["Token 1", "Token 2", "Token 3"]
+
+    const demoChartData: ActivationPatchingResponse = {
+        results: demoHeatmapData,
+        rowLabels: demoRowLabels,
+        colLabels: demoColLabels
+    }
+
+    const [chartData, setChartData] = useState<ActivationPatchingResponse | null>(demoChartData);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [layout, setLayout] = useState<Layout>("1x1");
     const [annotationsOpen, setAnnotationsOpen] = useState<boolean>(false);
@@ -66,26 +82,28 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         }
     }
 
+
+
+
     const [source, setSource] = useState<Completion>(makeDefaultCompletion("source"));
     const [destination, setDestination] = useState<Completion>(makeDefaultCompletion("destination"));
 
     const connectionsHook = useConnection();
 
+    const request: ActivationPatchingRequest = {
+        connections: connectionsHook.connections,
+        model: modelName,
+        source: source,
+        destination: destination,
+        submodule: "blocks",
+        correct_id: 1,
+        incorrect_id: 2,
+        patch_tokens: true,
+    }
 
     const handleRun = async () => {
         setIsLoading(true);
         setChartData(null);
-
-        const request: ActivationPatchingRequest = {
-            connections: connectionsHook.connections,
-            model: modelName,
-            source: source,
-            destination: destination,
-            submodule: "blocks",
-            correct_id: 1,
-            incorrect_id: 2,
-            patch_tokens: true,
-        }
 
         console.log(request);
         
@@ -107,15 +125,23 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
         }
     };
 
+    const handleLoadWorkspace = (workspace: ActivationPatchingWorkspace) => {
+        setSource(workspace.request.source);
+        setDestination(workspace.request.destination);
+        setChartData(workspace.graphData);
+        setAnnotations(workspace.annotations);
+    }
+        
     return (
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div className="w-64 border-r ">
-                {/* <ChatHistory
-                    savedConversations={savedConversations}
-                    onLoadConversation={handleLoadConversation}
-                    activeConversationIds={activeConversations.map(conv => conv.id)}
-                /> */}
+                <WorkspaceHistory 
+                    chartData={chartData}
+                    patchingRequest={request}
+                    annotations={annotations}
+                    onLoadWorkspace={handleLoadWorkspace}
+                />
             </div>
 
             {/* Main content */}

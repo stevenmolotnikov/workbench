@@ -28,11 +28,11 @@ export interface LogitLensWorkspace {
     annotations: Annotation[];
 }
 
-
 export const LogitLensModes: ChartMode[] = [
     {
         name: "Token Analysis",
         description: "Probability of the target token per layer.",
-        icon: <BarChart className="h-6 w-6" />
+        icon: <BarChart className="h-6 w-6" />,
+        chartType: "line"
     },
 ]

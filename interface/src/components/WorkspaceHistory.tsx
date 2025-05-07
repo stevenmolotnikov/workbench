@@ -1,31 +1,41 @@
 "use client";
 
 import { LogitLensWorkspace, LogitLensResponse, LensCompletion } from "@/types/lens";
+import { ActivationPatchingRequest, ActivationPatchingResponse, ActivationPatchingWorkspace } from "@/types/activation-patching";
 import { Annotation } from "@/types/workspace";
 import { Button } from "@/components/ui/button";
 import { Save, X } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 interface WorkspaceHistoryProps {
-    chartData: LogitLensResponse | null;
-    completions: LensCompletion[];
+    chartData: LogitLensResponse | ActivationPatchingResponse | null;
+    completions?: LensCompletion[];
+    patchingRequest?: ActivationPatchingRequest;
     annotations: Annotation[];
-    onLoadWorkspace: (workspace: LogitLensWorkspace) => void;
+    onLoadWorkspace: (workspace: LogitLensWorkspace | ActivationPatchingWorkspace) => void;
 }
 
-export function WorkspaceHistory({ chartData, completions, annotations, onLoadWorkspace }: WorkspaceHistoryProps) {
+export function WorkspaceHistory({ chartData, completions, annotations, patchingRequest, onLoadWorkspace }: WorkspaceHistoryProps) {
     const { savedWorkspaces, exportWorkspace, deleteWorkspace } = useWorkspaceStore();
 
     const handleExportWorkspace = () => {
         if (!chartData) return;
-        
-        const workspace: LogitLensWorkspace = {
-            completions,
-            graphData: chartData,
-            annotations
-        }
 
-        exportWorkspace(workspace);
+        if ('model_results' in chartData) {  // Check for LogitLensResponse
+            const workspace: LogitLensWorkspace = {
+                completions: completions ?? [],
+                graphData: chartData,
+                annotations
+            }
+            exportWorkspace(workspace);
+        } else {  // Must be ActivationPatchingResponse
+            const workspace: ActivationPatchingWorkspace = {
+                request: patchingRequest,
+                graphData: chartData,
+                annotations
+            }
+            exportWorkspace(workspace);
+        }
     }
 
     return (
@@ -68,7 +78,7 @@ export function WorkspaceHistory({ chartData, completions, annotations, onLoadWo
                                 </Button>
                             </div>
                             <div className="text-xs mt-1">
-                                {workspace.completions.length} completions • {workspace.annotations.length} annotations
+                                {workspace.annotations.length} annotations
                             </div>
                         </div>
                     ))}

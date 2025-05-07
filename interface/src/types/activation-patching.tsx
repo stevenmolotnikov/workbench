@@ -12,8 +12,16 @@ export interface ActivationPatchingRequest {
     patch_tokens: boolean;
 }
 
-export interface ActivationPatchingWorkspace extends ActivationPatchingRequest {
+export interface ActivationPatchingResponse {
+    results: number[][];
+    rowLabels: string[];
+    colLabels: string[];
+}
+
+export interface ActivationPatchingWorkspace {
+    request: ActivationPatchingRequest;
     annotations: Annotation[];
+    graphData: ActivationPatchingResponse;
 }
 
 export interface Connection {
@@ -31,25 +39,32 @@ export interface Connection {
     };
 }
 
+
+
+
 export const ActivationPatchingModes: ChartMode[] = [
     {
         name: "Attention Heads",
         description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />
+        icon: <Smile className="h-6 w-6" />,
+        chartType: "heatmap"
     },
     {
         name: "Transformer Blocks",
         description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />
+        icon: <Smile className="h-6 w-6" />,
+        chartType: "heatmap"
     },
     {
         name: "MLP Outputs",
         description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />
+        icon: <Smile className="h-6 w-6" />,
+        chartType: "heatmap"
     },
     {
         name: "Attention Outputs",
         description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />
+        icon: <Smile className="h-6 w-6" />,
+        chartType: "heatmap"
     },
 ]
