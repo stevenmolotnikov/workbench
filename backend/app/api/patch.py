@@ -12,6 +12,7 @@ def patch_tokens(model, patch_request, submodules, remote: bool):
     destination_tokens = model.tokenizer.encode(
         patch_request.destination.prompt
     )
+    eps = 1e-6
 
     def logit_difference(logits):
         return (
@@ -19,11 +20,10 @@ def patch_tokens(model, patch_request, submodules, remote: bool):
             - logits[0, -1, patch_request.incorrect_id]
         )
 
-    eps = 1e-6
-
     with model.session(remote=remote):
         source_activations = []
 
+        # Compute source activations and logit diff
         with model.trace(source_prompt):
             for sm in submodules:
                 x = sm.output
@@ -34,12 +34,12 @@ def patch_tokens(model, patch_request, submodules, remote: bool):
             logits = model.lm_head.output
             source_diff = logit_difference(logits)
 
+        # Compute destination logit diff
         with model.trace(destination_tokens):
             logits = model.lm_head.output
             destination_diff = logit_difference(logits)
 
         results = []
-
         for sm, acts in zip(submodules, source_activations):
             row_results = ns.list().save()
             for idx in range(len(destination_tokens)):
@@ -47,7 +47,14 @@ def patch_tokens(model, patch_request, submodules, remote: bool):
                     if patch_request.submodule == "blocks":
                         x = sm.output[0]
                         x[:, idx, :] = acts[:, idx, :]
-                        sm.output = (x, sm.output[1])
+                        
+                        # If caching is enabled, the tuple contains 
+                        # a KV cache at the 1st index. Caching is 
+                        # enabled on NDIF
+                        if remote:
+                            sm.output = (x, sm.output[1])
+                        else:
+                            sm.output = (x,)
                     else:
                         x = sm.output
                         x[:, idx, :] = acts[:, idx, :]
@@ -66,14 +73,7 @@ def patch_tokens(model, patch_request, submodules, remote: bool):
 
         return results
 
-
-def patch_blocks(model, patch_request, submodules, remote: bool):
-    pass
-
-
-def patch_heads(model, patch_request, submodules, remote: bool):
-    pass
-
+# TODO: Patch heads, etc.
 
 def activation_patching(patch_request: PatchRequest, state: AppState):
     model = state.get_model(patch_request.model)
@@ -88,11 +88,6 @@ def activation_patching(patch_request: PatchRequest, state: AppState):
 
     if patch_request.patch_tokens:
         return patch_tokens(model, patch_request, submodules, state.remote)
-    elif patch_request.submodule == "blocks":
-        return patch_blocks(model, patch_request, submodules, state.remote)
-    elif patch_request.submodule == "heads":
-        return patch_heads(model, patch_request, submodules, state.remote)
-
 
 @router.post("/patch")
 async def patch(patch_request: PatchRequest, request: Request):

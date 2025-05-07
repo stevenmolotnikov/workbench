@@ -24,6 +24,13 @@ export interface Annotation {
     timestamp: number;
 }
 
+export interface ChartMode {
+    name: string;
+    description: string;
+    icon: React.ReactNode;
+}
+
+
 interface TokenPrediction {
     str_idxs: string[];
     values: number[];

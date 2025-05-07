@@ -1,16 +1,21 @@
 from typing import List, Literal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, AliasGenerator, ConfigDict
+from pydantic.alias_generators import to_camel
 
 from .base import Completion
 
 class Point(BaseModel):
-    token_index: List[int]
+    model_config = ConfigDict(
+        alias_generator=to_camel
+    )
+
+    token_indices: List[int]
     counter_index: int
 
 class Connection(BaseModel):
-    source: Point
-    destination: Point
+    start: Point
+    end: Point
 
 class PatchRequest(BaseModel):
     model: str

@@ -16,6 +16,7 @@ import { ResizableLayout } from "@/components/Layout";
 
 import { Layout } from "@/types/workspace";
 import { Annotations } from "@/components/charts/Annotations";
+import { ActivationPatchingRequest, ActivationPatchingModes } from "@/types/activation-patching";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -70,25 +71,31 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
 
     const connectionsHook = useConnection();
 
+
     const handleRun = async () => {
         setIsLoading(true);
         setChartData(null);
+
+        const request: ActivationPatchingRequest = {
+            connections: connectionsHook.connections,
+            model: modelName,
+            source: source,
+            destination: destination,
+            submodule: "blocks",
+            correct_id: 1,
+            incorrect_id: 2,
+            patch_tokens: true,
+        }
+
+        console.log(request);
+        
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.patch), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    connections: connectionsHook.connections,
-                    model: modelName,
-                    source: source,
-                    destination: destination,
-                    submodule: "blocks",
-                    correct_id: 1,
-                    incorrect_id: 2,
-                    patch_tokens: true,
-                }),
+                body: JSON.stringify(request),
             });
             const data = await response.json();
             setChartData(data);
@@ -145,11 +152,11 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
                     }
                     charts={
                         <ChartSelector
+                            modes={ActivationPatchingModes}
                             layout={layout}
                             chartData={chartData}
                             isLoading={isLoading}
                             annotations={annotations}
-                            setAnnotations={setAnnotations}
                             activeAnnotation={activeAnnotation}
                             setActiveAnnotation={setActiveAnnotation}
                             annotationText={annotationText}
@@ -157,6 +164,7 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
                             addAnnotation={addAnnotation}
                             cancelAnnotation={cancelAnnotation}
                             deleteAnnotation={deleteAnnotation}
+                            setChartData={setChartData}
                         />
                     }
                     annotations={

@@ -1,4 +1,5 @@
-import { Completion, Annotation } from "@/types/workspace"
+import { Completion, Annotation, ChartMode } from "@/types/workspace"
+import { BarChart } from "lucide-react";
 
 export interface LensCompletion extends Completion { 
     model: string;
@@ -26,3 +27,12 @@ export interface LogitLensWorkspace {
     graphData: LogitLensResponse;
     annotations: Annotation[];
 }
+
+
+export const LogitLensModes: ChartMode[] = [
+    {
+        name: "Token Analysis",
+        description: "Probability of the target token per layer.",
+        icon: <BarChart className="h-6 w-6" />
+    },
+]

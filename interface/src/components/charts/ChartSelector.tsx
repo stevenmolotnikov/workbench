@@ -2,22 +2,23 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { LogitLensModes } from "@/components/workbench/modes"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Layout } from "@/types/workspace"
 import { TestChart } from "@/components/charts/TestChart"
 import { Plus } from "lucide-react"
 import { LogitLensResponse } from "@/types/lens"
-import { Annotation } from "@/types/workspace"
+import { Heatmap } from "@/components/charts/Heatmap"
+import { Annotation, ChartMode } from "@/types/workspace"
+
 
 interface SelectorProps {
+    modes: ChartMode[];
     setConfiguringPosition: (position: number | null) => void;
     isChartSelected: (index: number) => boolean;
     handleAddChart: (index: number) => void;
 }
 
-
-function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: SelectorProps) {
+function Selector({ modes, setConfiguringPosition, isChartSelected, handleAddChart }: SelectorProps) {
     return (
 
         <div className="absolute inset-0 z-20 flex items-center justify-center">
@@ -41,7 +42,7 @@ function Selector({ setConfiguringPosition, isChartSelected, handleAddChart }: S
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-2 gap-4">
-                        {LogitLensModes.map((mode, index) => (
+                        {modes.map((mode, index) => (
                             <Card
                                 key={index}
                                 className={cn(
@@ -77,8 +78,15 @@ interface ChartSelectorProps {
     chartData: LogitLensResponse | null;
     isLoading: boolean;
     annotations: Annotation[];
+    activeAnnotation: { x: number, y: number } | null;
     setActiveAnnotation: (annotation: { x: number, y: number } | null) => void;
-    setChartData: (chartData: LogitLensResponse | null) => void;
+    annotationText: string;
+    setAnnotationText: (text: string) => void;
+    addAnnotation: () => void;
+    cancelAnnotation: () => void;
+    deleteAnnotation: (id: string) => void;
+    setChartData: (data: LogitLensResponse | null) => void;
+    modes: ChartMode[];
 }
 
 export function ChartSelector({
@@ -86,8 +94,15 @@ export function ChartSelector({
     chartData,
     isLoading,
     annotations,
+    activeAnnotation,
     setActiveAnnotation,
-    setChartData
+    annotationText,
+    setAnnotationText,
+    addAnnotation,
+    cancelAnnotation,
+    deleteAnnotation,
+    setChartData,
+    modes
 }: ChartSelectorProps) {
     const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([])
     const [configuringPosition, setConfiguringPosition] = useState<number | null>(null)
@@ -138,6 +153,14 @@ export function ChartSelector({
         setChartData(null);
     }
 
+    const demoHeatmapData = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+    ]
+
+    const demoRowLabels = ["Layer 1", "Layer 2", "Layer 3"]
+    const demoColLabels = ["Token 1", "Token 2", "Token 3"]
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
@@ -154,13 +177,21 @@ export function ChartSelector({
                                     >
                                         <X className="h-4 w-4 text-muted-foreground" />
                                     </button>
-                                    <TestChart
-                                        title={LogitLensModes[selectedModes[index]!].name}
-                                        description={LogitLensModes[selectedModes[index]!].description}
+                                    {/* <TestChart
+                                        title={modes[selectedModes[index]!].name}
+                                        description={modes[selectedModes[index]!].description}
                                         data={chartData}
                                         isLoading={isLoading}
                                         annotations={annotations}
                                         setActiveAnnotation={setActiveAnnotation}
+                                    /> */}
+                                    <Heatmap 
+                                        data={demoHeatmapData}
+                                        rowLabels={demoRowLabels}
+                                        colLabels={demoColLabels}
+                                        activeAnnotation={activeAnnotation}
+                                        setActiveAnnotation={setActiveAnnotation}
+                                        annotations={annotations}
                                     />
                                 </div>
                             ) : (
@@ -184,6 +215,7 @@ export function ChartSelector({
             {/* Inline Chart Selector Overlay */}
             {configuringPosition !== null && (
                 <Selector
+                    modes={modes}
                     setConfiguringPosition={setConfiguringPosition}
                     isChartSelected={isChartSelected}
                     handleAddChart={handleAddChart}

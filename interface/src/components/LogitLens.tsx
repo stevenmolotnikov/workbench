@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { ModelSelector } from "./ModelSelector";
-import { LogitLensResponse, LogitLensWorkspace } from "@/types/lens";
+import { LogitLensResponse, LogitLensWorkspace, LogitLensModes } from "@/types/lens";
 
 import { Layout } from "@/types/workspace";
 
@@ -21,7 +21,7 @@ import { ResizableLayout } from "@/components/Layout";
 import { useLensCompletions } from "@/hooks/useLensCompletions";
 import { useAnnotations } from "@/hooks/useAnnotations";
 import { WorkspaceHistory } from "./WorkspaceHistory";
-import { useWorkspaceStore } from "@/stores/workspace";
+
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -171,6 +171,7 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                     }
                     charts={
                         <ChartSelector
+                            modes={LogitLensModes}
                             layout={layout}
                             chartData={chartData}
                             isLoading={isLoading}
