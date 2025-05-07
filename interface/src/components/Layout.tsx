@@ -3,22 +3,16 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
 
 interface ResizableLayoutProps {
     workbench: React.ReactNode;
     charts: React.ReactNode;
     annotations: React.ReactNode;
+    annotationsOpen: boolean;
 }
 
-export function ResizableLayout({ workbench, charts, annotations }: ResizableLayoutProps) {
-    const [annotationsOpen, setAnnotationsOpen] = useState(true);
-    
-    const toggleAnnotations = () => {
-        setAnnotationsOpen(!annotationsOpen);
-    }
+export function ResizableLayout({ workbench, charts, annotations, annotationsOpen }: ResizableLayoutProps) {    
+
     
     return (
         <ResizablePanelGroup
@@ -37,28 +31,10 @@ export function ResizableLayout({ workbench, charts, annotations }: ResizableLay
                     <ResizableHandle />
                     <ResizablePanel defaultSize={15} maxSize={30} minSize={15}>
                         <div className="relative h-full">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 z-10"
-                                onClick={toggleAnnotations}
-                            >
-                                <EyeOff className="h-4 w-4" />
-                            </Button>
                             {annotations}
                         </div>
                     </ResizablePanel>
                 </>
-            )}
-            {!annotationsOpen && (
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute bottom-2 right-2 z-10"
-                    onClick={toggleAnnotations}
-                >
-                    <Eye className="h-4 w-4" />
-                </Button>
             )}
         </ResizablePanelGroup>
     )

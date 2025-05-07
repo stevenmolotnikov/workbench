@@ -118,6 +118,7 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
 
     return {
         highlightedTokens,
+        setHighlightedTokens,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,

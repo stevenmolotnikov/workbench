@@ -15,7 +15,7 @@ export function useLensCompletions() {
         const newCompletion: LensCompletion = {
             id: generateUniqueId(),
             name: "Untitled",
-            prompt: "",
+            prompt: "The capital of France is",
             model: model,
             selectedTokenIndices: [-1]
         }
@@ -46,6 +46,7 @@ export function useLensCompletions() {
 
     return {
         activeCompletions,
+        setActiveCompletions,
         handleNewCompletion,
         handleLoadCompletion,
         handleDeleteCompletion,

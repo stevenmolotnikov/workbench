@@ -6,28 +6,23 @@ import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenData, TokenizerOutput } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { TokenPredictions } from "@/types/workspace";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface TokenAreaProps {
     text: string | { role: string; content: string }[] | null;
-    isLoading?: boolean;
+    showPredictions: boolean;
     predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
+    setSelectedToken?: (index: number) => void;
 }
 
 // Use dynamic import for transformers.js to avoid build errors
 let tokenizer: PreTrainedTokenizer | null = null;
 let isTokenizerLoading = true;
 
-export function TokenArea({ predictions, text, isLoading = false, onTokenSelection }: TokenAreaProps) {
+export function TokenArea({ predictions, text, showPredictions, onTokenSelection, setSelectedToken }: TokenAreaProps) {
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [isLocalLoading, setIsLocalLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [hoveredTokenIndex, setHoveredTokenIndex] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Load tokenizer once (when component mounts)
@@ -110,9 +105,24 @@ export function TokenArea({ predictions, text, isLoading = false, onTokenSelecti
         };
     }, [text]);
 
-    const { highlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove, getGroupInformation } = useTokenSelection({
+    const { highlightedTokens, setHighlightedTokens, handleMouseDown, handleMouseUp, handleMouseMove, getGroupInformation } = useTokenSelection({
         onTokenSelection
     });
+
+    // Add effect to highlight last token when showPredictions becomes true
+    useEffect(() => {
+
+        if (showPredictions && tokenData && highlightedTokens.length === 0) {
+            const lastTokenIndex = tokenData.tokens.length - 1;
+            
+            // Should fix at some point, but basically an await
+            const buffer = predictions[-1]
+            if (lastTokenIndex >= 0) {
+                setHighlightedTokens([lastTokenIndex]);
+                setSelectedToken?.(-1);
+            }
+        }
+    }, [predictions]);
 
     const fixToken = (token: string) => {
         token = token.replace("Ġ", ' ');
@@ -142,10 +152,10 @@ export function TokenArea({ predictions, text, isLoading = false, onTokenSelecti
             <div
                 className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
                 ref={containerRef}
-                onMouseDown={handleMouseDown}
-                onMouseUp={handleMouseUp}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseUp}
+                onMouseDown={showPredictions ? undefined : handleMouseDown}
+                onMouseUp={showPredictions ? undefined : handleMouseUp}
+                onMouseMove={showPredictions ? undefined : handleMouseMove}
+                onMouseLeave={showPredictions ? undefined : handleMouseUp}
             >
                 {tokenData.tokens.map((token, i) => {
                     const fixedText = fixToken(token.text);
@@ -161,40 +171,24 @@ export function TokenArea({ predictions, text, isLoading = false, onTokenSelecti
                         isHighlighted && isGroupStart && isGroupEnd && 'rounded',
                         isHighlighted && !isGroupStart && !isGroupEnd && 'rounded-none',
                         isHighlighted ? highlightStyle : 'border-transparent',
-                        hoverStyle,
-                        fixedText === '\\n' ? 'w-full' : 'w-fit'
+                        !showPredictions ? hoverStyle : '',
+                        fixedText === '\\n' ? 'w-full' : 'w-fit',
+                        showPredictions && 'cursor-pointer'
                     );
 
-                    const tokenPredictions = predictions[i];
-                    const showPredictions = isHighlighted && tokenPredictions;
-
                     return (
-                        <Popover key={`token-${i}`} open={showPredictions && hoveredTokenIndex === i}>
-                            <PopoverTrigger asChild>
-                                <div
-                                    data-token-id={i}
-                                    className={styles}
-                                    onMouseEnter={() => setHoveredTokenIndex(i)}
-                                    onMouseLeave={() => setHoveredTokenIndex(null)}
-                                >
-                                    {fixedText}
-                                </div>
-                            </PopoverTrigger>
-                            {showPredictions && (
-                                <PopoverContent className="w-40 max-w-60 p-2">
-                                    <div className="space-y-1">
-                                        {tokenPredictions.str_idxs.map((str, idx) => (
-                                            <div key={idx} className="flex justify-between text-sm">
-                                                <span>{str}</span>
-                                                <span className="text-muted-foreground">
-                                                    {tokenPredictions.values[idx].toFixed(4)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </PopoverContent>
-                            )}
-                        </Popover>
+                        <div
+                            key={`token-${i}`}
+                            data-token-id={i}
+                            className={styles}
+                            onClick={() => {
+                                if (showPredictions && setSelectedToken) {
+                                    setSelectedToken(i);
+                                }
+                            }}
+                        >
+                            {fixedText}
+                        </div>
                     );
                 })}
             </div>
@@ -202,14 +196,13 @@ export function TokenArea({ predictions, text, isLoading = false, onTokenSelecti
     };
 
     return (
-
-        <div className="flex flex-col h-full bg-card p-4 rounded-md border">
-            {isLoading || isLocalLoading || isTokenizerLoading
+        <>
+            {isLocalLoading || isTokenizerLoading
                 ? renderLoading()
                 : error
                     ? renderError()
                     : renderContent()
             }
-        </div>
+        </>
     );
 }

@@ -7,7 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { ModelSelector } from "./ModelSelector";
-import { LogitLensResponse } from "@/types/lens";
+import { LogitLensResponse, LogitLensWorkspace } from "@/types/lens";
 
 import { Layout } from "@/types/workspace";
 
@@ -20,6 +20,8 @@ import { Annotations } from "@/components/charts/Annotations";
 import { ResizableLayout } from "@/components/Layout";
 import { useLensCompletions } from "@/hooks/useLensCompletions";
 import { useAnnotations } from "@/hooks/useAnnotations";
+import { WorkspaceHistory } from "./WorkspaceHistory";
+import { useWorkspaceStore } from "@/stores/workspace";
 
 type ModelLoadStatus = 'loading' | 'success' | 'error';
 type WorkbenchMode = "logit-lens" | "activation-patching";
@@ -34,13 +36,27 @@ interface LogitLensProps {
 export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, setWorkbenchMode }: LogitLensProps) {
     const [modelType, setModelType] = useState<"chat" | "base">("base");
     const [modelName, setModelName] = useState<string>("");
+    const [annotationsOpen, setAnnotationsOpen] = useState(false);
 
     const {
         activeCompletions,
         handleDeleteCompletion,
         handleUpdateCompletion,
-        handleNewCompletion
+        handleNewCompletion,
+        setActiveCompletions
     } = useLensCompletions();
+
+    const {
+        annotations,
+        activeAnnotation,
+        setAnnotations,
+        setActiveAnnotation,
+        annotationText,
+        setAnnotationText,
+        addAnnotation,
+        cancelAnnotation,
+        deleteAnnotation
+    } = useAnnotations();
 
     // Add a completion when model successfully loads
     useEffect(() => {
@@ -52,17 +68,23 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
+    const toggleAnnotations = () => {
+        setAnnotationsOpen(!annotationsOpen);
+    }
 
-    const {
-        annotations,
-        activeAnnotation,
-        setActiveAnnotation,
-        annotationText,
-        setAnnotationText,
-        addAnnotation,
-        cancelAnnotation,
-        deleteAnnotation
-    } = useAnnotations();
+    const handleLoadWorkspace = (workspace: LogitLensWorkspace) => {
+        // Clear existing state
+        setChartData(null);
+        
+        // Update completions
+        setActiveCompletions(workspace.completions);
+        
+        // Update chart data
+        setChartData(workspace.graphData);
+        
+        // Update annotations
+        setAnnotations(workspace.annotations);
+    };
 
     const handleRun = async () => {
         setIsLoading(true);
@@ -96,23 +118,24 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
     };
 
     return (
-
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
-            <div className="w-64 border-r ">
-                {/* <ChatHistory
-                    savedConversations={savedConversations}
-                    onLoadConversation={handleLoadConversation}
-                    activeConversationIds={activeConversations.map(conv => conv.id)}
-                /> */}
+            <div className="w-64 border-r">
+                <WorkspaceHistory 
+                    chartData={chartData}
+                    completions={activeCompletions}
+                    annotations={annotations}
+                    onLoadWorkspace={handleLoadWorkspace}
+                />
             </div>
 
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <WorkbenchMode setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
+                <WorkbenchMode toggleAnnotations={toggleAnnotations} setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
 
-                <ResizableLayout
+                <ResizableLayout 
+                    annotationsOpen={annotationsOpen}
                     workbench={
                         <div className="h-full flex flex-col">
                             <div className="p-4 border-b">
@@ -153,6 +176,7 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                             isLoading={isLoading}
                             annotations={annotations}
                             setActiveAnnotation={setActiveAnnotation}
+                            setChartData={setChartData}
                         />
                     }
                     annotations={
@@ -169,6 +193,5 @@ export function LogitLens({ modelLoadStatus, setModelLoadStatus, workbenchMode, 
                 />
             </div>
         </div>
-
     );
 }

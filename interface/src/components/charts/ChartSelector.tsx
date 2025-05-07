@@ -78,6 +78,7 @@ interface ChartSelectorProps {
     isLoading: boolean;
     annotations: Annotation[];
     setActiveAnnotation: (annotation: { x: number, y: number } | null) => void;
+    setChartData: (chartData: LogitLensResponse | null) => void;
 }
 
 export function ChartSelector({
@@ -86,6 +87,7 @@ export function ChartSelector({
     isLoading,
     annotations,
     setActiveAnnotation,
+    setChartData
 }: ChartSelectorProps) {
     const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([])
     const [configuringPosition, setConfiguringPosition] = useState<number | null>(null)
@@ -133,6 +135,7 @@ export function ChartSelector({
             newModes[position] = undefined;
             return newModes;
         });
+        setChartData(null);
     }
 
 

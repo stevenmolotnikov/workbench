@@ -14,7 +14,6 @@ import config from "@/lib/config";
 
 import { ResizableLayout } from "@/components/Layout";
 
-import ComponentDropdown from "./ComponentDropdown";
 import { Layout } from "@/types/workspace";
 import { Annotations } from "@/components/charts/Annotations";
 
@@ -48,6 +47,11 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
     const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [layout, setLayout] = useState<Layout>("1x1");
+    const [annotationsOpen, setAnnotationsOpen] = useState<boolean>(false);
+
+    const toggleAnnotations = () => {
+        setAnnotationsOpen(!annotationsOpen);
+    }
 
     // Handler to update model load status based on boolean from child
     const handleModelLoadStatusUpdate = (success: boolean) => {
@@ -110,9 +114,10 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <WorkbenchMode setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
+                <WorkbenchMode toggleAnnotations={toggleAnnotations} setLayout={setLayout} handleRun={handleRun} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
 
                 <ResizableLayout
+                    annotationsOpen={annotationsOpen}
                     workbench={
                         <div className="h-full flex flex-col">
                             <div className="p-4 border-b">
@@ -125,7 +130,6 @@ export function ActivationPatching({ modelLoadStatus, setModelLoadStatus, workbe
                                             setModelType={setModelType}
                                             setLoaded={handleModelLoadStatusUpdate}
                                         />
-                                        <ComponentDropdown />
                                     </div>
                                 </div>
                             </div>

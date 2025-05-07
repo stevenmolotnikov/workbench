@@ -1,4 +1,4 @@
-import { Completion } from "@/types/workspace"
+import { Completion, Annotation } from "@/types/workspace"
 
 export interface LensCompletion extends Completion { 
     model: string;
@@ -19,4 +19,10 @@ interface LayerResults {
 
 export interface LogitLensResponse {
     model_results: ModelResults[];
+}
+
+export interface LogitLensWorkspace { 
+    completions: LensCompletion[];
+    graphData: LogitLensResponse;
+    annotations: Annotation[];
 }
