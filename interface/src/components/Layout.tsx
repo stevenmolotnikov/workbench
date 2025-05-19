@@ -3,17 +3,15 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
+import { Annotations } from "@/components/charts/Annotations";
 
 interface ResizableLayoutProps {
     workbench: React.ReactNode;
     charts: React.ReactNode;
-    annotations: React.ReactNode;
     annotationsOpen: boolean;
 }
 
-export function ResizableLayout({ workbench, charts, annotations, annotationsOpen }: ResizableLayoutProps) {    
-
-    
+export function ResizableLayout({ workbench, charts, annotationsOpen }: ResizableLayoutProps) {    
     return (
         <ResizablePanelGroup
             direction="horizontal"
@@ -31,7 +29,7 @@ export function ResizableLayout({ workbench, charts, annotations, annotationsOpe
                     <ResizableHandle />
                     <ResizablePanel defaultSize={15} maxSize={30} minSize={15}>
                         <div className="relative h-full">
-                            {annotations}
+                            <Annotations/>
                         </div>
                     </ResizablePanel>
                 </>

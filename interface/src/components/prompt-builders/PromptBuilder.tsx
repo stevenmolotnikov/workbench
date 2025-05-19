@@ -8,8 +8,10 @@ import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { TokenPredictions } from "@/types/workspace";
+import { Token } from "@/types/tokenizer";
 import config from "@/lib/config";
 import { cn } from "@/lib/utils";
+import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 
 interface PromptBuilderProps {
     completions: LensCompletion[];
@@ -27,11 +29,24 @@ export function PromptBuilder({
     };
 
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
-    const [selectedToken, setSelectedToken] = useState<number | null>(null);
+    const [selectedToken, setSelectedToken] = useState<Token | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
 
     const handleTokenSelection = (id: string, indices: number[]) => {
-        onUpdateCompletion(id, { selectedTokenIndices: indices });
+        onUpdateCompletion(id, { 
+            tokens: indices.map(idx => ({
+                target_token: "",
+                token_idx: idx
+            }))
+        });
+    };
+
+    const handleTargetTokenUpdate = (id: string, tokenIdx: number, targetToken: string) => {
+        onUpdateCompletion(id, {
+            tokens: completions.find(c => c.id === id)?.tokens.map(t => 
+                t.token_idx === tokenIdx ? { ...t, target_token: targetToken } : t
+            ) || []
+        });
     };
 
     const handleSparkleClick = async (completion: LensCompletion) => {
@@ -43,6 +58,7 @@ export function PromptBuilder({
     }
 
     const runConversation = async (completion: LensCompletion) => {
+        console.log(completion.tokens)
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
                 method: 'POST',
@@ -52,7 +68,7 @@ export function PromptBuilder({
                 body: JSON.stringify({
                     completion: completion,
                     model: completion.model,
-                    selected_token_indices: completion.selectedTokenIndices
+                    tokens: completion.tokens
                 }),
             });
             const data: TokenPredictions = await response.json();
@@ -64,6 +80,7 @@ export function PromptBuilder({
             console.log("Done");
         }
     };
+
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -109,31 +126,12 @@ export function PromptBuilder({
                         </div>
                     </div>
                     {
-                        showPredictions && <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
-                            {predictions && selectedToken !== null && predictions[selectedToken] ? (
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>Target</span>
-                                        <input
-                                            className="bg-transparent border rounded w-1/4"
-                                            placeholder=""
-                                        />
-                                    </div>
-                                    {predictions[selectedToken].str_idxs.map((str: string, idx: number) => (
-                                        <div key={idx} className="flex justify-between text-sm">
-                                            <span>{str}</span>
-                                            <span className="text-muted-foreground">
-                                                {predictions[selectedToken].values[idx].toFixed(4)}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-sm text-muted-foreground">
-                                    No token selected
-                                </div>
-                            )}
-                        </div>
+                        showPredictions && <PredictionDisplay
+                            predictions={predictions || {}}
+                            compl={compl}
+                            selectedToken={selectedToken}
+                            handleTargetTokenUpdate={handleTargetTokenUpdate}
+                        />
                     }
                 </div>
             ))}

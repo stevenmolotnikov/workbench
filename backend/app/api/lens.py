@@ -69,19 +69,28 @@ def process_results(model, results):
     return processed_results
 
 
-def preprocess(lens_request: LensRequest, state: AppState):
+def preprocess(lens_request: LensRequest):
     # Batch prompts for the same model
-    tasks = defaultdict(list)
+    grouped_requests = defaultdict(list)
     for completion in lens_request.completions:
-        task = {
+        request = {
             "prompt": completion.prompt,
             "selected_token_indices": completion.selectedTokenIndices,
         }
-        tasks[completion.model].append(task)
+        grouped_requests[completion.model].append(request)
+
+    return grouped_requests
+
+
+@router.post("/lens")
+async def lens(lens_request: LensRequest, request: Request):
+    state = request.app.state.m
+
+    grouped_requests = preprocess(lens_request)
 
     # Compute logit lens for each model
     all_results = []
-    for model_name, model_tasks in tasks.items():
+    for model_name, model_tasks in grouped_requests.items():
         model = state.get_model(model_name)
         results = logit_lens(model, model_tasks, state.remote)
 
@@ -93,9 +102,3 @@ def preprocess(lens_request: LensRequest, state: AppState):
             })
 
     return LensResponse(model_results=all_results)
-
-
-@router.post("/lens")
-async def lens(lens_request: LensRequest, request: Request):
-    state = request.app.state.m
-    return preprocess(lens_request, state)

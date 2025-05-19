@@ -1,91 +1,19 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Layout } from "@/types/workspace"
-import { TestChart } from "@/components/charts/TestChart"
-import { Plus } from "lucide-react"
-import { LogitLensResponse } from "@/types/lens"
-import { Heatmap } from "@/components/charts/Heatmap"
-import { Annotation, ChartMode } from "@/types/workspace"
-import { ActivationPatchingResponse } from "@/types/activation-patching"
+import { useState } from "react";
+import { X } from "lucide-react";
+import { Layout } from "@/types/workspace";
+import { TestChart } from "@/components/charts/TestChart";
+import { Plus } from "lucide-react";
+import { LogitLensResponse } from "@/types/lens";
+import { Heatmap } from "@/components/charts/Heatmap";
+import { ChartMode } from "@/types/workspace";
+import { ActivationPatchingResponse } from "@/types/activation-patching";
 
-
-interface SelectorProps {
-    modes: ChartMode[];
-    setConfiguringPosition: (position: number | null) => void;
-    isChartSelected: (index: number) => boolean;
-    handleAddChart: (index: number) => void;
-}
-
-function Selector({ modes, setConfiguringPosition, isChartSelected, handleAddChart }: SelectorProps) {
-    return (
-
-        <div className="absolute inset-0 z-20 flex items-center justify-center">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-background/50 backdrop-blur-sm"
-                onClick={() => setConfiguringPosition(null)}
-            ></div>
-            {/* Selection Panel */}
-            <Card className="relative max-w-md w-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                    <CardTitle>Select Visualization</CardTitle>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-1 h-auto rounded-full"
-                        onClick={() => setConfiguringPosition(null)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                        {modes.map((mode, index) => (
-                            <Card
-                                key={index}
-                                className={cn(
-                                    "flex flex-col items-center transition-colors rounded-md border",
-                                    isChartSelected(index)
-                                        ? "opacity-50 cursor-not-allowed bg-muted/30"
-                                        : "cursor-pointer hover:bg-muted/60 hover:border-muted-foreground/50"
-                                )}
-                                onClick={() => {
-                                    if (!isChartSelected(index)) {
-                                        handleAddChart(index);
-                                    }
-                                }}
-                            >
-                                <CardContent className="p-4 flex flex-col items-center">
-                                    <div className="mb-2 text-muted-foreground">
-                                        {mode.icon}
-                                    </div>
-                                    <p className="text-sm font-medium text-center">{mode.name}</p>
-                                    <p className="text-xs text-muted-foreground text-center mt-1">{mode.description}</p>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
+import { SelectionMenu } from "./SelectionMenu";
 
 interface ChartSelectorProps {
     layout: Layout;
     chartData: LogitLensResponse | ActivationPatchingResponse | null;
     isLoading: boolean;
-    annotations: Annotation[];
-    activeAnnotation: { x: number, y: number } | null;
-    setActiveAnnotation: (annotation: { x: number, y: number } | null) => void;
-    annotationText: string;
-    setAnnotationText: (text: string) => void;
-    addAnnotation: () => void;
-    cancelAnnotation: () => void;
-    deleteAnnotation: (id: string) => void;
     setChartData: (data: LogitLensResponse | null) => void;
     modes: ChartMode[];
 }
@@ -94,23 +22,15 @@ export function ChartSelector({
     layout,
     chartData,
     isLoading,
-    annotations,
-    activeAnnotation,
-    setActiveAnnotation,
-    annotationText,
-    setAnnotationText,
-    addAnnotation,
-    cancelAnnotation,
-    deleteAnnotation,
     setChartData,
-    modes
+    modes,
 }: ChartSelectorProps) {
-    const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([])
-    const [configuringPosition, setConfiguringPosition] = useState<number | null>(null)
+    const [selectedModes, setSelectedModes] = useState<(number | undefined)[]>([]);
+    const [configuringPosition, setConfiguringPosition] = useState<number | null>(null);
 
     const isChartSelected = (modeIndex: number) => {
         return selectedModes.includes(modeIndex);
-    }
+    };
 
     const getLayoutGrid = () => {
         switch (layout) {
@@ -121,7 +41,7 @@ export function ChartSelector({
             default:
                 return "grid-cols-1";
         }
-    }
+    };
 
     const getBoxCount = () => {
         switch (layout) {
@@ -132,27 +52,27 @@ export function ChartSelector({
             default:
                 return 1;
         }
-    }
+    };
 
     const handleAddChart = (modeIndex: number) => {
         if (configuringPosition === null) return;
 
-        setSelectedModes(prev => {
+        setSelectedModes((prev) => {
             const newModes = [...prev];
             newModes[configuringPosition] = modeIndex;
             return newModes;
         });
         setConfiguringPosition(null);
-    }
+    };
 
     const handleRemoveChart = (position: number) => {
-        setSelectedModes(prev => {
+        setSelectedModes((prev) => {
             const newModes = [...prev];
             newModes[position] = undefined;
             return newModes;
         });
         setChartData(null);
-    }
+    };
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
@@ -175,9 +95,6 @@ export function ChartSelector({
                                             data={chartData?.results}
                                             rowLabels={chartData?.rowLabels}
                                             colLabels={chartData?.colLabels}
-                                            activeAnnotation={activeAnnotation}
-                                            setActiveAnnotation={setActiveAnnotation}
-                                            annotations={annotations}
                                         />
                                     ) : (
                                         <TestChart
@@ -185,8 +102,7 @@ export function ChartSelector({
                                             description={modes[selectedModes[index]!].description}
                                             data={chartData}
                                             isLoading={isLoading}
-                                            annotations={annotations}
-                                            setActiveAnnotation={setActiveAnnotation}
+
                                         />
                                     )}
                                 </div>
@@ -198,7 +114,9 @@ export function ChartSelector({
                                     }}
                                 >
                                     <div className="flex items-center gap-1">
-                                        <p className="text-sm font-medium text-muted-foreground">Add a chart</p>
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Add a chart
+                                        </p>
                                         <Plus className="h-4 w-4 text-muted-foreground" />
                                     </div>
                                 </div>
@@ -210,7 +128,7 @@ export function ChartSelector({
 
             {/* Inline Chart Selector Overlay */}
             {configuringPosition !== null && (
-                <Selector
+                <SelectionMenu
                     modes={modes}
                     setConfiguringPosition={setConfiguringPosition}
                     isChartSelected={isChartSelected}
@@ -218,5 +136,5 @@ export function ChartSelector({
                 />
             )}
         </div>
-    )
+    );
 }

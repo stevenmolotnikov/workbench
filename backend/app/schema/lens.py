@@ -4,22 +4,33 @@ from pydantic import BaseModel
 
 from .base import Completion
 
-class LayerResults(BaseModel):
-    layer_idx: int
-    pred_probs: List[float]
-    preds: List[str]
+# Request Schema
 
-class ModelResults(BaseModel):
-    model_name: str
-    layer_results: List[LayerResults]
-
-class LensResponse(BaseModel):
-    model_results: List[ModelResults]
+class Token(BaseModel):
+    target_token: str
+    token_idx: int
 
 class LensCompletion(Completion):
     model: str
     name: str
-    selectedTokenIndices: List[int]
+    tokens: List[Token]
 
 class LensRequest(BaseModel):
     completions: List[LensCompletion]
+
+# Response Schema
+
+class Point(BaseModel):
+    model_name: str
+    prob: float
+
+class LayerResults(BaseModel):
+    layer: int
+    points: List[Point]
+
+class LensMetadata(BaseModel):
+    maxLayer: int
+
+class LensResponse(BaseModel):
+    data: List[LayerResults]
+    metadata: LensMetadata

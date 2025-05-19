@@ -2,28 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Annotation } from "@/types/workspace";
+import { useAnnotations } from "@/stores/annotations";
 
+export function Annotations() {
 
-interface AnnotationsProps {
-    annotations: Annotation[];
-    activeAnnotation: { x: number; y: number } | null;
-    annotationText: string;
-    setAnnotationText: (text: string) => void;
-    addAnnotation: () => void;
-    cancelAnnotation: () => void;
-    deleteAnnotation: (id: string) => void;
-}
+    const { annotations, activeAnnotation, annotationText, setAnnotationText, addAnnotation, cancelAnnotation, deleteAnnotation } = useAnnotations();
 
-export function Annotations({
-    annotations,
-    activeAnnotation,
-    annotationText,
-    setAnnotationText,
-    addAnnotation,
-    cancelAnnotation,
-    deleteAnnotation
-}: AnnotationsProps) {
     return (
         <div className="flex flex-col">
             {/* <div className="p-4 border-b">

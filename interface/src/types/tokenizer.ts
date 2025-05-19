@@ -1,8 +1,9 @@
 import { Tensor } from '@huggingface/transformers';
 
-export interface TokenData {
-    count: number;
-    tokens: { id: number, text: string }[];
+export interface Token {
+    id: number;
+    idx: number;
+    text: string;
 }
 
 type BatchEncoding = {

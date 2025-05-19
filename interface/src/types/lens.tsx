@@ -1,10 +1,14 @@
 import { Completion, Annotation, ChartMode } from "@/types/workspace"
 import { BarChart } from "lucide-react";
 
+interface Token { 
+    target_token: string;
+    token_idx: number;
+}
+
 export interface LensCompletion extends Completion { 
     model: string;
-    name: string;
-    selectedTokenIndices: number[];
+    tokens: Token[];
 }
 
 interface ModelResults {

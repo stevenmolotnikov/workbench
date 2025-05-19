@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/chart"
 import { LogitLensResponse } from "@/types/lens";
 import { Annotation } from "@/types/workspace";
+import { useAnnotations } from "@/stores/annotations";
 
 // Proposed schema from backend
 interface ChartDataSchema {
@@ -39,8 +40,6 @@ interface TestChartProps {
   data: LogitLensResponse | null;
   chartDataSchema?: ChartDataSchema; // New prop for optimized data flow
   isLoading: boolean;
-  annotations: Annotation[];
-  setActiveAnnotation: (annotation: {x: number, y: number} | null) => void;
 }
 
 interface CustomTooltipProps extends TooltipProps<number, string> {
@@ -132,10 +131,11 @@ export function TestChart({
   data, 
   chartDataSchema,
   isLoading,
-  annotations,
-  setActiveAnnotation,
 }: TestChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+
+  const { annotations, activeAnnotation, setActiveAnnotation } = useAnnotations();
+
   // Add state for potential annotation point (the point that will be annotated on click)
   const [potentialAnnotation, setPotentialAnnotation] = useState<{
     x: number,

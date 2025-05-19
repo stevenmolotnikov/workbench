@@ -14,10 +14,12 @@ export function useLensCompletions() {
     const handleNewCompletion = (model: string) => {
         const newCompletion: LensCompletion = {
             id: generateUniqueId(),
-            name: "Untitled",
             prompt: "The capital of France is",
             model: model,
-            selectedTokenIndices: [-1]
+            tokens: [{
+                target_token: "",
+                token_idx: -1
+            }]
         }
         handleLoadCompletion(newCompletion);
     }

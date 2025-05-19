@@ -1,15 +1,7 @@
 import * as React from "react"
 
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Code, Play, MessageSquareText } from "lucide-react"
+import { Play, MessageSquareText } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,32 +11,17 @@ import {
 import { LayoutGrid } from "lucide-react"
 import { Layout } from "@/types/workspace";
 
-type WorkbenchMode = "logit-lens" | "activation-patching";
-
 interface WorkbenchModeProps {
     setLayout: (layout: Layout) => void;
     handleRun: () => void;
-    workbenchMode: WorkbenchMode;
-    setWorkbenchMode: (mode: WorkbenchMode) => void;
     toggleAnnotations: () => void;
 }
 
-export function WorkbenchMode({ toggleAnnotations, setLayout, workbenchMode, setWorkbenchMode, handleRun }: WorkbenchModeProps) {
+export function WorkbenchMenu({ toggleAnnotations, setLayout, handleRun }: WorkbenchModeProps) {
     return (
 
         <div className="p-4 border-b flex items-center justify-between">
-
-            <Select value={workbenchMode} onValueChange={setWorkbenchMode} defaultValue="activation-patching">
-                <SelectTrigger className="w-[180px] -my-1">
-                    <SelectValue placeholder="Select a mode" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectGroup>
-                        <SelectItem value="logit-lens">Logit Lens</SelectItem>
-                        <SelectItem value="activation-patching">Activation Patching</SelectItem>
-                    </SelectGroup>
-                </SelectContent>
-            </Select>
+            <span>Hello</span>
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={toggleAnnotations}>
                     <MessageSquareText size={16} />

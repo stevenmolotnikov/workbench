@@ -1,47 +1,46 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import { LogitLens } from "@/components/LogitLens";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ActivationPatching } from "./ActivationPatching";
+import React from "react";
+import { useModelStore } from "@/stores/useModelStore";
+import { ModelLoadStatus } from "@/types/workbench";
 
-
-type ModelLoadStatus = 'loading' | 'success' | 'error';
-type WorkbenchMode = "logit-lens" | "activation-patching";
-
-export function Playground() {
-    const [modelLoadStatus, setModelLoadStatus] = useState<ModelLoadStatus>('loading');
-    const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>("activation-patching");
-
-    const getStatusMessage = () => {
-        if (modelLoadStatus === 'loading') {
-            return (
-                <div>
-                    The backend is hosted as a deployment on <a href="https://modal.com" className="text-blue-500">Modal</a>.
-                    We're starting up a container for your session.
-                </div>
-            );
-        } else if (modelLoadStatus === 'success') {
-            return (
-                <div>
-                    Some things might be slow, but they'll warm up soon enough!
-                </div>
-            );
-        } else if (modelLoadStatus === 'error') {
-            return (
-                <div>
-                    Could not connect to the backend. Reach out to Caden, he probably turned it off.
-                </div>
-            );
-        }
+const getStatusMessage = (modelLoadStatus: ModelLoadStatus) => {
+    if (modelLoadStatus === 'loading') {
+        return (
+            <div>
+                The backend is hosted as a deployment on <a href="https://modal.com" className="text-blue-500">Modal</a>.
+                We're starting up a container for your session.
+            </div>
+        );
+    } else if (modelLoadStatus === 'success') {
+        return (
+            <div>
+                Some things might be slow, but they'll warm up soon enough!
+            </div>
+        );
+    } else if (modelLoadStatus === 'error') {
+        return (
+            <div>
+                Could not connect to the backend. Reach out to Caden, he probably turned it off.
+            </div>
+        );
     }
+}
+
+export default function WorkbenchLayout({
+    children,
+}: Readonly<{
+    children: React.ReactNode;
+}>) {
+    const modelLoadStatus = useModelStore((state) => state.modelLoadStatus);
 
     return (
         <div className="flex flex-col h-screen">
-            <header className="border-b  px-4 py-3 flex items-center justify-between">
+            <header className="border-b px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <img
                         src="/images/NSF.png"
@@ -65,7 +64,6 @@ export function Playground() {
                                 })}
                                 size="sm"
                             >
-                                {/* {modelLoadStatus === 'loading' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} */}
                                 <div
                                     className={cn("text-white", {
                                         "text-yellow-500 hover:text-yellow-600 animate-pulse": modelLoadStatus === 'loading',
@@ -79,7 +77,7 @@ export function Playground() {
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80">
-                            {getStatusMessage()}
+                            {getStatusMessage(modelLoadStatus)}
                         </PopoverContent>
                     </Popover>
 
@@ -87,12 +85,7 @@ export function Playground() {
                     <ModeToggle />
                 </nav>
             </header>
-            {workbenchMode === "logit-lens" && (
-                <LogitLens modelLoadStatus={modelLoadStatus} setModelLoadStatus={setModelLoadStatus} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
-            )}
-            {workbenchMode === "activation-patching" && (
-                <ActivationPatching modelLoadStatus={modelLoadStatus} setModelLoadStatus={setModelLoadStatus} workbenchMode={workbenchMode} setWorkbenchMode={setWorkbenchMode} />
-            )}
+            {children}
         </div>
     );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TokenData } from '@/types/tokenizer';
+import { Token } from '@/types/tokenizer';
 
 interface UseTokenSelectionProps {
     onTokenSelection?: (indices: number[]) => void;
@@ -21,10 +21,10 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
         return null;
     };
 
-    const getGroupInformation = (i: number, tokenData: TokenData) => {
+    const getGroupInformation = (i: number, tokenData: Token[]) => {
         const isHighlighted = highlightedTokens.includes(i);
         const isPrevHighlighted = i > 0 && highlightedTokens.includes(i - 1);
-        const isNextHighlighted = i < tokenData.tokens.length - 1 && highlightedTokens.includes(i + 1);
+        const isNextHighlighted = i < tokenData.length - 1 && highlightedTokens.includes(i + 1);
         
         // Determine if this token is part of a group
         const isGroupStart = isHighlighted && !isPrevHighlighted;
@@ -36,7 +36,7 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
             if (isGroupStart) {
                 // Find the end of this group
                 let groupEnd = i;
-                while (groupEnd < tokenData.tokens.length - 1 && highlightedTokens.includes(groupEnd + 1)) {
+                while (groupEnd < tokenData.length - 1 && highlightedTokens.includes(groupEnd + 1)) {
                     groupEnd++;
                 }
                 groupId = i; // Use start index as group ID

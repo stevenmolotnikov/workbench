@@ -3,6 +3,7 @@ from typing import List
 from pydantic import BaseModel
 
 from .base import Completion
+from .lens import Token
 
 class ExecuteRequest(BaseModel):
     completions: List[Completion]
@@ -11,5 +12,5 @@ class ExecuteRequest(BaseModel):
 
 class ExecuteSelectedRequest(BaseModel):
     completion: Completion
-    selected_token_indices: List[int]
+    tokens: List[Token]
     model: str

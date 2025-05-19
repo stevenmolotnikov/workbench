@@ -17,7 +17,7 @@ def process_name(name):
 class AppState:
     def __init__(self, config_path: str):
         # Set NDIF key
-        CONFIG.set_default_api_key(os.environ["NDIF_KEY"])
+        CONFIG.set_default_api_key(os.environ["NDIF_API_KEY"])
 
         # Defaults
         self.models: Dict[str, LanguageModel] = {}

@@ -1,41 +1,22 @@
 "use client";
 
-import { LogitLensWorkspace, LogitLensResponse, LensCompletion } from "@/types/lens";
-import { ActivationPatchingRequest, ActivationPatchingResponse, ActivationPatchingWorkspace } from "@/types/activation-patching";
-import { Annotation } from "@/types/workspace";
+import { LogitLensWorkspace } from "@/types/lens";
+import { ActivationPatchingWorkspace } from "@/types/activation-patching";
 import { Button } from "@/components/ui/button";
 import { Save, X } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/workspace";
 
 interface WorkspaceHistoryProps {
-    chartData: LogitLensResponse | ActivationPatchingResponse | null;
-    completions?: LensCompletion[];
-    patchingRequest?: ActivationPatchingRequest;
-    annotations: Annotation[];
     onLoadWorkspace: (workspace: LogitLensWorkspace | ActivationPatchingWorkspace) => void;
+    getWorkspace: () => LogitLensWorkspace | ActivationPatchingWorkspace;
 }
 
-export function WorkspaceHistory({ chartData, completions, annotations, patchingRequest, onLoadWorkspace }: WorkspaceHistoryProps) {
+export function WorkspaceHistory({ onLoadWorkspace, getWorkspace }: WorkspaceHistoryProps) {
     const { savedWorkspaces, exportWorkspace, deleteWorkspace } = useWorkspaceStore();
 
     const handleExportWorkspace = () => {
-        if (!chartData) return;
-
-        if ('model_results' in chartData) {  // Check for LogitLensResponse
-            const workspace: LogitLensWorkspace = {
-                completions: completions ?? [],
-                graphData: chartData,
-                annotations
-            }
-            exportWorkspace(workspace);
-        } else {  // Must be ActivationPatchingResponse
-            const workspace: ActivationPatchingWorkspace = {
-                request: patchingRequest,
-                graphData: chartData,
-                annotations
-            }
-            exportWorkspace(workspace);
-        }
+        const workspace = getWorkspace();
+        exportWorkspace(workspace);
     }
 
     return (
@@ -50,7 +31,6 @@ export function WorkspaceHistory({ chartData, completions, annotations, patching
                     variant="outline"
                     className="h-8 w-8"
                     onClick={handleExportWorkspace}
-                    disabled={!chartData}
                 >
                     <Save size={6} />
                 </Button>
