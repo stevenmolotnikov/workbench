@@ -45,5 +45,6 @@ export const useLineGraphAnnotations = create<AnnotationState>((set) => ({
     deleteAnnotation: (id) =>
         set((state) => ({
             annotations: state.annotations.filter((a) => a.id !== id),
+            emphasizedAnnotation: null,
         })),
 }));

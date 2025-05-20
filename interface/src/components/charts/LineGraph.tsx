@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/lens";
@@ -14,9 +13,7 @@ interface DataPoint {
 }
 
 export function LineGraph({ data }: { data?: LineGraphData }) {
-    const [selectedDot, setSelectedDot] = useState<number | null>(null);
-
-    const { addPendingAnnotation, emphasizedAnnotation } = useLineGraphAnnotations();
+    const { addPendingAnnotation, emphasizedAnnotation, annotations, pendingAnnotation } = useLineGraphAnnotations();
 
     if (!data) {
         return <div>No data to display.</div>;
@@ -52,25 +49,48 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
         addPendingAnnotation(newAnnotation);
     };
 
-    // Custom dot renderer
+    const isAnnotatedOrPending = (lineId: string, layer: number) => 
+        (pendingAnnotation?.lineId === lineId && pendingAnnotation?.layer === layer) ||
+        annotations.some(annotation => annotation.lineId === lineId && annotation.layer === layer);
+
     const renderDot = (props: any) => {
         const { cx, cy, payload, index } = props;
-        const isSelected = selectedDot === index;
-
         const { lineId, layer } = transformObject(payload);
 
-        const emphasized = emphasizedAnnotation?.lineId === lineId && emphasizedAnnotation?.layer === layer;
+        const emphasized =
+            emphasizedAnnotation?.lineId === lineId && emphasizedAnnotation?.layer === layer;
+        
+        const isAnnotated = isAnnotatedOrPending(lineId, layer);
+        const r = emphasized ? 6 : (isAnnotated ? 4 : 0);
+
+        return (
+            <circle
+                key={`dot-${index}`}
+                cx={cx}
+                cy={cy}
+                r={r}
+                fill={"hsl(var(--chart-1))"}
+                stroke={isAnnotated ? "white" : "transparent"}
+                strokeWidth={isAnnotated ? 2 : 0}
+                pointerEvents="none"
+            />
+        );
+    };
+
+    // Custom dot renderer
+    const activeDot = (props: any) => {
+        const { cx, cy, payload, index } = props;
+
+        const { lineId, layer } = transformObject(payload);
 
         return (
             <g>
                 <circle
-                    key={`dot-${index}`}
+                    key={`active-dot-${index}`}
                     cx={cx}
                     cy={cy}
-                    r={emphasized ? 8 : 4}
-                    fill={isSelected ? "hsl(var(--primary))" : "hsl(var(--chart-1))"}
-                    stroke={isSelected ? "white" : "hsl(var(--chart-1))"}
-                    strokeWidth={isSelected ? 2 : 0}
+                    r={4}
+                    fill={"hsl(var(--chart-1))"}
                     pointerEvents="none"
                 />
                 <circle
@@ -115,7 +135,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                             stroke={chartConfig[seriesKey]?.color}
                             strokeWidth={2}
                             dot={renderDot}
-                            activeDot={renderDot}
+                            activeDot={activeDot}
                             connectNulls={true}
                         />
                     ))}
