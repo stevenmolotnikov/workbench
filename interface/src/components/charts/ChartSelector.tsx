@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Layout } from "@/types/workspace";
-import { TestChart } from "@/components/charts/TestChart";
 import { Plus } from "lucide-react";
-import { LogitLensResponse } from "@/types/lens";
+import { LineGraphData } from "@/types/lens";
 import { Heatmap } from "@/components/charts/Heatmap";
 import { ChartMode } from "@/types/workspace";
 import { ActivationPatchingResponse } from "@/types/activation-patching";
+import { LineGraph } from "@/components/charts/LineGraph";
 
 import { SelectionMenu } from "./SelectionMenu";
 
 interface ChartSelectorProps {
     layout: Layout;
-    chartData: LogitLensResponse | ActivationPatchingResponse | null;
+    chartData: LineGraphData | ActivationPatchingResponse | null;
     isLoading: boolean;
-    setChartData: (data: LogitLensResponse | null) => void;
+    setChartData: (data: LineGraphData | null) => void;
     modes: ChartMode[];
 }
 
@@ -97,12 +97,9 @@ export function ChartSelector({
                                             colLabels={chartData?.colLabels}
                                         />
                                     ) : (
-                                        <TestChart
-                                            title={modes[selectedModes[index]!].name}
-                                            description={modes[selectedModes[index]!].description}
+                                        <LineGraph
                                             data={chartData}
-                                            isLoading={isLoading}
-
+                                            // isLoading={isLoading}
                                         />
                                     )}
                                 </div>

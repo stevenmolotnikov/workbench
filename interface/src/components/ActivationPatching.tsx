@@ -8,7 +8,7 @@ import { Completion } from "@/types/workspace";
 import { ChartSelector } from "@/components/charts/ChartSelector";
 import { WorkbenchMenu } from "./WorkbenchMenu";
 import { useConnection } from "@/hooks/useConnection";
-import { useAnnotations } from "@/stores/annotations";
+import { useAnnotations } from "@/stores/lineGraphAnnotations";
 import config from "@/lib/config";
 import { WorkspaceHistory } from "@/components/WorkspaceHistory";
 

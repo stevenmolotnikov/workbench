@@ -38,7 +38,7 @@ async def execute(execute_request: ExecuteRequest, request: Request):
 async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
     state = request.app.state.m
     
-    idxs = [token.token_idx for token in execute_request.tokens]
+    idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
     tok = model.tokenizer
     prompt = execute_request.completion.prompt

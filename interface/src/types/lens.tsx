@@ -1,29 +1,37 @@
 import { Completion, Annotation, ChartMode } from "@/types/workspace"
 import { BarChart } from "lucide-react";
 
-interface Token { 
-    target_token: string;
-    token_idx: number;
+// Request Schema
+
+export interface TokenCompletion {
+    idx: number;
+    target_token?: string;
+    target_token_id?: number;
 }
 
 export interface LensCompletion extends Completion { 
     model: string;
-    tokens: Token[];
+    tokens: TokenCompletion[];
 }
 
-interface ModelResults {
-    model_name: string;
-    layer_results: LayerResults[];
+// Response Schema
+
+interface Point {
+    id: string;
+    prob: number;
 }
 
 interface LayerResults {
-    layer_idx: number;
-    pred_probs: number[];
-    preds: string[];
+    layer: number;
+    points: Point[];
 }
 
+
 export interface LogitLensResponse {
-    model_results: ModelResults[];
+    data: LayerResults[];
+    metadata: {
+        maxLayer: number;
+    };
 }
 
 export interface LogitLensWorkspace { 
@@ -31,6 +39,25 @@ export interface LogitLensWorkspace {
     graphData: LogitLensResponse;
     annotations: Annotation[];
 }
+
+// Processed Chart Data Schema
+
+interface ChartDataPoint {
+    layer: number;
+    [key: string]: number | string | null;
+}
+
+interface ChartConfig {
+    [key: string]: { label: string; color: string };
+}
+
+export interface LineGraphData {
+    chartData: ChartDataPoint[];
+    chartConfig: ChartConfig;
+    maxLayer: number;
+}
+
+// Chart Modes
 
 export const LogitLensModes: ChartMode[] = [
     {

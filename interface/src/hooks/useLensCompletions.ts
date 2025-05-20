@@ -18,7 +18,7 @@ export function useLensCompletions() {
             model: model,
             tokens: [{
                 target_token: "",
-                token_idx: -1
+                idx: -1
             }]
         }
         handleLoadCompletion(newCompletion);

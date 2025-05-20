@@ -7,12 +7,12 @@ from .base import Completion
 # Request Schema
 
 class Token(BaseModel):
-    target_token: str
-    token_idx: int
+    idx: int
+    target_token: str = None
+    target_token_id: int = None
 
 class LensCompletion(Completion):
     model: str
-    name: str
     tokens: List[Token]
 
 class LensRequest(BaseModel):
@@ -21,7 +21,7 @@ class LensRequest(BaseModel):
 # Response Schema
 
 class Point(BaseModel):
-    model_name: str
+    id: str
     prob: float
 
 class LayerResults(BaseModel):

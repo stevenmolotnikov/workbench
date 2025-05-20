@@ -8,18 +8,18 @@ from ..state import AppState
 
 router = APIRouter()
 
-def logit_lens(model, model_tasks, remote: bool):
+def logit_lens(model, model_requests, remote: bool):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))[:,]
 
     all_results = []
     with model.trace(remote=remote) as tracer:
-        for task in model_tasks:
+        for request in model_requests:
             # Get user queried indices
-            idxs = task["selected_token_indices"]
+            idxs = request["selected_token_idxs"]
             results = []
 
-            with tracer.invoke(task["prompt"]):
+            with tracer.invoke(request["prompt"]):
                 for layer_idx, layer in enumerate(model.model.layers):
                     # Decode hidden state into vocabulary
                     x = layer.output[0]
@@ -37,49 +37,59 @@ def logit_lens(model, model_tasks, remote: bool):
 
                     # Save results
                     results.append({
+                        "id": request["id"],
                         "layer_idx": layer_idx,
                         "pred_probs": pred_probs.save(),
                         "preds": preds.save(),
                     })
                 
-            all_results.append(results)
+            all_results.extend(results)
 
     return all_results
 
-def process_results(model, results):
-    processed_results = []
-    for layer_results in results:
-        # Cast to Python primatives and get Proxy values
-        preds = layer_results["preds"].value
-        pred_probs = layer_results["pred_probs"].tolist()
-
-        # If only a single token is selected, pred_probs is a float
-        if not isinstance(pred_probs, list):
-            pred_probs = [pred_probs]
-
-        # Get string for each token id prediction
-        str_toks = model.tokenizer.batch_decode(preds)
-
-        processed_results.append({
-            "layer_idx": layer_results["layer_idx"],
-            "pred_probs": pred_probs,
-            "preds": str_toks,
-        })
-
-    return processed_results
 
 
 def preprocess(lens_request: LensRequest):
     # Batch prompts for the same model
     grouped_requests = defaultdict(list)
     for completion in lens_request.completions:
+        selected_token_idxs = [token.idx for token in completion.tokens]
+        selected_token_ids = [token.target_token_id for token in completion.tokens]
+
         request = {
+            "id" : completion.id,
             "prompt": completion.prompt,
-            "selected_token_indices": completion.selectedTokenIndices,
+            "selected_token_idxs": selected_token_idxs,
+            "selected_token_ids": selected_token_ids,
         }
         grouped_requests[completion.model].append(request)
 
     return grouped_requests
+
+def postprocess(results):
+    processed_results = defaultdict(list)
+    for result in results:
+        # preds = result["preds"].value
+        pred_probs = result["pred_probs"].tolist()
+
+        # If only a single token is selected, pred_probs is a float
+        # if not isinstance(pred_probs, list):
+        #     pred_probs = [pred_probs]
+
+        layer_idx = result["layer_idx"]
+        processed_results[layer_idx].append({
+            "id": result["id"],
+            "prob": pred_probs,
+        })
+
+    layer_results = [
+        {
+            "layer": layer_idx,
+            "points": processed_results[layer_idx]
+        } for layer_idx in processed_results
+    ]
+
+    return layer_results
 
 
 @router.post("/lens")
@@ -89,16 +99,19 @@ async def lens(lens_request: LensRequest, request: Request):
     grouped_requests = preprocess(lens_request)
 
     # Compute logit lens for each model
-    all_results = []
-    for model_name, model_tasks in grouped_requests.items():
+    results = []
+    for model_name, model_requests in grouped_requests.items():
         model = state.get_model(model_name)
-        results = logit_lens(model, model_tasks, state.remote)
+        model_results = logit_lens(model, model_requests, state.remote)
+        results.extend(model_results)
 
-        for instance_idx, instance_results in enumerate(results):
-            processed_results = process_results(model, instance_results)
-            all_results.append({
-                "model_name": f"{model_name} | {instance_idx}",
-                "layer_results": processed_results,
-            })
+    results = postprocess(results)
 
-    return LensResponse(model_results=all_results)
+    print(results)
+
+    return LensResponse(**{
+        "data": results,
+        "metadata": {
+            "maxLayer": len(results) - 1
+        }
+    })

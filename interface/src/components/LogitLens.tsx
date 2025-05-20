@@ -21,10 +21,11 @@ import config from "@/lib/config";
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 
-import { useAnnotations } from "@/stores/annotations";
+import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
 import { useLensCompletions } from "@/hooks/useLensCompletions";
 
 import { useModelStore } from "@/stores/useModelStore";
+import { fetchLogitLensData } from "@/api/lens";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
@@ -41,7 +42,7 @@ export function LogitLens() {
         handleNewCompletion,
         setActiveCompletions,
     } = useLensCompletions();
-    const { setAnnotations } = useAnnotations();
+    // const { setAnnotations } = useLineGraphAnnotations();
 
     const toggleAnnotations = () => {
         setAnnotationsOpen(!annotationsOpen);
@@ -51,7 +52,7 @@ export function LogitLens() {
         setChartData(null);
         setActiveCompletions(workspace.completions);
         setChartData(workspace.graphData);
-        setAnnotations(workspace.annotations);
+        // setAnnotations(workspace.annotations);
     };
 
     const handleRun = async () => {
@@ -59,17 +60,7 @@ export function LogitLens() {
         setChartData(null);
 
         try {
-            const response = await fetch(
-                config.getApiUrl(config.endpoints.lens),
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ completions: activeCompletions }),
-                }
-            );
-            const data = await response.json();
+            const data = await fetchLogitLensData(activeCompletions);
             setChartData(data);
         } catch (error) {
             console.error("Error sending request:", error);

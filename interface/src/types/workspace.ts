@@ -18,11 +18,14 @@ export interface Model {
 
 export interface Annotation {
     id: string;
-    x: number;
-    y: number;
     text: string;
-    timestamp: number;
 }
+
+export interface LineGraphAnnotation extends Annotation { 
+    lineId: string;
+    layer: number;
+}
+
 
 export interface ChartMode {
     name: string;

@@ -8,7 +8,7 @@ import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { TokenPredictions } from "@/types/workspace";
-import { Token } from "@/types/tokenizer";
+import { TokenCompletion } from "@/types/lens";
 import config from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
@@ -29,14 +29,14 @@ export function PromptBuilder({
     };
 
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
-    const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+    const [selectedToken, setSelectedToken] = useState<TokenCompletion | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
 
     const handleTokenSelection = (id: string, indices: number[]) => {
         onUpdateCompletion(id, { 
             tokens: indices.map(idx => ({
                 target_token: "",
-                token_idx: idx
+                idx: idx
             }))
         });
     };
@@ -44,7 +44,7 @@ export function PromptBuilder({
     const handleTargetTokenUpdate = (id: string, tokenIdx: number, targetToken: string) => {
         onUpdateCompletion(id, {
             tokens: completions.find(c => c.id === id)?.tokens.map(t => 
-                t.token_idx === tokenIdx ? { ...t, target_token: targetToken } : t
+                t.idx === tokenIdx ? { ...t, target_token: targetToken } : t
             ) || []
         });
     };
@@ -80,7 +80,6 @@ export function PromptBuilder({
             console.log("Done");
         }
     };
-
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { TokenCompletion } from "@/types/lens";
 import { Token } from "@/types/tokenizer";
 import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
@@ -9,7 +10,7 @@ import { useModelStore } from "@/stores/useModelStore";
 interface PredictionDisplayProps {
     predictions: TokenPredictions;
     compl: LensCompletion;
-    selectedToken: Token;
+    selectedToken: TokenCompletion;
     handleTargetTokenUpdate: (id: string, idx: number, value: string) => void;
 }
 
@@ -28,7 +29,7 @@ export const PredictionDisplay = ({
         if (!selectedToken || selectedToken.idx === null) return;
 
         const targetToken = compl.tokens.find(
-            (t) => t.token_idx === selectedToken.idx
+            (t) => t.idx === selectedToken.idx
         )?.target_token;
 
         if (!targetToken) return;
@@ -36,6 +37,7 @@ export const PredictionDisplay = ({
         const debounce = setTimeout(async () => {
             const tokens = await tokenizeText(targetToken);
             setTokenData(tokens);
+            selectedToken.target_token_id = tokens?.[0]?.id;
         }, 500);
 
         return () => clearTimeout(debounce);
@@ -55,7 +57,7 @@ export const PredictionDisplay = ({
                             className="bg-transparent border rounded w-1/4"
                             placeholder=""
                             value={
-                                compl.tokens.find((t) => t.token_idx === selectedToken.idx)
+                                compl.tokens.find((t) => t.idx === selectedToken.idx)
                                     ?.target_token || ""
                             }
                             onChange={(e) =>
