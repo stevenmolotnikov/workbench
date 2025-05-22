@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { Button } from "@/components/ui/button";
 
 function Account() {
     const [session, setSession] = useState<Session | null>(null);
@@ -43,9 +43,16 @@ function Account() {
 }
 
 export default function HomePage() {
+    function logOut() {
+        const supabase = createClient();
+        console.log("Logging out");
+        supabase.auth.signOut();
+    }
+
     return (
         <div>
             <Account />
+            <Button onClick={logOut}>Log Out</Button>
         </div>
     );
 }

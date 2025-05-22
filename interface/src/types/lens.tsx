@@ -1,5 +1,5 @@
 import { Completion, Annotation, ChartMode } from "@/types/workspace"
-import { BarChart } from "lucide-react";
+import { BarChart, Grid3x3 } from "lucide-react";
 
 // Request Schema
 
@@ -63,13 +63,27 @@ export interface LineGraphData {
     maxLayer: number;
 }
 
+// Grid Chart Data Schema
+
+export interface GridChartData {
+    layer: number;
+    probs: number[][];
+    pred_strs: string[][];
+}
+
 // Chart Modes
 
 export const LogitLensModes: ChartMode[] = [
     {
-        name: "Token Analysis",
+        name: "Target Token",
         description: "Probability of the target token per layer.",
         icon: <BarChart className="h-6 w-6" />,
         chartType: "line"
+    },
+    {
+        name: "Prediction Grid",
+        description: "Grid of the most probable token per layer.",
+        icon: <Grid3x3 className="h-6 w-6" />,
+        chartType: "heatmap"
     },
 ]

@@ -3,24 +3,29 @@ import type { ModelLoadStatus } from '@/types/workbench';
 import type { Model } from '@/types/workspace';
 import config from '@/lib/config';
 
-interface ModelState {
+import { Layout } from '@/types/workspace';
+
+interface WorkbenchState {
+    // Models
     modelLoadStatus: ModelLoadStatus;
-    setModelLoadStatus: (status: ModelLoadStatus) => void;
     baseModels: string[];
     chatModels: string[];
-    fetchModels: () => Promise<void>;
     modelName: string;
     modelType: "base" | "chat";
+
+    setModelLoadStatus: (status: ModelLoadStatus) => void;
+    fetchModels: () => Promise<void>;
     setModelName: (name: string) => void;
     handleModelChange: (name: string) => void;
 }
 
-export const useModelStore = create<ModelState>((set, get) => ({
+export const useWorkbench = create<WorkbenchState>((set, get) => ({
     modelLoadStatus: 'loading',
     baseModels: [],
     chatModels: [],
     modelName: "",
     modelType: "base",
+
     setModelLoadStatus: (status) => set({ modelLoadStatus: status }),
     setModelName: (name) => set({ modelName: name }),
     handleModelChange: (name: string) => {

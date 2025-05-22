@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { PreTrainedTokenizer } from '@huggingface/transformers';
 import { Token } from '@/types/tokenizer';
-import { useModelStore } from './useModelStore';
+import { useWorkbench } from './useWorkbench';
 
 interface TokenizerState {
     tokenizers: Map<string, PreTrainedTokenizer>;
@@ -62,7 +62,7 @@ export const useTokenizer = create<TokenizerState>((set, get) => ({
         // print keys of tokenizers
         console.log(Array.from(tokenizers.keys()));
 
-        const { modelName } = useModelStore.getState();
+        const { modelName } = useWorkbench.getState();
         const tokenizer = tokenizers.get(modelName);
         
         if (!tokenizer) {

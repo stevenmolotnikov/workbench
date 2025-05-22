@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { useTokenizer } from "@/stores/useTokenizer";
-import { useModelStore } from "@/stores/useModelStore";
+import { useWorkbench } from "@/stores/useWorkbench";
 import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -96,7 +96,7 @@ export const PredictionDisplay = ({
     clearToken,
 }: PredictionDisplayProps) => {
     const { isTokenizerLoading, initializeTokenizer, tokenizeText } = useTokenizer();
-    const { modelName } = useModelStore();
+    const { modelName } = useWorkbench();
 
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 

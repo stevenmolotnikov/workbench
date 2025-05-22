@@ -6,7 +6,7 @@ import { Token } from "@/types/tokenizer";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
 import { TokenPredictions } from "@/types/workspace";
-import { useModelStore } from "@/stores/useModelStore";
+import { useWorkbench } from "@/stores/useWorkbench";
 import { useTokenizer } from "@/stores/useTokenizer";
 
 interface TokenAreaProps {
@@ -26,7 +26,7 @@ export function TokenArea({
     setSelectedIdx,
     filledTokens,
 }: TokenAreaProps) {
-    const { modelName } = useModelStore();
+    const { modelName } = useWorkbench();
     const { isLocalLoading, isTokenizerLoading, error, initializeTokenizer, tokenizeText } =
         useTokenizer();
     const [tokenData, setTokenData] = useState<Token[] | null>(null);

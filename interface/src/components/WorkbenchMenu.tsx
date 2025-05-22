@@ -38,7 +38,7 @@ export function WorkbenchMenu({ toggleAnnotations, setLayout, handleRun }: Workb
                         <DropdownMenuItem onClick={() => setLayout("2x1")}>2x1</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" onClick={handleRun}>
+                <Button size="sm" className="bg-gradient" onClick={handleRun}>
                     <Play size={16} />
                     Run
                 </Button>

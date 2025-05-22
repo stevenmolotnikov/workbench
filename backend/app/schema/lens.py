@@ -1,23 +1,22 @@
-from typing import List 
+from typing import List
 
 from pydantic import BaseModel
 
 from .base import Completion
 
-# Request Schema
-
 class Token(BaseModel):
     idx: int
     target_id: int
 
-class LensCompletion(Completion):
-    model: str
+##### TARGETED LENS REQUEST SCHEMA #####
+
+class TargetedLensCompletion(Completion):
     tokens: List[Token]
 
-class LensRequest(BaseModel):
-    completions: List[LensCompletion]
+class TargetedLensRequest(BaseModel):
+    completions: List[TargetedLensCompletion]
 
-# Response Schema
+##### TARGETED LENS RESPONSE SCHEMA #####
 
 class Point(BaseModel):
     id: str
@@ -33,3 +32,15 @@ class LensMetadata(BaseModel):
 class LensResponse(BaseModel):
     data: List[LayerResults]
     metadata: LensMetadata
+
+##### GRID LENS REQUEST SCHEMA #####
+
+class GridLensRequest(BaseModel):
+    completion: Completion
+
+##### GRID LENS RESPONSE SCHEMA #####
+
+class GridLensResponse(BaseModel):
+    id: str
+    probs: List[List[float]]
+    preds: List[List[str]]

@@ -1,8 +1,5 @@
-import { createClient } from '@/utils/supabase/server';
+import { redirect } from "next/navigation";
 
-export default async function Instruments() {
-  const supabase = await createClient();
-  const { data: instruments } = await supabase.from("instruments").select();
-
-  return <pre>{JSON.stringify(instruments, null, 2)}</pre>
+export default function Page() {
+    redirect("/auth/login");
 }

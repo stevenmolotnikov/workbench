@@ -1,14 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
-import { ModelSelector } from "./ModelSelector";
 import { LineGraphData, LogitLensWorkspace, LogitLensModes } from "@/types/lens";
 import { WorkbenchMenu } from "./WorkbenchMenu";
-
-import { Layout } from "@/types/workspace";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
 
@@ -16,25 +11,26 @@ import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 
 import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensWorkbench } from "@/stores/useLensWorkbench";
 
-import { useModelStore } from "@/stores/useModelStore";
-import { fetchLogitLensData } from "@/api/lens";
+import { fetchLogitLensData, fetchGridLensData } from "@/api/lens";
 import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
-    const [chartData, setChartData] = useState<LineGraphData | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [layout, setLayout] = useState<Layout>("1x1");
 
-    const { modelName } = useModelStore();
-
-    const {
-        activeCompletions,
-        handleNewCompletion,
-        setActiveCompletions,
-    } = useLensCompletions();
+    const { activeCompletions, setActiveCompletions } = useLensCompletions();
     const { annotations, setAnnotations } = useLineGraphAnnotations();
+    const { 
+        layout, 
+        gridPositions, 
+        setLayout, 
+        setChartData, 
+        setLoading, 
+        clearAllData,
+        getPopulatedPositions 
+    } = useLensWorkbench();
 
     const toggleAnnotations = () => {
         setAnnotationsOpen(!annotationsOpen);
@@ -42,15 +38,21 @@ export function LogitLens() {
 
     const loadWorkspace = (workspace: LogitLensWorkspace) => {
         setActiveCompletions(workspace.completions);
-        setChartData(workspace.graphData);
+        // For now, we'll just load the single chart data to the first position if it exists
+        // This could be enhanced to save/load multiple chart configurations
+        if (workspace.graphData && gridPositions.length > 0) {
+            setChartData(0, workspace.graphData);
+        }
         setAnnotations(workspace.annotations);
     };
 
     const exportWorkspace = () => {
+        // Export the first chart's data for backward compatibility
+        const firstChartData = gridPositions[0]?.chartData;
         const workspace = {
             name: "",
             completions: activeCompletions,
-            graphData: chartData,
+            graphData: firstChartData as LineGraphData | null,
             annotations: annotations,
         };
         return workspace;
@@ -58,14 +60,44 @@ export function LogitLens() {
 
     const handleRun = async () => {
         setIsLoading(true);
-        setChartData(null);
+        clearAllData(); // Clear all existing chart data
 
+        const populatedPositions = getPopulatedPositions();
+        
         try {
-            const data = await fetchLogitLensData(activeCompletions);
-            setChartData(data as LineGraphData);
+            // Send requests for each populated chart type
+            const promises = populatedPositions.map(async ({ position, chartType }) => {
+                setLoading(position, true);
+                
+                try {
+                    const mode = LogitLensModes[chartType];
+                    
+                    if (mode.chartType === "heatmap") {
+                        // For heatmap (grid lens), we need to send each completion separately
+                        // For now, just use the first completion
+                        if (activeCompletions.length > 0) {
+                            const firstCompletion = activeCompletions[0];
+                            const data = await fetchGridLensData(firstCompletion);
+                            setChartData(position, data);
+                        } else {
+                            setChartData(position, null);
+                        }
+                    } else {
+                        // For line charts (targeted lens), send all completions
+                        const data = await fetchLogitLensData(activeCompletions);
+                        setChartData(position, data as LineGraphData);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching data for chart at position ${position}:`, error);
+                    setChartData(position, null);
+                } finally {
+                    setLoading(position, false);
+                }
+            });
+
+            await Promise.all(promises);
         } catch (error) {
-            console.error("Error sending request:", error);
-            setChartData(null);
+            console.error("Error in handleRun:", error);
         } finally {
             setIsLoading(false);
         }
@@ -92,39 +124,10 @@ export function LogitLens() {
 
                 <ResizableLayout
                     annotationsOpen={annotationsOpen}
-                    workbench={
-                        <div className="h-full flex flex-col">
-                            <div className="p-4 border-b">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-sm font-medium">Model</h2>
-
-                                    <div className="flex items-center gap-2">
-                                        <ModelSelector />
-
-                                        <Button
-                                            size="sm"
-                                            className="w-100"
-                                            onClick={() => handleNewCompletion(modelName)}
-                                        >
-                                            New
-                                            <Plus size={16} />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <PromptBuilder
-                                completions={activeCompletions}
-                            />
-                        </div>
-                    }
+                    workbench={<PromptBuilder />}
                     charts={
                         <ChartSelector
                             modes={LogitLensModes}
-                            layout={layout}
-                            chartData={chartData}
-                            isLoading={isLoading}
-                            setChartData={setChartData}
                         />
                     }
                 />

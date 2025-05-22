@@ -51,7 +51,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     initialize: async () => {
         try {
             const supabase = createClient();
-
             // Get initial session
             const {
                 data: { session },
