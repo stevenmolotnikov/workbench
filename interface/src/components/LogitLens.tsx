@@ -5,31 +5,25 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { ModelSelector } from "./ModelSelector";
-import {
-    LogitLensResponse,
-    LogitLensWorkspace,
-    LogitLensModes,
-} from "@/types/lens";
+import { LineGraphData, LogitLensWorkspace, LogitLensModes } from "@/types/lens";
 import { WorkbenchMenu } from "./WorkbenchMenu";
 
 import { Layout } from "@/types/workspace";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
 
-import config from "@/lib/config";
-
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 
-import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
-import { useLensCompletions } from "@/hooks/useLensCompletions";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
 import { useModelStore } from "@/stores/useModelStore";
 import { fetchLogitLensData } from "@/api/lens";
+import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
-    const [chartData, setChartData] = useState<LogitLensResponse | null>(null);
+    const [chartData, setChartData] = useState<LineGraphData | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [layout, setLayout] = useState<Layout>("1x1");
 
@@ -37,22 +31,29 @@ export function LogitLens() {
 
     const {
         activeCompletions,
-        handleDeleteCompletion,
-        handleUpdateCompletion,
         handleNewCompletion,
         setActiveCompletions,
     } = useLensCompletions();
-    // const { setAnnotations } = useLineGraphAnnotations();
+    const { annotations, setAnnotations } = useLineGraphAnnotations();
 
     const toggleAnnotations = () => {
         setAnnotationsOpen(!annotationsOpen);
     };
 
-    const handleLoadWorkspace = (workspace: LogitLensWorkspace) => {
-        setChartData(null);
+    const loadWorkspace = (workspace: LogitLensWorkspace) => {
         setActiveCompletions(workspace.completions);
         setChartData(workspace.graphData);
-        // setAnnotations(workspace.annotations);
+        setAnnotations(workspace.annotations);
+    };
+
+    const exportWorkspace = () => {
+        const workspace = {
+            name: "",
+            completions: activeCompletions,
+            graphData: chartData,
+            annotations: annotations,
+        };
+        return workspace;
     };
 
     const handleRun = async () => {
@@ -61,7 +62,7 @@ export function LogitLens() {
 
         try {
             const data = await fetchLogitLensData(activeCompletions);
-            setChartData(data);
+            setChartData(data as LineGraphData);
         } catch (error) {
             console.error("Error sending request:", error);
             setChartData(null);
@@ -75,9 +76,8 @@ export function LogitLens() {
             {/* Left sidebar */}
             <div className="w-64 border-r">
                 <WorkspaceHistory
-                    chartData={chartData}
-                    completions={activeCompletions}
-                    onLoadWorkspace={handleLoadWorkspace}
+                    loadWorkspace={(workspace) => loadWorkspace(workspace as LogitLensWorkspace)}
+                    exportWorkspace={exportWorkspace}
                 />
             </div>
 
@@ -96,9 +96,7 @@ export function LogitLens() {
                         <div className="h-full flex flex-col">
                             <div className="p-4 border-b">
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-sm font-medium">
-                                        Model
-                                    </h2>
+                                    <h2 className="text-sm font-medium">Model</h2>
 
                                     <div className="flex items-center gap-2">
                                         <ModelSelector />
@@ -106,9 +104,7 @@ export function LogitLens() {
                                         <Button
                                             size="sm"
                                             className="w-100"
-                                            onClick={() =>
-                                                handleNewCompletion(modelName)
-                                            }
+                                            onClick={() => handleNewCompletion(modelName)}
                                         >
                                             New
                                             <Plus size={16} />
@@ -119,8 +115,6 @@ export function LogitLens() {
 
                             <PromptBuilder
                                 completions={activeCompletions}
-                                onUpdateCompletion={handleUpdateCompletion}
-                                onDeleteCompletion={handleDeleteCompletion}
                             />
                         </div>
                     }

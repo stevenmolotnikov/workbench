@@ -2,6 +2,8 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Request
 import torch as t
+import nnsight as ns
+
 
 from ..schema.lens import LensRequest, LensResponse
 from ..state import AppState
@@ -16,8 +18,12 @@ def logit_lens(model, model_requests, remote: bool):
     with model.trace(remote=remote) as tracer:
         for request in model_requests:
             # Get user queried indices
-            idxs = request["selected_token_idxs"]
+            idxs = request["idxs"]
+            target_ids = request["target_ids"]
             results = []
+
+            ns.log(idxs)
+            ns.log(target_ids)
 
             with tracer.invoke(request["prompt"]):
                 for layer_idx, layer in enumerate(model.model.layers):
@@ -27,20 +33,17 @@ def logit_lens(model, model_requests, remote: bool):
 
                     # Compute probabilities over the relevant tokens
                     relevant_tokens = logits[0, idxs, :]
+
                     probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
 
-                    # Get the predicted token at each index
-                    preds = t.argmax(probs, dim=-1)
-
                     # Gather probabilities over the predicted tokens
-                    pred_probs = t.gather(probs, 1, preds.unsqueeze(1)).squeeze()
+                    target_probs = t.gather(probs, 1, target_ids.unsqueeze(1)).squeeze()
 
                     # Save results
                     results.append({
                         "id": request["id"],
                         "layer_idx": layer_idx,
-                        "pred_probs": pred_probs.save(),
-                        "preds": preds.save(),
+                        "target_probs": target_probs.save(),
                     })
                 
             all_results.extend(results)
@@ -53,14 +56,22 @@ def preprocess(lens_request: LensRequest):
     # Batch prompts for the same model
     grouped_requests = defaultdict(list)
     for completion in lens_request.completions:
-        selected_token_idxs = [token.idx for token in completion.tokens]
-        selected_token_ids = [token.target_token_id for token in completion.tokens]
+        idxs = []
+        target_ids = []
+
+        for token in completion.tokens:
+            # These tokens have no target token set
+            if token.target_id != -1:
+                idxs.append(token.idx)
+                target_ids.append(token.target_id)
+
+        target_ids = t.tensor(target_ids)
 
         request = {
             "id" : completion.id,
             "prompt": completion.prompt,
-            "selected_token_idxs": selected_token_idxs,
-            "selected_token_ids": selected_token_ids,
+            "idxs": idxs,
+            "target_ids": target_ids,
         }
         grouped_requests[completion.model].append(request)
 
@@ -70,17 +81,18 @@ def postprocess(results):
     processed_results = defaultdict(list)
     for result in results:
         # preds = result["preds"].value
-        pred_probs = result["pred_probs"].tolist()
+        target_probs = result["target_probs"].tolist()
 
         # If only a single token is selected, pred_probs is a float
-        # if not isinstance(pred_probs, list):
-        #     pred_probs = [pred_probs]
+        if not isinstance(target_probs, list):
+            target_probs = [target_probs]
 
         layer_idx = result["layer_idx"]
-        processed_results[layer_idx].append({
-            "id": result["id"],
-            "prob": pred_probs,
-        })
+        for prob in target_probs:
+            processed_results[layer_idx].append({
+                "id": result["id"],
+                "prob": prob,
+            })
 
     layer_results = [
         {

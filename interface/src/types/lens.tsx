@@ -5,8 +5,8 @@ import { BarChart } from "lucide-react";
 
 export interface TokenCompletion {
     idx: number;
-    target_token?: string;
-    target_token_id?: number;
+    target_id: number;
+    target_text?: string;
 }
 
 export interface LensCompletion extends Completion { 
@@ -26,7 +26,6 @@ interface LayerResults {
     points: Point[];
 }
 
-
 export interface LogitLensResponse {
     data: LayerResults[];
     metadata: {
@@ -34,10 +33,17 @@ export interface LogitLensResponse {
     };
 }
 
+export interface LineGraphAnnotation extends Annotation { 
+    lineId: string;
+    layer: number;
+}
+
 export interface LogitLensWorkspace { 
+    id?: string;
+    name: string;
     completions: LensCompletion[];
-    graphData: LogitLensResponse;
-    annotations: Annotation[];
+    graphData: LineGraphData | null;
+    annotations: LineGraphAnnotation[];
 }
 
 // Processed Chart Data Schema

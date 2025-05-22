@@ -21,14 +21,21 @@ export const useTokenizer = create<TokenizerState>((set, get) => ({
     initializeTokenizer: async (modelName: string) => {
         const { tokenizers } = get();
         
+        // Don't initialize if modelName is empty
+        if (!modelName) {
+            set({ error: 'No model selected' });
+            return;
+        }
+        
         // If tokenizer already exists for this model, just set it as active
         if (tokenizers.has(modelName)) {
-            set({ isTokenizerLoading: false });
+            set({ isTokenizerLoading: false, error: null });
             return;
         }
 
         try {
             if (typeof window === 'undefined') return;
+            set({ isTokenizerLoading: true, error: null });
             const tokenizer = await PreTrainedTokenizer.from_pretrained(modelName);
             
             // Add new tokenizer to the map
@@ -37,16 +44,24 @@ export const useTokenizer = create<TokenizerState>((set, get) => ({
             
             set({ 
                 tokenizers: newTokenizers,
-                isTokenizerLoading: false 
+                isTokenizerLoading: false,
+                error: null
             });
         } catch (err) {
             console.error('Error initializing tokenizer:', err);
-            set({ error: 'Failed to initialize tokenizer' });
+            set({ 
+                error: `Failed to initialize tokenizer for model ${modelName}`,
+                isTokenizerLoading: false 
+            });
         }
     },
 
     tokenizeText: async (text) => {
         const { tokenizers } = get();
+
+        // print keys of tokenizers
+        console.log(Array.from(tokenizers.keys()));
+
         const { modelName } = useModelStore.getState();
         const tokenizer = tokenizers.get(modelName);
         

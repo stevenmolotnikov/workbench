@@ -1,4 +1,4 @@
-import { Connection } from "@/types/activation-patching";
+import { Connection } from "@/types/patching";
 
 interface EdgeProps {
     connections: Connection[];

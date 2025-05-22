@@ -21,12 +21,6 @@ export interface Annotation {
     text: string;
 }
 
-export interface LineGraphAnnotation extends Annotation { 
-    lineId: string;
-    layer: number;
-}
-
-
 export interface ChartMode {
     name: string;
     description: string;

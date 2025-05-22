@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { LineGraphData } from "@/types/lens";
 import { Heatmap } from "@/components/charts/Heatmap";
 import { ChartMode } from "@/types/workspace";
-import { ActivationPatchingResponse } from "@/types/activation-patching";
+import { ActivationPatchingResponse } from "@/types/patching";
 import { LineGraph } from "@/components/charts/LineGraph";
 
 import { SelectionMenu } from "./SelectionMenu";

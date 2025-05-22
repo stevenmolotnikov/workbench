@@ -8,44 +8,55 @@ import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { TokenPredictions } from "@/types/workspace";
-import { TokenCompletion } from "@/types/lens";
 import config from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
 interface PromptBuilderProps {
     completions: LensCompletion[];
-    onUpdateCompletion: (id: string, updates: Partial<LensCompletion>) => void;
-    onDeleteCompletion: (id: string) => void;
 }
 
-export function PromptBuilder({
-    completions,
-    onUpdateCompletion,
-    onDeleteCompletion,
-}: PromptBuilderProps) {
+export function PromptBuilder({ completions }: PromptBuilderProps) {
+    const { handleUpdateCompletion, handleDeleteCompletion } = useLensCompletions();
     const handleContentUpdate = (id: string, updates: Partial<LensCompletion>) => {
-        onUpdateCompletion(id, updates);
+        handleUpdateCompletion(id, updates);
     };
 
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
-    const [selectedToken, setSelectedToken] = useState<TokenCompletion | null>(null);
+    const [seletectedIdx, setSelectedIdx] = useState<number>(-1);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
 
     const handleTokenSelection = (id: string, indices: number[]) => {
-        onUpdateCompletion(id, { 
-            tokens: indices.map(idx => ({
-                target_token: "",
-                idx: idx
-            }))
+        handleUpdateCompletion(id, {
+            tokens: indices.map((idx) => ({
+                target_id: -1,
+                idx: idx,
+            })),
         });
     };
 
-    const handleTargetTokenUpdate = (id: string, tokenIdx: number, targetToken: string) => {
-        onUpdateCompletion(id, {
-            tokens: completions.find(c => c.id === id)?.tokens.map(t => 
-                t.idx === tokenIdx ? { ...t, target_token: targetToken } : t
-            ) || []
+    const updateToken = (id: string, tokenIdx: number, targetId: number, targetText: string) => {
+        handleUpdateCompletion(id, {
+            tokens:
+                completions
+                    .find((c) => c.id === id)
+                    ?.tokens.map((t) =>
+                        t.idx === tokenIdx
+                            ? { ...t, target_id: targetId, target_text: targetText }
+                            : t
+                    ) || [],
+        });
+    };
+
+    const clearToken = (id: string, tokenIdx: number) => {
+        handleUpdateCompletion(id, {
+            tokens:
+                completions
+                    .find((c) => c.id === id)
+                    ?.tokens.map((t) =>
+                        t.idx === tokenIdx ? { ...t, target_id: -1, target_text: "" } : t
+                    ) || [],
         });
     };
 
@@ -55,27 +66,34 @@ export function PromptBuilder({
         } else {
             await runConversation(completion);
         }
-    }
+    };
 
     const runConversation = async (completion: LensCompletion) => {
-        console.log(completion.tokens)
+        console.log(
+            JSON.stringify({
+                completion: completion,
+                model: completion.model,
+                tokens: completion.tokens,
+            })
+        );
+
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     completion: completion,
                     model: completion.model,
-                    tokens: completion.tokens
+                    tokens: completion.tokens,
                 }),
             });
             const data: TokenPredictions = await response.json();
             setPredictions(data);
             setShowPredictions(true);
         } catch (error) {
-            console.error('Error sending request:', error);
+            console.error("Error sending request:", error);
         } finally {
             console.log("Done");
         }
@@ -85,20 +103,27 @@ export function PromptBuilder({
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {completions.map((compl) => (
                 <div key={compl.id}>
-                    <div className={cn("border bg-card p-4 overflow-hidden transition-all duration-200 ease-in-out", showPredictions ? "rounded-t-lg" : "rounded-lg")}>
+                    <div
+                        className={cn(
+                            "border bg-card p-4 overflow-hidden transition-all duration-200 ease-in-out",
+                            showPredictions ? "rounded-t-lg" : "rounded-lg"
+                        )}
+                    >
                         <div className="flex items-center justify-between pb-4">
                             <span className="text-sm">{compl.model}</span>
                             <div className="flex items-center gap-2">
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => onDeleteCompletion(compl.id)}
+                                    onClick={() => handleDeleteCompletion(compl.id)}
                                 >
                                     <Trash size={16} className="w-8 h-8" />
                                 </Button>
                                 <Button
                                     size="icon"
-                                    onClick={() => { handleSparkleClick(compl) }}
+                                    onClick={() => {
+                                        handleSparkleClick(compl);
+                                    }}
                                 >
                                     <Sparkle size={16} className="w-8 h-8" />
                                 </Button>
@@ -108,7 +133,9 @@ export function PromptBuilder({
                             <div className="flex-1 overflow-y-autospace-y-6">
                                 <Textarea
                                     value={compl.prompt}
-                                    onChange={(e) => handleContentUpdate(compl.id, { prompt: e.target.value })}
+                                    onChange={(e) =>
+                                        handleContentUpdate(compl.id, { prompt: e.target.value })
+                                    }
                                     className="h-24 resize-none"
                                     placeholder="Enter your prompt here..."
                                 />
@@ -118,25 +145,27 @@ export function PromptBuilder({
                                     text={compl.prompt}
                                     showPredictions={showPredictions}
                                     predictions={predictions || {}}
-                                    onTokenSelection={(indices) => handleTokenSelection(compl.id, indices)}
-                                    setSelectedToken={setSelectedToken}
+                                    onTokenSelection={(indices) =>
+                                        handleTokenSelection(compl.id, indices)
+                                    }
+                                    setSelectedIdx={setSelectedIdx}
+                                    filledTokens={compl.tokens}
                                 />
                             </div>
                         </div>
                     </div>
-                    {
-                        showPredictions && <PredictionDisplay
+                    {showPredictions && (
+                        <PredictionDisplay
                             predictions={predictions || {}}
                             compl={compl}
-                            selectedToken={selectedToken}
-                            handleTargetTokenUpdate={handleTargetTokenUpdate}
+                            selectedIdx={seletectedIdx}
+                            updateToken={updateToken}
+                            clearToken={clearToken}
                         />
-                    }
+                    )}
                 </div>
             ))}
-            {completions.length === 0 && (
-                <p className="text-center py-4">No active completions.</p>
-            )}
+            {completions.length === 0 && <p className="text-center py-4">No active completions.</p>}
         </div>
     );
-} 
+}

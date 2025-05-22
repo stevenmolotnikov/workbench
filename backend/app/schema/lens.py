@@ -8,8 +8,7 @@ from .base import Completion
 
 class Token(BaseModel):
     idx: int
-    target_token: str = None
-    target_token_id: int = None
+    target_id: int
 
 class LensCompletion(Completion):
     model: str
