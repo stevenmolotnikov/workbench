@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Connection } from '@/types/activation-patching';
+import { Connection } from '@/types/patching';
 
 interface UseConnectionReturn {
     connections: Connection[];

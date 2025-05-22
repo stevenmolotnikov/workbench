@@ -6,7 +6,7 @@ import { Token } from "@/types/tokenizer";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
 import { TokenPredictions } from "@/types/workspace";
-import { useModelStore } from "@/stores/useModelStore";
+import { useWorkbench } from "@/stores/useWorkbench";
 import { useTokenizer } from "@/stores/useTokenizer";
 
 interface TokenAreaProps {
@@ -14,7 +14,8 @@ interface TokenAreaProps {
     showPredictions: boolean;
     predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
-    setSelectedToken?: (token: TokenCompletion) => void;
+    setSelectedIdx: (idx: number) => void;
+    filledTokens: TokenCompletion[];
 }
 
 export function TokenArea({
@@ -22,29 +23,38 @@ export function TokenArea({
     text,
     showPredictions,
     onTokenSelection,
-    setSelectedToken,
+    setSelectedIdx,
+    filledTokens,
 }: TokenAreaProps) {
-    const { modelName } = useModelStore();
+    const { modelName } = useWorkbench();
     const { isLocalLoading, isTokenizerLoading, error, initializeTokenizer, tokenizeText } =
         useTokenizer();
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Initialize tokenizer when component mounts
+    // Initialize tokenizer when component mounts or model changes
     useEffect(() => {
-        if (!isTokenizerLoading) return;
+        if (!modelName) {
+            setTokenData(null);
+            return;
+        }
         initializeTokenizer(modelName);
-    }, [modelName, isTokenizerLoading]);
+    }, [modelName]);
 
     // Perform tokenization whenever text changes
     useEffect(() => {
+        if (!modelName) {
+            setTokenData(null);
+            return;
+        }
+
         const debounce = setTimeout(async () => {
             const tokens = await tokenizeText(text);
             setTokenData(tokens);
         }, 500);
 
         return () => clearTimeout(debounce);
-    }, [text]);
+    }, [text, modelName]);
 
     const {
         highlightedTokens,
@@ -66,9 +76,7 @@ export function TokenArea({
             const buffer = predictions[-1];
             if (lastTokenIndex >= 0) {
                 setHighlightedTokens([lastTokenIndex]);
-                setSelectedToken?.({
-                    idx: -1,
-                });
+                setSelectedIdx(-1);
             }
         }
     }, [predictions]);
@@ -98,17 +106,21 @@ export function TokenArea({
                         i,
                         tokenData
                     );
-                    const highlightStyle = "bg-primary/50 border-primary/50";
-                    const hoverStyle = "hover:bg-primary/50 hover:border-primary/50";
+                    const highlightStyle = "bg-primary/30 border-primary/30";
+                    const hoverStyle = "hover:bg-primary/30 hover:border-primary/30";
+                    const filledStyle = "bg-primary/70";
+
+                    const isFilled = filledTokens.some((t) => t.idx === i && t.target_id !== -1);
 
                     const styles = cn(
                         "text-sm whitespace-pre border select-none",
                         !isHighlighted && "rounded",
-                        isHighlighted && isGroupStart && !isGroupEnd && "rounded-l",
+                        isHighlighted && isGroupStart && !isGroupEnd && "rounded-l !border-r-transparent",
                         isHighlighted && isGroupEnd && !isGroupStart && "rounded-r",
                         isHighlighted && isGroupStart && isGroupEnd && "rounded",
-                        isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none",
+                        isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none !border-r-transparent",
                         isHighlighted ? highlightStyle : "border-transparent",
+                        isFilled ? filledStyle : "",
                         !showPredictions ? hoverStyle : "",
                         token.text === "\\n" ? "w-full" : "w-fit",
                         showPredictions && "cursor-pointer"
@@ -120,10 +132,8 @@ export function TokenArea({
                             data-token-id={i}
                             className={styles}
                             onClick={() => {
-                                if (showPredictions && setSelectedToken) {
-                                    setSelectedToken({
-                                        idx: i,
-                                    });
+                                if (showPredictions) {
+                                    setSelectedIdx(i);
                                 }
                             }}
                         >

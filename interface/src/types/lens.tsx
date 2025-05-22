@@ -1,12 +1,12 @@
 import { Completion, Annotation, ChartMode } from "@/types/workspace"
-import { BarChart } from "lucide-react";
+import { BarChart, Grid3x3 } from "lucide-react";
 
 // Request Schema
 
 export interface TokenCompletion {
     idx: number;
-    target_token?: string;
-    target_token_id?: number;
+    target_id: number;
+    target_text?: string;
 }
 
 export interface LensCompletion extends Completion { 
@@ -26,7 +26,6 @@ interface LayerResults {
     points: Point[];
 }
 
-
 export interface LogitLensResponse {
     data: LayerResults[];
     metadata: {
@@ -34,10 +33,17 @@ export interface LogitLensResponse {
     };
 }
 
+export interface LineGraphAnnotation extends Annotation { 
+    lineId: string;
+    layer: number;
+}
+
 export interface LogitLensWorkspace { 
+    id?: string;
+    name: string;
     completions: LensCompletion[];
-    graphData: LogitLensResponse;
-    annotations: Annotation[];
+    graphData: LineGraphData | null;
+    annotations: LineGraphAnnotation[];
 }
 
 // Processed Chart Data Schema
@@ -57,13 +63,27 @@ export interface LineGraphData {
     maxLayer: number;
 }
 
+// Grid Chart Data Schema
+
+export interface GridChartData {
+    layer: number;
+    probs: number[][];
+    pred_strs: string[][];
+}
+
 // Chart Modes
 
 export const LogitLensModes: ChartMode[] = [
     {
-        name: "Token Analysis",
+        name: "Target Token",
         description: "Probability of the target token per layer.",
         icon: <BarChart className="h-6 w-6" />,
         chartType: "line"
+    },
+    {
+        name: "Prediction Grid",
+        description: "Grid of the most probable token per layer.",
+        icon: <Grid3x3 className="h-6 w-6" />,
+        chartType: "heatmap"
     },
 ]

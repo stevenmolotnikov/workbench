@@ -21,7 +21,7 @@ import {
     ActivationPatchingModes,
     ActivationPatchingWorkspace,
     ActivationPatchingResponse,
-} from "@/types/activation-patching";
+} from "@/types/patching";
 
 type ModelLoadStatus = "loading" | "success" | "error";
 type WorkbenchMode = "logit-lens" | "activation-patching";

@@ -19,6 +19,8 @@ export interface ActivationPatchingResponse {
 }
 
 export interface ActivationPatchingWorkspace {
+    id?: string;
+    name: string;
     request: ActivationPatchingRequest;
     annotations: Annotation[];
     graphData: ActivationPatchingResponse;
@@ -38,9 +40,6 @@ export interface Connection {
         counterIndex: number; // 0 for first counter, 1 for second counter
     };
 }
-
-
-
 
 export const ActivationPatchingModes: ChartMode[] = [
     {

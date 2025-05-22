@@ -40,9 +40,23 @@ function processChartData(data) {
   return { chartData: sortedData, chartConfig: dynamicConfig, maxLayer };
 }
 
+function processGridData(data) {
+  // Process grid lens response for heatmap visualization
+  // This is a placeholder - the actual processing will depend on the backend response format
+  const results = data.probs || []; // 2D array of probabilities
+  const rowLabels = results.map((_, index) => `Layer ${index}`);
+  const colLabels = results[0] ? results[0].map((_, index) => `Token ${index}`) : [];
+  
+  return {
+    results,
+    rowLabels,
+    colLabels,
+  };
+}
+
 export async function fetchLogitLensData(completions) {
     const response = await fetch(
-        config.getApiUrl(config.endpoints.lens),
+        config.getApiUrl(config.endpoints.targetedLens),
         {
             method: "POST",
             headers: {
@@ -58,4 +72,24 @@ export async function fetchLogitLensData(completions) {
     
     const rawData = await response.json();
     return processChartData(rawData);
+}
+
+export async function fetchGridLensData(completion) {
+    const response = await fetch(
+        config.getApiUrl(config.endpoints.gridLens),
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ completion }),
+        }
+    );
+    
+    if (!response.ok) {
+        throw new Error('Failed to fetch grid lens data');
+    }
+    
+    const rawData = await response.json();
+    return processGridData(rawData);
 }

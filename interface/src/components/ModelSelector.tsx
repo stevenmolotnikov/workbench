@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select"
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useModelStore } from "@/stores/useModelStore";
+import { useWorkbench } from "@/stores/useWorkbench";
 
 export function ModelSelector() {
     const { 
@@ -20,7 +20,7 @@ export function ModelSelector() {
         fetchModels,
         modelName,
         handleModelChange
-    } = useModelStore();
+    } = useWorkbench();
 
     useEffect(() => {
         fetchModels();

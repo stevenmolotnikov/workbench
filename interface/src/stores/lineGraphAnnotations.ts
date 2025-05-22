@@ -11,6 +11,7 @@ interface AnnotationState {
     setPendingAnnotation: (text: string) => void;
     cancelPendingAnnotation: () => void;
     deleteAnnotation: (id: string) => void;
+    setAnnotations: (annotations: LineGraphAnnotation[]) => void;
 
     // Emphasize annotations on hover
     setEmphasizedAnnotation: (annotation: LineGraphAnnotation) => void;
@@ -41,6 +42,8 @@ export const useLineGraphAnnotations = create<AnnotationState>((set) => ({
         }),
     
     cancelPendingAnnotation: () => set({ pendingAnnotation: null }),
+
+    setAnnotations: (annotations) => set({ annotations }),
 
     deleteAnnotation: (id) =>
         set((state) => ({

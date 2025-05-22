@@ -5,7 +5,7 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import React from "react";
-import { useModelStore } from "@/stores/useModelStore";
+import { useWorkbench } from "@/stores/useWorkbench";
 import { ModelLoadStatus } from "@/types/workbench";
 
 const getStatusMessage = (modelLoadStatus: ModelLoadStatus) => {
@@ -36,7 +36,7 @@ export default function WorkbenchLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const modelLoadStatus = useModelStore((state) => state.modelLoadStatus);
+    const modelLoadStatus = useWorkbench((state) => state.modelLoadStatus);
 
     return (
         <div className="flex flex-col h-screen">
@@ -83,6 +83,7 @@ export default function WorkbenchLayout({
 
                     <Button variant="ghost" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
                     <ModeToggle />
+                    <Button variant="outline" size="icon" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
                 </nav>
             </header>
             {children}
