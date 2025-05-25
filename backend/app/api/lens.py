@@ -30,14 +30,18 @@ def logit_lens_grid(model, prompt, remote: bool):
             # Compute probabilities over the relevant tokens
             relevant_tokens = logits[0, :, :]
 
-            probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
+            _probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
             _pred_ids = relevant_tokens.argmax(dim=-1)
 
             # Gather probabilities over the predicted tokens
-            _probs = t.gather(probs, 1, _pred_ids.unsqueeze(1)).squeeze()
+            _probs = t.gather(_probs, 1, _pred_ids.unsqueeze(1)).squeeze()
 
-            pred_ids.append(_pred_ids)
-            probs.append(_probs)
+            pred_ids.append(_pred_ids.save())
+            probs.append(_probs.save())
+
+    # TEMPORARAY FIX FOR 0.4
+    probs = [p.tolist() for p in probs]
+    pred_ids = [p.tolist() for p in pred_ids]
 
     return pred_ids, probs
 
@@ -164,12 +168,15 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     state = request.app.state.m
 
     model = state.get_model(lens_request.completion.model)
+    tok = model.tokenizer
     prompt = lens_request.completion.prompt
 
     pred_ids, probs = logit_lens_grid(model, prompt, state.remote)
 
+    pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
+
     return GridLensResponse(
         id=lens_request.completion.id,
         probs=probs,
-        preds=pred_ids,
+        pred_strs=pred_strs,
     )

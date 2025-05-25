@@ -4,6 +4,9 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartMode } from "@/types/workspace";
 
+import { DynamicIcon } from 'lucide-react/dynamic';
+
+
 interface SelectionMenuProps {
     modes: ChartMode[];
     setConfiguringPosition: (position: number | null) => void;
@@ -56,7 +59,7 @@ export function SelectionMenu({
                             >
                                 <CardContent className="p-4 flex flex-col items-center">
                                     <div className="mb-2 text-muted-foreground">
-                                        {mode.icon}
+                                        <DynamicIcon name={mode.icon} />
                                     </div>
                                     <p className="text-sm font-medium text-center">
                                         {mode.name}

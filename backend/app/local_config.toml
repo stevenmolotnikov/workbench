@@ -17,10 +17,10 @@ gpt_neox = "model"
 embed_out = "lm_head"
 final_layer_norm = "ln_f"
 
-[models.two]
-name = "Qwen/Qwen3-0.6B"
-chat = false
+# [models.two]
+# name = "Qwen/Qwen3-0.6B"
+# chat = false
 
-[models.two.rename]
-embed_out = "lm_head"
-norm = "ln_f"
+# [models.two.rename]
+# embed_out = "lm_head"
+# norm = "ln_f"

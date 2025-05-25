@@ -13,7 +13,7 @@ import { Layout } from "@/types/workspace";
 
 interface WorkbenchModeProps {
     setLayout: (layout: Layout) => void;
-    handleRun: () => void;
+    handleRun?: () => void;
     toggleAnnotations: () => void;
 }
 
@@ -36,12 +36,15 @@ export function WorkbenchMenu({ toggleAnnotations, setLayout, handleRun }: Workb
                     <DropdownMenuContent>
                         <DropdownMenuItem onClick={() => setLayout("1x1")}>1x1</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setLayout("2x1")}>2x1</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLayout("2x2")}>2x2</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="sm" className="bg-gradient" onClick={handleRun}>
-                    <Play size={16} />
-                    Run
-                </Button>
+                {handleRun && (
+                    <Button size="sm" className="bg-gradient" onClick={handleRun}>
+                        <Play size={16} />
+                        Run
+                    </Button>
+                )}
             </div>
         </div>
     );

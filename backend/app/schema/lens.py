@@ -43,4 +43,4 @@ class GridLensRequest(BaseModel):
 class GridLensResponse(BaseModel):
     id: str
     probs: List[List[float]]
-    preds: List[List[str]]
+    pred_strs: List[List[str]]

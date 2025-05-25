@@ -2,10 +2,10 @@
 
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
-import { LineGraphData } from "@/types/lens";
+import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
-import { LineGraphAnnotation } from "@/types/workspace";
+import { LineGraphAnnotation } from "@/types/lens";
 
 interface DataPoint {
     layer: number;

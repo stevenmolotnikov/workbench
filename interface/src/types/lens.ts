@@ -1,5 +1,6 @@
 import { Completion, Annotation, ChartMode } from "@/types/workspace"
-import { BarChart, Grid3x3 } from "lucide-react";
+import { LineGraphData } from "@/types/charts";
+import { LensHeatmap, LensLineGraph } from "@/components/charts/types";
 
 // Request Schema
 
@@ -12,25 +13,6 @@ export interface TokenCompletion {
 export interface LensCompletion extends Completion { 
     model: string;
     tokens: TokenCompletion[];
-}
-
-// Response Schema
-
-interface Point {
-    id: string;
-    prob: number;
-}
-
-interface LayerResults {
-    layer: number;
-    points: Point[];
-}
-
-export interface LogitLensResponse {
-    data: LayerResults[];
-    metadata: {
-        maxLayer: number;
-    };
 }
 
 export interface LineGraphAnnotation extends Annotation { 
@@ -46,26 +28,28 @@ export interface LogitLensWorkspace {
     annotations: LineGraphAnnotation[];
 }
 
-// Processed Chart Data Schema
+// Line Chart Data Schema
 
-interface ChartDataPoint {
+interface Point {
+    id: string;
+    prob: number;
+}
+
+interface Layer {
     layer: number;
-    [key: string]: number | string | null;
+    points: Point[];
 }
 
-interface ChartConfig {
-    [key: string]: { label: string; color: string };
-}
-
-export interface LineGraphData {
-    chartData: ChartDataPoint[];
-    chartConfig: ChartConfig;
-    maxLayer: number;
+export interface LensLineResponse {
+    data: Layer[];
+    metadata: {
+        maxLayer: number;
+    };
 }
 
 // Grid Chart Data Schema
 
-export interface GridChartData {
+export interface LensGridResponse {
     layer: number;
     probs: number[][];
     pred_strs: string[][];
@@ -77,13 +61,13 @@ export const LogitLensModes: ChartMode[] = [
     {
         name: "Target Token",
         description: "Probability of the target token per layer.",
-        icon: <BarChart className="h-6 w-6" />,
-        chartType: "line"
+        icon: "chart-area",
+        component: LensLineGraph,
     },
     {
         name: "Prediction Grid",
         description: "Grid of the most probable token per layer.",
-        icon: <Grid3x3 className="h-6 w-6" />,
-        chartType: "heatmap"
+        icon: "grid-3x3",
+        component: LensHeatmap,
     },
 ]
