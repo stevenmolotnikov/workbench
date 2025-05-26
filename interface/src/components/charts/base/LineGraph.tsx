@@ -1,6 +1,6 @@
 "use client";
 
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
@@ -125,6 +125,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                         axisLine={false}
                         tickMargin={8}
                     />
+                    <Legend />
                     <Tooltip content={<CustomTooltip />} />
 
                     {Object.keys(chartConfig).map((seriesKey) => (

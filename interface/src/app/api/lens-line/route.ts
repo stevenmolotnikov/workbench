@@ -26,7 +26,7 @@ function processChartData(data: LensLineResponse) {
             transformedData[layerValue] = { layer: layerValue };
         }
         layerResult.points.forEach((point) => {
-            const lineKey = point.id;
+            const lineKey = point.name;
             if (!dynamicConfig[lineKey]) {
                 dynamicConfig[lineKey] = {
                     label: lineKey,

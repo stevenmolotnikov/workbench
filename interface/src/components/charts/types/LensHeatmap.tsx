@@ -1,14 +1,24 @@
 import { useState } from "react";
-import { Heatmap } from "@/components/charts/Heatmap";
+import { Heatmap } from "@/components/charts/base/Heatmap";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
+
+import {
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuLabel,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
 
     const { activeCompletions } = useLensCompletions();
     const { gridPositions, removeChart, setChartData } = useCharts();
+
+    const [completionIndex, setCompletionIndex] = useState<string>("1");
 
     const gridPosition = gridPositions[index];
 
@@ -22,7 +32,7 @@ export function LensHeatmap({ index }: { index: number }) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: activeCompletions[0],
+                    completion: activeCompletions[parseInt(completionIndex) - 1],
                 }),
             });
 
@@ -39,24 +49,37 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     };
 
-    const handleConfigChart = () => {
-        console.log(`Configuring chart at position ${index}`);
-    };
-
     return (
         <ChartCard
             handleRunChart={handleRunChart}
-            handleConfigChart={handleConfigChart}
             handleRemoveChart={() => removeChart(index)}
             isLoading={isLoading}
-        >
-            {gridPosition.chartData ? (
-                <Heatmap {...gridPosition.chartData.data} />
-            ) : (
-                <div className="flex items-center justify-center h-full">
-                    <p className="text-muted-foreground">No data</p>
-                </div>
-            )}
-        </ChartCard>
+            chart={
+                gridPosition.chartData ? (
+                    <Heatmap {...gridPosition.chartData.data} />
+                ) : (
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No data</p>
+                    </div>
+                )
+            }
+            configContent={
+                <>
+                    <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup value={completionIndex} onValueChange={setCompletionIndex}>
+                        {activeCompletions.length >= 1 ? (
+                            activeCompletions.map((_, i) => (
+                                <DropdownMenuRadioItem key={i} value={`${i + 1}`}>
+                                    {i + 1}
+                                </DropdownMenuRadioItem>
+                            ))
+                        ) : (
+                            <DropdownMenuItem disabled>No completions</DropdownMenuItem>
+                        )}
+                    </DropdownMenuRadioGroup>
+                </>
+            }
+        />
     );
 }

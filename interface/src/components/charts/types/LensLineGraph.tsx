@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LineGraph } from "@/components/charts/LineGraph";
+import { LineGraph } from "@/components/charts/base/LineGraph";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
@@ -45,17 +45,15 @@ export function LensLineGraph({ index }: { index: number }) {
     return (
         <ChartCard
             handleRunChart={handleRunChart}
-            handleConfigChart={handleConfigChart}
             handleRemoveChart={() => removeChart(index)}
             isLoading={isLoading}
-        >
-            {gridPosition.chartData ? (
+            chart={gridPosition.chartData ? (
                 <LineGraph data={gridPosition.chartData.data} />
             ) : (
                 <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">No data</p>
                 </div>
             )}
-        </ChartCard>
+        />
     );
 }

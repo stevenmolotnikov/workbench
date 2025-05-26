@@ -11,6 +11,7 @@ export interface TokenCompletion {
 }
 
 export interface LensCompletion extends Completion { 
+    name: string;
     model: string;
     tokens: TokenCompletion[];
 }
@@ -31,7 +32,7 @@ export interface LogitLensWorkspace {
 // Line Chart Data Schema
 
 interface Point {
-    id: string;
+    name: string;
     prob: number;
 }
 

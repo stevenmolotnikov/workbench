@@ -15,24 +15,41 @@ const generateUniqueId = (): string => {
     return Math.random().toString(16).slice(2) + Date.now().toString(16);
 };
 
+// Generate a unique name in the format "Untitled n"
+const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
+    const existingNames = existingCompletions.map(completion => completion.name);
+    let counter = 1;
+    let name = `Untitled ${counter}`;
+    
+    while (existingNames.includes(name)) {
+        counter++;
+        name = `Untitled ${counter}`;
+    }
+    
+    return name;
+};
+
 export const useLensCompletions = create<LensCompletionsState>((set) => ({
     activeCompletions: [],
 
     setActiveCompletions: (completions) => set({ activeCompletions: completions }),
 
     handleNewCompletion: (model) => {
-        const newCompletion: LensCompletion = {
-            id: generateUniqueId(),
-            prompt: "The capital of France is",
-            model: model,
-            tokens: [{
-                target_id: -1,
-                idx: -1
-            }]
-        };
-        set((state) => ({
-            activeCompletions: [...state.activeCompletions, newCompletion]
-        }));
+        set((state) => {
+            const newCompletion: LensCompletion = {
+                name: generateUniqueName(state.activeCompletions),
+                id: generateUniqueId(),
+                prompt: "The capital of France is",
+                model: model,
+                tokens: [{
+                    target_id: -1,
+                    idx: -1
+                }]
+            };
+            return {
+                activeCompletions: [...state.activeCompletions, newCompletion]
+            };
+        });
     },
 
     handleLoadCompletion: (completionToLoad) => {

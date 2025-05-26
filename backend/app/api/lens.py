@@ -4,7 +4,6 @@ from fastapi import APIRouter, Request
 import torch as t
 import nnsight as ns
 
-
 from ..schema.lens import (
     TargetedLensRequest,
     GridLensRequest,
@@ -77,7 +76,7 @@ def logit_lens_targeted(model, model_requests, remote: bool):
                     # Save results
                     results.append(
                         {
-                            "id": request["id"],
+                            "name": request["name"],
                             "layer_idx": layer_idx,
                             "target_probs": target_probs.save(),
                         }
@@ -104,7 +103,7 @@ def preprocess(lens_request: TargetedLensRequest | GridLensRequest):
         target_ids = t.tensor(target_ids)
 
         request = {
-            "id": completion.id,
+            "name": completion.name,
             "prompt": completion.prompt,
             "idxs": idxs,
             "target_ids": target_ids,
@@ -128,8 +127,8 @@ def postprocess(results):
         for prob in target_probs:
             processed_results[layer_idx].append(
                 {
-                    "id": result["id"],
-                    "prob": prob,
+                    "name": result["name"],
+                    "prob": round(prob, 2),
                 }
             )
 
@@ -155,8 +154,6 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
         results.extend(model_results)
 
     results = postprocess(results)
-
-    print(results)
 
     return LensResponse(
         **{"data": results, "metadata": {"maxLayer": len(results) - 1}}

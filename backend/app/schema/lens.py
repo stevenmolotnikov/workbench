@@ -11,6 +11,7 @@ class Token(BaseModel):
 ##### TARGETED LENS REQUEST SCHEMA #####
 
 class TargetedLensCompletion(Completion):
+    name: str
     tokens: List[Token]
 
 class TargetedLensRequest(BaseModel):
@@ -19,7 +20,7 @@ class TargetedLensRequest(BaseModel):
 ##### TARGETED LENS RESPONSE SCHEMA #####
 
 class Point(BaseModel):
-    id: str
+    name: str
     prob: float
 
 class LayerResults(BaseModel):

@@ -9,6 +9,7 @@ import { useState } from "react";
 import config from "@/lib/config";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
+import { Input } from "@/components/ui/input";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -21,6 +22,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
     const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
         useLensCompletions();
+
     const handleContentUpdate = (id: string, updates: Partial<LensCompletion>) => {
         handleUpdateCompletion(id, updates);
     };
@@ -93,12 +95,22 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         <div key={compl.id}>
             <div
                 className={cn(
-                    "border bg-card p-4 overflow-hidden transition-all duration-200 ease-in-out",
+                    "border bg-card px-4 pb-4 pt-2 overflow-hidden transition-all duration-200 ease-in-out",
                     showPredictions ? "rounded-t-lg" : "rounded-lg"
                 )}
             >
                 <div className="flex items-center justify-between pb-4">
-                    <span className="text-sm">{compl.model}</span>
+                    <div className="flex items-center gap-2">
+                            <div className="flex flex-col">
+                                <Input
+                                    value={compl.name}
+                                    placeholder="Untitled"
+                                    onChange={(e) => handleContentUpdate(compl.id, { name: e.target.value })}
+                                    className="border-none shadow-none px-1 py-0 font-bold"
+                                />
+                                <span className="text-xs px-1">{compl.model}</span>
+                            </div>
+                        </div>
                     <div className="flex items-center gap-2">
                         <Button
                             variant="ghost"
@@ -130,7 +142,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             placeholder="Enter your prompt here..."
                         />
                     </div>
-                    <div className="flex flex-col h-24 w-full p-3 rounded-md border">
+                    <div className="flex flex-col h-24 w-full p-3 rounded-md border-dashed border">
                         <TokenArea
                             text={compl.prompt}
                             showPredictions={showPredictions}

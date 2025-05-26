@@ -30,9 +30,6 @@ export function Annotations() {
 
     return (
         <div className="flex flex-col">
-            {/* <div className="p-4 border-b">
-                <h2 className="text-sm font-medium">Annotations</h2>
-            </div> */}
             <div className="flex-1 overflow-auto p-4">
                 {/* Annotation input form */}
                 {pendingAnnotation && (

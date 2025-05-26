@@ -83,7 +83,6 @@ export default function WorkbenchLayout({
 
                     <Button variant="ghost" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
                     <ModeToggle />
-                    <Button variant="outline" size="icon" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
                 </nav>
             </header>
             {children}
