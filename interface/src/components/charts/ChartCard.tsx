@@ -10,16 +10,18 @@ interface ChartCardProps {
     handleRunChart: () => void;
     handleRemoveChart: () => void;
     isLoading: boolean;
-    configContent?: React.ReactNode;
+    chartTitle: React.ReactNode;
     chart: React.ReactNode;
+    configContent?: React.ReactNode;
 }
 
 export function ChartCard({
     handleRunChart,
     handleRemoveChart,
     isLoading,
-    configContent = null,
+    chartTitle,
     chart,
+    configContent = null,
 }: ChartCardProps) {
 
     const CardMenu = () => {
@@ -59,7 +61,8 @@ export function ChartCard({
     }
 
     return (
-        <div className="h-full border rounded-lg p-4">
+        <div className="h-full flex flex-col border rounded-lg p-4 justify-between">
+            {chartTitle}
             <CardMenu />
             {isLoading ? (
                 <>

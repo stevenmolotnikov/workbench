@@ -6,9 +6,15 @@ import { NextResponse, NextRequest } from 'next/server';
 function processHeatmapData(data: LensGridResponse) {
     const { layer, probs, pred_strs } = data;
 
+    const yTickLabels = Array.from({ length: pred_strs.length }, (_, i) => i);
+
     return {
         data: probs,
         labels: pred_strs,
+        yTickLabels: yTickLabels,
+        yAxisLabel: "Layers",
+        xAxisLabel: "Original Tokens",
+        xTickLabels: pred_strs[pred_strs.length - 1] // TODO: Add x tick labels
     };
 }
 

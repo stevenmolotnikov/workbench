@@ -54,6 +54,12 @@ export function LensHeatmap({ index }: { index: number }) {
             handleRunChart={handleRunChart}
             handleRemoveChart={() => removeChart(index)}
             isLoading={isLoading}
+            chartTitle={
+                <div>
+                    <div className="text-lg font-medium">Lens Heatmap</div>
+                    <span className="text-sm text-muted-foreground">Completion {completionIndex}</span>
+                </div>
+            }
             chart={
                 gridPosition.chartData ? (
                     <Heatmap {...gridPosition.chartData.data} />
