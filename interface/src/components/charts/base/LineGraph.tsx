@@ -4,7 +4,7 @@ import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "r
 import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
-import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
+import { useAnnotations, type Annotation } from "@/stores/useAnnotations";
 import { LineGraphAnnotation } from "@/types/lens";
 
 interface DataPoint {
@@ -13,7 +13,8 @@ interface DataPoint {
 }
 
 export function LineGraph({ data }: { data?: LineGraphData }) {
-    const { addPendingAnnotation, emphasizedAnnotation, annotations, pendingAnnotation } = useLineGraphAnnotations();
+    const { addPendingAnnotation, emphasizedAnnotation, annotations, pendingAnnotation } =
+        useAnnotations();
 
     if (!data) {
         return <div>No data to display.</div>;
@@ -46,22 +47,35 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
             layer: layer,
             lineId: lineId,
         };
-        addPendingAnnotation(newAnnotation);
+        addPendingAnnotation({ type: "lineGraph", data: newAnnotation });
     };
 
-    const isAnnotatedOrPending = (lineId: string, layer: number) => 
-        (pendingAnnotation?.lineId === lineId && pendingAnnotation?.layer === layer) ||
-        annotations.some(annotation => annotation.lineId === lineId && annotation.layer === layer);
+    const isAnnotatedOrPending = (lineId: string, layer: number) => {
+        return (
+            (pendingAnnotation?.type !== null &&
+                pendingAnnotation?.type === "lineGraph" &&
+                pendingAnnotation?.data.lineId === lineId &&
+                pendingAnnotation?.data.layer === layer) ||
+            annotations.some(
+                (annotation) =>
+                    annotation.type === "lineGraph" &&
+                    annotation.data.lineId === lineId &&
+                    annotation.data.layer === layer
+            )
+        );
+    };
 
     const renderDot = (props: any) => {
         const { cx, cy, payload, index } = props;
         const { lineId, layer } = transformObject(payload);
 
         const emphasized =
-            emphasizedAnnotation?.lineId === lineId && emphasizedAnnotation?.layer === layer;
-        
+            emphasizedAnnotation?.type === "lineGraph" &&
+            emphasizedAnnotation?.data.lineId === lineId &&
+            emphasizedAnnotation?.data.layer === layer;
+
         const isAnnotated = isAnnotatedOrPending(lineId, layer);
-        const r = emphasized ? 6 : (isAnnotated ? 4 : 0);
+        const r = emphasized ? 6 : isAnnotated ? 4 : 0;
 
         return (
             <circle

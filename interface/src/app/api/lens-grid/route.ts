@@ -13,7 +13,7 @@ function processHeatmapData(data: LensGridResponse) {
         labels: pred_strs,
         yTickLabels: yTickLabels,
         yAxisLabel: "Layers",
-        xAxisLabel: "Original Tokens",
+        xAxisLabel: "Tokens",
         xTickLabels: pred_strs[pred_strs.length - 1] // TODO: Add x tick labels
     };
 }

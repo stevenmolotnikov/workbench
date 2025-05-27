@@ -14,12 +14,12 @@ import { WorkspaceHistory } from "./WorkspaceHistory";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useCharts } from "@/stores/useCharts";
 
-import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
+// import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
     const { activeCompletions, setActiveCompletions } = useLensCompletions();
-    const { annotations, setAnnotations } = useLineGraphAnnotations();
+    // const { annotations, setAnnotations } = useLineGraphAnnotations();
     const { 
         gridPositions, 
         setLayout, 
@@ -37,7 +37,7 @@ export function LogitLens() {
         if (workspace.graphData && gridPositions.length > 0) {
             setChartData(0, workspace.graphData);
         }
-        setAnnotations(workspace.annotations);
+        // setAnnotations(workspace.annotations);
     };
 
     const exportWorkspace = () => {
@@ -47,7 +47,7 @@ export function LogitLens() {
             name: "",
             completions: activeCompletions,
             graphData: firstChartData as LineGraphData | null,
-            annotations: annotations,
+            annotations: [],
         };
         return workspace;
     };

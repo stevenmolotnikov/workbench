@@ -2,9 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
+import { useAnnotations, type Annotation } from "@/stores/useAnnotations";
 import { useState } from "react";
-import { LineGraphAnnotation } from "@/types/workspace";
 
 export function Annotations() {
     const {
@@ -15,7 +14,7 @@ export function Annotations() {
         deleteAnnotation,
         setEmphasizedAnnotation,
         clearEmphasizedAnnotation,
-    } = useLineGraphAnnotations();
+    } = useAnnotations();
 
     const [text, setText] = useState("");
 
@@ -24,7 +23,7 @@ export function Annotations() {
         setText("");
     };
 
-    const handleEmphasizedAnnotation = (annotation: LineGraphAnnotation) => {
+    const handleEmphasizedAnnotation = (annotation: Annotation) => {
         setEmphasizedAnnotation(annotation);
     };
 
@@ -61,19 +60,19 @@ export function Annotations() {
                     <div className="flex flex-col gap-3">
                         {annotations.map(
                             (annotation) =>
-                                annotation.text !== "" && (
+                                annotation.data.text !== "" && (
                                     <div
-                                        key={annotation.id}
+                                        key={annotation.data.id}
                                         onMouseEnter={() => handleEmphasizedAnnotation(annotation)}
                                         onMouseLeave={() => clearEmphasizedAnnotation()}
                                         className="flex items-start justify-between rounded-md border p-3 text-sm"
                                     >
-                                        <p>{annotation.text}</p>
+                                        <p>{annotation.data.text}</p>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="h-6 w-6 p-0"
-                                            onClick={() => deleteAnnotation(annotation.id)}
+                                            onClick={() => deleteAnnotation(annotation.data.id)}
                                         >
                                             &times;
                                         </Button>

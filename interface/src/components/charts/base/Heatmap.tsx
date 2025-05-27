@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { HeatmapData } from "@/types/charts";
+import { useAnnotations, type Annotation } from "@/stores/useAnnotations";
+import { CellPosition, HeatmapAnnotation } from "@/types/lens";
 
 // Convert value to color
 const getColor = (value: number, minValue: number, maxValue: number): string => {
@@ -50,6 +52,19 @@ export const Heatmap: React.FC<
         visible: false,
     });
 
+    const {
+        annotations,
+        pendingAnnotation,
+        addPendingAnnotation,
+    } = useAnnotations();
+    
+
+    const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+    const [tempSelectedCells, setTempSelectedCells] = useState<Set<string>>(new Set());
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState<CellPosition | null>(null);
+    const [dragEnd, setDragEnd] = useState<CellPosition | null>(null);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerDimensions, setContainerDimensions] = useState({
         width: 1000,
@@ -77,6 +92,148 @@ export const Heatmap: React.FC<
         return () => resizeObserver.disconnect();
     }, []);
 
+    // Helper function to create cell key
+    const getCellKey = (row: number, col: number): string => `${row}-${col}`;
+
+    // Helper function to check if a cell is selected
+    const isCellSelected = (row: number, col: number): boolean => {
+        return selectedCells.has(getCellKey(row, col));
+    };
+
+    // Helper function to check if a cell is annotated
+    const isCellAnnotated = (row: number, col: number): boolean => {
+        return annotations.some(
+            (annotation) =>
+                annotation.type === "heatmap" &&
+                annotation.data.positions.some(pos => pos.row === row && pos.col === col)
+        );
+    };
+
+    // Helper function to check if a cell is part of pending annotation
+    const isCellPending = (row: number, col: number): boolean => {
+        return tempSelectedCells.has(getCellKey(row, col));
+    };
+
+    // Helper function to check if a cell is in drag selection
+    const isCellInDragSelection = (row: number, col: number): boolean => {
+        if (!isDragging || !dragStart || !dragEnd) return false;
+        
+        const minRow = Math.min(dragStart.row, dragEnd.row);
+        const maxRow = Math.max(dragStart.row, dragEnd.row);
+        const minCol = Math.min(dragStart.col, dragEnd.col);
+        const maxCol = Math.max(dragStart.col, dragEnd.col);
+        
+        return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
+    };
+
+    // Handle drag start
+    const handleMouseDown = (row: number, col: number, event: React.MouseEvent) => {
+        event.preventDefault();
+        setIsDragging(true);
+        setDragStart({ row, col });
+        setDragEnd({ row, col });
+    };
+
+    // Handle drag move
+    const handleMouseEnterCell = (row: number, col: number) => {
+        if (isDragging) {
+            setDragEnd({ row, col });
+        }
+    };
+
+    // Handle drag end
+    const handleMouseUp = () => {
+        if (isDragging && dragStart && dragEnd) {
+            // Check if this was a single click (no drag movement)
+            const isSingleClick = dragStart.row === dragEnd.row && dragStart.col === dragEnd.col;
+            
+            const selectedPositions: CellPosition[] = [];
+            
+            if (isSingleClick) {
+                // Handle single cell selection/deselection
+                const cellKey = getCellKey(dragStart.row, dragStart.col);
+                const wasSelected = selectedCells.has(cellKey);
+                
+                setSelectedCells(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(cellKey)) {
+                        newSet.delete(cellKey);
+                    } else {
+                        newSet.add(cellKey);
+                    }
+                    return newSet;
+                });
+                
+                if (!wasSelected) {
+                    selectedPositions.push({ row: dragStart.row, col: dragStart.col });
+                }
+            } else {
+                // Handle drag selection
+                const minRow = Math.min(dragStart.row, dragEnd.row);
+                const maxRow = Math.max(dragStart.row, dragEnd.row);
+                const minCol = Math.min(dragStart.col, dragEnd.col);
+                const maxCol = Math.max(dragStart.col, dragEnd.col);
+                
+                for (let r = minRow; r <= maxRow; r++) {
+                    for (let c = minCol; c <= maxCol; c++) {
+                        selectedPositions.push({ row: r, col: c });
+                    }
+                }
+                
+                setSelectedCells(prev => {
+                    const newSet = new Set(prev);
+                    for (let r = minRow; r <= maxRow; r++) {
+                        for (let c = minCol; c <= maxCol; c++) {
+                            newSet.add(getCellKey(r, c));
+                        }
+                    }
+                    return newSet;
+                });
+            }
+            
+            // Create pending annotation if cells were selected
+            if (selectedPositions.length > 0) {
+                const newAnnotation: HeatmapAnnotation = {
+                    id: Date.now().toString(),
+                    text: "New Annotation",
+                    positions: selectedPositions,
+                };
+                
+                // Set temp selected cells for visual feedback
+                const tempCellKeys = new Set(selectedPositions.map(pos => getCellKey(pos.row, pos.col)));
+                setTempSelectedCells(tempCellKeys);
+                
+                // Clear regular selected cells since they're now pending
+                setSelectedCells(new Set());
+                
+                addPendingAnnotation({ type: "heatmap", data: newAnnotation });
+            }
+        }
+        
+        setIsDragging(false);
+        setDragStart(null);
+        setDragEnd(null);
+    };
+
+    // Add global mouse up listener
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            if (isDragging) {
+                handleMouseUp();
+            }
+        };
+
+        document.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, [isDragging, dragStart, dragEnd]);
+
+    // Handle pending annotation cancellation
+    useEffect(() => {
+        if (!pendingAnnotation || pendingAnnotation.type !== "heatmap") {
+            setTempSelectedCells(new Set());
+        }
+    }, [pendingAnnotation]);
+
     // Find min and max values for color scaling
     const flatData = data.flat();
     const minValue = Math.min(...flatData);
@@ -103,7 +260,7 @@ export const Heatmap: React.FC<
     const colorScaleSpace = shouldHideColorbar ? 0 : containerHeight * 0.1; 
 
     const chartStartX = yLabelSpace + yTickSpace;
-    const chartStartY = containerHeight * 0.025; // Small top margin proportional to height
+    const chartStartY = containerHeight * 0; // Small top margin proportional to height
 
     // Calculate available space for the heatmap cells
     const availableWidthForCells = containerWidth - chartStartX;
@@ -138,19 +295,23 @@ export const Heatmap: React.FC<
         event: React.MouseEvent,
         value: number,
     ) => {
-        const rect = (event.currentTarget as SVGElement).getBoundingClientRect();
-        const svgRect = (event.currentTarget.closest("svg") as SVGElement).getBoundingClientRect();
+        if (!isDragging) {
+            const rect = (event.currentTarget as SVGElement).getBoundingClientRect();
+            const svgRect = (event.currentTarget.closest("svg") as SVGElement).getBoundingClientRect();
 
-        setTooltip({
-            value,
-            x: ((rect.left + rect.width / 2 - svgRect.left) / svgRect.width) * 100,
-            y: ((rect.top - svgRect.top) / svgRect.height) * 100,
-            visible: true,
-        });
+            setTooltip({
+                value,
+                x: ((rect.left + rect.width / 2 - svgRect.left) / svgRect.width) * 100,
+                y: ((rect.top - svgRect.top) / svgRect.height) * 100,
+                visible: true,
+            });
+        }
     };
 
     const handleMouseLeave = () => {
-        setTooltip((prev) => ({ ...prev, visible: false }));
+        if (!isDragging) {
+            setTooltip((prev) => ({ ...prev, visible: false }));
+        }
     };
 
     // Create gradient for continuous color bar
@@ -158,11 +319,11 @@ export const Heatmap: React.FC<
 
     return (
         <div ref={containerRef} className="relative w-full h-full">
-
             <svg
                 className="w-full h-full"
                 viewBox={`0 0 ${svgWidth} ${svgHeight}`}
                 preserveAspectRatio="xMidYMid meet"
+                style={{ userSelect: 'none' }}
             >
                 {/* Define gradient for color scale */}
                 <defs>
@@ -203,35 +364,60 @@ export const Heatmap: React.FC<
                 <g transform={`translate(${chartStartX}, ${chartStartY})`}>
                     {/* Add axis lines */}
                     {data.map((row, rowIndex) =>
-                        row.map((value, colIndex) => (
-                            <g key={`${rowIndex}-${colIndex}`}>
-                                <rect
-                                    x={colIndex * cellWidth + spacing / 2}
-                                    y={rowIndex * cellHeight + spacing / 2}
-                                    width={actualCellWidth}
-                                    height={actualCellHeight}
-                                    fill={getColor(value, minValue, maxValue)}
-                                    stroke="none"
-                                    className="cursor-pointer transition-opacity hover:opacity-80"
-                                    onMouseEnter={(e) =>
-                                        handleMouseEnter(e, value)
-                                    }
-                                    onMouseLeave={handleMouseLeave}
-                                    rx={5}
-                                    ry={5}
-                                />
-                                <text
-                                    x={colIndex * cellWidth + cellWidth / 2}
-                                    y={rowIndex * cellHeight + cellHeight / 2}
-                                    textAnchor="middle"
-                                    dominantBaseline="middle"
-                                    className="fill-background pointer-events-none"
-                                    fontSize={Math.min(fontSize, Math.min(actualCellWidth, actualCellHeight) / 4)}
-                                >
-                                    {getCellText(value, rowIndex, colIndex)}
-                                </text>
-                            </g>
-                        ))
+                        row.map((value, colIndex) => {
+                            const isSelected = isCellSelected(rowIndex, colIndex);
+                            const isInDragSelection = isCellInDragSelection(rowIndex, colIndex);
+                            const isAnnotated = isCellAnnotated(rowIndex, colIndex);
+                            const isPending = isCellPending(rowIndex, colIndex);
+                            
+                            // Determine border style based on state
+                            let strokeColor = "none";
+                            let strokeWidth = 0;
+                            
+                            if (isAnnotated) {
+                                strokeColor = "#16a34a"; // green for annotated
+                                strokeWidth = 2;
+                            } else if (isPending) {
+                                strokeColor = "#f59e0b"; // amber for pending
+                                strokeWidth = 2;
+                            } else if (isSelected || isInDragSelection) {
+                                strokeColor = "#2563eb"; // blue for selected
+                                strokeWidth = 2;
+                            }
+                            
+                            return (
+                                <g key={`${rowIndex}-${colIndex}`}>
+                                    <rect
+                                        x={colIndex * cellWidth + spacing / 2}
+                                        y={rowIndex * cellHeight + spacing / 2}
+                                        width={actualCellWidth}
+                                        height={actualCellHeight}
+                                        fill={getColor(value, minValue, maxValue)}
+                                        stroke={strokeColor}
+                                        strokeWidth={strokeWidth}
+                                        className="cursor-pointer transition-opacity hover:opacity-80"
+                                        onMouseEnter={(e) => {
+                                            handleMouseEnter(e, value);
+                                            handleMouseEnterCell(rowIndex, colIndex);
+                                        }}
+                                        onMouseLeave={handleMouseLeave}
+                                        onMouseDown={(e) => handleMouseDown(rowIndex, colIndex, e)}
+                                        rx={5}
+                                        ry={5}
+                                    />
+                                    <text
+                                        x={colIndex * cellWidth + cellWidth / 2}
+                                        y={rowIndex * cellHeight + cellHeight / 2}
+                                        textAnchor="middle"
+                                        dominantBaseline="middle"
+                                        className="fill-background pointer-events-none"
+                                        fontSize={Math.min(fontSize, Math.min(actualCellWidth, actualCellHeight) / 4)}
+                                    >
+                                        {getCellText(value, rowIndex, colIndex)}
+                                    </text>
+                                </g>
+                            );
+                        })
                     )}
                 </g>
 

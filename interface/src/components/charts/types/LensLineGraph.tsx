@@ -47,8 +47,16 @@ export function LensLineGraph({ index }: { index: number }) {
             handleRunChart={handleRunChart}
             handleRemoveChart={() => removeChart(index)}
             isLoading={isLoading}
+            chartTitle={
+                <div>
+                    <div className="text-md font-bold">Lens Line Graph</div>
+                    <span className="text-xs text-muted-foreground">Target Token Prediction</span>
+                </div>
+            }
             chart={gridPosition.chartData ? (
-                <LineGraph data={gridPosition.chartData.data} />
+                <div className="pt-6 h-full">
+                    <LineGraph data={gridPosition.chartData.data} />
+                </div>
             ) : (
                 <div className="flex items-center justify-center h-full">
                     <p className="text-muted-foreground">No data</p>

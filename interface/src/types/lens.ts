@@ -21,6 +21,16 @@ export interface LineGraphAnnotation extends Annotation {
     layer: number;
 }
 
+export interface CellPosition {
+    row: number;
+    col: number;
+}
+
+
+export interface HeatmapAnnotation extends Annotation { 
+    positions: CellPosition[];
+}
+
 export interface LogitLensWorkspace { 
     id?: string;
     name: string;

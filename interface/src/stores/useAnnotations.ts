@@ -1,24 +1,29 @@
 import { create } from "zustand";
-import { LineGraphAnnotation } from "@/types/workspace";
+import { LineGraphAnnotation, HeatmapAnnotation } from "@/types/lens";
+
+export type Annotation =
+    | { type: "lineGraph"; data: LineGraphAnnotation }
+    | { type: "heatmap"; data: HeatmapAnnotation };
+
 
 interface AnnotationState {
-    annotations: LineGraphAnnotation[];
-    pendingAnnotation: LineGraphAnnotation | null;
-    emphasizedAnnotation: LineGraphAnnotation | null;
+    annotations: Annotation[];
+    pendingAnnotation: Annotation | null;
+    emphasizedAnnotation: Annotation | null;
 
     // Pending annotations when creating a new annotation
-    addPendingAnnotation: (annotation: LineGraphAnnotation) => void;
+    addPendingAnnotation: (annotation: Annotation) => void;
     setPendingAnnotation: (text: string) => void;
     cancelPendingAnnotation: () => void;
     deleteAnnotation: (id: string) => void;
-    setAnnotations: (annotations: LineGraphAnnotation[]) => void;
+    setAnnotations: (annotations: Annotation[]) => void;
 
     // Emphasize annotations on hover
-    setEmphasizedAnnotation: (annotation: LineGraphAnnotation) => void;
+    setEmphasizedAnnotation: (annotation: Annotation) => void;
     clearEmphasizedAnnotation: () => void;
 }
 
-export const useLineGraphAnnotations = create<AnnotationState>((set) => ({
+export const useAnnotations = create<AnnotationState>((set) => ({
     annotations: [],
     pendingAnnotation: null,
     emphasizedAnnotation: null,
@@ -33,7 +38,7 @@ export const useLineGraphAnnotations = create<AnnotationState>((set) => ({
                 return state;
             }
 
-            state.pendingAnnotation.text = text;
+            state.pendingAnnotation.data.text = text;
 
             return {
                 annotations: [...state.annotations, state.pendingAnnotation],
@@ -47,7 +52,7 @@ export const useLineGraphAnnotations = create<AnnotationState>((set) => ({
 
     deleteAnnotation: (id) =>
         set((state) => ({
-            annotations: state.annotations.filter((a) => a.id !== id),
+            annotations: state.annotations.filter((a) => a.data.id !== id),
             emphasizedAnnotation: null,
         })),
 }));
