@@ -57,6 +57,7 @@ const TokenDisplay = ({
                         placeholder="Enter a target token"
                         value={targetToken}
                         onChange={(e) => setTargetToken(e.target.value)}
+                        id="predictions-display"
                     />
                     <Button
                         size="icon"

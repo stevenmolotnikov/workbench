@@ -10,14 +10,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LayoutGrid } from "lucide-react";
 import { Layout } from "@/types/workspace";
+import { TourDialog } from "./TourDialog";
 
 interface WorkbenchModeProps {
     setLayout: (layout: Layout) => void;
-    handleRun?: () => void;
     toggleAnnotations: () => void;
 }
 
-export function WorkbenchMenu({ toggleAnnotations, setLayout, handleRun }: WorkbenchModeProps) {
+export function WorkbenchMenu({ toggleAnnotations, setLayout }: WorkbenchModeProps) {
     return (
         <div className="p-4 border-b flex items-center justify-between">
             <span>Hello</span>
@@ -39,12 +39,7 @@ export function WorkbenchMenu({ toggleAnnotations, setLayout, handleRun }: Workb
                         <DropdownMenuItem onClick={() => setLayout("2x2")}>2x2</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                {handleRun && (
-                    <Button size="sm" className="bg-gradient" onClick={handleRun}>
-                        <Play size={16} />
-                        Run
-                    </Button>
-                )}
+                <TourDialog />
             </div>
         </div>
     );

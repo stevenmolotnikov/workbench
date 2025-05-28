@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { TourProvider } from "@/components/providers/TourProvider";
 
 export const metadata: Metadata = {
     title: "Logit Lens - NDIF",
@@ -24,7 +25,7 @@ export default function RootLayout({
                     enableSystem
                     disableTransitionOnChange
                 >
-                    {children}
+                    <TourProvider>{children}</TourProvider>
                 </ThemeProvider>
             </body>
         </html>

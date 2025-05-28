@@ -39,7 +39,7 @@ export const useLensCompletions = create<LensCompletionsState>((set) => ({
             const newCompletion: LensCompletion = {
                 name: generateUniqueName(state.activeCompletions),
                 id: generateUniqueId(),
-                prompt: "The capital of France is",
+                prompt: "",
                 model: model,
                 tokens: [{
                     target_id: -1,

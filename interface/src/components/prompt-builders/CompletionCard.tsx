@@ -10,6 +10,7 @@ import config from "@/lib/config";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
+import { useTour } from "@reactour/tour";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -19,6 +20,8 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
     const [selectedIdx, setSelectedIdx] = useState<number>(-1);
+
+    const { setCurrentStep, currentStep, isOpen } = useTour();
 
     const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
         useLensCompletions();
@@ -65,6 +68,12 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             setShowPredictions(false);
         } else {
             await runConversation(completion);
+
+            if (isOpen) {
+                setTimeout(() => {
+                    setCurrentStep(currentStep + 1);
+                }, 250);
+            }
         }
     };
 
@@ -88,6 +97,16 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             console.error("Error sending request:", error);
         } finally {
             console.log("Done");
+        }
+    };
+
+    const contentUpdate = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        handleContentUpdate(compl.id, {
+            prompt: e.target.value,
+        });
+
+        if (isOpen && e.target.value === "The capital of France is") {
+            setCurrentStep(currentStep + 1);
         }
     };
 
@@ -124,6 +143,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             onClick={() => {
                                 handlePredictions(compl);
                             }}
+                            id="view-predictions"
                         >
                             <Keyboard size={16} className="w-8 h-8" />
                         </Button>
@@ -133,13 +153,10 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                     <div className="flex-1 overflow-y-autospace-y-6">
                         <Textarea
                             value={compl.prompt}
-                            onChange={(e) =>
-                                handleContentUpdate(compl.id, {
-                                    prompt: e.target.value,
-                                })
-                            }
+                            onChange={contentUpdate}
                             className="h-24 resize-none"
                             placeholder="Enter your prompt here..."
+                            id="completion-text"
                         />
                     </div>
                     <div className="flex flex-col h-24 w-full p-3 rounded-md border-dashed border">
