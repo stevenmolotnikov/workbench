@@ -11,13 +11,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { useTour } from "@reactour/tour";
 import { useState } from "react";
+import { TourSteps } from "@/components/providers/TourProvider";
 
 export function TourDialog() {
-    const { isOpen, setIsOpen, currentStep, steps, setCurrentStep } = useTour();
+    const { setSteps, setIsOpen } = useTour();
 
     const [dialogOpen, setDialogOpen] = useState(false);
 
-    const handleStartTour = () => {
+    const handleStartTour = (tourType: string) => {
+        setSteps(TourSteps[tourType]);
         setIsOpen(true);
         setDialogOpen(false);
     };
@@ -25,28 +27,44 @@ export function TourDialog() {
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="h-8 text-xs">Tutorials</Button>
+                <Button variant="outline" className="h-8 text-xs">
+                    Tutorials
+                </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Edit profile</DialogTitle>
-                    <DialogDescription>
-                        Make changes to your profile here. Click save when you're done.
-                    </DialogDescription>
+                    <DialogTitle>Tutorials</DialogTitle>
+                    <DialogDescription>Learn about the interface.</DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <span>Name</span>
-                        <Button variant="outline" onClick={handleStartTour}>Start Tour</Button>
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-row justify-between items-center">
+                        <div>
+                            <span>Features</span>
+                            <p className="text-xs text-muted-foreground">Understand the general layout.</p>
+                        </div>
+                        <Button variant="outline" className="h-8" onClick={() => handleStartTour("feature")}>
+                            Start Tour
+                        </Button>
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <span>Username</span>
-                        <Input id="username" value="@peduarte" className="col-span-3" />
+                    <div className="flex flex-row justify-between items-center">
+                        <div>
+                            <span>Logit Lens</span>
+                            <p className="text-xs text-muted-foreground">Walk through an example of Logit Lens.</p>
+                        </div>
+                        <Button variant="outline" className="h-8" onClick={() => handleStartTour("logitLens")}>
+                            Start Tour
+                        </Button>
+                    </div>
+                    <div className="flex flex-row justify-between items-center">
+                        <div>
+                            <span>Activation Patching</span>
+                            <p className="text-xs text-muted-foreground">Learn about activation patching.</p>
+                        </div>
+                        <Button variant="outline" className="h-8" onClick={() => handleStartTour("")}>
+                            Start Tour
+                        </Button>
                     </div>
                 </div>
-                <DialogFooter>
-                    <Button type="submit">Save changes</Button>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

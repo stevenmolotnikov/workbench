@@ -1,53 +1,71 @@
 "use client";
 
-import { TourProvider as ReactourTourProvider } from "@reactour/tour";
+import { TourProvider as ReactourTourProvider, PopoverContentProps } from "@reactour/tour";
 import { ReactNode } from "react";
 
-const steps = [
+const FeatureTourSteps = [
+    {
+        selector: "#new-completion",
+        content: "Welcome to the Logit Lens! This is your first step in the tour.",
+    },
+];
+
+const LogitLensTourSteps = [
     {
         selector: "#new-completion",
         content: "Welcome to the Logit Lens! This is your first step in the tour.",
     },
     {
-        selector: "#completion-text", 
-        content: "This is the second step of your tour. Here you can learn about different features.",
+        selector: "#completion-text",
+        content:
+            "This is the second step of your tour. Here you can learn about different features.",
     },
     {
         selector: "#view-predictions",
         content: "This is the final step. You're now ready to explore the application!",
     },
     {
-      selector: "#predictions-display",
-      content: "This is the final step. You're now ready to explore the application!",
-      position: "bottom"
-  },
+        selector: "#predictions-display",
+        content: "This is the final step. You're now ready to explore the application!",
+    },
 ];
+
+export const TourSteps = {
+    "feature": FeatureTourSteps,
+    "logitLens": LogitLensTourSteps,
+}
 
 interface TourProviderProps {
     children: ReactNode;
 }
 
-export function TourProvider({ children }: TourProviderProps) {
-    const radius = 10
+function ContentComponent({currentStep, steps, setIsOpen, setCurrentStep, ...props}: PopoverContentProps) {
+    const content = steps[currentStep].content;
+
+    if (typeof content === "function") {
+        return <div>
+            Unsupported content type
+        </div>
+    }
+
     return (
-          <ReactourTourProvider 
-            steps={steps} 
+        <div className="bg-card border w-full h-full p-4 rounded-lg">
+            {content}
+        </div>
+    );
+}
+
+export function TourProvider({ children }: TourProviderProps) {
+    return (
+        <ReactourTourProvider
+            steps={FeatureTourSteps}
+            ContentComponent={ContentComponent}
             styles={{
-              popover: (base) => ({
-                ...base,
-                '--reactour-accent': '#ef5a3d',
-                borderRadius: radius,
-              }),
-              maskArea: (base) => ({ ...base, rx: radius }),
-              maskWrapper: (base) => ({ ...base, display: 'none' }),
-            //   badge: (base) => ({ ...base, left: 'auto', right: '-0.8125em' }),
-              arrow: (base) => ({ ...base, display: 'none' }),
-              dot: (base) => ({ ...base, display: 'none' }),
-              controls: (base) => ({ ...base, marginTop: 100 }),
-            //   close: (base) => ({ ...base, right: 'auto', left: 8, top: 8 }),
+                maskWrapper: (base) => ({ ...base, color: "transparent", cursor: "not-allowed" }),
+                popover: (base) => ({ ...base, padding: 0, backgroundColor: "transparent" })
             }}
-          >
+        >
             {children}
         </ReactourTourProvider>
     );
-} 
+}
