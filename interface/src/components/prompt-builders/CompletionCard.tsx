@@ -1,4 +1,4 @@
-import { Trash, Keyboard } from "lucide-react";
+import { Trash, Keyboard, ALargeSmall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,9 @@ import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { useTour } from "@reactour/tour";
+import { useWorkbench } from "@/stores/useWorkbench";
+import { tokenizeText } from "@/components/prompt-builders/tokenize";
+import { Token } from "@/types/tokenizer";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -20,11 +23,48 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
     const [selectedIdx, setSelectedIdx] = useState<number>(-1);
+    
+    // Tokenization state
+    const [tokenData, setTokenData] = useState<Token[] | null>(null);
+    const [isTokenizing, setIsTokenizing] = useState(false);
+    const [tokenError, setTokenError] = useState<string | null>(null);
+    const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
 
     const { setCurrentStep, currentStep, isOpen } = useTour();
+    const { modelName } = useWorkbench();
 
     const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
         useLensCompletions();
+
+    // Check if text has changed since last tokenization
+    const textHasChanged = compl.prompt !== lastTokenizedText;
+    const shouldEnableTokenize = !isTokenizing && modelName && compl.prompt && (!tokenData || textHasChanged);
+
+    const handleTokenize = async () => {
+        if (!modelName) {
+            setTokenError('No model selected');
+            return;
+        }
+
+        if (!compl.prompt) {
+            setTokenData(null);
+            setLastTokenizedText(null);
+            return;
+        }
+
+        try {
+            setIsTokenizing(true);
+            setTokenError(null);
+            const tokens = await tokenizeText(compl.prompt, modelName);
+            setTokenData(tokens);
+            setLastTokenizedText(compl.prompt);
+        } catch (err) {
+            console.error('Error tokenizing text:', err);
+            setTokenError(err instanceof Error ? err.message : 'Failed to tokenize text');
+        } finally {
+            setIsTokenizing(false);
+        }
+    };
 
     const handleContentUpdate = (id: string, updates: Partial<LensCompletion>) => {
         handleUpdateCompletion(id, updates);
@@ -130,7 +170,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                                 <span className="text-xs px-1">{compl.model}</span>
                             </div>
                         </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -139,7 +179,17 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             <Trash size={16} className="w-8 h-8" />
                         </Button>
                         <Button
+                            variant="ghost"
                             size="icon"
+                            onClick={handleTokenize}
+                            disabled={!shouldEnableTokenize}
+                            title={textHasChanged ? "Re-tokenize" : "Tokenize"}
+                        >
+                            <ALargeSmall size={16} className="w-8 h-8" />
+                        </Button>
+                        <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => {
                                 handlePredictions(compl);
                             }}
@@ -155,11 +205,11 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             value={compl.prompt}
                             onChange={contentUpdate}
                             className="h-24 resize-none"
-                            placeholder="Enter your prompt here..."
+                            placeholder="Enter your prompt here."
                             id="completion-text"
                         />
                     </div>
-                    <div className="flex flex-col h-24 w-full p-3 rounded-md border-dashed border">
+                    <div className="flex flex-col w-full px-3 py-2 rounded-md border-dashed border">
                         <TokenArea
                             text={compl.prompt}
                             showPredictions={showPredictions}
@@ -167,6 +217,9 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             onTokenSelection={(indices) => handleTokenSelection(compl.id, indices)}
                             setSelectedIdx={setSelectedIdx}
                             filledTokens={compl.tokens}
+                            tokenData={tokenData}
+                            isTokenizing={isTokenizing}
+                            tokenError={tokenError}
                         />
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { Play, MessageSquareText } from "lucide-react";
+import { SquarePen } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,8 +23,8 @@ export function WorkbenchMenu({ toggleAnnotations, setLayout }: WorkbenchModePro
             <span>Hello</span>
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={toggleAnnotations}>
-                    <MessageSquareText size={16} />
-                    Annotations
+                    <SquarePen size={16} />
+                    Annotate
                 </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -4,8 +4,8 @@ import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { useTokenizer } from "@/stores/useTokenizer";
 import { useWorkbench } from "@/stores/useWorkbench";
+import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -96,30 +96,31 @@ export const PredictionDisplay = ({
     updateToken,
     clearToken,
 }: PredictionDisplayProps) => {
-    const { isTokenizerLoading, initializeTokenizer, tokenizeText } = useTokenizer();
     const { modelName } = useWorkbench();
 
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (!isTokenizerLoading) return;
-        initializeTokenizer(modelName);
-    }, [modelName, isTokenizerLoading]);
-
     const handleTargetTokenUpdate = async (text: string) => {
-        const tokens = await tokenizeText(text);
-        if (!tokens || tokens.length === 0) return;
+        if (!modelName) {
+            console.error('No model selected');
+            return;
+        }
 
-        // Only update if there's a single token
-        if (tokens.length === 1) {
-            updateToken(compl.id, selectedIdx, tokens[0].id, tokens[0].text);
+        try {
+            const tokens = await tokenizeText(text, modelName);
+            if (!tokens || tokens.length === 0) return;
 
-            setTempTokenText([]);
-        } else {
-            // Else, set temp token text and clear tokens
-
-            setTempTokenText(tokens.map((t) => t.text));
-            clearToken(compl.id, selectedIdx);
+            // Only update if there's a single token
+            if (tokens.length === 1) {
+                updateToken(compl.id, selectedIdx, tokens[0].id, tokens[0].text);
+                setTempTokenText([]);
+            } else {
+                // Else, set temp token text and clear tokens
+                setTempTokenText(tokens.map((t) => t.text));
+                clearToken(compl.id, selectedIdx);
+            }
+        } catch (error) {
+            console.error('Error tokenizing text:', error);
         }
     };
 
