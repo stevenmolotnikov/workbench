@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { TokenPredictions } from "@/types/workspace";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import config from "@/lib/config";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
@@ -14,6 +14,7 @@ import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useWorkbench } from "@/stores/useWorkbench";
 import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { Token } from "@/types/tokenizer";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -35,6 +36,21 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
     const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
         useLensCompletions();
+
+    const {deleteAnnotation, annotations} = useAnnotations();
+
+    const clearAnnotations = (completionId: string) => {
+        annotations.forEach(annotation => {
+            if (annotation.type === "token" && annotation.data.id.startsWith(completionId)) {
+                deleteAnnotation(annotation.data.id);
+            }
+        });
+    }
+
+    const moreHandleDeleteCompletion = (id: string) => {
+        clearAnnotations(id);
+        handleDeleteCompletion(id);
+    }
 
     // Check if text has changed since last tokenization
     const textHasChanged = compl.prompt !== lastTokenizedText;
@@ -64,6 +80,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             setTokenError(err instanceof Error ? err.message : "Failed to tokenize text");
         } finally {
             setIsTokenizing(false);
+            clearAnnotations(compl.id);
             handleClick('#tokenize-button');
         }
     };
@@ -146,6 +163,8 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         handleTextInput(e.target.value);
     };
 
+    const [predictionsEnabled, setPredictionsEnabled] = useState(false);
+
     return (
         <div key={compl.id}>
             <div
@@ -172,7 +191,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteCompletion(compl.id)}
+                            onClick={() => moreHandleDeleteCompletion(compl.id)}
                         >
                             <Trash size={16} className="w-8 h-8" />
                         </Button>
@@ -192,6 +211,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             onClick={() => {
                                 handlePredictions(compl);
                             }}
+                            disabled={!predictionsEnabled}
                             id="view-predictions"
                         >
                             <Keyboard size={16} className="w-8 h-8" />
@@ -213,12 +233,14 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                         id="token-area"
                     >
                         <TokenArea
+                            completionId={compl.id}
                             showPredictions={showPredictions}
                             predictions={predictions || {}}
                             onTokenSelection={(indices) => handleTokenSelection(compl.id, indices)}
                             setSelectedIdx={setSelectedIdx}
                             filledTokens={compl.tokens}
                             tokenData={tokenData}
+                            setPredictionsEnabled={setPredictionsEnabled}
                             isTokenizing={isTokenizing}
                             tokenError={tokenError}
                         />

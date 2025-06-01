@@ -21,14 +21,9 @@ type TokenHighlightEvent = {
 type TokenClickEvent = {
     type: "tokenClick";
     tokenIndex: number;
-};
+};  
 
-type TokenSelectionEvent = {
-    type: "tokenSelection";
-    tokenIndex: number;
-};
-
-type TutorialEventData = ClickEvent | TextInputEvent | TokenHighlightEvent | TokenClickEvent | TokenSelectionEvent;
+type TutorialEventData = ClickEvent | TextInputEvent | TokenHighlightEvent | TokenClickEvent;
 
 export function useTutorialManager() {
     const { setCurrentStep, currentStep, isOpen, steps } = useTour();
@@ -106,16 +101,6 @@ export function useTutorialManager() {
         [checkStepCompletion]
     );
 
-    const handleTokenSelection = useCallback(
-        (tokenIndex: number) => {
-            checkStepCompletion({
-                type: "tokenSelection",
-                tokenIndex,
-            });
-        },
-        [checkStepCompletion]
-    );
-
     const handleTokenHighlight = useCallback(
         (tokenIndex: number) => {
             checkStepCompletion({
@@ -141,7 +126,6 @@ export function useTutorialManager() {
         currentStep,
         handleClick,
         handleTextInput,
-        handleTokenSelection,
         handleTokenHighlight,
         handleTokenClick,
     };

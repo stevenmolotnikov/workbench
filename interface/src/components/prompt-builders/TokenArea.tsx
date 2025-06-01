@@ -4,11 +4,13 @@ import { useRef, useEffect } from "react";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
-import { TokenPredictions } from "@/types/workspace";
+import { TokenPredictions, Annotation } from "@/types/workspace";
 import { Token } from "@/types/tokenizer";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 interface TokenAreaProps {
+    completionId: string;
     showPredictions: boolean;
     predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
@@ -17,10 +19,11 @@ interface TokenAreaProps {
     tokenData: Token[] | null;
     isTokenizing: boolean;
     tokenError: string | null;
+    setPredictionsEnabled: (enabled: boolean) => void;
 }
 
 export function TokenArea({
-    predictions,
+    completionId,
     showPredictions,
     onTokenSelection,
     setSelectedIdx,
@@ -28,12 +31,12 @@ export function TokenArea({
     tokenData,
     isTokenizing,
     tokenError,
+    setPredictionsEnabled,
 }: TokenAreaProps) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     const {
         highlightedTokens,
-        setHighlightedTokens,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
@@ -43,7 +46,6 @@ export function TokenArea({
     });
 
     const { 
-        handleTokenSelection: handleTutorialTokenSelection,
         handleTokenHighlight,
         handleTokenClick 
     } = useTutorialManager();
@@ -56,23 +58,24 @@ export function TokenArea({
         }
     }, [highlightedTokens, handleTokenHighlight]);
 
-    // Add effect to highlight last token when showPredictions becomes true
     useEffect(() => {
-        if (showPredictions && tokenData && highlightedTokens.length === 0) {
-            const lastTokenIndex = tokenData.length - 1;
-
-            // Should fix at some point, but basically an await
-            const buffer = predictions[-1];
-            if (lastTokenIndex >= 0) {
-                setHighlightedTokens([lastTokenIndex]);
-                setSelectedIdx(-1);
-            }
+        if (highlightedTokens.length > 0) {
+            setPredictionsEnabled(true);
+        } else {
+            setPredictionsEnabled(false);
         }
-    }, [predictions, showPredictions, tokenData, highlightedTokens.length, setHighlightedTokens, setSelectedIdx]);
+    }, [highlightedTokens, setPredictionsEnabled]);
+
+    const { addPendingAnnotation } = useAnnotations();
 
     const handleSetSelectedIdx = (idx: number) => {
         setSelectedIdx(idx);
         handleTokenClick(idx);
+        const tokenAnnotation: Annotation = {
+            id: completionId + "-" + idx,
+            text: "",
+        };
+        addPendingAnnotation({ type: "token", data: tokenAnnotation });
     };
 
     const renderLoading = () => (
