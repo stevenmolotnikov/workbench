@@ -32,8 +32,20 @@ function ContentComponent({
 }
 
 export function TourProvider({ children }: TourProviderProps) {
-    const tutorialBarWidth = window.innerWidth * 0.25;
-    const menuBarHeight = window.innerHeight * 0.06;
+    const [dimensions, setDimensions] = React.useState({
+        tutorialBarWidth: 0,
+        menuBarHeight: 0
+    });
+
+    React.useEffect(() => {
+        const tutorialBarWidth = window.innerWidth * 0.25;
+        const menuBarHeight = window.innerHeight * 0.06;
+        
+        setDimensions({
+            tutorialBarWidth,
+            menuBarHeight
+        });
+    }, []);
 
     return (
         <ReactourTourProvider
@@ -44,7 +56,7 @@ export function TourProvider({ children }: TourProviderProps) {
                 popover: (base) => ({ ...base, padding: 0, backgroundColor: "transparent" }),
             }}
             padding={{
-                wrapper: [menuBarHeight, 0, 0, tutorialBarWidth],
+                wrapper: [dimensions.menuBarHeight, 0, 0, dimensions.tutorialBarWidth],
             }}
         >
             {children}
