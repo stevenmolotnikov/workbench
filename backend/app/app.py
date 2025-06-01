@@ -9,7 +9,7 @@ def _fastapi_app(config_path: str = "config.toml"):
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://nnterface.vercel.app", "http://localhost:3000", "http://0.0.0.0:3000"],
+        allow_origins=["https://interp-workbench.vercel.app"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

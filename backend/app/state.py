@@ -43,7 +43,11 @@ class AppState:
 
         for _, cfg in config.models.items():
             model = LanguageModel(
-                cfg.name, rename=cfg.rename, token=hf_token, device_map="cpu"
+                cfg.name,
+                rename=cfg.rename,
+                token=hf_token,
+                device_map="cpu",
+                dispatch=not self.remote,
             )
             model = self._process_model(model)
             self.models[cfg.name] = model
