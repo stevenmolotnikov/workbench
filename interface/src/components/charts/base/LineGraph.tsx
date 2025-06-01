@@ -1,20 +1,10 @@
 "use client";
 
-import {
-    Line,
-    LineChart,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ReferenceArea,
-} from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { LineGraphAnnotation, LineGraphRangeAnnotation } from "@/types/lens";
 import { useState } from "react";
 
 interface DataPoint {
@@ -22,90 +12,102 @@ interface DataPoint {
     [key: string]: number;
 }
 
-
 export function LineGraph({ data }: { data?: LineGraphData }) {
     const { addPendingAnnotation, emphasizedAnnotation, annotations, pendingAnnotation } =
         useAnnotations();
     const [refAreaLeft, setRefAreaLeft] = useState<string>("");
     const [refAreaRight, setRefAreaRight] = useState<string>("");
     const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
+    const [hoveredDot, setHoveredDot] = useState<{ lineId: string; layer: number } | null>(null);
 
-    const [lineHighlights, setLineHighlights] = useState<
-        Record<string, { start: number; end: number }>
-    >({});
-
-    if (!data) {
+    if (!data?.chartData?.length) {
         return <div>No data to display.</div>;
     }
 
     const { chartData, chartConfig, maxLayer } = data;
 
-    if (!chartData || chartData.length === 0) {
-        return <div>No data to display.</div>;
-    }
-
-    function transformObject(inputObj: DataPoint): { lineId: string; layer: number } {
-        // Find the key that's not "layer"
-        const idKey = Object.keys(inputObj).find((key) => key !== "layer");
-
-        if (!idKey) {
-            throw new Error("No dynamic ID key found in the object");
-        }
-
-        return {
-            lineId: idKey,
-            layer: inputObj.layer,
-        };
-    }
+    // Simplified object transformation - just get the first non-layer key
+    const getLineId = (payload: DataPoint) =>
+        Object.keys(payload).find((key) => key !== "layer") || "";
 
     const handleDotClick = (lineId: string, layer: number) => {
-        const newAnnotation: LineGraphAnnotation = {
-            id: Date.now().toString(),
-            text: "New Annotation",
-            layer: layer,
-            lineId: lineId,
-        };
-        addPendingAnnotation({ type: "lineGraph", data: newAnnotation });
+        addPendingAnnotation({
+            type: "lineGraph",
+            data: {
+                id: Date.now().toString(),
+                text: "New Annotation",
+                layer,
+                lineId,
+            },
+        });
     };
 
     const handleDotMouseDown = (lineId: string, layer: number) => {
-
         setHighlightedLine(lineId);
         setRefAreaLeft(layer.toString());
         setRefAreaRight(layer.toString());
     };
 
-
     const handleMouseUp = () => {
         if (!highlightedLine) return;
 
-        setLineHighlights((prev) => {
-            const newHighlights = { ...prev };
-            newHighlights[highlightedLine] = {
-                start: Number(refAreaLeft) / maxLayer * 100,
-                end: Number(refAreaRight) / maxLayer * 100,
-            };
-            return newHighlights;
-        });
+        const start = (Number(refAreaLeft) / maxLayer) * 100;
+        const end = (Number(refAreaRight) / maxLayer) * 100;
 
-        const newAnnotation: LineGraphRangeAnnotation = {
-            id: Date.now().toString(),
-            text: "New Annotation",
-            lineId: highlightedLine,
-            start: Number(refAreaLeft) / maxLayer * 100,
-            end: Number(refAreaRight) / maxLayer * 100,
-        };
-        addPendingAnnotation({ type: "lineGraphRange", data: newAnnotation });
+        addPendingAnnotation({
+            type: "lineGraphRange",
+            data: {
+                id: Date.now().toString(),
+                text: "New Annotation",
+                lineId: highlightedLine,
+                start,
+                end,
+            },
+        });
 
         setRefAreaLeft("");
         setRefAreaRight("");
         setHighlightedLine(null);
     };
 
+    // Get range highlights from annotations store
+    const getRangeHighlights = (lineId: string): Array<{ start: number; end: number; isTemporary?: boolean }> => {
+        const highlights: Array<{ start: number; end: number; isTemporary?: boolean }> = [];
+        
+        // Add highlights from confirmed annotations
+        annotations.forEach((annotation) => {
+            if (annotation.type === "lineGraphRange" && annotation.data.lineId === lineId) {
+                highlights.push({
+                    start: annotation.data.start,
+                    end: annotation.data.end,
+                });
+            }
+        });
+
+        // Add highlight from pending annotation
+        if (pendingAnnotation?.type === "lineGraphRange" && pendingAnnotation?.data.lineId === lineId) {
+            highlights.push({
+                start: pendingAnnotation.data.start,
+                end: pendingAnnotation.data.end,
+            });
+        }
+
+        // Add temporary highlight during dragging
+        if (highlightedLine === lineId && refAreaLeft && refAreaRight) {
+            highlights.push({
+                start: (Number(refAreaLeft) / maxLayer) * 100,
+                end: (Number(refAreaRight) / maxLayer) * 100,
+                isTemporary: true,
+            });
+        }
+
+        return highlights;
+    };
+
+    // Check if a dot is annotated or pending - consolidated logic
     const isAnnotatedOrPending = (lineId: string, layer: number) => {
         return (
-            (pendingAnnotation?.type !== null &&
-                pendingAnnotation?.type === "lineGraph" &&
+            (pendingAnnotation?.type === "lineGraph" &&
                 pendingAnnotation?.data.lineId === lineId &&
                 pendingAnnotation?.data.layer === layer) ||
             annotations.some(
@@ -117,17 +119,30 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
         );
     };
 
-    const renderDot = (props: any) => {
-        const { cx, cy, payload, index } = props;
-        const { lineId, layer } = transformObject(payload);
-
-        const emphasized =
+    // Check if a dot is emphasized - consolidated logic
+    const dotIsEmphasized = (lineId: string, layer: number) => {
+        return (
             emphasizedAnnotation?.type === "lineGraph" &&
             emphasizedAnnotation?.data.lineId === lineId &&
-            emphasizedAnnotation?.data.layer === layer;
+            emphasizedAnnotation?.data.layer === layer
+        );
+    };
 
-        const isAnnotated = isAnnotatedOrPending(lineId, layer);
-        const r = emphasized ? 6 : isAnnotated ? 4 : 0;
+    const renderDot = (props: unknown) => {
+        const { cx, cy, payload, index } = props as {
+            cx: number;
+            cy: number;
+            payload: DataPoint;
+            index: number;
+        };
+
+        const lineId = getLineId(payload);
+        const { layer } = payload;
+        const emphasized = dotIsEmphasized(lineId, layer);
+        const annotated = isAnnotatedOrPending(lineId, layer);
+
+        // Calculate radius based on state
+        const r = emphasized ? 6 : annotated ? 4 : 0;
 
         return (
             <circle
@@ -135,57 +150,68 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                 cx={cx}
                 cy={cy}
                 r={r}
-                fill={"hsl(var(--chart-1))"}
-                stroke={isAnnotated ? "white" : "transparent"}
-                strokeWidth={isAnnotated ? 2 : 0}
+                fill="hsl(var(--chart-1))"
+                stroke={annotated ? "white" : "transparent"}
+                strokeWidth={annotated ? 2 : 0}
                 pointerEvents="none"
             />
         );
     };
 
-    // Custom dot renderer
-    const activeDot = (props: any) => {
-        const { cx, cy, payload, index } = props;
-        const { lineId, layer } = transformObject(payload);
+    // Active dot with interaction handlers
+    const activeDot = (props: unknown) => {
+        const { cx, cy, payload, index } = props as {
+            cx: number;
+            cy: number;
+            payload: DataPoint;
+            index: number;
+        };
 
-        const emphasized =
-            emphasizedAnnotation?.type === "lineGraph" &&
-            emphasizedAnnotation?.data.lineId === lineId &&
-            emphasizedAnnotation?.data.layer === layer;
+        const lineId = getLineId(payload);
+        const { layer } = payload;
+        const emphasized = dotIsEmphasized(lineId, layer);
+        const annotated = isAnnotatedOrPending(lineId, layer);
+        const hovered = hoveredDot?.lineId === lineId && hoveredDot?.layer === layer;
 
-        const isAnnotated = isAnnotatedOrPending(lineId, layer);
-        const r = emphasized ? 6 : isAnnotated ? 4 : 0;
+        // Calculate radius based on state priority
+        const r = emphasized ? 8 : annotated ? 6 : hovered ? 4 : 0;
 
         return (
             <g>
+                <circle cx={cx} cy={cy} r={r} fill="hsl(var(--chart-1))" pointerEvents="none" />
                 <circle
-                    key={`active-dot-${index}`}
                     cx={cx}
                     cy={cy}
-                    r={r}
-                    fill={"hsl(var(--chart-1))"}
-                    pointerEvents="none"
-                />
-                <circle
-                    key={`hidden-dot-${index}`}
-                    cx={cx}
-                    cy={cy}
-                    r={12}
+                    r={16}
                     fill="transparent"
                     style={{ cursor: "pointer" }}
                     onClick={() => handleDotClick(lineId, layer)}
                     onMouseDown={() => handleDotMouseDown(lineId, layer)}
+                    onMouseEnter={() => setHoveredDot({ lineId, layer })}
+                    onMouseLeave={() => setHoveredDot(null)}
                 />
             </g>
         );
     };
 
+    const rangeIsEmphasized = (lineId: string, start: number, end: number) => {
+        const value =
+            emphasizedAnnotation?.type === "lineGraphRange" &&
+            emphasizedAnnotation?.data.lineId === lineId &&
+            emphasizedAnnotation?.data.start === start &&
+            emphasizedAnnotation?.data.end === end;
+
+        return value;
+    };
+
     const getGradient = (seriesKey: string, color: string) => {
-        if (!lineHighlights[seriesKey]) {
+        const highlights = getRangeHighlights(seriesKey);
+
+        if (highlights.length === 0) {
             return (
                 <linearGradient
                     key={`gradient-${seriesKey}`}
-                    id={String(seriesKey).replace(" ", "")}
+                    id={seriesKey.replace(" ", "")}
                     x1="0%"
                     y1="0"
                     x2="100%"
@@ -196,45 +222,64 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                 </linearGradient>
             );
         }
+
+        // Normalize and sort highlights
+        const normalized = highlights
+            .map((h) => ({
+                start: Math.max(0, Math.min(100, Math.min(h.start, h.end))),
+                end: Math.max(0, Math.min(100, Math.max(h.start, h.end))),
+                isTemporary: h.isTemporary,
+            }))
+            .sort((a, b) => a.start - b.start);
+
+        // Create gradient stops
+        const stops: Array<{ offset: number; color: string }> = [{ offset: 0, color }];
+
+        normalized.forEach(({ start, end, isTemporary }) => {
+            // Determine highlight color based on emphasis and temporary state
+            let highlightColor = "white"; // Default highlight color
+
+            if (
+                !isTemporary &&
+                rangeIsEmphasized(seriesKey, start, end)
+            ) {
+                highlightColor = "#ffd700"; // Gold color for emphasized ranges
+            } else if (isTemporary) {
+                highlightColor = "#e0e0e0"; // Light gray for temporary highlights
+            }
+
+            if (start > 0) stops.push({ offset: start - 0.001, color });
+            stops.push({ offset: start, color: highlightColor });
+            stops.push({ offset: end, color: highlightColor });
+            if (end < 100) stops.push({ offset: end + 0.001, color });
+        });
+
+        stops.push({ offset: 100, color });
+
+        // Remove duplicates and sort
+        const uniqueStops = stops
+            .sort((a, b) => a.offset - b.offset)
+            .filter(
+                (stop, i, arr) =>
+                    i === 0 || stop.offset !== arr[i - 1].offset || stop.color !== arr[i - 1].color
+            );
+
         return (
             <linearGradient
                 key={`gradient-${seriesKey}`}
-                id={String(seriesKey).replace(" ", "")}
+                id={seriesKey.replace(" ", "")}
                 x1="0%"
                 y1="0"
                 x2="100%"
                 y2="0"
             >
-                <stop offset="0%" stopColor={color} />
-                <stop
-                    offset={`${Math.min(
-                        lineHighlights[seriesKey].start,
-                        lineHighlights[seriesKey].end
-                    )}%`}
-                    stopColor={color}
-                />
-                <stop
-                    offset={`${Math.min(
-                        lineHighlights[seriesKey].start,
-                        lineHighlights[seriesKey].end
-                    )}%`}
-                    stopColor="white"
-                />
-                <stop
-                    offset={`${Math.max(
-                        lineHighlights[seriesKey].start,
-                        lineHighlights[seriesKey].end
-                    )}%`}
-                    stopColor="white"
-                />
-                <stop
-                    offset={`${Math.max(
-                        lineHighlights[seriesKey].start,
-                        lineHighlights[seriesKey].end
-                    )}%`}
-                    stopColor={color}
-                />
-                <stop offset="100%" stopColor={color} />
+                {uniqueStops.map((stop, index) => (
+                    <stop
+                        key={index}
+                        offset={`${Math.max(0, Math.min(100, stop.offset))}%`}
+                        stopColor={stop.color}
+                    />
+                ))}
             </linearGradient>
         );
     };
@@ -270,34 +315,23 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                     <Tooltip content={<CustomTooltip />} />
 
                     <defs>
-                        {Object.keys(chartConfig).map((seriesKey) => {
-                            return getGradient(seriesKey, chartConfig[seriesKey].color);
-                        })}
+                        {Object.keys(chartConfig).map((seriesKey) =>
+                            getGradient(seriesKey, chartConfig[seriesKey].color)
+                        )}
                     </defs>
-
 
                     {Object.keys(chartConfig).map((seriesKey) => (
                         <Line
                             key={seriesKey}
                             dataKey={seriesKey}
                             type="linear"
-                            stroke={`url(#${String(seriesKey).replace(" ", "")})`}
+                            stroke={`url(#${seriesKey.replace(" ", "")})`}
                             strokeWidth={highlightedLine === seriesKey ? 4 : 2}
                             dot={renderDot}
                             activeDot={activeDot}
                             connectNulls={true}
                         />
                     ))}
-
-                    {refAreaLeft && refAreaRight && (
-                        <ReferenceArea
-                            x1={refAreaLeft}
-                            x2={refAreaRight}
-                            strokeOpacity={0.3}
-                            fill="hsl(var(--chart-1))"
-                            fillOpacity={0.1}
-                        />
-                    )}
                 </LineChart>
             </ChartContainer>
         </div>
