@@ -51,8 +51,9 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
     const handleMouseUp = () => {
         if (!highlightedLine) return;
 
-        const start = (Number(refAreaLeft) / maxLayer) * 100;
-        const end = (Number(refAreaRight) / maxLayer) * 100;
+        // Store actual layer numbers instead of percentages
+        const start = Number(refAreaLeft);
+        const end = Number(refAreaRight);
 
         addPendingAnnotation({
             type: "lineGraphRange",
@@ -71,28 +72,33 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
     };
 
     // Get range highlights from annotations store
-    const getRangeHighlights = (lineId: string): Array<{ start: number; end: number; isTemporary?: boolean }> => {
+    const getRangeHighlights = (
+        lineId: string
+    ): Array<{ start: number; end: number; isTemporary?: boolean }> => {
         const highlights: Array<{ start: number; end: number; isTemporary?: boolean }> = [];
-        
-        // Add highlights from confirmed annotations
+
+        // Add highlights from confirmed annotations (convert layer numbers to percentages)
         annotations.forEach((annotation) => {
             if (annotation.type === "lineGraphRange" && annotation.data.lineId === lineId) {
                 highlights.push({
-                    start: annotation.data.start,
-                    end: annotation.data.end,
+                    start: (annotation.data.start / maxLayer) * 100,
+                    end: (annotation.data.end / maxLayer) * 100,
                 });
             }
         });
 
-        // Add highlight from pending annotation
-        if (pendingAnnotation?.type === "lineGraphRange" && pendingAnnotation?.data.lineId === lineId) {
+        // Add highlight from pending annotation (convert layer numbers to percentages)
+        if (
+            pendingAnnotation?.type === "lineGraphRange" &&
+            pendingAnnotation?.data.lineId === lineId
+        ) {
             highlights.push({
-                start: pendingAnnotation.data.start,
-                end: pendingAnnotation.data.end,
+                start: (pendingAnnotation.data.start / maxLayer) * 100,
+                end: (pendingAnnotation.data.end / maxLayer) * 100,
             });
         }
 
-        // Add temporary highlight during dragging
+        // Add temporary highlight during dragging (convert layer numbers to percentages)
         if (highlightedLine === lineId && refAreaLeft && refAreaRight) {
             highlights.push({
                 start: (Number(refAreaLeft) / maxLayer) * 100,
@@ -195,11 +201,16 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
     };
 
     const rangeIsEmphasized = (lineId: string, start: number, end: number) => {
+        // Convert percentage back to layer numbers for comparison
+        const startLayer = Math.round((start / 100) * maxLayer);
+        const endLayer = Math.round((end / 100) * maxLayer);
+        
         const value =
             emphasizedAnnotation?.type === "lineGraphRange" &&
             emphasizedAnnotation?.data.lineId === lineId &&
-            emphasizedAnnotation?.data.start === start &&
-            emphasizedAnnotation?.data.end === end;
+            (emphasizedAnnotation?.data.start === startLayer ||
+                emphasizedAnnotation?.data.start === endLayer) &&
+            (emphasizedAnnotation?.data.end === endLayer || emphasizedAnnotation?.data.end === startLayer);
 
         return value;
     };
@@ -239,10 +250,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
             // Determine highlight color based on emphasis and temporary state
             let highlightColor = "white"; // Default highlight color
 
-            if (
-                !isTemporary &&
-                rangeIsEmphasized(seriesKey, start, end)
-            ) {
+            if (!isTemporary && rangeIsEmphasized(seriesKey, start, end)) {
                 highlightColor = "#ffd700"; // Gold color for emphasized ranges
             } else if (isTemporary) {
                 highlightColor = "#e0e0e0"; // Light gray for temporary highlights

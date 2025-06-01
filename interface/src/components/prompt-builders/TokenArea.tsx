@@ -66,7 +66,7 @@ export function TokenArea({
         }
     }, [highlightedTokens, setPredictionsEnabled]);
 
-    const { addPendingAnnotation } = useAnnotations();
+    const { addPendingAnnotation, annotations, emphasizedAnnotation } = useAnnotations();
 
     const handleSetSelectedIdx = (idx: number) => {
         setSelectedIdx(idx);
@@ -92,6 +92,14 @@ export function TokenArea({
         </span>
     );
 
+    const checkIsAnnotated = (idx: number) => {
+        return annotations.some((annotation) => annotation.type === "token" && annotation.data.id === completionId + "-" + idx);
+    };
+
+    const checkIsEmphasized = (idx: number) => {
+        return emphasizedAnnotation?.type === "token" && emphasizedAnnotation?.data.id === completionId + "-" + idx;
+    };
+
     const renderContent = () => {
         if (!tokenData) return renderEmptyState();
 
@@ -110,6 +118,8 @@ export function TokenArea({
                             i,
                             tokenData
                         );
+                        const isAnnotated = checkIsAnnotated(i);
+                        const isEmphasized = checkIsEmphasized(i);
                         const highlightStyle = "bg-primary/30 border-primary/30";
                         const hoverStyle = "hover:bg-primary/30 hover:border-primary/30";
                         const filledStyle = "bg-primary/70";
@@ -119,11 +129,13 @@ export function TokenArea({
                         const styles = cn(
                             "text-sm whitespace-pre border select-none",
                             !isHighlighted && "rounded",
-                            isHighlighted && isGroupStart && !isGroupEnd && "rounded-l !border-r-transparent",
+                            isHighlighted && isGroupStart && !isGroupEnd && "rounded-l",
                             isHighlighted && isGroupEnd && !isGroupStart && "rounded-r",
                             isHighlighted && isGroupStart && isGroupEnd && "rounded",
-                            isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none !border-r-transparent",
+                            isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none",
                             isHighlighted ? highlightStyle : "border-transparent",
+                            isAnnotated && "border-white",
+                            isEmphasized && "border-yellow-500",
                             isFilled ? filledStyle : "",
                             !showPredictions ? hoverStyle : "",
                             token.text === "\\n" ? "w-full" : "w-fit",
