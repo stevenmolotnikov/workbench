@@ -1,9 +1,10 @@
 import { create } from "zustand";
-import { LineGraphAnnotation, HeatmapAnnotation } from "@/types/lens";
+import { LineGraphAnnotation, HeatmapAnnotation, LineGraphRangeAnnotation } from "@/types/lens";
 import { Annotation as WorkspaceAnnotation } from "@/types/workspace";
 
 export type Annotation =
     | { type: "lineGraph"; data: LineGraphAnnotation }
+    | { type: "lineGraphRange"; data: LineGraphRangeAnnotation }
     | { type: "heatmap"; data: HeatmapAnnotation }
     | { type: "token"; data: WorkspaceAnnotation };
 

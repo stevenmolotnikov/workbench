@@ -21,6 +21,12 @@ export interface LineGraphAnnotation extends Annotation {
     layer: number;
 }
 
+export interface LineGraphRangeAnnotation extends Annotation { 
+    lineId: string;
+    start: number;
+    end: number;
+}
+
 export interface CellPosition {
     row: number;
     col: number;
