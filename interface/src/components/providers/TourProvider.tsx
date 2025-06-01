@@ -3,39 +3,6 @@
 import { TourProvider as ReactourTourProvider, PopoverContentProps } from "@reactour/tour";
 import React, { ReactNode } from "react";
 
-const FeatureTourSteps = [
-    {
-        selector: "#new-completion",
-        content: "Welcome to the Logit Lens! This is your first step in the tour.",
-    },
-];
-
-const LogitLensTourSteps = [
-    {
-        selector: "#new-completion",
-        content:
-            "For most experiments, the best prompts will be incomplete statements with a correct, expected single-token solution. Start by entering a prompt like `The Eiffel Tower is in the city of`",
-    },
-    {
-        selector: "#completion-text",
-        content:
-            "This is the second step of your tour. Here you can learn about different features.",
-    },
-    {
-        selector: "#view-predictions",
-        content: "This is the final step. You're now ready to explore the application!",
-    },
-    {
-        selector: "#predictions-display",
-        content: "This is the final step. You're now ready to explore the application!",
-    },
-];
-
-export const TourSteps = {
-    feature: FeatureTourSteps,
-    logitLens: LogitLensTourSteps,
-};
-
 interface TourProviderProps {
     children: ReactNode;
 }
@@ -53,6 +20,10 @@ function ContentComponent({
         return <div>Unsupported content type</div>;
     }
 
+    if (steps[currentStep].selector === "sidebar") {
+        return <></>;
+    }
+
     return (
         <div className="bg-card border w-full h-full p-4 rounded-lg">
             {renderTextWithBackticks(content as string)}
@@ -61,13 +32,19 @@ function ContentComponent({
 }
 
 export function TourProvider({ children }: TourProviderProps) {
+    const tutorialBarWidth = window.innerWidth * 0.25;
+    const menuBarHeight = window.innerHeight * 0.06;
+
     return (
         <ReactourTourProvider
-            steps={FeatureTourSteps}
+            steps={[]}
             ContentComponent={ContentComponent}
             styles={{
-                maskWrapper: (base) => ({ ...base, color: "transparent", cursor: "not-allowed" }),
+                maskWrapper: (base) => ({ ...base, cursor: "not-allowed" }),
                 popover: (base) => ({ ...base, padding: 0, backgroundColor: "transparent" }),
+            }}
+            padding={{
+                wrapper: [menuBarHeight, 0, 0, tutorialBarWidth],
             }}
         >
             {children}
@@ -147,7 +124,7 @@ export function renderTextWithBackticks(text: string): React.ReactElement {
                     );
                 }
                 // Split text by newlines and render each part with line breaks
-                return segment.content.split('\n').map((line, lineIndex) => (
+                return segment.content.split("\n").map((line, lineIndex) => (
                     <React.Fragment key={`${index}-${lineIndex}`}>
                         {lineIndex > 0 && <br />}
                         {line}

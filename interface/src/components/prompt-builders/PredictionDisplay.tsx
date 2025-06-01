@@ -41,7 +41,7 @@ const TokenDisplay = ({
     };
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-2" id="predictions-display">
             {predictions[selectedIdx].str_idxs.map((str: string, idx: number) => (
                 <div key={idx} className="flex justify-between text-sm">
                     <span>{fixString(str)}</span>
@@ -57,7 +57,6 @@ const TokenDisplay = ({
                         placeholder="Enter a target token"
                         value={targetToken}
                         onChange={(e) => setTargetToken(e.target.value)}
-                        id="predictions-display"
                     />
                     <Button
                         size="icon"

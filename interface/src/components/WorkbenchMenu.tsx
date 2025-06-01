@@ -10,14 +10,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LayoutGrid } from "lucide-react";
 import { Layout } from "@/types/workspace";
-import { TourDialog } from "./TourDialog";
+import { BookOpen } from "lucide-react";
 
 interface WorkbenchModeProps {
     setLayout: (layout: Layout) => void;
     toggleAnnotations: () => void;
+    toggleTutorials: () => void;
 }
 
-export function WorkbenchMenu({ toggleAnnotations, setLayout }: WorkbenchModeProps) {
+export function WorkbenchMenu({ toggleAnnotations, toggleTutorials, setLayout }: WorkbenchModeProps) {
     return (
         <div className="p-4 border-b flex items-center justify-between">
             <span>Hello</span>
@@ -39,7 +40,10 @@ export function WorkbenchMenu({ toggleAnnotations, setLayout }: WorkbenchModePro
                         <DropdownMenuItem onClick={() => setLayout("2x2")}>2x2</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <TourDialog />
+                <Button variant="outline" className="h-8 text-xs" onClick={toggleTutorials}>
+                    <BookOpen size={16} />
+                    Tutorials
+                </Button>
             </div>
         </div>
     );

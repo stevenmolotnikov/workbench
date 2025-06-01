@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
 import { TokenPredictions } from "@/types/workspace";
 import { Token } from "@/types/tokenizer";
+import { useTutorialManager } from "@/hooks/useTutorialManager";
 
 interface TokenAreaProps {
-    text: string | { role: string; content: string }[] | null;
     showPredictions: boolean;
     predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
@@ -21,7 +21,6 @@ interface TokenAreaProps {
 
 export function TokenArea({
     predictions,
-    text,
     showPredictions,
     onTokenSelection,
     setSelectedIdx,
@@ -43,6 +42,20 @@ export function TokenArea({
         onTokenSelection,
     });
 
+    const { 
+        handleTokenSelection: handleTutorialTokenSelection,
+        handleTokenHighlight,
+        handleTokenClick 
+    } = useTutorialManager();
+
+    useEffect(() => {
+        if (highlightedTokens.length > 0) {
+            highlightedTokens.forEach(tokenIndex => {
+                handleTokenHighlight(tokenIndex);
+            });
+        }
+    }, [highlightedTokens, handleTokenHighlight]);
+
     // Add effect to highlight last token when showPredictions becomes true
     useEffect(() => {
         if (showPredictions && tokenData && highlightedTokens.length === 0) {
@@ -55,7 +68,12 @@ export function TokenArea({
                 setSelectedIdx(-1);
             }
         }
-    }, [predictions]);
+    }, [predictions, showPredictions, tokenData, highlightedTokens.length, setHighlightedTokens, setSelectedIdx]);
+
+    const handleSetSelectedIdx = (idx: number) => {
+        setSelectedIdx(idx);
+        handleTokenClick(idx);
+    };
 
     const renderLoading = () => (
         <>
@@ -116,7 +134,7 @@ export function TokenArea({
                                 className={styles}
                                 onClick={() => {
                                     if (showPredictions) {
-                                        setSelectedIdx(i);
+                                        handleSetSelectedIdx(i);
                                     }
                                 }}
                             >
@@ -139,3 +157,4 @@ export function TokenArea({
         </>
     );
 }
+

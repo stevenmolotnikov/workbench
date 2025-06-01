@@ -40,7 +40,7 @@ export default function WorkbenchLayout({
 
     return (
         <div className="flex flex-col h-screen">
-            <header className="border-b px-4 py-3 flex items-center justify-between">
+            <header className="border-b px-4 py-3 flex items-center justify-between h-[6vh]">
                 <div className="flex items-center gap-4">
                     <img
                         src="/images/NSF.png"

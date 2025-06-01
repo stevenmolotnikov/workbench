@@ -6,22 +6,17 @@ import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useWorkbench } from "@/stores/useWorkbench";
-import { useTour } from "@reactour/tour";
+import { useTutorialManager } from "@/hooks/useTutorialManager";
 
 export function PromptBuilder() {
     const { handleNewCompletion, activeCompletions } = useLensCompletions();
-    const { setCurrentStep, currentStep, isOpen } = useTour();
+    const { handleClick } = useTutorialManager();
 
     const { modelName } = useWorkbench();
 
     function createNewCompletion() {
         handleNewCompletion(modelName);
-        // TODO: mmaybe check if activeCompletions incremented instead
-        if (isOpen) {
-            setTimeout(() => {
-                setCurrentStep(currentStep + 1);
-            }, 250);
-        }
+        handleClick('#new-completion');
     }
 
     return (

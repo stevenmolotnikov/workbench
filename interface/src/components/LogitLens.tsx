@@ -10,6 +10,7 @@ import { ChartSelector } from "@/components/charts/ChartSelector";
 
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
+import { TutorialsSidebar } from "./TutorialsSidebar";
 
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useCharts } from "@/stores/useCharts";
@@ -18,6 +19,7 @@ import { useCharts } from "@/stores/useCharts";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
+    const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const { activeCompletions, setActiveCompletions } = useLensCompletions();
     // const { annotations, setAnnotations } = useLineGraphAnnotations();
     const { 
@@ -30,12 +32,24 @@ export function LogitLens() {
         setAnnotationsOpen(!annotationsOpen);
     };
 
+    const toggleTutorials = () => {
+        setTutorialsOpen(!tutorialsOpen);
+    };
+
+    const closeTutorials = () => {
+        setTutorialsOpen(false);
+    };
+
     const loadWorkspace = (workspace: LogitLensWorkspace) => {
         setActiveCompletions(workspace.completions);
         // For now, we'll just load the single chart data to the first position if it exists
         // This could be enhanced to save/load multiple chart configurations
         if (workspace.graphData && gridPositions.length > 0) {
-            setChartData(0, workspace.graphData);
+            const chartData = {
+                type: "lineGraph" as const,
+                data: workspace.graphData
+            };
+            setChartData(0, chartData);
         }
         // setAnnotations(workspace.annotations);
     };
@@ -55,11 +69,15 @@ export function LogitLens() {
     return (
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
-            <div className="w-64 border-r">
-                <WorkspaceHistory
-                    loadWorkspace={(workspace) => loadWorkspace(workspace as LogitLensWorkspace)}
-                    exportWorkspace={exportWorkspace}
-                />
+            <div className={`border-r ${tutorialsOpen ? 'w-[25vw]' : 'w-64'} transition-all duration-300`}>
+                {tutorialsOpen ? (
+                    <TutorialsSidebar onClose={closeTutorials} />
+                ) : (
+                    <WorkspaceHistory
+                        loadWorkspace={(workspace) => loadWorkspace(workspace as LogitLensWorkspace)}
+                        exportWorkspace={exportWorkspace}
+                    />
+                )}
             </div>
 
             {/* Main content */}
@@ -67,6 +85,7 @@ export function LogitLens() {
                 {/* Top bar within main content */}
                 <WorkbenchMenu
                     toggleAnnotations={toggleAnnotations}
+                    toggleTutorials={toggleTutorials}
                     setLayout={setLayout}
                 />
 
