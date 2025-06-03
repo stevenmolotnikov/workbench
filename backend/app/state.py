@@ -39,11 +39,15 @@ class AppState:
             config = ModelsConfig(**tomllib.load(f))
 
         self.remote = config.remote
-        hf_token = os.environ["HF_TOKEN"]
+        hf_token = os.environ.get("HF_TOKEN", None)
 
         for _, cfg in config.models.items():
             model = LanguageModel(
-                cfg.name, rename=cfg.rename, token=hf_token
+                cfg.name,
+                rename=cfg.rename,
+                token=hf_token,
+                device_map="cpu",
+                dispatch=not self.remote,
             )
             model = self._process_model(model)
             self.models[cfg.name] = model
@@ -51,7 +55,7 @@ class AppState:
         return config
 
     def _process_model(self, model):
-        """Add a get_submodule method to the model. The existing 
+        """Add a get_submodule method to the model. The existing
         method returns a Torch module rather than an Envoy
         """
 
@@ -61,7 +65,7 @@ class AppState:
 
         def get_submodule(name):
             return module_dict[name]
-        
+
         setattr(model, "get_submodule", get_submodule)
 
         return model

@@ -3,11 +3,9 @@ import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-import { useTokenizer } from "@/stores/useTokenizer";
-import { useWorkbench } from "@/stores/useWorkbench";
+import { useSelectedModel } from "@/hooks/useSelectedModel";
+import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { ArrowRight } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
 interface TokenDisplayProps {
@@ -41,7 +39,7 @@ const TokenDisplay = ({
     };
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-2" id="predictions-display">
             {predictions[selectedIdx].str_idxs.map((str: string, idx: number) => (
                 <div key={idx} className="flex justify-between text-sm">
                     <span>{fixString(str)}</span>
@@ -95,30 +93,31 @@ export const PredictionDisplay = ({
     updateToken,
     clearToken,
 }: PredictionDisplayProps) => {
-    const { isTokenizerLoading, initializeTokenizer, tokenizeText } = useTokenizer();
-    const { modelName } = useWorkbench();
+    const { modelName } = useSelectedModel();
 
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
-    useEffect(() => {
-        if (!isTokenizerLoading) return;
-        initializeTokenizer(modelName);
-    }, [modelName, isTokenizerLoading]);
-
     const handleTargetTokenUpdate = async (text: string) => {
-        const tokens = await tokenizeText(text);
-        if (!tokens || tokens.length === 0) return;
+        if (!modelName) {
+            console.error('No model selected');
+            return;
+        }
 
-        // Only update if there's a single token
-        if (tokens.length === 1) {
-            updateToken(compl.id, selectedIdx, tokens[0].id, tokens[0].text);
+        try {
+            const tokens = await tokenizeText(text, modelName);
+            if (!tokens || tokens.length === 0) return;
 
-            setTempTokenText([]);
-        } else {
-            // Else, set temp token text and clear tokens
-
-            setTempTokenText(tokens.map((t) => t.text));
-            clearToken(compl.id, selectedIdx);
+            // Only update if there's a single token
+            if (tokens.length === 1) {
+                updateToken(compl.id, selectedIdx, tokens[0].id, tokens[0].text);
+                setTempTokenText([]);
+            } else {
+                // Else, set temp token text and clear tokens
+                setTempTokenText(tokens.map((t) => t.text));
+                clearToken(compl.id, selectedIdx);
+            }
+        } catch (error) {
+            console.error('Error tokenizing text:', error);
         }
     };
 

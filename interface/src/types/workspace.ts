@@ -1,4 +1,4 @@
-export type Layout = "1x1" | "2x1";
+export type Layout = "1x1" | "2x1" | "2x2";
 
 export interface Prediction {
     id: string;
@@ -21,14 +21,16 @@ export interface Annotation {
     text: string;
 }
 
+export type ChartType = "heatmap" | "lineGraph";
+
 export interface ChartMode {
     name: string;
     description: string;
-    icon: React.ReactNode;
-    chartType: "heatmap" | "line";
+    icon: string;
+    component: React.ComponentType<{ index: number }>;
 }
 
-
+// Types for top-k predictions
 interface TokenPrediction {
     str_idxs: string[];
     values: number[];

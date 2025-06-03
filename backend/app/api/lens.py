@@ -4,7 +4,6 @@ from fastapi import APIRouter, Request
 import torch as t
 import nnsight as ns
 
-
 from ..schema.lens import (
     TargetedLensRequest,
     GridLensRequest,
@@ -30,14 +29,18 @@ def logit_lens_grid(model, prompt, remote: bool):
             # Compute probabilities over the relevant tokens
             relevant_tokens = logits[0, :, :]
 
-            probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
+            _probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
             _pred_ids = relevant_tokens.argmax(dim=-1)
 
             # Gather probabilities over the predicted tokens
-            _probs = t.gather(probs, 1, _pred_ids.unsqueeze(1)).squeeze()
+            _probs = t.gather(_probs, 1, _pred_ids.unsqueeze(1)).squeeze()
 
-            pred_ids.append(_pred_ids)
-            probs.append(_probs)
+            pred_ids.append(_pred_ids.save())
+            probs.append(_probs.save())
+
+    # TEMPORARAY FIX FOR 0.4
+    probs = [p.tolist() for p in probs]
+    pred_ids = [p.tolist() for p in pred_ids]
 
     return pred_ids, probs
 
@@ -45,6 +48,8 @@ def logit_lens_grid(model, prompt, remote: bool):
 def logit_lens_targeted(model, model_requests, remote: bool):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
+
+    tok = model.tokenizer
 
     all_results = []
     with model.trace(remote=remote) as tracer:
@@ -54,6 +59,7 @@ def logit_lens_targeted(model, model_requests, remote: bool):
             target_ids = request["target_ids"]
             results = []
 
+            prompt_id_strs = tok.batch_decode(tok.encode(request["prompt"]))
             with tracer.invoke(request["prompt"]):
                 for layer_idx, layer in enumerate(model.model.layers):
                     # Decode hidden state into vocabulary
@@ -73,9 +79,11 @@ def logit_lens_targeted(model, model_requests, remote: bool):
                     # Save results
                     results.append(
                         {
-                            "id": request["id"],
+                            "name": request["name"],
                             "layer_idx": layer_idx,
                             "target_probs": target_probs.save(),
+                            "idxs": idxs,
+                            "prompt_id_strs": prompt_id_strs,
                         }
                     )
 
@@ -100,7 +108,7 @@ def preprocess(lens_request: TargetedLensRequest | GridLensRequest):
         target_ids = t.tensor(target_ids)
 
         request = {
-            "id": completion.id,
+            "name": completion.name,
             "prompt": completion.prompt,
             "idxs": idxs,
             "target_ids": target_ids,
@@ -115,17 +123,19 @@ def postprocess(results):
     for result in results:
         # preds = result["preds"].value
         target_probs = result["target_probs"].tolist()
+        target_idxs = result["idxs"]
+        target_prompt_id_strs = result["prompt_id_strs"]
 
         # If only a single token is selected, pred_probs is a float
         if not isinstance(target_probs, list):
             target_probs = [target_probs]
 
         layer_idx = result["layer_idx"]
-        for prob in target_probs:
+        for idx, prob in zip(target_idxs, target_probs):
             processed_results[layer_idx].append(
                 {
-                    "id": result["id"],
-                    "prob": prob,
+                    "name": result["name"] + f" - (\"{target_prompt_id_strs[idx]}\" | {idx})",
+                    "prob": round(prob, 2),
                 }
             )
 
@@ -164,12 +174,15 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     state = request.app.state.m
 
     model = state.get_model(lens_request.completion.model)
+    tok = model.tokenizer
     prompt = lens_request.completion.prompt
 
     pred_ids, probs = logit_lens_grid(model, prompt, state.remote)
 
+    pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
+
     return GridLensResponse(
         id=lens_request.completion.id,
         probs=probs,
-        preds=pred_ids,
+        pred_strs=pred_strs,
     )

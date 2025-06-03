@@ -1,13 +1,18 @@
 import modal
 
-from .app import _fastapi_app
+from .main import fastapi_app
 
-app = modal.App(name="nnsight-backend")
+dependencies = [
+    "fastapi==0.115.6",
+    "git+https://github.com/ndif-team/nnsight.git"
+]
+
+app = modal.App(name="interp-workbench")
 image = (
     modal.Image.debian_slim()
-    .pip_install("fastapi==0.115.6")
-    .pip_install("nnsight==0.4.5")
-    .add_local_file("app/config.toml", remote_path="/root/config.toml")
+    .apt_install("git") # Required for building nnsight from source
+    .pip_install(*dependencies)
+    .add_local_file("app/local_config.toml", remote_path="/root/app/config.toml")
 )
 
 @app.function(
@@ -16,5 +21,5 @@ image = (
 )
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
-def fastapi_app():
-    return _fastapi_app()
+def modal_app():
+    return fastapi_app(True, "config.toml")

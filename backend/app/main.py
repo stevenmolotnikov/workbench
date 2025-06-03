@@ -4,12 +4,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import lens, patch, models
 from .state import AppState
 
-def _fastapi_app(config_path: str = "config.toml"):
+def fastapi_app(remote: bool = False, config_path: str = "local_config.toml"):
     app = FastAPI()
+
+    allowed_origins = []
+    if remote:
+        allowed_origins.append("https://interp-workbench.vercel.app")
+    else:
+        allowed_origins.append("http://localhost:3000")
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["https://nnterface.vercel.app", "http://localhost:3000", "http://0.0.0.0:3000"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -20,7 +26,7 @@ def _fastapi_app(config_path: str = "config.toml"):
     app.include_router(lens, prefix="/api")
     app.include_router(patch, prefix="/api")
     app.include_router(models, prefix="/api")
-    
+
     app.state.m = AppState(config_path)
 
     @app.get("/models")

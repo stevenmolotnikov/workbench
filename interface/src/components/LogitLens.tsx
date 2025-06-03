@@ -2,38 +2,42 @@
 
 import { useState } from "react";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
-import { LineGraphData, LogitLensWorkspace, LogitLensModes } from "@/types/lens";
+import { LogitLensWorkspace, LogitLensModes } from "@/types/lens";
+import { LineGraphData } from "@/types/charts";
 import { WorkbenchMenu } from "./WorkbenchMenu";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
 
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
+import { TutorialsSidebar } from "./TutorialsSidebar";
 
 import { useLensCompletions } from "@/stores/useLensCompletions";
-import { useLensWorkbench } from "@/stores/useLensWorkbench";
+import { useCharts } from "@/stores/useCharts";
 
-import { fetchLogitLensData, fetchGridLensData } from "@/api/lens";
-import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
+// import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-
+    const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const { activeCompletions, setActiveCompletions } = useLensCompletions();
-    const { annotations, setAnnotations } = useLineGraphAnnotations();
+    // const { annotations, setAnnotations } = useLineGraphAnnotations();
     const { 
-        layout, 
         gridPositions, 
         setLayout, 
-        setChartData, 
-        setLoading, 
-        clearAllData,
-        getPopulatedPositions 
-    } = useLensWorkbench();
+        setChartData
+    } = useCharts();
 
     const toggleAnnotations = () => {
         setAnnotationsOpen(!annotationsOpen);
+    };
+
+    const toggleTutorials = () => {
+        setTutorialsOpen(!tutorialsOpen);
+    };
+
+    const closeTutorials = () => {
+        setTutorialsOpen(false);
     };
 
     const loadWorkspace = (workspace: LogitLensWorkspace) => {
@@ -41,9 +45,13 @@ export function LogitLens() {
         // For now, we'll just load the single chart data to the first position if it exists
         // This could be enhanced to save/load multiple chart configurations
         if (workspace.graphData && gridPositions.length > 0) {
-            setChartData(0, workspace.graphData);
+            const chartData = {
+                type: "lineGraph" as const,
+                data: workspace.graphData
+            };
+            setChartData(0, chartData);
         }
-        setAnnotations(workspace.annotations);
+        // setAnnotations(workspace.annotations);
     };
 
     const exportWorkspace = () => {
@@ -53,64 +61,23 @@ export function LogitLens() {
             name: "",
             completions: activeCompletions,
             graphData: firstChartData as LineGraphData | null,
-            annotations: annotations,
+            annotations: [],
         };
         return workspace;
-    };
-
-    const handleRun = async () => {
-        setIsLoading(true);
-        clearAllData(); // Clear all existing chart data
-
-        const populatedPositions = getPopulatedPositions();
-        
-        try {
-            // Send requests for each populated chart type
-            const promises = populatedPositions.map(async ({ position, chartType }) => {
-                setLoading(position, true);
-                
-                try {
-                    const mode = LogitLensModes[chartType];
-                    
-                    if (mode.chartType === "heatmap") {
-                        // For heatmap (grid lens), we need to send each completion separately
-                        // For now, just use the first completion
-                        if (activeCompletions.length > 0) {
-                            const firstCompletion = activeCompletions[0];
-                            const data = await fetchGridLensData(firstCompletion);
-                            setChartData(position, data);
-                        } else {
-                            setChartData(position, null);
-                        }
-                    } else {
-                        // For line charts (targeted lens), send all completions
-                        const data = await fetchLogitLensData(activeCompletions);
-                        setChartData(position, data as LineGraphData);
-                    }
-                } catch (error) {
-                    console.error(`Error fetching data for chart at position ${position}:`, error);
-                    setChartData(position, null);
-                } finally {
-                    setLoading(position, false);
-                }
-            });
-
-            await Promise.all(promises);
-        } catch (error) {
-            console.error("Error in handleRun:", error);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     return (
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
-            <div className="w-64 border-r">
-                <WorkspaceHistory
-                    loadWorkspace={(workspace) => loadWorkspace(workspace as LogitLensWorkspace)}
-                    exportWorkspace={exportWorkspace}
-                />
+            <div className={`border-r ${tutorialsOpen ? 'w-[25vw]' : 'w-64'} transition-all duration-300`}>
+                {tutorialsOpen ? (
+                    <TutorialsSidebar onClose={closeTutorials} />
+                ) : (
+                    <WorkspaceHistory
+                        loadWorkspace={(workspace) => loadWorkspace(workspace as LogitLensWorkspace)}
+                        exportWorkspace={exportWorkspace}
+                    />
+                )}
             </div>
 
             {/* Main content */}
@@ -118,8 +85,8 @@ export function LogitLens() {
                 {/* Top bar within main content */}
                 <WorkbenchMenu
                     toggleAnnotations={toggleAnnotations}
+                    toggleTutorials={toggleTutorials}
                     setLayout={setLayout}
-                    handleRun={handleRun}
                 />
 
                 <ResizableLayout

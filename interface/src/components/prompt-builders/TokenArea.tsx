@@ -1,64 +1,44 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { Token } from "@/types/tokenizer";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
-import { TokenPredictions } from "@/types/workspace";
-import { useWorkbench } from "@/stores/useWorkbench";
-import { useTokenizer } from "@/stores/useTokenizer";
+import { TokenPredictions, Annotation } from "@/types/workspace";
+import { Token } from "@/types/tokenizer";
+import { useTutorialManager } from "@/hooks/useTutorialManager";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 interface TokenAreaProps {
-    text: string | { role: string; content: string }[] | null;
+    completionId: string;
     showPredictions: boolean;
     predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
     setSelectedIdx: (idx: number) => void;
     filledTokens: TokenCompletion[];
+    tokenData: Token[] | null;
+    isTokenizing: boolean;
+    isLoadingTokenizer: boolean;
+    tokenError: string | null;
+    setPredictionsEnabled: (enabled: boolean) => void;
 }
 
 export function TokenArea({
-    predictions,
-    text,
+    completionId,
     showPredictions,
     onTokenSelection,
     setSelectedIdx,
     filledTokens,
+    tokenData,
+    isTokenizing,
+    isLoadingTokenizer,
+    tokenError,
+    setPredictionsEnabled,
 }: TokenAreaProps) {
-    const { modelName } = useWorkbench();
-    const { isLocalLoading, isTokenizerLoading, error, initializeTokenizer, tokenizeText } =
-        useTokenizer();
-    const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-
-    // Initialize tokenizer when component mounts or model changes
-    useEffect(() => {
-        if (!modelName) {
-            setTokenData(null);
-            return;
-        }
-        initializeTokenizer(modelName);
-    }, [modelName]);
-
-    // Perform tokenization whenever text changes
-    useEffect(() => {
-        if (!modelName) {
-            setTokenData(null);
-            return;
-        }
-
-        const debounce = setTimeout(async () => {
-            const tokens = await tokenizeText(text);
-            setTokenData(tokens);
-        }, 500);
-
-        return () => clearTimeout(debounce);
-    }, [text, modelName]);
 
     const {
         highlightedTokens,
-        setHighlightedTokens,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
@@ -67,91 +47,133 @@ export function TokenArea({
         onTokenSelection,
     });
 
-    // Add effect to highlight last token when showPredictions becomes true
-    useEffect(() => {
-        if (showPredictions && tokenData && highlightedTokens.length === 0) {
-            const lastTokenIndex = tokenData.length - 1;
+    const { 
+        handleTokenHighlight,
+        handleTokenClick 
+    } = useTutorialManager();
 
-            // Should fix at some point, but basically an await
-            const buffer = predictions[-1];
-            if (lastTokenIndex >= 0) {
-                setHighlightedTokens([lastTokenIndex]);
-                setSelectedIdx(-1);
-            }
+    useEffect(() => {
+        if (highlightedTokens.length > 0) {
+            highlightedTokens.forEach(tokenIndex => {
+                handleTokenHighlight(tokenIndex);
+            });
         }
-    }, [predictions]);
+    }, [highlightedTokens, handleTokenHighlight]);
+
+    useEffect(() => {
+        if (highlightedTokens.length > 0) {
+            setPredictionsEnabled(true);
+        } else {
+            setPredictionsEnabled(false);
+        }
+    }, [highlightedTokens, setPredictionsEnabled]);
+
+    const { addPendingAnnotation, annotations, emphasizedAnnotation } = useAnnotations();
+
+    const handleSetSelectedIdx = (idx: number) => {
+        setSelectedIdx(idx);
+        handleTokenClick(idx);
+        const tokenAnnotation: Annotation = {
+            id: completionId + "-" + idx,
+            text: "",
+        };
+        addPendingAnnotation({ type: "token", data: tokenAnnotation });
+    };
 
     const renderLoading = () => (
         <>
-            <div className="text-sm text-muted-foreground">Loading Tokenizer...</div>
+            <div className="text-sm text-muted-foreground">
+                {isLoadingTokenizer ? "Loading tokenizer..." : "Tokenizing..."}
+            </div>
         </>
     );
 
-    const renderError = () => <div className="text-red-500 text-sm">{error}</div>;
+    const renderError = () => <div className="text-red-500 text-sm">{tokenError}</div>;
+
+    const renderEmptyState = () => (
+        <span className="text-sm text-muted-foreground">
+            Tokenize to view tokens.
+        </span>
+    );
+
+    const checkIsAnnotated = (idx: number) => {
+        return annotations.some((annotation) => annotation.type === "token" && annotation.data.id === completionId + "-" + idx);
+    };
+
+    const checkIsEmphasized = (idx: number) => {
+        return emphasizedAnnotation?.type === "token" && emphasizedAnnotation?.data.id === completionId + "-" + idx;
+    };
 
     const renderContent = () => {
-        if (!tokenData) return null;
+        if (!tokenData) return renderEmptyState();
 
         return (
-            <div
-                className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
-                ref={containerRef}
-                onMouseDown={showPredictions ? undefined : handleMouseDown}
-                onMouseUp={showPredictions ? undefined : handleMouseUp}
-                onMouseMove={showPredictions ? undefined : handleMouseMove}
-                onMouseLeave={showPredictions ? undefined : handleMouseUp}
-            >
-                {tokenData.map((token, i) => {
-                    const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(
-                        i,
-                        tokenData
-                    );
-                    const highlightStyle = "bg-primary/30 border-primary/30";
-                    const hoverStyle = "hover:bg-primary/30 hover:border-primary/30";
-                    const filledStyle = "bg-primary/70";
+            <div className="space-y-2">
+                <div
+                    className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
+                    ref={containerRef}
+                    onMouseDown={showPredictions ? undefined : handleMouseDown}
+                    onMouseUp={showPredictions ? undefined : handleMouseUp}
+                    onMouseMove={showPredictions ? undefined : handleMouseMove}
+                    onMouseLeave={showPredictions ? undefined : handleMouseUp}
+                >
+                    {tokenData.map((token, i) => {
+                        const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(
+                            i,
+                            tokenData
+                        );
+                        const isAnnotated = checkIsAnnotated(i);
+                        const isEmphasized = checkIsEmphasized(i);
+                        const highlightStyle = "bg-primary/30 border-primary/30";
+                        const hoverStyle = "hover:bg-primary/30 hover:border-primary/30";
+                        const filledStyle = "bg-primary/70";
 
-                    const isFilled = filledTokens.some((t) => t.idx === i && t.target_id !== -1);
+                        const isFilled = filledTokens.some((t) => t.idx === i && t.target_id !== -1);
 
-                    const styles = cn(
-                        "text-sm whitespace-pre border select-none",
-                        !isHighlighted && "rounded",
-                        isHighlighted && isGroupStart && !isGroupEnd && "rounded-l !border-r-transparent",
-                        isHighlighted && isGroupEnd && !isGroupStart && "rounded-r",
-                        isHighlighted && isGroupStart && isGroupEnd && "rounded",
-                        isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none !border-r-transparent",
-                        isHighlighted ? highlightStyle : "border-transparent",
-                        isFilled ? filledStyle : "",
-                        !showPredictions ? hoverStyle : "",
-                        token.text === "\\n" ? "w-full" : "w-fit",
-                        showPredictions && "cursor-pointer"
-                    );
+                        const styles = cn(
+                            "text-sm whitespace-pre border select-none",
+                            !isHighlighted && "rounded",
+                            isHighlighted && isGroupStart && !isGroupEnd && "rounded-l",
+                            isHighlighted && isGroupEnd && !isGroupStart && "rounded-r",
+                            isHighlighted && isGroupStart && isGroupEnd && "rounded",
+                            isHighlighted && !isGroupStart && !isGroupEnd && "rounded-none",
+                            isHighlighted ? highlightStyle : "border-transparent",
+                            isAnnotated && "border-white",
+                            isEmphasized && "border-yellow-500",
+                            isFilled ? filledStyle : "",
+                            !showPredictions ? hoverStyle : "",
+                            token.text === "\\n" ? "w-full" : "w-fit",
+                            showPredictions && "cursor-pointer"
+                        );
 
-                    return (
-                        <div
-                            key={`token-${i}`}
-                            data-token-id={i}
-                            className={styles}
-                            onClick={() => {
-                                if (showPredictions) {
-                                    setSelectedIdx(i);
-                                }
-                            }}
-                        >
-                            {token.text}
-                        </div>
-                    );
-                })}
+                        return (
+                            <div
+                                key={`token-${i}`}
+                                data-token-id={i}
+                                className={styles}
+                                onClick={() => {
+                                    if (showPredictions) {
+                                        handleSetSelectedIdx(i);
+                                    }
+                                }}
+                            >
+                                {token.text}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         );
     };
 
     return (
         <>
-            {isLocalLoading || isTokenizerLoading
+            {(isTokenizing || isLoadingTokenizer)
                 ? renderLoading()
-                : error
+                : tokenError
                 ? renderError()
                 : renderContent()}
         </>
     );
 }
+

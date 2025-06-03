@@ -9,27 +9,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { useWorkbench } from "@/stores/useWorkbench";
+import { useModels } from "@/hooks/useModels";
+import { useSelectedModel } from "@/hooks/useSelectedModel";
 
 export function ModelSelector() {
-    const { 
-        baseModels, 
-        chatModels, 
-        fetchModels,
-        modelName,
-        handleModelChange
-    } = useWorkbench();
-
-    useEffect(() => {
-        fetchModels();
-    }, [fetchModels]);
+    const { baseModels, chatModels, isLoading } = useModels();
+    const { modelName, handleModelChange } = useSelectedModel();
 
     return (
         <Select value={modelName} onValueChange={handleModelChange}>
             <SelectTrigger className={cn("w-[220px]", {
-                "animate-pulse": baseModels.length === 0 && chatModels.length === 0
+                "animate-pulse": isLoading
             })}>
                 <SelectValue placeholder="Select a model" />
             </SelectTrigger>
@@ -50,7 +41,7 @@ export function ModelSelector() {
                         ))}
                     </SelectGroup>
                 )}
-                {(baseModels.length === 0 && chatModels.length === 0) && (
+                {isLoading && (
                     <SelectItem value="loading" disabled>Loading models...</SelectItem>
                 )}
             </SelectContent>
