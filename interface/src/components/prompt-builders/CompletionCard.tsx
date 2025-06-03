@@ -1,20 +1,20 @@
-import { Trash, Keyboard, ALargeSmall } from "lucide-react";
+import { Trash, Keyboard, ALargeSmall, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import { TokenPredictions } from "@/types/workspace";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import config from "@/lib/config";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
-import { useWorkbench } from "@/stores/useWorkbench";
-import { tokenizeText } from "@/components/prompt-builders/tokenize";
+import { tokenizeText, isTokenizerCached } from "@/components/prompt-builders/tokenize";
 import { Token } from "@/types/tokenizer";
 import { useAnnotations } from "@/stores/useAnnotations";
+import { useSelectedModel } from "@/hooks/useSelectedModel";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -23,16 +23,18 @@ interface CompletionCardProps {
 export function CompletionCard({ compl }: CompletionCardProps) {
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
+    const [loadingPredictions, setLoadingPredictions] = useState<boolean>(false);
     const [selectedIdx, setSelectedIdx] = useState<number>(-1);
 
     // Tokenization state
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const [isTokenizing, setIsTokenizing] = useState(false);
+    const [isLoadingTokenizer, setIsLoadingTokenizer] = useState(false);
     const [tokenError, setTokenError] = useState<string | null>(null);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
 
     const { handleClick, handleTextInput } = useTutorialManager();
-    const { modelName } = useWorkbench();
+    const { modelName } = useSelectedModel();
 
     const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
         useLensCompletions();
@@ -55,7 +57,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     // Check if text has changed since last tokenization
     const textHasChanged = compl.prompt !== lastTokenizedText;
     const shouldEnableTokenize =
-        !isTokenizing && modelName && compl.prompt && (!tokenData || textHasChanged);
+        !isTokenizing && !isLoadingTokenizer && modelName && compl.prompt && (!tokenData || textHasChanged);
 
     const handleTokenize = async () => {
         if (!modelName) {
@@ -70,7 +72,15 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         }
 
         try {
-            setIsTokenizing(true);
+            // Check if tokenizer is cached to determine loading state
+            const tokenizerCached = isTokenizerCached(modelName);
+            
+            if (!tokenizerCached) {
+                setIsLoadingTokenizer(true);
+            } else {
+                setIsTokenizing(true);
+            }
+            
             setTokenError(null);
             const tokens = await tokenizeText(compl.prompt, modelName);
             setTokenData(tokens);
@@ -80,6 +90,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             setTokenError(err instanceof Error ? err.message : "Failed to tokenize text");
         } finally {
             setIsTokenizing(false);
+            setIsLoadingTokenizer(false);
             clearAnnotations(compl.id);
             handleClick('#tokenize-button');
         }
@@ -126,7 +137,9 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         if (showPredictions) {
             setShowPredictions(false);
         } else {
+            setLoadingPredictions(true);
             await runConversation(completion);
+            setLoadingPredictions(false);
             handleClick('#view-predictions');
         }
     };
@@ -211,10 +224,14 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             onClick={() => {
                                 handlePredictions(compl);
                             }}
-                            disabled={!predictionsEnabled}
+                            disabled={!predictionsEnabled || loadingPredictions}
                             id="view-predictions"
-                        >
-                            <Keyboard size={16} className="w-8 h-8" />
+                        >   
+                            {loadingPredictions ? (
+                                <Loader2 className="w-8 h-8 animate-spin" />
+                            ) : (
+                                <Keyboard size={16} className="w-8 h-8" />
+                            )}
                         </Button>
                     </div>
                 </div>
@@ -242,6 +259,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             tokenData={tokenData}
                             setPredictionsEnabled={setPredictionsEnabled}
                             isTokenizing={isTokenizing}
+                            isLoadingTokenizer={isLoadingTokenizer}
                             tokenError={tokenError}
                         />
                     </div>

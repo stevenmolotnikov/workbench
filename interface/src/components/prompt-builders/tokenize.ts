@@ -20,6 +20,10 @@ async function getTokenizer(modelName: string): Promise<PreTrainedTokenizer> {
   return tokenizer;
 }
 
+export async function isTokenizerCached(modelName: string): Promise<boolean> {
+  return tokenizerCache.has(modelName);
+}
+
 export async function tokenizeText(
   text: string | { role: string; content: string }[] | null,
   modelName: string

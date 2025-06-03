@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensCompletions } from "@/stores/useLensCompletions";
-import { useWorkbench } from "@/stores/useWorkbench";
+import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
+import { useModels } from "@/hooks/useModels";
 
 export function PromptBuilder() {
     const { handleNewCompletion, activeCompletions } = useLensCompletions();
+    const { isLoading } = useModels();
     const { handleClick } = useTutorialManager();
-
-    const { modelName } = useWorkbench();
+    const { modelName } = useSelectedModel();
 
     function createNewCompletion() {
         handleNewCompletion(modelName);
@@ -33,6 +34,7 @@ export function PromptBuilder() {
                             className="w-100"
                             onClick={createNewCompletion}
                             id="new-completion"
+                            disabled={isLoading}
                         >
                             New
                             <Plus size={16} />

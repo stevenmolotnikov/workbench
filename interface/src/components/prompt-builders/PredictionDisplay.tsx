@@ -3,11 +3,9 @@ import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-import { useWorkbench } from "@/stores/useWorkbench";
+import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { ArrowRight } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
 interface TokenDisplayProps {
@@ -95,7 +93,7 @@ export const PredictionDisplay = ({
     updateToken,
     clearToken,
 }: PredictionDisplayProps) => {
-    const { modelName } = useWorkbench();
+    const { modelName } = useSelectedModel();
 
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 

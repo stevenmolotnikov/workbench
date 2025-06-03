@@ -18,6 +18,7 @@ interface TokenAreaProps {
     filledTokens: TokenCompletion[];
     tokenData: Token[] | null;
     isTokenizing: boolean;
+    isLoadingTokenizer: boolean;
     tokenError: string | null;
     setPredictionsEnabled: (enabled: boolean) => void;
 }
@@ -30,6 +31,7 @@ export function TokenArea({
     filledTokens,
     tokenData,
     isTokenizing,
+    isLoadingTokenizer,
     tokenError,
     setPredictionsEnabled,
 }: TokenAreaProps) {
@@ -80,7 +82,9 @@ export function TokenArea({
 
     const renderLoading = () => (
         <>
-            <div className="text-sm text-muted-foreground">Tokenizing...</div>
+            <div className="text-sm text-muted-foreground">
+                {isLoadingTokenizer ? "Loading tokenizer..." : "Tokenizing..."}
+            </div>
         </>
     );
 
@@ -164,7 +168,7 @@ export function TokenArea({
 
     return (
         <>
-            {isTokenizing
+            {(isTokenizing || isLoadingTokenizer)
                 ? renderLoading()
                 : tokenError
                 ? renderError()
