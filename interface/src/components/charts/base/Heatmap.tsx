@@ -14,7 +14,6 @@ const getColor = (value: number, minValue: number, maxValue: number): string => 
         g1 = 229,
         b1 = 229; // #e5e5e5
 
-
     const r2 = 96,
         g2 = 165,
         b2 = 250; // #60a5fa
@@ -33,9 +32,20 @@ interface TooltipData {
     visible: boolean;
 }
 
-export const Heatmap: React.FC<
-    HeatmapData & { cellSpacing?: number }
-> = ({
+interface HeatmapProps {
+    chartIndex: number;
+    data: number[][];
+    labels?: string[][];
+    xTickLabels?: (string | number)[];
+    yTickLabels?: (string | number)[];
+    xAxisLabel?: string;
+    yAxisLabel?: string;
+    fontSize?: number;
+    cellSpacing?: number;
+}
+
+export function Heatmap({
+    chartIndex,
     data,
     labels,
     xTickLabels = [],
@@ -43,8 +53,8 @@ export const Heatmap: React.FC<
     xAxisLabel = "",
     yAxisLabel = "",
     fontSize = 12,
-    cellSpacing = 0.025, // Spacing between cells as percentage of cell size
-}) => {
+    cellSpacing = 0.025,
+}: HeatmapProps) {
     const [tooltip, setTooltip] = useState<TooltipData>({
         value: 0,
         x: 0,
@@ -52,12 +62,8 @@ export const Heatmap: React.FC<
         visible: false,
     });
 
-    const {
-        annotations,
-        pendingAnnotation,
-        addPendingAnnotation,
-    } = useAnnotations();
-    
+    const { annotations, pendingAnnotation, addPendingAnnotation, setAnnotations } =
+        useAnnotations();
 
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [tempSelectedCells, setTempSelectedCells] = useState<Set<string>>(new Set());
@@ -89,7 +95,12 @@ export const Heatmap: React.FC<
             resizeObserver.observe(containerRef.current);
         }
 
-        return () => resizeObserver.disconnect();
+        return () => {
+            resizeObserver.disconnect();
+            setAnnotations(
+                annotations.filter((a) => a.type === "heatmap" && a.data.chartIndex !== chartIndex)
+            );
+        };
     }, []);
 
     // Helper function to create cell key
@@ -105,7 +116,7 @@ export const Heatmap: React.FC<
         return annotations.some(
             (annotation) =>
                 annotation.type === "heatmap" &&
-                annotation.data.positions.some(pos => pos.row === row && pos.col === col)
+                annotation.data.positions.some((pos) => pos.row === row && pos.col === col)
         );
     };
 
@@ -117,12 +128,12 @@ export const Heatmap: React.FC<
     // Helper function to check if a cell is in drag selection
     const isCellInDragSelection = (row: number, col: number): boolean => {
         if (!isDragging || !dragStart || !dragEnd) return false;
-        
+
         const minRow = Math.min(dragStart.row, dragEnd.row);
         const maxRow = Math.max(dragStart.row, dragEnd.row);
         const minCol = Math.min(dragStart.col, dragEnd.col);
         const maxCol = Math.max(dragStart.col, dragEnd.col);
-        
+
         return row >= minRow && row <= maxRow && col >= minCol && col <= maxCol;
     };
 
@@ -146,15 +157,15 @@ export const Heatmap: React.FC<
         if (isDragging && dragStart && dragEnd) {
             // Check if this was a single click (no drag movement)
             const isSingleClick = dragStart.row === dragEnd.row && dragStart.col === dragEnd.col;
-            
+
             const selectedPositions: CellPosition[] = [];
-            
+
             if (isSingleClick) {
                 // Handle single cell selection/deselection
                 const cellKey = getCellKey(dragStart.row, dragStart.col);
                 const wasSelected = selectedCells.has(cellKey);
-                
-                setSelectedCells(prev => {
+
+                setSelectedCells((prev) => {
                     const newSet = new Set(prev);
                     if (newSet.has(cellKey)) {
                         newSet.delete(cellKey);
@@ -163,7 +174,7 @@ export const Heatmap: React.FC<
                     }
                     return newSet;
                 });
-                
+
                 if (!wasSelected) {
                     selectedPositions.push({ row: dragStart.row, col: dragStart.col });
                 }
@@ -173,14 +184,14 @@ export const Heatmap: React.FC<
                 const maxRow = Math.max(dragStart.row, dragEnd.row);
                 const minCol = Math.min(dragStart.col, dragEnd.col);
                 const maxCol = Math.max(dragStart.col, dragEnd.col);
-                
+
                 for (let r = minRow; r <= maxRow; r++) {
                     for (let c = minCol; c <= maxCol; c++) {
                         selectedPositions.push({ row: r, col: c });
                     }
                 }
-                
-                setSelectedCells(prev => {
+
+                setSelectedCells((prev) => {
                     const newSet = new Set(prev);
                     for (let r = minRow; r <= maxRow; r++) {
                         for (let c = minCol; c <= maxCol; c++) {
@@ -190,26 +201,29 @@ export const Heatmap: React.FC<
                     return newSet;
                 });
             }
-            
+
             // Create pending annotation if cells were selected
             if (selectedPositions.length > 0) {
                 const newAnnotation: HeatmapAnnotation = {
                     id: Date.now().toString(),
                     text: "New Annotation",
                     positions: selectedPositions,
+                    chartIndex,
                 };
-                
+
                 // Set temp selected cells for visual feedback
-                const tempCellKeys = new Set(selectedPositions.map(pos => getCellKey(pos.row, pos.col)));
+                const tempCellKeys = new Set(
+                    selectedPositions.map((pos) => getCellKey(pos.row, pos.col))
+                );
                 setTempSelectedCells(tempCellKeys);
-                
+
                 // Clear regular selected cells since they're now pending
                 setSelectedCells(new Set());
-                
+
                 addPendingAnnotation({ type: "heatmap", data: newAnnotation });
             }
         }
-        
+
         setIsDragging(false);
         setDragStart(null);
         setDragEnd(null);
@@ -223,8 +237,8 @@ export const Heatmap: React.FC<
             }
         };
 
-        document.addEventListener('mouseup', handleGlobalMouseUp);
-        return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+        document.addEventListener("mouseup", handleGlobalMouseUp);
+        return () => document.removeEventListener("mouseup", handleGlobalMouseUp);
     }, [isDragging, dragStart, dragEnd]);
 
     // Handle pending annotation cancellation
@@ -252,24 +266,25 @@ export const Heatmap: React.FC<
     // Calculate space allocation as percentages of container size
     const yLabelSpace = yAxisLabel ? containerWidth * 0.02 : 0;
     const yTickSpace = yTickLabels.length > 0 ? containerWidth * 0.04 : 0;
-    
+
     const xTickSpace = xTickLabels.length > 0 ? containerHeight * 0.04 : 0;
     const xLabelSpace = xAxisLabel ? containerHeight * 0.04 : 0;
     const xLabelOffset = shouldHideColorbar ? 10 : 20;
 
-    const colorScaleSpace = shouldHideColorbar ? 0 : containerHeight * 0.1; 
+    const colorScaleSpace = shouldHideColorbar ? 0 : containerHeight * 0.1;
 
     const chartStartX = yLabelSpace + yTickSpace;
     const chartStartY = containerHeight * 0; // Small top margin proportional to height
 
     // Calculate available space for the heatmap cells
     const availableWidthForCells = containerWidth - chartStartX;
-    const availableHeightForCells = containerHeight - chartStartY - xTickSpace - xLabelSpace - colorScaleSpace;
-    
+    const availableHeightForCells =
+        containerHeight - chartStartY - xTickSpace - xLabelSpace - colorScaleSpace;
+
     // Calculate cell dimensions separately to allow rectangular cells
     const cellWidth = availableWidthForCells / cols;
     const cellHeight = availableHeightForCells / rows;
-    
+
     const spacing = cellWidth * cellSpacing;
     const actualCellWidth = cellWidth - spacing;
     const actualCellHeight = cellHeight - spacing;
@@ -277,7 +292,7 @@ export const Heatmap: React.FC<
     // Calculate actual chart dimensions
     const chartWidth = cols * cellWidth;
     const chartHeight = rows * cellHeight;
-    
+
     // Calculate total SVG dimensions needed
     const svgWidth = chartStartX + chartWidth;
     const svgHeight = chartStartY + chartHeight + xTickSpace + xLabelSpace + colorScaleSpace;
@@ -291,13 +306,12 @@ export const Heatmap: React.FC<
     };
 
     // Handle mouse events for tooltip
-    const handleMouseEnter = (
-        event: React.MouseEvent,
-        value: number,
-    ) => {
+    const handleMouseEnter = (event: React.MouseEvent, value: number) => {
         if (!isDragging) {
             const rect = (event.currentTarget as SVGElement).getBoundingClientRect();
-            const svgRect = (event.currentTarget.closest("svg") as SVGElement).getBoundingClientRect();
+            const svgRect = (
+                event.currentTarget.closest("svg") as SVGElement
+            ).getBoundingClientRect();
 
             setTooltip({
                 value,
@@ -323,7 +337,7 @@ export const Heatmap: React.FC<
                 className="w-full h-full"
                 viewBox={`0 0 ${svgWidth} ${svgHeight}`}
                 preserveAspectRatio="xMidYMid meet"
-                style={{ userSelect: 'none' }}
+                style={{ userSelect: "none" }}
             >
                 {/* Define gradient for color scale */}
                 <defs>
@@ -369,11 +383,11 @@ export const Heatmap: React.FC<
                             const isInDragSelection = isCellInDragSelection(rowIndex, colIndex);
                             const isAnnotated = isCellAnnotated(rowIndex, colIndex);
                             const isPending = isCellPending(rowIndex, colIndex);
-                            
+
                             // Determine border style based on state
                             let strokeColor = "none";
                             let strokeWidth = 0;
-                            
+
                             if (isAnnotated) {
                                 strokeColor = "#16a34a"; // green for annotated
                                 strokeWidth = 2;
@@ -384,7 +398,7 @@ export const Heatmap: React.FC<
                                 strokeColor = "#2563eb"; // blue for selected
                                 strokeWidth = 2;
                             }
-                            
+
                             return (
                                 <g key={`${rowIndex}-${colIndex}`}>
                                     <rect
@@ -411,7 +425,10 @@ export const Heatmap: React.FC<
                                         textAnchor="middle"
                                         dominantBaseline="middle"
                                         className="fill-background pointer-events-none"
-                                        fontSize={Math.min(fontSize, Math.min(actualCellWidth, actualCellHeight) / 4)}
+                                        fontSize={Math.min(
+                                            fontSize,
+                                            Math.min(actualCellWidth, actualCellHeight) / 4
+                                        )}
                                     >
                                         {getCellText(value, rowIndex, colIndex)}
                                     </text>
@@ -461,7 +478,11 @@ export const Heatmap: React.FC<
 
                 {/* Continuous color scale legend */}
                 {!shouldHideColorbar && (
-                    <g transform={`translate(${chartStartX}, ${chartStartY + chartHeight + xTickSpace + (xAxisLabel ? 50 : 10)})`}>
+                    <g
+                        transform={`translate(${chartStartX}, ${
+                            chartStartY + chartHeight + xTickSpace + (xAxisLabel ? 50 : 10)
+                        })`}
+                    >
                         {/* Continuous color bar */}
                         <rect
                             x={0}
@@ -516,4 +537,4 @@ export const Heatmap: React.FC<
             )}
         </div>
     );
-};
+}

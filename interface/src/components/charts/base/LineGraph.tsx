@@ -5,30 +5,46 @@ import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface DataPoint {
     layer: number;
     [key: string]: number;
 }
 
-export function LineGraph({ data }: { data?: LineGraphData }) {
-    const { addPendingAnnotation, emphasizedAnnotation, annotations, pendingAnnotation } =
-        useAnnotations();
+interface LineGraphProps {
+    chartIndex: number;
+    data?: LineGraphData;
+}
+
+export function LineGraph({ chartIndex, data }: LineGraphProps) {
+    const {
+        addPendingAnnotation,
+        emphasizedAnnotation,
+        setAnnotations,
+        annotations,
+        pendingAnnotation,
+    } = useAnnotations();
     const [refAreaLeft, setRefAreaLeft] = useState<string>("");
     const [refAreaRight, setRefAreaRight] = useState<string>("");
     const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
     const [hoveredDot, setHoveredDot] = useState<{ lineId: string; layer: number } | null>(null);
+
+    useEffect(() => {
+        return () => {
+            setAnnotations(
+                annotations.filter(
+                    (a) => a.type === "lineGraph" && a.data.chartIndex !== chartIndex
+                )
+            );
+        };
+    }, []);
 
     if (!data?.chartData?.length) {
         return <div>No data to display.</div>;
     }
 
     const { chartData, chartConfig, maxLayer } = data;
-
-    // Simplified object transformation - just get the first non-layer key
-    const getLineId = (payload: DataPoint) =>
-        Object.keys(payload).find((key) => key !== "layer") || "";
 
     const handleDotClick = (lineId: string, layer: number) => {
         addPendingAnnotation({
@@ -38,11 +54,13 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                 text: "New Annotation",
                 layer,
                 lineId,
+                chartIndex,
             },
         });
     };
 
     const handleDotMouseDown = (lineId: string, layer: number) => {
+        console.log(lineId, layer);
         setHighlightedLine(lineId);
         setRefAreaLeft(layer.toString());
         setRefAreaRight(layer.toString());
@@ -63,6 +81,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                 lineId: highlightedLine,
                 start,
                 end,
+                chartIndex,
             },
         });
 
@@ -134,7 +153,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
         );
     };
 
-    const renderDot = (props: unknown) => {
+    const renderDot = (lineId: string, props: unknown) => {
         const { cx, cy, payload, index } = props as {
             cx: number;
             cy: number;
@@ -142,7 +161,6 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
             index: number;
         };
 
-        const lineId = getLineId(payload);
         const { layer } = payload;
         const emphasized = dotIsEmphasized(lineId, layer);
         const annotated = isAnnotatedOrPending(lineId, layer);
@@ -165,7 +183,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
     };
 
     // Active dot with interaction handlers
-    const activeDot = (props: unknown) => {
+    const activeDot = (lineId: string, props: unknown) => {
         const { cx, cy, payload, index } = props as {
             cx: number;
             cy: number;
@@ -173,7 +191,6 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
             index: number;
         };
 
-        const lineId = getLineId(payload);
         const { layer } = payload;
         const emphasized = dotIsEmphasized(lineId, layer);
         const annotated = isAnnotatedOrPending(lineId, layer);
@@ -204,15 +221,26 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
         // Convert percentage back to layer numbers for comparison
         const startLayer = Math.round((start / 100) * maxLayer);
         const endLayer = Math.round((end / 100) * maxLayer);
-        
+
         const value =
             emphasizedAnnotation?.type === "lineGraphRange" &&
             emphasizedAnnotation?.data.lineId === lineId &&
             (emphasizedAnnotation?.data.start === startLayer ||
                 emphasizedAnnotation?.data.start === endLayer) &&
-            (emphasizedAnnotation?.data.end === endLayer || emphasizedAnnotation?.data.end === startLayer);
+            (emphasizedAnnotation?.data.end === endLayer ||
+                emphasizedAnnotation?.data.end === startLayer);
 
         return value;
+    };
+
+    // Ids cannot have special characters
+    const fixId = (id: string) => {
+        return id
+            .replaceAll(" ", "")
+            .replaceAll("(", "")
+            .replaceAll(")", "")
+            .replaceAll("|", "")
+            .replaceAll('"', "");
     };
 
     const getGradient = (seriesKey: string, color: string) => {
@@ -222,7 +250,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
             return (
                 <linearGradient
                     key={`gradient-${seriesKey}`}
-                    id={seriesKey.replace(" ", "")}
+                    id={fixId(seriesKey)}
                     x1="0%"
                     y1="0"
                     x2="100%"
@@ -275,7 +303,7 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
         return (
             <linearGradient
                 key={`gradient-${seriesKey}`}
-                id={seriesKey.replace(" ", "")}
+                id={fixId(seriesKey)}
                 x1="0%"
                 y1="0"
                 x2="100%"
@@ -333,10 +361,10 @@ export function LineGraph({ data }: { data?: LineGraphData }) {
                             key={seriesKey}
                             dataKey={seriesKey}
                             type="linear"
-                            stroke={`url(#${seriesKey.replace(" ", "")})`}
+                            stroke={`url(#${fixId(seriesKey)})`}
                             strokeWidth={highlightedLine === seriesKey ? 4 : 2}
-                            dot={renderDot}
-                            activeDot={activeDot}
+                            dot={(payload) => renderDot(seriesKey, payload)}
+                            activeDot={(payload) => activeDot(seriesKey, payload)}
                             connectNulls={true}
                         />
                     ))}

@@ -49,6 +49,8 @@ def logit_lens_targeted(model, model_requests, remote: bool):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
+    tok = model.tokenizer
+
     all_results = []
     with model.trace(remote=remote) as tracer:
         for request in model_requests:
@@ -57,6 +59,7 @@ def logit_lens_targeted(model, model_requests, remote: bool):
             target_ids = request["target_ids"]
             results = []
 
+            prompt_id_strs = tok.batch_decode(tok.encode(request["prompt"]))
             with tracer.invoke(request["prompt"]):
                 for layer_idx, layer in enumerate(model.model.layers):
                     # Decode hidden state into vocabulary
@@ -79,6 +82,8 @@ def logit_lens_targeted(model, model_requests, remote: bool):
                             "name": request["name"],
                             "layer_idx": layer_idx,
                             "target_probs": target_probs.save(),
+                            "idxs": idxs,
+                            "prompt_id_strs": prompt_id_strs,
                         }
                     )
 
@@ -118,16 +123,18 @@ def postprocess(results):
     for result in results:
         # preds = result["preds"].value
         target_probs = result["target_probs"].tolist()
+        target_idxs = result["idxs"]
+        target_prompt_id_strs = result["prompt_id_strs"]
 
         # If only a single token is selected, pred_probs is a float
         if not isinstance(target_probs, list):
             target_probs = [target_probs]
 
         layer_idx = result["layer_idx"]
-        for prob in target_probs:
+        for idx, prob in zip(target_idxs, target_probs):
             processed_results[layer_idx].append(
                 {
-                    "name": result["name"],
+                    "name": result["name"] + f" - (\"{target_prompt_id_strs[idx]}\" | {idx})",
                     "prob": round(prob, 2),
                 }
             )
@@ -154,6 +161,8 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
         results.extend(model_results)
 
     results = postprocess(results)
+
+    print(results)
 
     return LensResponse(
         **{"data": results, "metadata": {"maxLayer": len(results) - 1}}

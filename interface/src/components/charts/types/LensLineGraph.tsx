@@ -38,10 +38,6 @@ export function LensLineGraph({ index }: { index: number }) {
         }
     };
 
-    const handleConfigChart = () => {
-        console.log(`Configuring chart at position ${index}`);
-    };
-
     return (
         <ChartCard
             handleRunChart={handleRunChart}

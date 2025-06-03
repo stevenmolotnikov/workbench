@@ -19,12 +19,14 @@ export interface LensCompletion extends Completion {
 export interface LineGraphAnnotation extends Annotation { 
     lineId: string;
     layer: number;
+    chartIndex: number;
 }
 
 export interface LineGraphRangeAnnotation extends Annotation { 
     lineId: string;
     start: number;
     end: number;
+    chartIndex: number;
 }
 
 export interface CellPosition {
@@ -35,6 +37,7 @@ export interface CellPosition {
 
 export interface HeatmapAnnotation extends Annotation { 
     positions: CellPosition[];
+    chartIndex: number;
 }
 
 export interface LogitLensWorkspace { 
