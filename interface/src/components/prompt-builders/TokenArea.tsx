@@ -161,6 +161,17 @@ export function TokenArea({
         </span>
     );
 
+    const fix = (text: string) => {
+        const result = text
+            .replace(/\r\n/g, '\\r\\n')  // Windows line endings
+            .replace(/\n/g, '\\n')       // Newlines
+            .replace(/\r/g, '\\r')       // Carriage returns
+            .replace(/\t/g, '\\t')       // Tabs
+
+        return result;
+    }
+
+
     const renderTokens = () => {
         if (!tokenData) return renderEmptyState();
 
@@ -188,6 +199,8 @@ export function TokenArea({
                             isGroupEnd
                         );
 
+                        const fixedText = fix(token.text);
+
                         return (
                             <div
                                 key={`token-${idx}`}
@@ -195,7 +208,7 @@ export function TokenArea({
                                 className={styles}
                                 onClick={() => showPredictions && handleTokenSelection(idx)}
                             >
-                                {token.text}
+                                {fixedText}
                             </div>
                         );
                     })}
