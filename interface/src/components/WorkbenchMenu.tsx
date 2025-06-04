@@ -11,14 +11,16 @@ import {
 import { LayoutGrid } from "lucide-react";
 import { Layout } from "@/types/workspace";
 import { BookOpen } from "lucide-react";
+import { useCharts } from "@/stores/useCharts";
 
 interface WorkbenchModeProps {
-    setLayout: (layout: Layout) => void;
     toggleAnnotations: () => void;
     toggleTutorials: () => void;
 }
 
-export function WorkbenchMenu({ toggleAnnotations, toggleTutorials, setLayout }: WorkbenchModeProps) {
+export function WorkbenchMenu({ toggleAnnotations, toggleTutorials }: WorkbenchModeProps) {
+    const { setLayout } = useCharts();
+
     return (
         <div className="p-4 border-b flex items-center justify-between">
             <span>Hello</span>

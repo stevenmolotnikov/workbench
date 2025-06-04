@@ -7,17 +7,37 @@ import { Save, X } from "lucide-react";
 import { useWorkspaceStore, type Workspace } from "@/stores/useWorkspace";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LogitLensWorkspace } from "@/types/lens";
+import { useCharts } from "@/stores/useCharts";
+import { useAnnotations } from "@/stores/useAnnotations";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
-interface WorkspaceHistoryProps {
-    loadWorkspace: (workspace: Workspace) => void;
-    exportWorkspace: () => Workspace;
-}
-
-export function WorkspaceHistory({ loadWorkspace, exportWorkspace }: WorkspaceHistoryProps) {
+export function WorkspaceHistory() {
     const { workspaces, session, isLoading, deleteWorkspace, createWorkspace } =
         useWorkspaceStore();
 
     const [pendingWorkspace, setPendingWorkspace] = useState<Workspace | null>(null);
+
+    const { annotations, setAnnotations } = useAnnotations();
+    const { setGridPositions, gridPositions } = useCharts();
+
+    const loadWorkspace = (workspace: LogitLensWorkspace) => {
+        const { setActiveCompletions } = useLensCompletions.getState();
+        setActiveCompletions(workspace.completions);
+        setGridPositions(workspace.graphData);
+        setAnnotations(workspace.annotations);
+    };
+
+    const exportWorkspace = () => {
+        const { activeCompletions } = useLensCompletions.getState();
+        const workspace = {
+            name: "",
+            completions: activeCompletions,
+            graphData: gridPositions,
+            annotations: annotations,
+        };
+        return workspace;
+    };
 
     const addPendingWorkspace = (workspace: Workspace) => {
         if (workspaces.length >= 5) {

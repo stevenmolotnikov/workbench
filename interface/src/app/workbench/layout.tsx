@@ -28,7 +28,6 @@ export default function WorkbenchLayout({
 
                 <nav className="flex gap-2 items-center">
                     <WorkbenchStatus />
-                    <Button variant="ghost" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
                     <ModeToggle />
                 </nav>
             </header>
