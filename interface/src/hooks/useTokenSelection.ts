@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { Token } from '@/types/tokenizer';
+import { TokenCompletion } from '@/types/lens';
 
 interface UseTokenSelectionProps {
     onTokenSelection?: (indices: number[]) => void;
     counterId?: number;
     onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
+    filledTokens?: TokenCompletion[];
 }
 
-export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighlight }: UseTokenSelectionProps) {
-    const [highlightedTokens, setHighlightedTokens] = useState<number[]>([]);
+export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhighlight, filledTokens = [] }: UseTokenSelectionProps) {
+    // Get highlighted tokens from the completion object instead of local state
+    const highlightedTokens = filledTokens.filter(token => token.highlighted && token.idx >= 0).map(token => token.idx);
+    
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
 
@@ -59,12 +63,23 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
     }
 
     const unhighlightTokens = (tokens: number[]) => {
-        setHighlightedTokens([...highlightedTokens.filter(id => !tokens.includes(id))]);
+        // Instead of managing local state, call onTokenSelection to update the completion object
+        const remainingTokens = highlightedTokens.filter(id => !tokens.includes(id));
+        if (onTokenSelection) {
+            onTokenSelection(remainingTokens.length > 0 ? remainingTokens : [-1]);
+        }
+        
         // Call onTokenUnhighlight for each unhighlighted token
         if (onTokenUnhighlight) {
             tokens.forEach(tokenIndex => {
                 onTokenUnhighlight(tokenIndex, counterId);
             });
+        }
+    }
+
+    const highlightTokens = (tokens: number[]) => {
+        if (onTokenSelection) {
+            onTokenSelection(tokens.length > 0 ? tokens : [-1]);
         }
     }
 
@@ -74,17 +89,17 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
         const tokenId = getTokenIdFromEvent(e);
         if (tokenId !== null) {
             if (highlightedTokens.includes(tokenId)) {
+                // Unhighlight this specific token
                 unhighlightTokens([tokenId]);
             } else {
                 // If Ctrl/Cmd is pressed, add to existing selection
                 if (e.ctrlKey || e.metaKey || e.shiftKey) {
                     setStartToken(tokenId);
-                    setHighlightedTokens([...highlightedTokens, tokenId]);
+                    highlightTokens([...highlightedTokens, tokenId]);
                 } else {
-                    // Start new selection
-                    unhighlightTokens(highlightedTokens);
+                    // Start new selection (this will clear previous highlights)
                     setStartToken(tokenId);
-                    setHighlightedTokens([tokenId]);
+                    highlightTokens([tokenId]);
                 }
             }
         }
@@ -92,9 +107,6 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
 
     const handleMouseUp = () => {
         setIsSelecting(false);
-        if (onTokenSelection) {
-            onTokenSelection(highlightedTokens.length > 0 ? highlightedTokens : [-1]);
-        }
         setStartToken(null);
     };
 
@@ -110,15 +122,14 @@ export function useTokenSelection({ onTokenSelection, counterId, onTokenUnhighli
         
         // If Ctrl/Cmd is pressed, add to existing selection
         if (e.ctrlKey || e.metaKey || e.shiftKey) {
-            setHighlightedTokens([...highlightedTokens, ...newHighlightedTokens]);
+            highlightTokens([...highlightedTokens, ...newHighlightedTokens]);
         } else {
-            setHighlightedTokens(newHighlightedTokens);
+            highlightTokens(newHighlightedTokens);
         }
     };
 
     return {
         highlightedTokens,
-        setHighlightedTokens,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,

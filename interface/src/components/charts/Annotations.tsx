@@ -3,13 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAnnotations, type Annotation } from "@/stores/useAnnotations";
+import { CircleDotDashed, Spline, Grid3X3, ALargeSmall, X } from "lucide-react";
 import { useState } from "react";
 
 const AnnotationTitle = {
-    "lineGraph": "Line Graph",
-    "lineGraphRange": "Line Graph Range",
-    "heatmap": "Heatmap",
-    "token": "Token",
+    lineGraph: "Point",
+    lineGraphRange: "Range",
+    heatmap: "Cells",
+    token: "Token",
 };
 
 function formatAnnotationDetails(annotation: Annotation) {
@@ -30,6 +31,13 @@ function formatAnnotationDetails(annotation: Annotation) {
             return "";
     }
 }
+
+const AnnotationIcons = {
+    lineGraph: CircleDotDashed,
+    lineGraphRange: Spline,
+    heatmap: Grid3X3,
+    token: ALargeSmall,
+};
 
 export function Annotations() {
     const {
@@ -77,11 +85,21 @@ export function Annotations() {
                             rows={3}
                         />
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={cancelPendingAnnotation}>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                size="sm"
+                                onClick={cancelPendingAnnotation}
+                            >
                                 Cancel
                             </Button>
-                            <Button size="sm" onClick={handleSetPendingAnnotation} disabled={!text.trim()}>
-                                Add Annotation
+                            <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={handleSetPendingAnnotation}
+                                disabled={!text.trim()}
+                            >
+                                Add
                             </Button>
                         </div>
                     </div>
@@ -90,9 +108,7 @@ export function Annotations() {
                 {/* Annotations list */}
                 {annotations.length === 0 && !pendingAnnotation ? (
                     <div className="text-center py-8">
-                        <p className="text-sm text-muted-foreground">
-                            No annotations yet
-                        </p>
+                        <p className="text-sm text-muted-foreground">No annotations yet</p>
                         <p className="text-xs text-muted-foreground mt-1">
                             Click on a chart to add annotations
                         </p>
@@ -106,40 +122,47 @@ export function Annotations() {
                                         key={annotation.data.id}
                                         onMouseEnter={() => handleEmphasizedAnnotation(annotation)}
                                         onMouseLeave={() => clearEmphasizedAnnotation()}
-                                        className="group bg-card border border-border rounded-lg p-4 hover:border-border/80 hover:shadow-sm transition-all duration-200 cursor-pointer"
+                                        className="group bg-card border rounded-lg p-4 transition-all duration-200 cursor-pointer relative"
                                     >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
+                                        {/* Delete button - positioned absolutely in top right */}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute top-4 right-4 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteAnnotation(annotation.data.id);
+                                            }}
+                                        >
+                                            <X />
+                                        </Button>
+
+                                        <div className="flex items-start">
+                                            <div className="flex-1 min-w-0 pr-8">
                                                 {/* Header with type */}
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                                                    {(() => {
+                                                        const IconComponent =
+                                                            AnnotationIcons[annotation.type];
+                                                        return (
+                                                            <IconComponent className="h-4 w-4 text-muted-foreground" />
+                                                        );
+                                                    })()}
+                                                    <span className="inline-flex items-center py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
                                                         {AnnotationTitle[annotation.type]}
                                                     </span>
                                                 </div>
-                                                
+
                                                 {/* Details */}
                                                 <p className="text-xs text-muted-foreground mb-2">
                                                     {formatAnnotationDetails(annotation)}
                                                 </p>
-                                                
+
                                                 {/* Annotation text */}
                                                 <p className="text-sm text-foreground leading-relaxed">
                                                     {annotation.data.text}
                                                 </p>
                                             </div>
-                                            
-                                            {/* Delete button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteAnnotation(annotation.data.id);
-                                                }}
-                                            >
-                                                ×
-                                            </Button>
                                         </div>
                                     </div>
                                 )

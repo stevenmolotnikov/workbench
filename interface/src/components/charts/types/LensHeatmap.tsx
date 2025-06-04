@@ -11,9 +11,16 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
+    const { annotations, setAnnotations } = useAnnotations();
+
+    const handleRemoveChart = () => {
+        setAnnotations(annotations.filter((a) => !(a.type === "heatmap" && a.data.chartIndex === index)));
+        removeChart(index);
+    };
 
     const { activeCompletions } = useLensCompletions();
     const { gridPositions, removeChart, setChartData } = useCharts();
@@ -52,7 +59,7 @@ export function LensHeatmap({ index }: { index: number }) {
     return (
         <ChartCard
             handleRunChart={handleRunChart}
-            handleRemoveChart={() => removeChart(index)}
+            handleRemoveChart={handleRemoveChart}
             isLoading={isLoading}
             chartTitle={
                 <div>
@@ -62,7 +69,7 @@ export function LensHeatmap({ index }: { index: number }) {
             }
             chart={
                 gridPosition.chartData ? (
-                    <Heatmap {...gridPosition.chartData.data} />
+                    <Heatmap chartIndex={index} {...gridPosition.chartData.data} />
                 ) : (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground">No data</p>

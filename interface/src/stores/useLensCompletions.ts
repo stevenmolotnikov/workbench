@@ -43,7 +43,8 @@ export const useLensCompletions = create<LensCompletionsState>((set) => ({
                 model: model,
                 tokens: [{
                     target_id: -1,
-                    idx: -1
+                    idx: -1,
+                    highlighted: false
                 }]
             };
             return {

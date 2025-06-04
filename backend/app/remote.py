@@ -4,7 +4,7 @@ from .main import fastapi_app
 
 dependencies = [
     "fastapi==0.115.6",
-    "git+https://github.com/ndif-team/nnsight.git"
+    "git+https://github.com/ndif-team/nnsight.git@main"
 ]
 
 app = modal.App(name="interp-workbench")

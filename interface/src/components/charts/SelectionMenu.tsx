@@ -4,20 +4,15 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartMode } from "@/types/workspace";
 
-import { DynamicIcon } from 'lucide-react/dynamic';
-
-
 interface SelectionMenuProps {
     modes: ChartMode[];
     setConfiguringPosition: (position: number | null) => void;
-    isChartSelected: (index: number) => boolean;
     handleAddChart: (index: number) => void;
 }
 
 export function SelectionMenu({
     modes,
     setConfiguringPosition,
-    isChartSelected,
     handleAddChart,
 }: SelectionMenuProps) {
     return (
@@ -47,19 +42,15 @@ export function SelectionMenu({
                                 key={index}
                                 className={cn(
                                     "flex flex-col items-center transition-colors rounded-md border",
-                                    isChartSelected(index)
-                                        ? "opacity-50 cursor-not-allowed bg-muted/30"
-                                        : "cursor-pointer hover:bg-muted/60 hover:border-muted-foreground/50"
+                                    "cursor-pointer hover:bg-muted/60 hover:border-muted-foreground/50"
                                 )}
                                 onClick={() => {
-                                    if (!isChartSelected(index)) {
-                                        handleAddChart(index);
-                                    }
+                                    handleAddChart(index);
                                 }}
                             >
                                 <CardContent className="p-4 flex flex-col items-center">
                                     <div className="mb-2 text-muted-foreground">
-                                        <DynamicIcon name={mode.icon} />
+                                        <mode.icon />
                                     </div>
                                     <p className="text-sm font-medium text-center">
                                         {mode.name}

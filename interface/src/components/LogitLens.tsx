@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { LogitLensWorkspace, LogitLensModes } from "@/types/lens";
-import { LineGraphData } from "@/types/charts";
 import { WorkbenchMenu } from "./WorkbenchMenu";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";
@@ -14,18 +13,17 @@ import { TutorialsSidebar } from "./TutorialsSidebar";
 
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useCharts } from "@/stores/useCharts";
-
-// import { useLineGraphAnnotations } from "@/stores/lineGraphAnnotations";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 export function LogitLens() {
     const [annotationsOpen, setAnnotationsOpen] = useState(false);
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const { activeCompletions, setActiveCompletions } = useLensCompletions();
-    // const { annotations, setAnnotations } = useLineGraphAnnotations();
+    const { annotations, setAnnotations } = useAnnotations();
     const { 
+        setGridPositions,
         gridPositions, 
         setLayout, 
-        setChartData
     } = useCharts();
 
     const toggleAnnotations = () => {
@@ -42,26 +40,16 @@ export function LogitLens() {
 
     const loadWorkspace = (workspace: LogitLensWorkspace) => {
         setActiveCompletions(workspace.completions);
-        // For now, we'll just load the single chart data to the first position if it exists
-        // This could be enhanced to save/load multiple chart configurations
-        if (workspace.graphData && gridPositions.length > 0) {
-            const chartData = {
-                type: "lineGraph" as const,
-                data: workspace.graphData
-            };
-            setChartData(0, chartData);
-        }
-        // setAnnotations(workspace.annotations);
+        setGridPositions(workspace.graphData);
+        setAnnotations(workspace.annotations);
     };
 
     const exportWorkspace = () => {
-        // Export the first chart's data for backward compatibility
-        const firstChartData = gridPositions[0]?.chartData;
-        const workspace = {
+        const workspace = { 
             name: "",
             completions: activeCompletions,
-            graphData: firstChartData as LineGraphData | null,
-            annotations: [],
+            graphData: gridPositions,
+            annotations: annotations,
         };
         return workspace;
     };

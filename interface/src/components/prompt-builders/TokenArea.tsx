@@ -45,6 +45,7 @@ export function TokenArea({
         getGroupInformation,
     } = useTokenSelection({
         onTokenSelection,
+        filledTokens,
     });
 
     const { 
@@ -61,12 +62,16 @@ export function TokenArea({
     }, [highlightedTokens, handleTokenHighlight]);
 
     useEffect(() => {
-        if (highlightedTokens.length > 0) {
+        // Enable predictions if there are highlighted tokens OR if there are target completions
+        const hasHighlightedTokens = highlightedTokens.length > 0;
+        const hasTargetCompletions = filledTokens.some(token => token.target_id >= 0);
+        
+        if (hasHighlightedTokens || hasTargetCompletions) {
             setPredictionsEnabled(true);
         } else {
             setPredictionsEnabled(false);
         }
-    }, [highlightedTokens, setPredictionsEnabled]);
+    }, [highlightedTokens, filledTokens, setPredictionsEnabled]);
 
     const { addPendingAnnotation, annotations, emphasizedAnnotation } = useAnnotations();
 
@@ -122,6 +127,7 @@ export function TokenArea({
                             i,
                             tokenData
                         );
+                        
                         const isAnnotated = checkIsAnnotated(i);
                         const isEmphasized = checkIsEmphasized(i);
                         const highlightStyle = "bg-primary/30 border-primary/30";

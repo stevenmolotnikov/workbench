@@ -3,17 +3,26 @@ import { LineGraph } from "@/components/charts/base/LineGraph";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 export function LensLineGraph({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
 
     const { activeCompletions } = useLensCompletions();
     const { gridPositions, removeChart, setChartData } = useCharts();
+    const { annotations, setAnnotations } = useAnnotations();
 
     const gridPosition = gridPositions[index];
 
+    const handleRemoveChart = () => {
+        setAnnotations(annotations.filter((a) => !(a.type === "lineGraph" && a.data.chartIndex === index)));
+        removeChart(index);
+    };
+
     const handleRunChart = async () => {
         setIsLoading(true);
+
+        console.log("activeCompletions", activeCompletions);
 
         try {
             const response = await fetch("/api/lens-line", {
@@ -41,7 +50,7 @@ export function LensLineGraph({ index }: { index: number }) {
     return (
         <ChartCard
             handleRunChart={handleRunChart}
-            handleRemoveChart={() => removeChart(index)}
+            handleRemoveChart={handleRemoveChart}
             isLoading={isLoading}
             chartTitle={
                 <div>
@@ -51,7 +60,7 @@ export function LensLineGraph({ index }: { index: number }) {
             }
             chart={gridPosition.chartData ? (
                 <div className="pt-6 h-full">
-                    <LineGraph data={gridPosition.chartData.data} />
+                    <LineGraph chartIndex={index} data={gridPosition.chartData.data} />
                 </div>
             ) : (
                 <div className="flex items-center justify-center h-full">

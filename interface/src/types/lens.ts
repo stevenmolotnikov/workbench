@@ -1,6 +1,8 @@
-import { Completion, Annotation, ChartMode } from "@/types/workspace"
-import { LineGraphData } from "@/types/charts";
+import { Completion, ChartMode, Annotation } from "@/types/workspace"
 import { LensHeatmap, LensLineGraph } from "@/components/charts/types";
+import { Annotation as WorkspaceAnnotation } from "@/stores/useAnnotations";
+import { GridPosition } from "@/stores/useCharts";
+import { ChartArea, Grid3X3 } from "lucide-react";
 
 // Request Schema
 
@@ -8,6 +10,7 @@ export interface TokenCompletion {
     idx: number;
     target_id: number;
     target_text?: string;
+    highlighted: boolean;
 }
 
 export interface LensCompletion extends Completion { 
@@ -44,8 +47,8 @@ export interface LogitLensWorkspace {
     id?: string;
     name: string;
     completions: LensCompletion[];
-    graphData: LineGraphData | null;
-    annotations: LineGraphAnnotation[];
+    graphData: GridPosition[];
+    annotations: WorkspaceAnnotation[];
 }
 
 // Line Chart Data Schema
@@ -81,13 +84,13 @@ export const LogitLensModes: ChartMode[] = [
     {
         name: "Target Token",
         description: "Probability of the target token per layer.",
-        icon: "chart-area",
+        icon: ChartArea,
         component: LensLineGraph,
     },
     {
         name: "Prediction Grid",
         description: "Grid of the most probable token per layer.",
-        icon: "grid-3x3",
+        icon: Grid3X3,
         component: LensHeatmap,
     },
 ]

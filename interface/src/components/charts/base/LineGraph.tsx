@@ -30,15 +30,6 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
     const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
     const [hoveredDot, setHoveredDot] = useState<{ lineId: string; layer: number } | null>(null);
 
-    useEffect(() => {
-        return () => {
-            setAnnotations(
-                annotations.filter(
-                    (a) => a.type === "lineGraph" && a.data.chartIndex !== chartIndex
-                )
-            );
-        };
-    }, []);
 
     if (!data?.chartData?.length) {
         return <div>No data to display.</div>;
