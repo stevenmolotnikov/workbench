@@ -71,6 +71,10 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             return;
         }
 
+        if (showPredictions) {
+            setShowPredictions(false);
+        }
+
         try {
             // Check if tokenizer is cached to determine loading state
             const tokenizerCached = isTokenizerCached(modelName);
@@ -92,6 +96,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             setIsTokenizing(false);
             setIsLoadingTokenizer(false);
             clearAnnotations(compl.id);
+
             handleClick('#tokenize-button');
         }
     };
@@ -101,12 +106,66 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     };
 
     const handleTokenSelection = (id: string, indices: number[]) => {
-        handleUpdateCompletion(id, {
-            tokens: indices.map((idx) => ({
+        const currentCompletion = activeCompletions.find((c) => c.id === id);
+        if (!currentCompletion) return;
+
+        if (indices.length === 1 && indices[0] === -1) {
+            // Clear all highlighted tokens and their completions
+            handleUpdateCompletion(id, {
+                tokens: currentCompletion.tokens.map((t) => ({
+                    ...t,
+                    highlighted: false,
+                    // Clear completion if token is being unhighlighted
+                    target_id: t.highlighted && t.target_id !== -1 ? -1 : t.target_id,
+                    target_text: t.highlighted && t.target_id !== -1 ? "" : t.target_text,
+                })),
+            });
+        } else {
+            // Get existing tokens
+            const existingTokens = currentCompletion.tokens;
+            
+            // Create new highlighted tokens
+            const newHighlightedTokens = indices.map((idx) => ({
                 target_id: -1,
                 idx: idx,
-            })),
-        });
+                highlighted: true,
+            }));
+            
+            // Start with existing tokens, updating their highlighted status and clearing completions if unhighlighted
+            const updatedTokens = existingTokens.map(token => {
+                const willBeHighlighted = indices.includes(token.idx);
+                const wasHighlighted = token.highlighted;
+                
+                // If token was highlighted but won't be anymore, clear its completion
+                if (wasHighlighted && !willBeHighlighted && token.target_id !== -1) {
+                    return {
+                        ...token,
+                        highlighted: false,
+                        target_id: -1,
+                        target_text: "",
+                    };
+                }
+                
+                return {
+                    ...token,
+                    highlighted: willBeHighlighted,
+                };
+            });
+            
+            // Add any new tokens that don't exist yet
+            const finalTokens = [...updatedTokens];
+            newHighlightedTokens.forEach(newToken => {
+                const existingIndex = finalTokens.findIndex(t => t.idx === newToken.idx);
+                if (existingIndex === -1) {
+                    // Add new highlighted token
+                    finalTokens.push(newToken);
+                }
+            });
+            
+            handleUpdateCompletion(id, {
+                tokens: finalTokens,
+            });
+        }
     };
 
     const updateToken = (id: string, tokenIdx: number, targetId: number, targetText: string) => {
@@ -128,7 +187,9 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                 activeCompletions
                     .find((c) => c.id === id)
                     ?.tokens.map((t) =>
-                        t.idx === tokenIdx ? { ...t, target_id: -1, target_text: "" } : t
+                        t.idx === tokenIdx 
+                            ? { ...t, target_id: -1, target_text: "", highlighted: false } 
+                            : t
                     ) || [],
         });
     };
@@ -177,6 +238,20 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     };
 
     const [predictionsEnabled, setPredictionsEnabled] = useState(false);
+
+    // Auto-tokenize and show predictions on component mount if there are highlighted tokens or target completions
+    useEffect(() => {
+        const hasHighlightedTokens = compl.tokens.some(token => token.highlighted && token.idx >= 0);
+        const hasTargetCompletions = compl.tokens.some(token => token.target_id >= 0);
+        
+        if ((hasHighlightedTokens || hasTargetCompletions) && compl.prompt && modelName && !tokenData) {
+            handleTokenize().then(() => {
+                if (hasTargetCompletions) {
+                    handlePredictions(compl);
+                }
+            });
+        }
+    }, [compl.tokens, compl.prompt, modelName]); // Dependencies to watch for changes
 
     return (
         <div key={compl.id}>

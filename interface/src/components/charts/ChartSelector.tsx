@@ -26,10 +26,6 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
 
     const { layout, gridPositions, setChartMode } = useCharts();
 
-    const isChartSelected = (modeIndex: number) => {
-        return gridPositions.some((pos) => pos.chartMode === modeIndex);
-    };
-
     const getLayoutGrid = () => {
         switch (layout) {
             case "1x1":
@@ -87,7 +83,6 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
                 <SelectionMenu
                     modes={modes}
                     setConfiguringPosition={setConfiguringPosition}
-                    isChartSelected={isChartSelected}
                     handleAddChart={handleAddChart}
                 />
             )}

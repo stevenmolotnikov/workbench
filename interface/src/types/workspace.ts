@@ -26,7 +26,7 @@ export type ChartType = "heatmap" | "lineGraph";
 export interface ChartMode {
     name: string;
     description: string;
-    icon: string;
+    icon: React.ElementType;
     component: React.ComponentType<{ index: number }>;
 }
 

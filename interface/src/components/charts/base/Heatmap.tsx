@@ -97,9 +97,6 @@ export function Heatmap({
 
         return () => {
             resizeObserver.disconnect();
-            setAnnotations(
-                annotations.filter((a) => a.type === "heatmap" && a.data.chartIndex !== chartIndex)
-            );
         };
     }, []);
 
