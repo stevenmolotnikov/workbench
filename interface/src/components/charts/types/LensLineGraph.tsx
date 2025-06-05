@@ -8,7 +8,6 @@ import { useAnnotations } from "@/stores/useAnnotations";
 export function LensLineGraph({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
 
-    const { activeCompletions } = useLensCompletions();
     const { gridPositions, removeChart, setChartData } = useCharts();
     const { annotations, setAnnotations } = useAnnotations();
 
@@ -22,9 +21,8 @@ export function LensLineGraph({ index }: { index: number }) {
     const handleRunChart = async () => {
         setIsLoading(true);
 
-        console.log("activeCompletions", activeCompletions);
-
         try {
+            const {activeCompletions} = useLensCompletions.getState();
             const response = await fetch("/api/lens-line", {
                 method: "POST",
                 headers: {

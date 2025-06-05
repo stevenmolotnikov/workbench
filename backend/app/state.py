@@ -1,8 +1,11 @@
 import os
 import tomllib
+import types
 from typing import Dict
+from functools import partial
 
 from nnsight import LanguageModel, CONFIG
+from nnsight.intervention.backends.callback import CallbackBackend
 
 from .schema.config import ModelsConfig
 
@@ -12,6 +15,17 @@ def process_name(name):
     if name != "":
         assert name.startswith(".")
     return name[1:]
+
+
+def _wrapped_trace(self, *args, callback_url: str, remote: bool, **kwargs):
+    backend = None
+
+    if remote:
+        backend = CallbackBackend(
+            callback_url, self.to_model_key(), blocking=True
+        )
+
+    return self.trace(*args, backend=backend, **kwargs)
 
 
 class AppState:
@@ -38,7 +52,9 @@ class AppState:
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
 
-        self.remote = config.remote
+        remote = config.remote
+        callback_url = config.callback_url
+
         hf_token = os.environ.get("HF_TOKEN", None)
 
         for _, cfg in config.models.items():
@@ -47,25 +63,14 @@ class AppState:
                 rename=cfg.rename,
                 token=hf_token,
                 device_map="cpu",
-                dispatch=not self.remote,
+                dispatch=not remote,
             )
-            model = self._process_model(model)
+
+            wrapped_trace = partial(
+                _wrapped_trace, remote=remote, callback_url=callback_url
+            )
+            model.wrapped_trace = types.MethodType(wrapped_trace, model)
+            
             self.models[cfg.name] = model
 
         return config
-
-    def _process_model(self, model):
-        """Add a get_submodule method to the model. The existing
-        method returns a Torch module rather than an Envoy
-        """
-
-        module_dict = {
-            process_name(name): module for name, module in model.named_modules()
-        }
-
-        def get_submodule(name):
-            return module_dict[name]
-
-        setattr(model, "get_submodule", get_submodule)
-
-        return model

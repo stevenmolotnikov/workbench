@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import React from "react";
+import { TerminalStatusLine } from "@/components/TerminalStatus";
 import { WorkbenchStatus } from "@/components/WorkbenchStatus";
 
 export default function WorkbenchLayout({
@@ -28,8 +28,8 @@ export default function WorkbenchLayout({
 
                 <nav className="flex gap-2 items-center">
                     <WorkbenchStatus />
-                    <Button variant="ghost" onClick={() => window.open("https://nnsight.net", "_blank")} size="sm">NNsight</Button>
-                    <ModeToggle />
+                    {/* <TerminalStatusLine message="Request sent..." typewriter={true} /> */}
+                    <ModeToggle /> 
                 </nav>
             </header>
             {children}

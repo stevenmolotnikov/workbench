@@ -3,6 +3,7 @@ import { Heatmap } from "@/components/charts/base/Heatmap";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
+import { useMemo } from "react";
 
 import {
     DropdownMenuRadioGroup,
@@ -15,24 +16,25 @@ import { useAnnotations } from "@/stores/useAnnotations";
 
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
-    const { annotations, setAnnotations } = useAnnotations();
-
-    const handleRemoveChart = () => {
-        setAnnotations(annotations.filter((a) => !(a.type === "heatmap" && a.data.chartIndex === index)));
-        removeChart(index);
-    };
-
-    const { activeCompletions } = useLensCompletions();
-    const { gridPositions, removeChart, setChartData } = useCharts();
-
     const [completionIndex, setCompletionIndex] = useState<string>("1");
 
+    const { annotations, setAnnotations } = useAnnotations();
+    const { gridPositions, removeChart, setChartData } = useCharts();
+
     const gridPosition = gridPositions[index];
+
+    const handleRemoveChart = () => {
+        setAnnotations(
+            annotations.filter((a) => !(a.type === "heatmap" && a.data.chartIndex === index))
+        );
+        removeChart(index);
+    };
 
     const handleRunChart = async () => {
         setIsLoading(true);
 
         try {
+            const { activeCompletions } = useLensCompletions.getState();
             const response = await fetch("/api/lens-grid", {
                 method: "POST",
                 headers: {
@@ -56,6 +58,19 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     };
 
+    const activeCompletionsLength = useLensCompletions((state) => state.activeCompletions.length);
+    const memoizedCompletionItems = useMemo(() => {
+        return activeCompletionsLength >= 1 ? (
+            Array.from({ length: activeCompletionsLength }, (_, i) => (
+                <DropdownMenuRadioItem key={i} value={`${i + 1}`}>
+                    {i + 1}
+                </DropdownMenuRadioItem>
+            ))
+        ) : (
+            <DropdownMenuItem disabled>No completions</DropdownMenuItem>
+        );
+    }, [activeCompletionsLength]);
+
     return (
         <ChartCard
             handleRunChart={handleRunChart}
@@ -64,7 +79,9 @@ export function LensHeatmap({ index }: { index: number }) {
             chartTitle={
                 <div>
                     <div className="text-md font-bold">Lens Heatmap</div>
-                    <span className="text-xs text-muted-foreground">Completion {completionIndex}</span>
+                    <span className="text-xs text-muted-foreground">
+                        Completion {completionIndex}
+                    </span>
                 </div>
             }
             chart={
@@ -80,16 +97,11 @@ export function LensHeatmap({ index }: { index: number }) {
                 <>
                     <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup value={completionIndex} onValueChange={setCompletionIndex}>
-                        {activeCompletions.length >= 1 ? (
-                            activeCompletions.map((_, i) => (
-                                <DropdownMenuRadioItem key={i} value={`${i + 1}`}>
-                                    {i + 1}
-                                </DropdownMenuRadioItem>
-                            ))
-                        ) : (
-                            <DropdownMenuItem disabled>No completions</DropdownMenuItem>
-                        )}
+                    <DropdownMenuRadioGroup
+                        value={completionIndex}
+                        onValueChange={setCompletionIndex}
+                    >
+                        {memoizedCompletionItems}
                     </DropdownMenuRadioGroup>
                 </>
             }

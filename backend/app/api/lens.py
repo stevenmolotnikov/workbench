@@ -14,13 +14,13 @@ from ..schema.lens import (
 router = APIRouter()
 
 
-def logit_lens_grid(model, prompt, remote: bool):
+def logit_lens_grid(model, prompt):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     pred_ids = []
     probs = []
-    with model.trace(prompt, remote=remote):
+    with model.wrapped_trace(prompt):
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             x = layer.output[0]
@@ -45,14 +45,14 @@ def logit_lens_grid(model, prompt, remote: bool):
     return pred_ids, probs
 
 
-def logit_lens_targeted(model, model_requests, remote: bool):
+def logit_lens_targeted(model, model_requests):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     tok = model.tokenizer
 
     all_results = []
-    with model.trace(remote=remote) as tracer:
+    with model.wrapped_trace() as tracer:
         for request in model_requests:
             # Get user queried indices
             idxs = request["idxs"]
@@ -157,7 +157,7 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
     results = []
     for model_name, model_requests in grouped_requests.items():
         model = state.get_model(model_name)
-        model_results = logit_lens_targeted(model, model_requests, state.remote)
+        model_results = logit_lens_targeted(model, model_requests)
         results.extend(model_results)
 
     results = postprocess(results)
@@ -177,7 +177,7 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     tok = model.tokenizer
     prompt = lens_request.completion.prompt
 
-    pred_ids, probs = logit_lens_grid(model, prompt, state.remote)
+    pred_ids, probs = logit_lens_grid(model, prompt)
 
     pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
 

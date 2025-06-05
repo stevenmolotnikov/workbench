@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import lens, patch, models
 from .state import AppState
 
-def fastapi_app(remote: bool = False, config_path: str = "local_config.toml"):
+def fastapi_app(remote: bool = False, config_path: str = "ndif_config.toml"):
     app = FastAPI()
 
     allowed_origins = []

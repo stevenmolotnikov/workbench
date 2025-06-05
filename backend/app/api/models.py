@@ -43,7 +43,7 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
     tok = model.tokenizer
     prompt = execute_request.completion.prompt
 
-    with model.trace(prompt, remote=state.remote):
+    with model.wrapped_trace(prompt):
         logits = model.lm_head.output
 
         logits = logits[0,idxs,:].softmax(dim=-1)

@@ -49,25 +49,24 @@ const TokenDisplay = ({
                 </div>
             ))}
             <div className="flex justify-between text-sm border-t pt-3">
-                <div className="flex w-1/2 max-w-sm items-center space-x-2">
+                <div className="flex w-2/3 items-center space-x-2">
                     <Input
-                        className="w-full h-8"
+                        className="w- h-8"
                         placeholder="Enter a target token"
                         value={targetToken}
                         onChange={(e) => setTargetToken(e.target.value)}
                     />
                     <Button
-                        size="icon"
                         variant="outline"
-                        className="h-8 w-8"
+                        className="h-8"
                         onClick={() => handleTargetTokenUpdate(targetToken)}
                     >
-                        <ArrowRight />
+                        Set Target <ArrowRight />
                     </Button>
                 </div>
                 <div
                     className={cn(
-                        "flex w-full max-w-sm items-center justify-end",
+                        "flex w-1/3 max-w-sm items-center justify-end",
                         tempTokenText.length > 1 && "bg-red-500/50"
                     )}
                 >

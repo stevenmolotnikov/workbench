@@ -1,11 +1,22 @@
 import { Annotation, Completion, ChartMode } from "@/types/workspace";
-import { Smile  } from "lucide-react";
+import { Smile, ChartArea, Grid3X3, Layers  } from "lucide-react";
+
+// Token completion for patching - similar to lens TokenCompletion
+export interface PatchingTokenCompletion {
+    idx: number;
+    highlighted: boolean;
+}
+
+// Extended completion interface for patching that includes tokens
+export interface PatchingCompletion extends Completion {
+    tokens: PatchingTokenCompletion[];
+}
 
 export interface ActivationPatchingRequest {
     connections: Connection[];
     model: string;
-    source: Completion;
-    destination: Completion;
+    source: PatchingCompletion;
+    destination: PatchingCompletion;
     submodule: string;
     correct_id: number;
     incorrect_id: number;
@@ -45,25 +56,25 @@ export const ActivationPatchingModes: ChartMode[] = [
     {
         name: "Attention Heads",
         description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />,
-        chartType: "heatmap"
+        icon: ChartArea,
+        component: () => null // TODO: Add actual component
     },
     {
         name: "Transformer Blocks",
-        description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />,
-        chartType: "heatmap"
+        description: "Visualize transformer block activations.",
+        icon: Layers,
+        component: () => null // TODO: Add actual component
     },
     {
         name: "MLP Outputs",
-        description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />,
-        chartType: "heatmap"
+        description: "Visualize MLP layer outputs.",
+        icon: Grid3X3,
+        component: () => null // TODO: Add actual component
     },
     {
         name: "Attention Outputs",
-        description: "Visualize attention patterns across transformer heads.",
-        icon: <Smile className="h-6 w-6" />,
-        chartType: "heatmap"
+        description: "Visualize attention mechanism outputs.",
+        icon: Smile,
+        component: () => null // TODO: Add actual component
     },
 ]

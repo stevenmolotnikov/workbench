@@ -15,6 +15,44 @@ interface UseConnectionReturn {
     clearConnections: () => void;
 }
 
+// Utility functions
+const isHighlighted = (tokenElement: HTMLElement) => 
+    tokenElement.classList.contains('bg-primary/50');
+
+const getGroupTokenIndices = (groupId: number): number[] => {
+    const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
+    return groupTokens
+        .map(token => parseInt(token.getAttribute('data-token-id') || '-1'))
+        .filter(idx => idx !== -1);
+};
+
+const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement): number => {
+    const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`)) as HTMLElement[];
+    if (groupTokens.length <= 1) {
+        const rect = tokenElement.getBoundingClientRect();
+        return rect.left + rect.width / 2;
+    }
+
+    // Group by line and find current line tokens
+    const currentRect = tokenElement.getBoundingClientRect();
+    const currentLineY = Math.round(currentRect.top);
+    
+    const currentLineTokens = groupTokens.filter(token => 
+        Math.round(token.getBoundingClientRect().top) === currentLineY
+    );
+
+    // Calculate line bounds
+    const bounds = currentLineTokens.reduce((acc, token) => {
+        const rect = token.getBoundingClientRect();
+        return {
+            left: Math.min(acc.left, rect.left),
+            right: Math.max(acc.right, rect.right)
+        };
+    }, { left: Infinity, right: -Infinity });
+
+    return (bounds.left + bounds.right) / 2;
+};
+
 export function useConnection(): UseConnectionReturn {
     const [connections, setConnections] = useState<Connection[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -22,210 +60,114 @@ export function useConnection(): UseConnectionReturn {
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
-    // Add effect to change cursor style when dragging
-    useEffect(() => {
-        if (isDragging) {
-            document.body.style.cursor = 'pointer';
-        } else {
-            document.body.style.cursor = 'default';
-        }
-        
-        return () => {
-            document.body.style.cursor = 'default';
-        };
-    }, [isDragging]);
-
-    const clearConnections = () => {
-        setConnections([]);
-    }
-
-    const isHighlighted = (tokenElement: HTMLElement) => {
-        return tokenElement.classList.contains('bg-primary/50');
-    }
+    const clearConnections = () => setConnections([]);
 
     const removeConnection = (tokenIndex: number, counterIndex: number) => {
         setConnections(prev => prev.filter(conn => 
             !conn.start.tokenIndices.includes(tokenIndex) && conn.start.counterIndex !== counterIndex
         ));
-    }
-
-    const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement) => {
-        // Find all tokens in the group
-        const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
-        if (groupTokens.length <= 1) {
-            return tokenElement.getBoundingClientRect().left + tokenElement.getBoundingClientRect().width / 2;
-        }
-
-        // Group tokens by their vertical position (line)
-        const lineGroups = new Map<number, HTMLElement[]>();
-        groupTokens.forEach(token => {
-            const rect = token.getBoundingClientRect();
-            // Round to nearest pixel to account for small floating point differences
-            const lineY = Math.round(rect.top);
-            if (!lineGroups.has(lineY)) {
-                lineGroups.set(lineY, []);
-            }
-            lineGroups.get(lineY)!.push(token as HTMLElement);
-        });
-
-        // Find the line that contains our current token
-        const currentRect = tokenElement.getBoundingClientRect();
-        const currentLineY = Math.round(currentRect.top);
-        const currentLineTokens = lineGroups.get(currentLineY) || [];
-
-        // Calculate center for the current line
-        const lineBounds = currentLineTokens.reduce((bounds, token) => {
-            const tokenRect = token.getBoundingClientRect();
-            return {
-                left: Math.min(bounds.left, tokenRect.left),
-                right: Math.max(bounds.right, tokenRect.right)
-            };
-        }, { left: Infinity, right: -Infinity });
-
-        return (lineBounds.left + lineBounds.right) / 2;
     };
 
-    const checkIfAlreadyConnected = (tokenIndices: number[]) => {
-        return connections.some(conn => 
+    const checkIfAlreadyConnected = useCallback((tokenIndices: number[]) => 
+        connections.some(conn => 
             conn.start.tokenIndices.some(idx => tokenIndices.includes(idx)) || 
             conn.end.tokenIndices.some(idx => tokenIndices.includes(idx))
-        );
-    }
+        ), [connections]);
 
-    const getGroupTokenIndices = (groupId: number): number[] => {
-        const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
-        return groupTokens.map(token => parseInt(token.getAttribute('data-token-id') || '-1')).filter(idx => idx !== -1);
-    }
+    const getTokenData = (tokenElement: HTMLElement) => {
+        const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
+        const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
+        const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
+        return { tokenIndex, groupId, tokenIndices };
+    };
+
+    const calculatePosition = (tokenElement: HTMLElement, groupId: number, isStart: boolean) => {
+        const rect = tokenElement.getBoundingClientRect();
+        const svgRect = svgRef.current?.getBoundingClientRect();
+        if (!svgRect) return null;
+
+        const x = groupId !== -1 ? calculateGroupCenter(groupId, tokenElement) : rect.left + rect.width / 2;
+        const y = isStart ? rect.bottom - svgRect.top : rect.top - svgRect.top;
+        
+        return { x: x - svgRect.left, y };
+    };
 
     const handleBoxMouseDown = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         const target = e.target as HTMLElement;
         const tokenElement = target.closest('[data-token-id]') as HTMLElement;
-        if (!tokenElement) return;
+        if (!tokenElement || !isHighlighted(tokenElement)) return;
 
-        // Check if the token is highlighted
-        if (!isHighlighted(tokenElement)) return;
+        const { tokenIndices, groupId } = getTokenData(tokenElement);
+        if (checkIfAlreadyConnected(tokenIndices)) return;
 
-        const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
-        const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
-        if (tokenIndex === -1) return;
+        const position = calculatePosition(tokenElement, groupId, true);
+        if (!position) return;
 
-        // Get all token indices in the group
-        const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
-
-        // Don't connect if has already been connected
-        if (checkIfAlreadyConnected(tokenIndices)) {
-            console.log("already connected");
-            return;
-        };
-
-        const rect = tokenElement.getBoundingClientRect();
-        const svgRect = svgRef.current?.getBoundingClientRect();
-
-        if (svgRect) {
-            setIsDragging(true);
-            
-            // Calculate x position based on group or single token
-            const x = groupId !== -1 ? 
-                calculateGroupCenter(groupId, tokenElement) : 
-                rect.left + rect.width / 2;
-
-            setCurrentConnection({
-                start: {
-                    x: x - svgRect.left,
-                    y: rect.bottom - svgRect.top,
-                    tokenIndices,
-                    counterIndex
-                }
-            });
-        }
+        setIsDragging(true);
+        setCurrentConnection({
+            start: { ...position, tokenIndices, counterIndex }
+        });
     };
 
-    const handleMouseMove = useCallback((e: MouseEvent) => {
-        if (isDragging && svgRef.current) {
-            const svgRect = svgRef.current.getBoundingClientRect();
-            setCurrentConnection(prev => ({
-                ...prev,
-                end: {
-                    x: e.clientX - svgRect.left,
-                    y: e.clientY - svgRect.top,
-                    tokenIndices: [], // Will be set on mouse up
-                    counterIndex: -1 // Will be set on mouse up
-                }
-            }));
-        }
-    }, [isDragging]);
-
     const handleBoxMouseUp = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
-        if (isDragging && currentConnection.start) {
-            const target = e.target as HTMLElement;
-            const tokenElement = target.closest('[data-token-id]') as HTMLElement;
-
-            console.log("up")
-            
-            // Only connect to token elements
-            if (!tokenElement) {
-                setIsDragging(false);
-                setCurrentConnection({});
-                return;
-            }
-            
-            // Don't connect to unhighlighted tokens
-            if (!isHighlighted(tokenElement)) {
-                setIsDragging(false);
-                setCurrentConnection({});
-                return;
-            }
-
-            const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
-            const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
-            
-            // Get all token indices in the group
-            const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
-
-            // Don't connect if it has already been connected
-            if (checkIfAlreadyConnected(tokenIndices)) {
-                setIsDragging(false);
-                setCurrentConnection({});
-                return;
-            }
-
-            // Prevent connecting to the same counter
-            if (counterIndex === currentConnection.start.counterIndex) {
-                setIsDragging(false);
-                setCurrentConnection({});
-                return;
-            }
-
-            const rect = tokenElement.getBoundingClientRect();
-            const svgRect = svgRef.current?.getBoundingClientRect();
-
-            if (svgRect) {
-                // Calculate x position based on group or single token
-                const x = groupId !== -1 ? 
-                    calculateGroupCenter(groupId, tokenElement) : 
-                    rect.left + rect.width / 2;
-
-                // Use the top of the token for the second counter
-                const endPoint = {
-                    x: x - svgRect.left,
-                    y: rect.top - svgRect.top,
-                    tokenIndices,
-                    counterIndex
-                };
-
-                setConnections(prev => [...prev, {
-                    start: currentConnection.start,
-                    end: endPoint
-                } as Connection]);
-            }
+        if (!isDragging || !currentConnection.start) {
+            setIsDragging(false);
+            setCurrentConnection({});
+            return;
         }
+
+        const target = e.target as HTMLElement;
+        const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+        
+        if (!tokenElement || !isHighlighted(tokenElement) || 
+            counterIndex === currentConnection.start.counterIndex) {
+            setIsDragging(false);
+            setCurrentConnection({});
+            return;
+        }
+
+        const { tokenIndices, groupId } = getTokenData(tokenElement);
+        if (checkIfAlreadyConnected(tokenIndices)) {
+            setIsDragging(false);
+            setCurrentConnection({});
+            return;
+        }
+
+        const position = calculatePosition(tokenElement, groupId, false);
+        if (position) {
+            const endPoint = { ...position, tokenIndices, counterIndex };
+            setConnections(prev => [...prev, {
+                start: currentConnection.start,
+                end: endPoint
+            } as Connection]);
+        }
+
         setIsDragging(false);
         setCurrentConnection({});
     };
 
-    useEffect(() => {
-        window.addEventListener('mousemove', handleMouseMove);
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!isDragging || !svgRef.current) return;
+        
+        const svgRect = svgRef.current.getBoundingClientRect();
+        setCurrentConnection(prev => ({
+            ...prev,
+            end: {
+                x: e.clientX - svgRect.left,
+                y: e.clientY - svgRect.top,
+                tokenIndices: [],
+                counterIndex: -1
+            }
+        }));
+    }, [isDragging]);
 
+    // Effects
+    useEffect(() => {
+        document.body.style.cursor = isDragging ? 'pointer' : 'default';
+        return () => { document.body.style.cursor = 'default'; };
+    }, [isDragging]);
+
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Backspace' && selectedEdgeIndex !== null) {
                 setConnections(prev => prev.filter((_, i) => i !== selectedEdgeIndex));
@@ -234,15 +176,14 @@ export function useConnection(): UseConnectionReturn {
         };
 
         const handleWindowMouseUp = (e: MouseEvent) => {
-            if (isDragging) {
-                // Only clear if we're not over a valid token
-                const target = e.target as HTMLElement;
-                const tokenElement = target.closest('[data-token-id]') as HTMLElement;
-                
-                if (!tokenElement || !isHighlighted(tokenElement)) {
-                    setIsDragging(false);
-                    setCurrentConnection({});
-                }
+            if (!isDragging) return;
+            
+            const target = e.target as HTMLElement;
+            const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+            
+            if (!tokenElement || !isHighlighted(tokenElement)) {
+                setIsDragging(false);
+                setCurrentConnection({});
             }
         };
 
@@ -257,13 +198,8 @@ export function useConnection(): UseConnectionReturn {
         };
     }, [isDragging, selectedEdgeIndex, handleMouseMove]);
 
-    const handleEdgeSelect = (index: number) => {
-        setSelectedEdgeIndex(index);
-    };
-
-    const handleBackgroundClick = () => {
-        setSelectedEdgeIndex(null);
-    };
+    const handleEdgeSelect = (index: number) => setSelectedEdgeIndex(index);
+    const handleBackgroundClick = () => setSelectedEdgeIndex(null);
 
     return {
         connections,
