@@ -119,8 +119,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
             .eq("user_id", session.user.id)
             .order("created_at", { ascending: false });
 
-        console.log(data);
-
         if (error) throw error;
         return data || [];
     },

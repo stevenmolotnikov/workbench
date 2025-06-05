@@ -72,3 +72,29 @@ export async function clearTokenizerCache(): Promise<void> {
   tokenizerCache.clear();
   console.log('Tokenizer cache cleared');
 }
+
+export async function decodeTokenIds(
+  tokenIds: number[],
+  modelName: string
+): Promise<string[]> {
+  try {
+    if (!modelName) {
+      throw new Error('No model specified');
+    }
+
+    if (!tokenIds || tokenIds.length === 0) {
+      return [];
+    }
+
+    // Get cached tokenizer or load if not cached
+    const tokenizer = await getTokenizer(modelName);
+
+    // Decode each token ID individually to get the string representation
+    const decodedTokens = tokenIds.map((id) => tokenizer.decode([id]));
+
+    return decodedTokens;
+  } catch (error) {
+    console.error('Error decoding token IDs:', error);
+    throw new Error(`Failed to decode token IDs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

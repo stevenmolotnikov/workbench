@@ -4,6 +4,7 @@ import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
 import { useAnnotations } from "@/stores/useAnnotations";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
 export function LensLineGraph({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
@@ -20,6 +21,10 @@ export function LensLineGraph({ index }: { index: number }) {
 
     const handleRunChart = async () => {
         setIsLoading(true);
+
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        
+        startStatusUpdates();
 
         try {
             const {activeCompletions} = useLensCompletions.getState();
@@ -42,6 +47,7 @@ export function LensLineGraph({ index }: { index: number }) {
             setChartData(index, null);
         } finally {
             setIsLoading(false);
+            stopStatusUpdates();
         }
     };
 
@@ -56,7 +62,7 @@ export function LensLineGraph({ index }: { index: number }) {
                     <span className="text-xs text-muted-foreground">Target Token Prediction</span>
                 </div>
             }
-            chart={gridPosition.chartData ? (
+            chart={gridPosition.chartData && gridPosition.chartData.type === 'lineGraph' ? (
                 <div className="pt-6 h-full">
                     <LineGraph chartIndex={index} data={gridPosition.chartData.data} />
                 </div>

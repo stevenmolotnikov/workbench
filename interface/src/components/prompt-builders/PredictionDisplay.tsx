@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useSelectedModel } from "@/hooks/useSelectedModel";
-import { tokenizeText } from "@/components/prompt-builders/tokenize";
-import { ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { tokenizeText, decodeTokenIds } from "@/components/prompt-builders/tokenize";
+
+interface TokenBadge {
+    text: string;
+    probability: number;
+    id: number;
+}
 
 interface TokenDisplayProps {
     predictions: TokenPredictions;
@@ -24,54 +27,129 @@ const TokenDisplay = ({
     compl,
 }: TokenDisplayProps) => {
     const [targetToken, setTargetToken] = useState<string>("");
+    const [decodedTokens, setDecodedTokens] = useState<string[]>([]);
+    const [tokenBadges, setTokenBadges] = useState<TokenBadge[]>([]);
+    const { modelName } = useSelectedModel();
+
+    // Decode token IDs when predictions change
+    useEffect(() => {
+        const decodeTokens = async () => {
+            if (!modelName || !predictions[selectedIdx]?.ids) {
+                setDecodedTokens([]);
+                return;
+            }
+
+            try {
+                // Only decode the first 3 tokens
+                const topTokenIds = predictions[selectedIdx].ids.slice(0, 3);
+                const decoded = await decodeTokenIds(topTokenIds, modelName);
+                setDecodedTokens(decoded);
+            } catch (error) {
+                console.error('Error decoding tokens:', error);
+                setDecodedTokens([]);
+            }
+        };
+
+        decodeTokens();
+    }, [predictions, selectedIdx, modelName]);
 
     const fixString = (str: string | undefined) => {
         if (!str) return "";    
         return str.replace(" ", "_");
     };
 
-    const getText = () => {
-        if (compl.tokens.length === 0) return JSON.stringify(tempTokenText);
-
-        const targetToken = compl.tokens.find((t) => t.idx === selectedIdx);
-
-        return fixString(targetToken?.target_text);
+    const handleKeyPress = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && targetToken.trim()) {
+            await handleTokenSubmit(targetToken.trim());
+        }
     };
 
+    const handleTokenSubmit = async (text: string) => {
+        if (!modelName) {
+            console.error('No model selected');
+            return;
+        }
+
+        try {
+            const tokens = await tokenizeText(text, modelName);
+            if (!tokens || tokens.length === 0) return;
+
+            // Only process if there's a single token
+            if (tokens.length === 1) {
+                const tokenId = tokens[0].id;
+                
+                // Find the probability of this token in current predictions
+                const tokenIndex = predictions[selectedIdx]?.ids.findIndex(id => id === tokenId);
+                const probability = tokenIndex !== -1 ? predictions[selectedIdx].values[tokenIndex] : 0;
+                
+                // Add to badges if not already present
+                const existingBadge = tokenBadges.find(badge => badge.id === tokenId);
+                if (!existingBadge) {
+                    const newBadge: TokenBadge = {
+                        text: tokens[0].text,
+                        probability,
+                        id: tokenId
+                    };
+                    setTokenBadges(prev => [...prev, newBadge]);
+                }
+                
+                // Update the token in the completion
+                handleTargetTokenUpdate(text);
+                setTargetToken("");
+            }
+        } catch (error) {
+            console.error('Error tokenizing text:', error);
+        }
+    };
+
+    const removeBadge = (badgeId: number) => {
+        setTokenBadges(prev => prev.filter(badge => badge.id !== badgeId));
+    };
+
+    // Create prediction badges from top predictions
+    const predictionBadges = decodedTokens.map((tokenStr: string, idx: number) => ({
+        text: tokenStr,
+        probability: predictions[selectedIdx].values[idx],
+        id: predictions[selectedIdx].ids[idx],
+        isPrediction: true
+    }));
+
+    // Combine prediction badges with user-added badges
+    const allBadges = [...predictionBadges, ...tokenBadges.map(badge => ({ ...badge, isPrediction: false }))];
+
     return (
-        <div className="space-y-2" id="predictions-display">
-            {predictions[selectedIdx].str_idxs.map((str: string, idx: number) => (
-                <div key={idx} className="flex justify-between text-sm">
-                    <span>{fixString(str)}</span>
-                    <span className="text-muted-foreground">
-                        {predictions[selectedIdx].values[idx].toFixed(4)}
-                    </span>
-                </div>
-            ))}
-            <div className="flex justify-between text-sm border-t pt-3">
-                <div className="flex w-2/3 items-center space-x-2">
-                    <Input
-                        className="w- h-8"
-                        placeholder="Enter a target token"
-                        value={targetToken}
-                        onChange={(e) => setTargetToken(e.target.value)}
-                    />
-                    <Button
-                        variant="outline"
-                        className="h-8"
-                        onClick={() => handleTargetTokenUpdate(targetToken)}
+        <div className="space-y-3" id="predictions-display">
+            {/* All badges displayed inline */}
+            <div className="flex flex-wrap gap-2 items-center">
+                {allBadges.map((badge, index) => (
+                    <div
+                        key={`${badge.id}-${badge.isPrediction ? 'pred' : 'user'}`}
+                        className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors"
+                        onClick={badge.isPrediction ? undefined : () => removeBadge(badge.id)}
+                        title={badge.isPrediction ? 'Top prediction' : 'Click to remove'}
                     >
-                        Set Target <ArrowRight />
-                    </Button>
-                </div>
-                <div
-                    className={cn(
-                        "flex w-1/3 max-w-sm items-center justify-end",
-                        tempTokenText.length > 1 && "bg-red-500/50"
-                    )}
-                >
-                    {getText()}
-                </div>
+                        <span className="font-medium">{fixString(badge.text)}</span>
+                        <span className="ml-1 text-xs opacity-70">
+                            {badge.probability.toFixed(4)}
+                        </span>
+                    </div>
+                ))}
+                {tempTokenText.length > 1 && (
+                    <div className="text-xs text-red-500 bg-red-500/10 px-2 py-1 rounded">
+                        Multi-token: {JSON.stringify(tempTokenText)}
+                    </div>
+                )}
+            </div>
+
+            {/* Input field */}
+            <div className="border-t pt-3">
+                <Input
+                    className="h-8"
+                    placeholder="Enter a target token and press Enter"
+                    value={targetToken}
+                    onChange={(e) => setTargetToken(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                />
             </div>
         </div>
     );

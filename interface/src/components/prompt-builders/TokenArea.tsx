@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { TokenCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
-import { TokenPredictions, Annotation } from "@/types/workspace";
+import { Annotation } from "@/types/workspace";
 import { Token } from "@/types/tokenizer";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useAnnotations } from "@/stores/useAnnotations";
@@ -12,7 +12,6 @@ import { useAnnotations } from "@/stores/useAnnotations";
 interface TokenAreaProps {
     completionId: string;
     showPredictions: boolean;
-    predictions: TokenPredictions;
     onTokenSelection?: (indices: number[]) => void;
     setSelectedIdx: (idx: number) => void;
     filledTokens: TokenCompletion[];
@@ -60,7 +59,7 @@ export function TokenArea({
         filledTokens,
     });
 
-    const { handleTokenHighlight, handleTokenClick: tutorialHandleTokenClick } = useTutorialManager();
+    const { handleTokenHighlight, handleTokenClick } = useTutorialManager();
     const { addPendingAnnotation, annotations, emphasizedAnnotation } = useAnnotations();
 
     // Handle tutorial highlighting
@@ -82,7 +81,7 @@ export function TokenArea({
 
     const handleTokenSelection = (idx: number) => {
         setSelectedIdx(idx);
-        tutorialHandleTokenClick(idx);
+        handleTokenClick(idx);
         
         const tokenAnnotation: Annotation = {
             id: `${completionId}-${idx}`,
@@ -151,10 +150,6 @@ export function TokenArea({
         </div>
     );
 
-    const renderErrorState = () => (
-        <div className="text-red-500 text-sm">{tokenError}</div>
-    );
-
     const renderEmptyState = () => (
         <span className="text-sm text-muted-foreground">
             Tokenize to view tokens.
@@ -219,7 +214,6 @@ export function TokenArea({
 
     // Main render logic
     if (isTokenizing || isLoadingTokenizer) return renderLoadingState();
-    if (tokenError) return renderErrorState();
     return renderTokens();
 }
 

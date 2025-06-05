@@ -13,6 +13,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useAnnotations } from "@/stores/useAnnotations";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +33,10 @@ export function LensHeatmap({ index }: { index: number }) {
 
     const handleRunChart = async () => {
         setIsLoading(true);
+
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+
+        startStatusUpdates();
 
         try {
             const { activeCompletions } = useLensCompletions.getState();
@@ -55,6 +60,7 @@ export function LensHeatmap({ index }: { index: number }) {
             setChartData(index, null);
         } finally {
             setIsLoading(false);
+            stopStatusUpdates();
         }
     };
 

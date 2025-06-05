@@ -5,7 +5,8 @@
 # model.lm_head
 
 remote = true
-callback_url = "http://localhost:3000/api/status-update"
+next_public_base_url = "http://localhost:3000"
+callback_url = "/api/status-update"
 
 [models]
 

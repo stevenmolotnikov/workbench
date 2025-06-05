@@ -32,9 +32,8 @@ export interface ChartMode {
 
 // Types for top-k predictions
 interface TokenPrediction {
-    str_idxs: string[];
+    ids: number[];
     values: number[];
-    indices: number[];
 }
 
 export interface TokenPredictions {

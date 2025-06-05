@@ -1,4 +1,4 @@
-import { Trash, Keyboard, ALargeSmall, Loader2 } from "lucide-react";
+import { Trash, Keyboard, ALargeSmall, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,18 +32,18 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const [isTokenizing, setIsTokenizing] = useState(false);
     const [isLoadingTokenizer, setIsLoadingTokenizer] = useState(false);
-    const [tokenError, setTokenError] = useState<string | null>(null);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
     const { modelName } = useSelectedModel();
-    const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } = useLensCompletions();
+    const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
+        useLensCompletions();
     const { deleteAnnotation, annotations } = useAnnotations();
 
     // Helper functions
     const clearAnnotations = (completionId: string) => {
-        annotations.forEach(annotation => {
+        annotations.forEach((annotation) => {
             if (annotation.type === "token" && annotation.data.id.startsWith(completionId)) {
                 deleteAnnotation(annotation.data.id);
             }
@@ -56,16 +56,16 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     };
 
     const textHasChanged = compl.prompt !== lastTokenizedText;
-    const shouldEnableTokenize = 
-        !isTokenizing && 
-        !isLoadingTokenizer && 
-        modelName && 
-        compl.prompt && 
+    const shouldEnableTokenize =
+        !isTokenizing &&
+        !isLoadingTokenizer &&
+        modelName &&
+        compl.prompt &&
         (!tokenData || textHasChanged);
 
     const handleTokenize = async () => {
         if (!modelName) {
-            setTokenError("No model selected");
+            console.error("No model selected");
             return;
         }
 
@@ -81,25 +81,23 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
         try {
             const tokenizerCached = isTokenizerCached(modelName);
-            
+
             if (!tokenizerCached) {
                 setIsLoadingTokenizer(true);
             } else {
                 setIsTokenizing(true);
             }
-            
-            setTokenError(null);
+
             const tokens = await tokenizeText(compl.prompt, modelName);
             setTokenData(tokens);
             setLastTokenizedText(compl.prompt);
         } catch (err) {
             console.error("Error tokenizing text:", err);
-            setTokenError(err instanceof Error ? err.message : "Failed to tokenize text");
         } finally {
             setIsTokenizing(false);
             setIsLoadingTokenizer(false);
             clearAnnotations(compl.id);
-            handleClick('#tokenize-button');
+            handleClick("#tokenize-button");
         }
     };
 
@@ -129,11 +127,11 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                 idx: idx,
                 highlighted: true,
             }));
-            
-            const updatedTokens = existingTokens.map(token => {
+
+            const updatedTokens = existingTokens.map((token) => {
                 const willBeHighlighted = indices.includes(token.idx);
                 const wasHighlighted = token.highlighted;
-                
+
                 // Clear completion if token was highlighted but won't be anymore
                 if (wasHighlighted && !willBeHighlighted && token.target_id !== -1) {
                     return {
@@ -143,22 +141,22 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                         target_text: "",
                     };
                 }
-                
+
                 return {
                     ...token,
                     highlighted: willBeHighlighted,
                 };
             });
-            
+
             // Add new tokens that don't exist yet
             const finalTokens = [...updatedTokens];
-            newHighlightedTokens.forEach(newToken => {
-                const existingIndex = finalTokens.findIndex(t => t.idx === newToken.idx);
+            newHighlightedTokens.forEach((newToken) => {
+                const existingIndex = finalTokens.findIndex((t) => t.idx === newToken.idx);
                 if (existingIndex === -1) {
                     finalTokens.push(newToken);
                 }
             });
-            
+
             handleUpdateCompletion(compl.id, {
                 tokens: finalTokens,
             });
@@ -167,23 +165,21 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
     const updateToken = (id: string, tokenIdx: number, targetId: number, targetText: string) => {
         const currentTokens = activeCompletions.find((c) => c.id === id)?.tokens || [];
-        
+
         handleUpdateCompletion(id, {
             tokens: currentTokens.map((t) =>
-                t.idx === tokenIdx
-                    ? { ...t, target_id: targetId, target_text: targetText }
-                    : t
+                t.idx === tokenIdx ? { ...t, target_id: targetId, target_text: targetText } : t
             ),
         });
     };
 
     const clearToken = (id: string, tokenIdx: number) => {
         const currentTokens = activeCompletions.find((c) => c.id === id)?.tokens || [];
-        
+
         handleUpdateCompletion(id, {
             tokens: currentTokens.map((t) =>
-                t.idx === tokenIdx 
-                    ? { ...t, target_id: -1, target_text: "", highlighted: false } 
+                t.idx === tokenIdx
+                    ? { ...t, target_id: -1, target_text: "", highlighted: false }
                     : t
             ),
         });
@@ -217,7 +213,7 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             setLoadingPredictions(true);
             await runPredictions();
             setLoadingPredictions(false);
-            handleClick('#view-predictions');
+            handleClick("#view-predictions");
         }
     };
 
@@ -228,10 +224,17 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
     // Auto-tokenize and show predictions on component mount if there are highlighted tokens or target completions
     useEffect(() => {
-        const hasHighlightedTokens = compl.tokens.some(token => token.highlighted && token.idx >= 0);
-        const hasTargetCompletions = compl.tokens.some(token => token.target_id >= 0);
-        
-        if ((hasHighlightedTokens || hasTargetCompletions) && compl.prompt && modelName && !tokenData) {
+        const hasHighlightedTokens = compl.tokens.some(
+            (token) => token.highlighted && token.idx >= 0
+        );
+        const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
+
+        if (
+            (hasHighlightedTokens || hasTargetCompletions) &&
+            compl.prompt &&
+            modelName &&
+            !tokenData
+        ) {
             handleTokenize().then(() => {
                 if (hasTargetCompletions) {
                     handlePredictions();
@@ -244,31 +247,34 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         <div key={compl.id}>
             <div
                 className={cn(
-                    "border bg-card px-4 pb-4 pt-2 overflow-hidden transition-all duration-200 ease-in-out",
+                    "border bg-card px-4 pb-4 pt-2 overflow-hidden transition-all duration-200 ease-in-out group relative",
                     showPredictions ? "rounded-t-lg" : "rounded-lg"
                 )}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between pb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="flex flex-col">
-                            <Input
-                                value={compl.name}
-                                placeholder="Untitled"
-                                onChange={(e) => handleContentUpdate({ name: e.target.value })}
-                                className="border-none shadow-none px-1 py-0 font-bold"
-                            />
-                            <span className="text-xs px-1">{compl.model}</span>
-                        </div>
+                    {/* Delete button */}
+                    <Button
+                        variant="ghost"
+                        title="Delete completion"
+                        size="icon"
+                        onClick={() => handleDeleteCompletionWithCleanup(compl.id)}
+                        className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute top-2 right-2"
+                    >
+                        <X size={16} className="w-8 h-8" />
+                    </Button>
+
+                    <div className="flex flex-col">
+                        <Input
+                            value={compl.name}
+                            placeholder="Untitled"
+                            onChange={(e) => handleContentUpdate({ name: e.target.value })}
+                            className="border-none shadow-none px-1 py-0 font-bold"
+                        />
+                        <span className="text-xs px-1">{compl.model}</span>
                     </div>
-                    <div className="flex items-center">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteCompletionWithCleanup(compl.id)}
-                        >
-                            <Trash size={16} className="w-8 h-8" />
-                        </Button>
+
+                    <div className="flex mt-4">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -285,7 +291,8 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             onClick={handlePredictions}
                             disabled={!predictionsEnabled || loadingPredictions}
                             id="view-predictions"
-                        >   
+                            title="View predictions"
+                        >
                             {loadingPredictions ? (
                                 <Loader2 className="w-8 h-8 animate-spin" />
                             ) : (
@@ -313,7 +320,6 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                         <TokenArea
                             completionId={compl.id}
                             showPredictions={showPredictions}
-                            predictions={predictions || {}}
                             onTokenSelection={handleTokenSelection}
                             setSelectedIdx={setSelectedIdx}
                             filledTokens={compl.tokens}
@@ -321,7 +327,6 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             setPredictionsEnabled={setPredictionsEnabled}
                             isTokenizing={isTokenizing}
                             isLoadingTokenizer={isLoadingTokenizer}
-                            tokenError={tokenError}
                         />
                     </div>
                 </div>

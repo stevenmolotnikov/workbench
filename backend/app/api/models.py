@@ -40,27 +40,22 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
     
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
-    tok = model.tokenizer
+
     prompt = execute_request.completion.prompt
 
     with model.wrapped_trace(prompt):
         logits = model.lm_head.output
 
         logits = logits[0,idxs,:].softmax(dim=-1)
-        values_indices = t.topk(logits, k=3, dim=-1)
+        values_indices = t.sort(logits, dim=-1, descending=True)
 
         values = values_indices[0].tolist().save()
         indices = values_indices[1].tolist().save()
 
-    all_str_idxs = [
-        tok.batch_decode(idx) for idx in indices
-    ]
-
     results = {
         token_index : {
-            "str_idxs": all_str_idxs[idx],
-            "values": values[idx],
-            "indices": indices[idx]
+            "ids": indices[idx],
+            "values": values[idx]
         } for idx, token_index in enumerate(idxs)
     }
 

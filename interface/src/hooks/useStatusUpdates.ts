@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { create } from 'zustand';
 
 export interface StatusUpdate {
-    type: 'connected' | 'status-update';
+    type: 'connected' | 'status-update' | 'job-sent';
     status?: string;
     progress?: number;
     data?: Record<string, unknown>;
@@ -9,70 +9,115 @@ export interface StatusUpdate {
     timestamp?: string;
 }
 
-export interface UseStatusUpdatesReturn {
+interface StatusUpdatesState {
     updates: StatusUpdate[];
     latestUpdate: StatusUpdate | null;
     isConnected: boolean;
+    isEnabled: boolean;
     error: string | null;
+    eventSource: EventSource | null;
+    
+    // Actions
     clearUpdates: () => void;
+    startStatusUpdates: () => void;
+    stopStatusUpdates: () => void;
+    setConnected: (connected: boolean) => void;
+    setError: (error: string | null) => void;
+    addUpdate: (update: StatusUpdate) => void;
 }
 
-export function useStatusUpdates(): UseStatusUpdatesReturn {
-    const [updates, setUpdates] = useState<StatusUpdate[]>([]);
-    const [latestUpdate, setLatestUpdate] = useState<StatusUpdate | null>(null);
-    const [isConnected, setIsConnected] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const eventSourceRef = useRef<EventSource | null>(null);
+export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
+    updates: [],
+    latestUpdate: null,
+    isConnected: false,
+    isEnabled: false,
+    error: null,
+    eventSource: null,
 
-    useEffect(() => {
+    clearUpdates: () => {
+        set({ updates: [], latestUpdate: null });
+    },
+
+    setConnected: (connected: boolean) => {
+        set({ isConnected: connected });
+    },
+
+    setError: (error: string | null) => {
+        set({ error });
+    },
+
+    addUpdate: (update: StatusUpdate) => {
+        set((state) => ({
+            updates: [...state.updates, update],
+            latestUpdate: update
+        }));
+    },
+
+    stopStatusUpdates: () => {
+        const { eventSource } = get();
+        if (eventSource) {
+            eventSource.close();
+        }
+        set({
+            isConnected: false,
+            isEnabled: false,
+            error: null,
+            eventSource: null
+        });
+    },
+
+    startStatusUpdates: () => {
+        const { isEnabled, eventSource } = get();
+        
+        // Don't start if already enabled
+        if (isEnabled || eventSource) {
+            return;
+        }
+
+        // Clear previous updates when starting new job
+        set({ 
+            isEnabled: true, 
+            error: null,
+            updates: [],
+            latestUpdate: null
+        });
+        
+        // Set initial "Job sent" status
+        const jobSentUpdate: StatusUpdate = {
+            type: 'job-sent',
+            message: 'Job sent',
+            timestamp: new Date().toISOString()
+        };
+        
+        get().addUpdate(jobSentUpdate);
+
         // Create EventSource connection
-        const eventSource = new EventSource('/api/status-stream');
-        eventSourceRef.current = eventSource;
+        const newEventSource = new EventSource('/api/status-stream');
+        set({ eventSource: newEventSource });
 
-        eventSource.onopen = () => {
-            setIsConnected(true);
-            setError(null);
+        newEventSource.onopen = () => {
+            get().setConnected(true);
+            get().setError(null);
         };
 
-        eventSource.onmessage = (event) => {
+        newEventSource.onmessage = (event) => {
             try {
                 const update: StatusUpdate = JSON.parse(event.data);
-                
-                setUpdates(prev => [...prev, update]);
-                setLatestUpdate(update);
+                get().addUpdate(update);
                 
                 if (update.type === 'connected') {
-                    setIsConnected(true);
+                    get().setConnected(true);
                 }
             } catch (err) {
                 console.error('Error parsing SSE message:', err);
-                setError('Failed to parse update message');
+                get().setError('Failed to parse update message');
             }
         };
 
-        eventSource.onerror = (event) => {
+        newEventSource.onerror = (event) => {
             console.error('SSE connection error:', event);
-            setIsConnected(false);
-            setError('Connection to status updates failed');
+            get().setConnected(false);
+            get().setError('Connection to status updates failed');
         };
-
-        // Cleanup on unmount
-        return () => {
-            eventSource.close();
-            eventSourceRef.current = null;
-        };
-    }, []);
-
-    const clearUpdates = () => {
-        setUpdates([]);
-        setLatestUpdate(null);
-    };
-
-    return {
-        updates,
-        latestUpdate,
-        isConnected,
-        error,
-        clearUpdates,
-    };
-} 
+    },
+})); 

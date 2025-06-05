@@ -53,7 +53,8 @@ class AppState:
             config = ModelsConfig(**tomllib.load(f))
 
         remote = config.remote
-        callback_url = config.callback_url
+        next_public_base_url = config.next_public_base_url
+        callback_url = f"{next_public_base_url}{config.callback_url}"
 
         hf_token = os.environ.get("HF_TOKEN", None)
 
