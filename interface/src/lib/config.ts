@@ -14,6 +14,7 @@ const config = {
         patch: '/api/patch',
         execute: '/api/execute',
         executeSelected: '/api/execute_selected',
+        processData: '/process-data',
     },
     
     // Helper function to get full API URL

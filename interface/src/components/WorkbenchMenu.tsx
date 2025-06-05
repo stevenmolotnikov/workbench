@@ -19,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 
 interface WorkbenchModeProps {
     toggleAnnotations: () => void;
@@ -46,6 +47,7 @@ export function WorkbenchMenu({ toggleAnnotations, toggleTutorials }: WorkbenchM
                 </SelectContent>
             </Select>
             <div className="flex items-center gap-2">
+                <StatusUpdatesDisplay />
                 <Button variant="outline" size="sm" onClick={toggleAnnotations}>
                     <SquarePen size={16} />
                     Annotate
