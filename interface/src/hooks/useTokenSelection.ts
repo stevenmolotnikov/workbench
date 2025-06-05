@@ -1,26 +1,17 @@
-import { useState } from 'react';
-import { Token } from '@/types/tokenizer';
-import { TokenCompletion } from '@/types/lens';
+import { useState } from "react";
+import { Token } from "@/types/tokenizer";
+import { LensCompletion } from "@/types/lens";
 
-interface UseTokenSelectionProps {
-    onTokenSelection?: (indices: number[]) => void;
-    counterId?: number;
-    onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
-    filledTokens?: TokenCompletion[];
-}
-
-export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhighlight, filledTokens = [] }: UseTokenSelectionProps) {
-    // Get highlighted tokens from the completion object instead of local state
-    const highlightedTokens = filledTokens.filter(token => token.highlighted && token.idx >= 0).map(token => token.idx);
-    
+export function useTokenSelection(compl: LensCompletion) {
+    const [highlightedTokens, setHighlightedTokens] = useState<number[]>(compl.tokens.map(t => t.idx));
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
 
     const getTokenIdFromEvent = (e: React.MouseEvent): number | null => {
         const target = e.target as HTMLElement;
-        const tokenElement = target.closest('[data-token-id]');
+        const tokenElement = target.closest("[data-token-id]");
         if (tokenElement) {
-            return parseInt(tokenElement.getAttribute('data-token-id') || '0', 10);
+            return parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
         }
         return null;
     };
@@ -29,18 +20,21 @@ export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhi
         const isHighlighted = highlightedTokens.includes(i);
         const isPrevHighlighted = i > 0 && highlightedTokens.includes(i - 1);
         const isNextHighlighted = i < tokenData.length - 1 && highlightedTokens.includes(i + 1);
-        
+
         // Determine if this token is part of a group
         const isGroupStart = isHighlighted && !isPrevHighlighted;
         const isGroupEnd = isHighlighted && !isNextHighlighted;
-        
+
         // Calculate group ID
         let groupId = -1;
         if (isHighlighted) {
             if (isGroupStart) {
                 // Find the end of this group
                 let groupEnd = i;
-                while (groupEnd < tokenData.length - 1 && highlightedTokens.includes(groupEnd + 1)) {
+                while (
+                    groupEnd < tokenData.length - 1 &&
+                    highlightedTokens.includes(groupEnd + 1)
+                ) {
                     groupEnd++;
                 }
                 groupId = i; // Use start index as group ID
@@ -58,30 +52,9 @@ export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhi
             isHighlighted,
             groupId,
             isGroupStart,
-            isGroupEnd
-        }
-    }
-
-    const unhighlightTokens = (tokens: number[]) => {
-        // Instead of managing local state, call onTokenSelection to update the completion object
-        const remainingTokens = highlightedTokens.filter(id => !tokens.includes(id));
-        if (onTokenSelection) {
-            onTokenSelection(remainingTokens.length > 0 ? remainingTokens : [-1]);
-        }
-        
-        // Call onTokenUnhighlight for each unhighlighted token
-        if (onTokenUnhighlight) {
-            tokens.forEach(tokenIndex => {
-                onTokenUnhighlight(tokenIndex, counterId);
-            });
-        }
-    }
-
-    const highlightTokens = (tokens: number[]) => {
-        if (onTokenSelection) {
-            onTokenSelection(tokens.length > 0 ? tokens : [-1]);
-        }
-    }
+            isGroupEnd,
+        };
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0) return;
@@ -90,16 +63,18 @@ export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhi
         if (tokenId !== null) {
             if (highlightedTokens.includes(tokenId)) {
                 // Unhighlight this specific token
-                unhighlightTokens([tokenId]);
+                const newHighlighted = highlightedTokens.filter((id) => id !== tokenId);
+                setHighlightedTokens(newHighlighted);
             } else {
                 // If Ctrl/Cmd is pressed, add to existing selection
                 if (e.ctrlKey || e.metaKey || e.shiftKey) {
                     setStartToken(tokenId);
-                    highlightTokens([...highlightedTokens, tokenId]);
+                    const newHighlighted = [...highlightedTokens, tokenId];
+                    setHighlightedTokens(newHighlighted);
                 } else {
                     // Start new selection (this will clear previous highlights)
                     setStartToken(tokenId);
-                    highlightTokens([tokenId]);
+                    setHighlightedTokens([tokenId]);
                 }
             }
         }
@@ -112,28 +87,29 @@ export function useTokenSelection({ onTokenSelection, counterId = 0, onTokenUnhi
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isSelecting || startToken === null) return;
-        
+
         const currentToken = getTokenIdFromEvent(e);
         if (currentToken === null) return;
 
         const start = Math.min(startToken, currentToken);
         const end = Math.max(startToken, currentToken);
         const newHighlightedTokens = Array.from({ length: end - start + 1 }, (_, i) => start + i);
-        
+
         // If Ctrl/Cmd is pressed, add to existing selection
         if (e.ctrlKey || e.metaKey || e.shiftKey) {
-            highlightTokens([...highlightedTokens, ...newHighlightedTokens]);
+            const combined = [...highlightedTokens, ...newHighlightedTokens];
+            const unique = [...new Set(combined)];
+            setHighlightedTokens(unique);
         } else {
-            highlightTokens(newHighlightedTokens);
+            setHighlightedTokens(newHighlightedTokens);
         }
     };
 
     return {
         highlightedTokens,
+        getGroupInformation,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
-        counterId,
-        getGroupInformation
     };
-} 
+}

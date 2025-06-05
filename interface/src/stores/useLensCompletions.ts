@@ -44,8 +44,8 @@ export const useLensCompletions = create<LensCompletionsState>((set) => ({
                 tokens: [{
                     target_id: -1,
                     idx: -1,
-                    highlighted: false
-                }]
+                    target_text: "",
+                }],
             };
             return {
                 activeCompletions: [...state.activeCompletions, newCompletion]

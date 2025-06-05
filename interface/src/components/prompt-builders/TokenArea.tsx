@@ -1,103 +1,72 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { TokenCompletion } from "@/types/lens";
+import { useRef } from "react";
+import { LensCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
-import { Annotation } from "@/types/workspace";
 import { Token } from "@/types/tokenizer";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useAnnotations } from "@/stores/useAnnotations";
+import { useTokenSelection } from "@/hooks/useTokenSelection";
 
 interface TokenAreaProps {
-    completionId: string;
+    compl: LensCompletion;
     showPredictions: boolean;
-    onTokenSelection?: (indices: number[]) => void;
     setSelectedIdx: (idx: number) => void;
-    filledTokens: TokenCompletion[];
     tokenData: Token[] | null;
-    isTokenizing: boolean;
-    isLoadingTokenizer: boolean;
-    tokenError: string | null;
-    setPredictionsEnabled: (enabled: boolean) => void;
+    tokenSelection: ReturnType<typeof useTokenSelection>;
 }
 
 // Token styling constants
 const TOKEN_STYLES = {
-    base: "text-sm whitespace-pre border select-none",
-    highlight: "bg-primary/30 border-primary/30",
-    filled: "bg-primary/70 border-primary/70",
-    hover: "hover:bg-primary/30 hover:border-primary/30",
-    annotated: "border-white",
-    emphasized: "border-yellow-500",
-    transparent: "border-transparent",
+    base: "text-sm whitespace-pre select-none !box-border relative",
+    highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
+    filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
+    hover: "",
+    annotated: "bg-white after:absolute after:inset-0 after:border after:border-primary/30",
+    emphasized: "bg-yellow-500 after:absolute after:inset-0 after:border after:border-primary/30",
+    transparent: "bg-transparent",
     clickable: "cursor-pointer",
 } as const;
 
 export function TokenArea({
-    completionId,
+    compl,
     showPredictions,
-    onTokenSelection,
     setSelectedIdx,
-    filledTokens,
     tokenData,
-    isTokenizing,
-    isLoadingTokenizer,
-    tokenError,
-    setPredictionsEnabled,
+    tokenSelection,
 }: TokenAreaProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    
+    const { handleTokenClick } = useTutorialManager();
+    const { annotations, emphasizedAnnotation, addPendingAnnotation } = useAnnotations();
 
-    const {
-        highlightedTokens,
+    const { 
+        getGroupInformation,
         handleMouseDown,
         handleMouseUp,
         handleMouseMove,
-        getGroupInformation,
-    } = useTokenSelection({
-        onTokenSelection,
-        filledTokens,
-    });
-
-    const { handleTokenHighlight, handleTokenClick } = useTutorialManager();
-    const { addPendingAnnotation, annotations, emphasizedAnnotation } = useAnnotations();
-
-    // Handle tutorial highlighting
-    useEffect(() => {
-        if (highlightedTokens.length > 0) {
-            highlightedTokens.forEach(tokenIndex => {
-                handleTokenHighlight(tokenIndex);
-            });
-        }
-    }, [highlightedTokens, handleTokenHighlight]);
-
-    // Enable/disable predictions based on token state
-    useEffect(() => {
-        const hasHighlightedTokens = highlightedTokens.length > 0;
-        const hasTargetCompletions = filledTokens.some(token => token.target_id >= 0);
-        
-        setPredictionsEnabled(hasHighlightedTokens || hasTargetCompletions);
-    }, [highlightedTokens, filledTokens, setPredictionsEnabled]);
+    } = tokenSelection;
 
     const handleTokenSelection = (idx: number) => {
         setSelectedIdx(idx);
         handleTokenClick(idx);
         
-        const tokenAnnotation: Annotation = {
-            id: `${completionId}-${idx}`,
+        const tokenAnnotation = {
+            id: `${compl.id}-${idx}`,
             text: "",
         };
         addPendingAnnotation({ type: "token", data: tokenAnnotation });
     };
 
+
     const getTokenState = (idx: number) => {
-        const isFilled = filledTokens.some(t => t.idx === idx && t.target_id !== -1);
+        const isFilled = compl.tokens.some(t => t.idx === idx && t.target_id !== -1);
         const isAnnotated = annotations.some(
             annotation => annotation.type === "token" && 
-            annotation.data.id === `${completionId}-${idx}`
+            annotation.data.id === `${compl.id}-${idx}`
         );
         const isEmphasized = emphasizedAnnotation?.type === "token" && 
-            emphasizedAnnotation?.data.id === `${completionId}-${idx}`;
+            emphasizedAnnotation?.data.id === `${compl.id}-${idx}`;
 
         return { isFilled, isAnnotated, isEmphasized };
     };
@@ -124,12 +93,12 @@ export function TokenArea({
         // Determine border radius based on grouping
         let borderRadius = "";
         if (isHighlighted) {
-            if (isGroupStart && isGroupEnd) borderRadius = "rounded";
-            else if (isGroupStart) borderRadius = "rounded-l";
-            else if (isGroupEnd) borderRadius = "rounded-r";
-            else borderRadius = "rounded-none";
+            if (isGroupStart && isGroupEnd) borderRadius = "rounded after:rounded";
+            else if (isGroupStart) borderRadius = "rounded-l after:rounded-l";
+            else if (isGroupEnd) borderRadius = "rounded-r after:rounded-r";
+            else borderRadius = "rounded-none after:rounded-none";
         } else {
-            borderRadius = "rounded";
+            borderRadius = "rounded after:rounded";
         }
 
         return cn(
@@ -144,12 +113,6 @@ export function TokenArea({
         );
     };
 
-    const renderLoadingState = () => (
-        <div className="text-sm text-muted-foreground">
-            {isLoadingTokenizer ? "Loading tokenizer..." : "Tokenizing..."}
-        </div>
-    );
-
     const renderEmptyState = () => (
         <span className="text-sm text-muted-foreground">
             Tokenize to view tokens.
@@ -157,15 +120,19 @@ export function TokenArea({
     );
 
     const fix = (text: string) => {
+        const numNewlines = (text.match(/\n/g) || []).length;
+
         const result = text
             .replace(/\r\n/g, '\\r\\n')  // Windows line endings
             .replace(/\n/g, '\\n')       // Newlines
             .replace(/\r/g, '\\r')       // Carriage returns
             .replace(/\t/g, '\\t')       // Tabs
 
-        return result;
+        return {
+            result: result,
+            numNewlines: numNewlines,
+        }
     }
-
 
     const renderTokens = () => {
         if (!tokenData) return renderEmptyState();
@@ -173,7 +140,8 @@ export function TokenArea({
         return (
             <div className="space-y-2">
                 <div
-                    className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
+                    className="max-h-40 overflow-y-auto custom-scrollbar select-none whitespace-pre-wrap"
+                    style={{ display: "inline" }}
                     ref={containerRef}
                     onMouseDown={showPredictions ? undefined : handleMouseDown}
                     onMouseUp={showPredictions ? undefined : handleMouseUp}
@@ -194,17 +162,20 @@ export function TokenArea({
                             isGroupEnd
                         );
 
-                        const fixedText = fix(token.text);
+                        const { result, numNewlines } = fix(token.text);
 
                         return (
-                            <div
-                                key={`token-${idx}`}
-                                data-token-id={idx}
-                                className={styles}
-                                onClick={() => showPredictions && handleTokenSelection(idx)}
-                            >
-                                {fixedText}
-                            </div>
+                            <span key={`token-${idx}`}>
+                                <span
+                                    
+                                    data-token-id={idx}
+                                    className={styles}
+                                    onClick={() => showPredictions && handleTokenSelection(idx)}
+                                >
+                                    {result}
+                                </span>
+                                {numNewlines > 0 && "\n".repeat(numNewlines)}
+                            </span>
                         );
                     })}
                 </div>
@@ -212,8 +183,6 @@ export function TokenArea({
         );
     };
 
-    // Main render logic
-    if (isTokenizing || isLoadingTokenizer) return renderLoadingState();
     return renderTokens();
 }
 

@@ -1,4 +1,4 @@
-import { ConnectableTokenArea } from "./ConnectableTokenArea";
+// import { ConnectableTokenArea } from "./ConnectableTokenArea";
 import { Prediction } from "@/types/workspace";
 import { Token } from "@/types/tokenizer";
 import { PatchingCompletion } from "@/types/patching";
@@ -46,7 +46,7 @@ export function TokenAreaWithPrediction({
                 </span>
             </div>
 
-            <ConnectableTokenArea
+            {/* <ConnectableTokenArea
                 text={text}
                 tokenData={tokenData}
                 isConnecting={isConnecting}
@@ -58,7 +58,7 @@ export function TokenAreaWithPrediction({
                 tokenError={tokenError}
                 onTokenSelection={onTokenSelection}
                 filledTokens={completion.tokens}
-            />
+            /> */}
         </div>
     );
 } 

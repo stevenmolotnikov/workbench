@@ -1,4 +1,4 @@
-import { Trash, Keyboard, ALargeSmall, Loader2, X } from "lucide-react";
+import { Keyboard, ALargeSmall, Loader2, X, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,10 +11,12 @@ import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
-import { tokenizeText, isTokenizerCached } from "@/components/prompt-builders/tokenize";
+import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { Token } from "@/types/tokenizer";
-import { useAnnotations } from "@/stores/useAnnotations";
 import { useSelectedModel } from "@/hooks/useSelectedModel";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
+import { TooltipButton } from "../ui/tooltip-button";
+import { useTokenSelection } from "@/hooks/useTokenSelection";
 
 interface CompletionCardProps {
     compl: LensCompletion;
@@ -26,42 +28,25 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
     const [loadingPredictions, setLoadingPredictions] = useState<boolean>(false);
     const [selectedIdx, setSelectedIdx] = useState<number>(-1);
-    const [predictionsEnabled, setPredictionsEnabled] = useState(false);
 
     // Tokenization state
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
-    const [isTokenizing, setIsTokenizing] = useState(false);
-    const [isLoadingTokenizer, setIsLoadingTokenizer] = useState(false);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
+
+    const tokenSelection = useTokenSelection(compl);
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
     const { modelName } = useSelectedModel();
-    const { handleUpdateCompletion, handleDeleteCompletion, activeCompletions } =
-        useLensCompletions();
-    const { deleteAnnotation, annotations } = useAnnotations();
+    const { handleUpdateCompletion, handleDeleteCompletion } = useLensCompletions();
 
     // Helper functions
-    const clearAnnotations = (completionId: string) => {
-        annotations.forEach((annotation) => {
-            if (annotation.type === "token" && annotation.data.id.startsWith(completionId)) {
-                deleteAnnotation(annotation.data.id);
-            }
-        });
-    };
-
     const handleDeleteCompletionWithCleanup = (id: string) => {
-        clearAnnotations(id);
         handleDeleteCompletion(id);
     };
 
     const textHasChanged = compl.prompt !== lastTokenizedText;
-    const shouldEnableTokenize =
-        !isTokenizing &&
-        !isLoadingTokenizer &&
-        modelName &&
-        compl.prompt &&
-        (!tokenData || textHasChanged);
+    const shouldEnableTokenize = modelName && compl.prompt && (!tokenData || textHasChanged);
 
     const handleTokenize = async () => {
         if (!modelName) {
@@ -80,23 +65,12 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         }
 
         try {
-            const tokenizerCached = isTokenizerCached(modelName);
-
-            if (!tokenizerCached) {
-                setIsLoadingTokenizer(true);
-            } else {
-                setIsTokenizing(true);
-            }
-
             const tokens = await tokenizeText(compl.prompt, modelName);
             setTokenData(tokens);
             setLastTokenizedText(compl.prompt);
         } catch (err) {
             console.error("Error tokenizing text:", err);
         } finally {
-            setIsTokenizing(false);
-            setIsLoadingTokenizer(false);
-            clearAnnotations(compl.id);
             handleClick("#tokenize-button");
         }
     };
@@ -105,87 +79,45 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         handleUpdateCompletion(compl.id, updates);
     };
 
-    const handleTokenSelection = (indices: number[]) => {
-        const currentCompletion = activeCompletions.find((c) => c.id === compl.id);
-        if (!currentCompletion) return;
+    const updateTokens = () => {
+        const highlightedTokens = tokenSelection.highlightedTokens;
+        const existingIndices = new Set(compl.tokens.map(t => t.idx));
 
-        if (indices.length === 1 && indices[0] === -1) {
-            // Clear all highlighted tokens and their completions
-            handleUpdateCompletion(compl.id, {
-                tokens: currentCompletion.tokens.map((t) => ({
-                    ...t,
-                    highlighted: false,
-                    target_id: t.highlighted && t.target_id !== -1 ? -1 : t.target_id,
-                    target_text: t.highlighted && t.target_id !== -1 ? "" : t.target_text,
-                })),
-            });
-        } else {
-            // Update token highlights
-            const existingTokens = currentCompletion.tokens;
-            const newHighlightedTokens = indices.map((idx) => ({
+        // Create new tokens only for indices that don't already exist
+        const newTokens = highlightedTokens
+            .filter(idx => !existingIndices.has(idx))
+            .map(idx => ({
+                idx,
                 target_id: -1,
-                idx: idx,
-                highlighted: true,
+                target_text: "",
             }));
 
-            const updatedTokens = existingTokens.map((token) => {
-                const willBeHighlighted = indices.includes(token.idx);
-                const wasHighlighted = token.highlighted;
+        // Combine existing tokens with new ones
+        const updatedTokens = [...compl.tokens, ...newTokens];
 
-                // Clear completion if token was highlighted but won't be anymore
-                if (wasHighlighted && !willBeHighlighted && token.target_id !== -1) {
-                    return {
-                        ...token,
-                        highlighted: false,
-                        target_id: -1,
-                        target_text: "",
-                    };
-                }
-
-                return {
-                    ...token,
-                    highlighted: willBeHighlighted,
-                };
-            });
-
-            // Add new tokens that don't exist yet
-            const finalTokens = [...updatedTokens];
-            newHighlightedTokens.forEach((newToken) => {
-                const existingIndex = finalTokens.findIndex((t) => t.idx === newToken.idx);
-                if (existingIndex === -1) {
-                    finalTokens.push(newToken);
-                }
-            });
-
-            handleUpdateCompletion(compl.id, {
-                tokens: finalTokens,
-            });
-        }
-    };
-
-    const updateToken = (id: string, tokenIdx: number, targetId: number, targetText: string) => {
-        const currentTokens = activeCompletions.find((c) => c.id === id)?.tokens || [];
-
-        handleUpdateCompletion(id, {
-            tokens: currentTokens.map((t) =>
-                t.idx === tokenIdx ? { ...t, target_id: targetId, target_text: targetText } : t
-            ),
+        handleUpdateCompletion(compl.id, {
+            tokens: updatedTokens,
         });
-    };
 
-    const clearToken = (id: string, tokenIdx: number) => {
-        const currentTokens = activeCompletions.find((c) => c.id === id)?.tokens || [];
+        // Return the updated completion
+        const { activeCompletions } = useLensCompletions.getState();
+        const updatedCompl = activeCompletions.find((c: LensCompletion) => c.id === compl.id);
 
-        handleUpdateCompletion(id, {
-            tokens: currentTokens.map((t) =>
-                t.idx === tokenIdx
-                    ? { ...t, target_id: -1, target_text: "", highlighted: false }
-                    : t
-            ),
-        });
+        return updatedCompl;
     };
 
     const runPredictions = async () => {
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+
+        const updatedCompl = updateTokens();
+
+        if (!updatedCompl) {
+            console.error("Completion not found");
+            return;
+        }
+
+        startStatusUpdates();
+
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
                 method: "POST",
@@ -193,16 +125,19 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: compl,
-                    model: compl.model,
-                    tokens: compl.tokens,
+                    completion: updatedCompl,
+                    model: updatedCompl.model,
+                    tokens: updatedCompl.tokens,
                 }),
             });
             const data: TokenPredictions = await response.json();
+
             setPredictions(data);
             setShowPredictions(true);
         } catch (error) {
             console.error("Error sending request:", error);
+        } finally {
+            stopStatusUpdates();
         }
     };
 
@@ -222,113 +157,102 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         handleTextInput(e.target.value);
     };
 
-    // Auto-tokenize and show predictions on component mount if there are highlighted tokens or target completions
+    // Auto-tokenize and show predictions on component mount if there are target completions
     useEffect(() => {
-        const hasHighlightedTokens = compl.tokens.some(
-            (token) => token.highlighted && token.idx >= 0
-        );
         const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
 
-        if (
-            (hasHighlightedTokens || hasTargetCompletions) &&
-            compl.prompt &&
-            modelName &&
-            !tokenData
-        ) {
+        if (hasTargetCompletions && compl.prompt && modelName && !tokenData) {
             handleTokenize().then(() => {
-                if (hasTargetCompletions) {
-                    handlePredictions();
-                }
+                handlePredictions();
             });
         }
     }, [compl.tokens, compl.prompt, modelName]);
 
     return (
-        <div key={compl.id}>
+        <div key={compl.id} className="group relative">
+            {/* Delete button */}
+            <Button
+                variant="ghost"
+                title="Delete completion"
+                size="icon"
+                onClick={() => handleDeleteCompletionWithCleanup(compl.id)}
+                className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
+            >
+                <X
+                    size={14}
+                    className="w-4 h-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                />
+            </Button>
+
             <div
                 className={cn(
-                    "border bg-card px-4 pb-4 pt-2 overflow-hidden transition-all duration-200 ease-in-out group relative",
+                    "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out",
                     showPredictions ? "rounded-t-lg" : "rounded-lg"
                 )}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between pb-4">
-                    {/* Delete button */}
-                    <Button
-                        variant="ghost"
-                        title="Delete completion"
-                        size="icon"
-                        onClick={() => handleDeleteCompletionWithCleanup(compl.id)}
-                        className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute top-2 right-2"
-                    >
-                        <X size={16} className="w-8 h-8" />
-                    </Button>
-
-                    <div className="flex flex-col">
+                <div className="flex items-center my-4 justify-between">
+                    <div className="flex px-0.5 flex-col">
                         <Input
                             value={compl.name}
                             placeholder="Untitled"
                             onChange={(e) => handleContentUpdate({ name: e.target.value })}
-                            className="border-none shadow-none px-1 py-0 font-bold"
+                            className="border-none shadow-none rounded h-fit px-0 py-0 font-bold"
                         />
-                        <span className="text-xs px-1">{compl.model}</span>
+                        <span className="text-xs w-full">{compl.model}</span>
                     </div>
 
-                    <div className="flex mt-4">
-                        <Button
-                            variant="ghost"
+                    <div className="flex gap-2">
+                        <TooltipButton
+                            variant="outline"
                             size="icon"
                             id="tokenize-button"
                             onClick={handleTokenize}
                             disabled={!shouldEnableTokenize}
-                            title={textHasChanged ? "Re-tokenize" : "Tokenize"}
+                            tooltip={textHasChanged ? "Re-tokenize" : "Tokenize"}
                         >
                             <ALargeSmall size={16} className="w-8 h-8" />
-                        </Button>
-                        <Button
+                        </TooltipButton>
+                        <TooltipButton
                             size="icon"
-                            variant="ghost"
+                            variant="outline"
                             onClick={handlePredictions}
-                            disabled={!predictionsEnabled || loadingPredictions}
+                            disabled={loadingPredictions}
                             id="view-predictions"
-                            title="View predictions"
+                            tooltip="View predictions"
                         >
                             {loadingPredictions ? (
                                 <Loader2 className="w-8 h-8 animate-spin" />
                             ) : (
                                 <Keyboard size={16} className="w-8 h-8" />
                             )}
-                        </Button>
+                        </TooltipButton>
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex flex-col h-full gap-4">
-                    <div className="flex-1 overflow-y-auto space-y-6">
-                        <Textarea
-                            value={compl.prompt}
-                            onChange={handlePromptChange}
-                            className="h-24 resize-none"
-                            placeholder="Enter your prompt here."
-                            id="completion-text"
-                        />
-                    </div>
-                    <div
-                        className="flex flex-col w-full px-3 py-2 rounded-md border-dashed border"
-                        id="token-area"
-                    >
-                        <TokenArea
-                            completionId={compl.id}
-                            showPredictions={showPredictions}
-                            onTokenSelection={handleTokenSelection}
-                            setSelectedIdx={setSelectedIdx}
-                            filledTokens={compl.tokens}
-                            tokenData={tokenData}
-                            setPredictionsEnabled={setPredictionsEnabled}
-                            isTokenizing={isTokenizing}
-                            isLoadingTokenizer={isLoadingTokenizer}
-                        />
-                    </div>
+                    <Textarea
+                        value={compl.prompt}
+                        onChange={handlePromptChange}
+                        className="h-24"
+                        placeholder="Enter your prompt here."
+                        id="completion-text"
+                    />
+                    {tokenData && (
+                        <div
+                            className="flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded"
+                            id="token-area"
+                        >
+                            <TokenArea
+                                compl={compl}
+                                showPredictions={showPredictions}
+                                setSelectedIdx={setSelectedIdx}
+                                tokenData={tokenData}
+                                tokenSelection={tokenSelection}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
             {showPredictions && (
@@ -336,8 +260,6 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                     predictions={predictions || {}}
                     compl={compl}
                     selectedIdx={selectedIdx}
-                    updateToken={updateToken}
-                    clearToken={clearToken}
                 />
             )}
         </div>

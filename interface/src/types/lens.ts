@@ -9,8 +9,7 @@ import { ChartArea, Grid3X3 } from "lucide-react";
 export interface TokenCompletion {
     idx: number;
     target_id: number;
-    target_text?: string;
-    highlighted: boolean;
+    target_text: string;
 }
 
 export interface LensCompletion extends Completion { 

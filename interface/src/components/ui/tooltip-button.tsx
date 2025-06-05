@@ -8,6 +8,8 @@ interface TooltipButtonProps {
     variant?: "default" | "outline" | "ghost" | "link";
     size?: "default" | "sm" | "lg" | "icon";
     className?: string;
+    id?: string;
+    disabled?: boolean;
 }
 
 export function TooltipButton({
@@ -17,16 +19,25 @@ export function TooltipButton({
     variant = "default",
     size = "default",
     className,
+    id,
+    disabled,
 }: TooltipButtonProps) {
     return (
-        <TooltipProvider>
+        <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button onClick={onClick} variant={variant} size={size} className={className}>
+                    <Button 
+                        onClick={onClick} 
+                        variant={variant} 
+                        size={size} 
+                        className={className}
+                        id={id}
+                        disabled={disabled}
+                    >
                         {children}
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent>{tooltip}</TooltipContent>
+                <TooltipContent className="bg-background">{tooltip}</TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );

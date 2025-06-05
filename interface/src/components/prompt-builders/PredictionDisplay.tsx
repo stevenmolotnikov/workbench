@@ -4,6 +4,9 @@ import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { tokenizeText, decodeTokenIds } from "@/components/prompt-builders/tokenize";
+import { Button } from "../ui/button";
+import { Plus } from "lucide-react";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
 interface TokenBadge {
     text: string;
@@ -59,8 +62,8 @@ const TokenDisplay = ({
     };
 
     const handleKeyPress = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && targetToken.trim()) {
-            await handleTokenSubmit(targetToken.trim());
+        if (e.key === 'Enter' && targetToken) {
+            await handleTokenSubmit(targetToken);
         }
     };
 
@@ -142,14 +145,22 @@ const TokenDisplay = ({
             </div>
 
             {/* Input field */}
-            <div className="border-t pt-3">
+            <div className="border-t flex items-center gap-2 pt-3">
                 <Input
                     className="h-8"
                     placeholder="Enter a target token and press Enter"
                     value={targetToken}
                     onChange={(e) => setTargetToken(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyPress}
                 />
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleTokenSubmit(targetToken)}
+                >
+                    <Plus size={16} className="w-8 h-8" />
+                </Button>
             </div>
         </div>
     );
@@ -159,20 +170,37 @@ interface PredictionDisplayProps {
     predictions: TokenPredictions;
     compl: LensCompletion;
     selectedIdx: number;
-    updateToken: (id: string, idx: number, targetId: number, targetText: string) => void;
-    clearToken: (id: string, tokenIdx: number) => void;
 }
 
 export const PredictionDisplay = ({
     predictions,
     compl,
     selectedIdx,
-    updateToken,
-    clearToken,
 }: PredictionDisplayProps) => {
     const { modelName } = useSelectedModel();
 
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
+
+    const updateToken = (idx: number, targetId: number, targetText: string) => {
+       const { handleUpdateCompletion } = useLensCompletions.getState();
+       
+        const currentTokens = compl.tokens || [];
+        handleUpdateCompletion(compl.id, {
+            tokens: currentTokens.map((t) =>
+                t.idx === idx ? { ...t, target_id: targetId, target_text: targetText } : t
+            ),
+        });
+    };
+
+    const clearToken = (tokenIdx: number) => {
+        const { handleUpdateCompletion } = useLensCompletions.getState();
+        const currentTokens = compl.tokens || [];
+        handleUpdateCompletion(compl.id, {
+            tokens: currentTokens.map((t) =>
+                t.idx === tokenIdx ? { ...t, target_id: -1, target_text: "" } : t
+            ),
+        });
+    };
 
     const handleTargetTokenUpdate = async (text: string) => {
         if (!modelName) {
@@ -186,12 +214,12 @@ export const PredictionDisplay = ({
 
             // Only update if there's a single token
             if (tokens.length === 1) {
-                updateToken(compl.id, selectedIdx, tokens[0].id, tokens[0].text);
+                updateToken(selectedIdx, tokens[0].id, tokens[0].text);
                 setTempTokenText([]);
             } else {
                 // Else, set temp token text and clear tokens
                 setTempTokenText(tokens.map((t) => t.text));
-                clearToken(compl.id, selectedIdx);
+                clearToken(selectedIdx);
             }
         } catch (error) {
             console.error('Error tokenizing text:', error);
