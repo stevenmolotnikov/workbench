@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heatmap } from "@/components/charts/base/Heatmap";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
@@ -64,6 +64,22 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     };
 
+    const handleEmphasizeCompletion = (index: number) => {
+        console.log("Emphasizing completion", index);
+        const { emphasizedCompletions, setEmphasizedCompletions } = useLensCompletions.getState();
+        if (index === -1) {
+            setEmphasizedCompletions([]);
+        } else {
+            setEmphasizedCompletions([...emphasizedCompletions, index]);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            handleEmphasizeCompletion(-1);
+        };
+    }, [completionIndex]);
+
     const activeCompletionsLength = useLensCompletions((state) => state.activeCompletions.length);
     const memoizedCompletionItems = useMemo(() => {
         return activeCompletionsLength >= 1 ? (
@@ -78,39 +94,45 @@ export function LensHeatmap({ index }: { index: number }) {
     }, [activeCompletionsLength]);
 
     return (
-        <ChartCard
-            handleRunChart={handleRunChart}
-            handleRemoveChart={handleRemoveChart}
-            isLoading={isLoading}
-            chartTitle={
-                <div>
-                    <div className="text-md font-bold">Lens Heatmap</div>
-                    <span className="text-xs text-muted-foreground">
-                        Completion {completionIndex}
-                    </span>
-                </div>
-            }
-            chart={
-                gridPosition.chartData ? (
-                    <Heatmap chartIndex={index} {...gridPosition.chartData.data} />
-                ) : (
-                    <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data</p>
+        <div
+            onMouseEnter={() => handleEmphasizeCompletion(parseInt(completionIndex) - 1)}
+            onMouseLeave={() => handleEmphasizeCompletion(-1)}
+            className="h-full w-full"
+        >
+            <ChartCard
+                handleRunChart={handleRunChart}
+                handleRemoveChart={handleRemoveChart}
+                isLoading={isLoading}
+                chartTitle={
+                    <div>
+                        <div className="text-md font-bold">Lens Heatmap</div>
+                        <span className="text-xs text-muted-foreground">
+                            Completion {completionIndex}
+                        </span>
                     </div>
-                )
-            }
-            configContent={
-                <>
-                    <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup
-                        value={completionIndex}
-                        onValueChange={setCompletionIndex}
-                    >
-                        {memoizedCompletionItems}
-                    </DropdownMenuRadioGroup>
-                </>
-            }
-        />
+                }
+                chart={
+                    gridPosition.chartData ? (
+                        <Heatmap chartIndex={index} {...gridPosition.chartData.data} />
+                    ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <p className="text-muted-foreground">No data</p>
+                        </div>
+                    )
+                }
+                configContent={
+                    <>
+                        <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                            value={completionIndex}
+                            onValueChange={setCompletionIndex}
+                        >
+                            {memoizedCompletionItems}
+                        </DropdownMenuRadioGroup>
+                    </>
+                }
+            />
+        </div>
     );
 }

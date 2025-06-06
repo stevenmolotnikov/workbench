@@ -25,7 +25,6 @@ const TOKEN_STYLES = {
     annotated: "bg-white after:absolute after:inset-0 after:border after:border-primary/30",
     emphasized: "bg-yellow-500 after:absolute after:inset-0 after:border after:border-primary/30",
     transparent: "bg-transparent",
-    clickable: "cursor-pointer",
 } as const;
 
 export function TokenArea({
@@ -109,7 +108,8 @@ export function TokenArea({
             isEmphasized && TOKEN_STYLES.emphasized,
             !showPredictions && TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
-            showPredictions && TOKEN_STYLES.clickable
+            (showPredictions && isHighlighted) && "cursor-pointer",
+            !showPredictions && "cursor-text"
         );
     };
 

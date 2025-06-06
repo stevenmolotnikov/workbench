@@ -3,10 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { useQuery } from '@tanstack/react-query';
-import config from '@/lib/config';
-import type { Model } from '@/types/workspace';
 import type { ModelLoadStatus } from '@/types/workbench';
+import { useModels } from '@/hooks/useModels';
 
 const getStatusMessage = (modelLoadStatus: ModelLoadStatus) => {
     if (modelLoadStatus === 'loading') {
@@ -31,22 +29,8 @@ const getStatusMessage = (modelLoadStatus: ModelLoadStatus) => {
     }
 }
 
-const fetchModels = async (): Promise<Model[]> => {
-    const response = await fetch(config.getApiUrl(config.endpoints.models));
-    
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return response.json();
-};
-
 export function WorkbenchStatus() {
-    const { data: models, isLoading, error } = useQuery({
-        queryKey: ['models'],
-        queryFn: fetchModels,
-    });
-
+    const { isLoading, error } = useModels();
     const modelLoadStatus: ModelLoadStatus = isLoading ? 'loading' : error ? 'error' : 'success';
 
     return (

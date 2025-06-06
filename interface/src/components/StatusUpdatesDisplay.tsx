@@ -72,18 +72,20 @@ export function StatusUpdatesDisplay() {
             }`}
         >
             <div
-                className={`w-1.5 h-1.5 rounded-full mr-2 ${
+                className={`mr-2 ${
                     getStatusType() === "error"
-                        ? "bg-red-500"
+                        ? "text-destructive"
                         : getStatusType() === "success"
-                        ? "bg-green-500"
+                        ? "text-green-600"
                         : getStatusType() === "loading"
-                        ? "bg-blue-500 animate-pulse"
+                        ? "text-blue-600 animate-pulse"
                         : getStatusType() === "ready"
-                        ? "bg-gray-400"
-                        : "bg-slate-400"
+                        ? "text-gray-600"
+                        : "text-slate-600"
                 }`}
-            />
+            >
+                ●
+            </div>
             {getMessage()}
         </div>
     );

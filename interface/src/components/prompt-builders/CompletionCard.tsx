@@ -1,4 +1,4 @@
-import { Keyboard, ALargeSmall, Loader2, X, Pencil } from "lucide-react";
+import { Keyboard, ALargeSmall, Loader2, X, Pencil, KeyboardOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,10 +19,11 @@ import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 
 interface CompletionCardProps {
+    index: number;
     compl: LensCompletion;
 }
 
-export function CompletionCard({ compl }: CompletionCardProps) {
+export function CompletionCard({ index, compl }: CompletionCardProps) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
@@ -32,8 +33,6 @@ export function CompletionCard({ compl }: CompletionCardProps) {
     // Tokenization state
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
-
-    const tokenSelection = useTokenSelection(compl);
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
@@ -47,6 +46,14 @@ export function CompletionCard({ compl }: CompletionCardProps) {
 
     const textHasChanged = compl.prompt !== lastTokenizedText;
     const shouldEnableTokenize = modelName && compl.prompt && (!tokenData || textHasChanged);
+
+    const removeToken = (idxs: number[]) => {
+        handleUpdateCompletion(compl.id, {
+            tokens: compl.tokens.filter(t => !idxs.includes(t.idx)),
+        });
+    };
+
+    const tokenSelection = useTokenSelection({ compl, removeToken });
 
     const handleTokenize = async () => {
         if (!modelName) {
@@ -79,8 +86,9 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         handleUpdateCompletion(compl.id, updates);
     };
 
+    const highlightedTokens = tokenSelection.highlightedTokens;
+
     const updateTokens = () => {
-        const highlightedTokens = tokenSelection.highlightedTokens;
         const existingIndices = new Set(compl.tokens.map(t => t.idx));
 
         // Create new tokens only for indices that don't already exist
@@ -168,6 +176,8 @@ export function CompletionCard({ compl }: CompletionCardProps) {
         }
     }, [compl.tokens, compl.prompt, modelName]);
 
+    const emphasizedCompletions = useLensCompletions((state) => state.emphasizedCompletions);
+
     return (
         <div key={compl.id} className="group relative">
             {/* Delete button */}
@@ -187,7 +197,8 @@ export function CompletionCard({ compl }: CompletionCardProps) {
             <div
                 className={cn(
                     "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out",
-                    showPredictions ? "rounded-t-lg" : "rounded-lg"
+                    showPredictions ? "rounded-t-lg" : "rounded-lg",
+                    emphasizedCompletions.includes(index) && "border-primary"
                 )}
             >
                 {/* Header */}
@@ -217,14 +228,18 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                             size="icon"
                             variant="outline"
                             onClick={handlePredictions}
-                            disabled={loadingPredictions}
+                            disabled={loadingPredictions || highlightedTokens.length === 0}
                             id="view-predictions"
                             tooltip="View predictions"
                         >
                             {loadingPredictions ? (
                                 <Loader2 className="w-8 h-8 animate-spin" />
                             ) : (
-                                <Keyboard size={16} className="w-8 h-8" />
+                                showPredictions ? (
+                                    <KeyboardOff size={16} className="w-8 h-8" />
+                                ) : (
+                                    <Keyboard size={16} className="w-8 h-8" />
+                                )
                             )}
                         </TooltipButton>
                     </div>
@@ -241,7 +256,10 @@ export function CompletionCard({ compl }: CompletionCardProps) {
                     />
                     {tokenData && (
                         <div
-                            className="flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded"
+                            className={cn(
+                                "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded",
+                                loadingPredictions && "pointer-events-none"
+                            )}
                             id="token-area"
                         >
                             <TokenArea

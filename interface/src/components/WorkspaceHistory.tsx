@@ -2,30 +2,35 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-
 import { Save, X } from "lucide-react";
 import { useWorkspaceStore, type Workspace } from "@/stores/useWorkspace";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { LogitLensWorkspace } from "@/types/lens";
 import { useCharts } from "@/stores/useCharts";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useModels } from '@/hooks/useModels';
+import { cn } from "@/lib/utils";
 
 export function WorkspaceHistory() {
     const { workspaces, session, isLoading, deleteWorkspace, createWorkspace } =
         useWorkspaceStore();
+    const { isLoading: isModelsLoading } = useModels();
 
     const [pendingWorkspace, setPendingWorkspace] = useState<Workspace | null>(null);
 
     const { annotations, setAnnotations } = useAnnotations();
     const { setGridPositions, gridPositions } = useCharts();
 
-    const loadWorkspace = (workspace: LogitLensWorkspace) => {
-        const { setActiveCompletions } = useLensCompletions.getState();
-        setActiveCompletions(workspace.completions);
-        setGridPositions(workspace.graphData);
-        setAnnotations(workspace.annotations);
+    const loadWorkspace = (workspace: Workspace) => {
+        if (isModelsLoading) return;
+        
+        if ("completions" in workspace) {
+            const { setActiveCompletions } = useLensCompletions.getState();
+            setActiveCompletions(workspace.completions);
+            setGridPositions(workspace.graphData);
+            setAnnotations(workspace.annotations);
+        }
     };
 
     const exportWorkspace = () => {
@@ -130,7 +135,10 @@ export function WorkspaceHistory() {
                     {workspaces.map((workspace, index) => (
                         <div
                             key={index}
-                            className="p-4 border bg-card rounded-lg cursor-pointer group"
+                            className={cn(
+                                "p-4 border bg-card rounded-lg group",
+                                isModelsLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                            )}
                             onClick={() => loadWorkspace(workspace)}
                         >
                             <div className="flex items-center gap-2 relative">

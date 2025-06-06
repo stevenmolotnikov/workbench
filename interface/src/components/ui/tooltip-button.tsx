@@ -26,16 +26,18 @@ export function TooltipButton({
         <TooltipProvider delayDuration={100}>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button 
-                        onClick={onClick} 
-                        variant={variant} 
-                        size={size} 
-                        className={className}
-                        id={id}
-                        disabled={disabled}
-                    >
-                        {children}
-                    </Button>
+                    <span className="inline-block">
+                        <Button 
+                            onClick={onClick} 
+                            variant={variant} 
+                            size={size} 
+                            className={className}
+                            id={id}
+                            disabled={disabled}
+                        >
+                            {children}
+                        </Button>
+                    </span>
                 </TooltipTrigger>
                 <TooltipContent className="bg-background">{tooltip}</TooltipContent>
             </Tooltip>

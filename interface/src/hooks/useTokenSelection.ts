@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Token } from "@/types/tokenizer";
 import { LensCompletion } from "@/types/lens";
 
-export function useTokenSelection(compl: LensCompletion) {
+interface UseTokenSelectionProps {
+    compl: LensCompletion;
+    removeToken: (idxs: number[]) => void;
+}
+
+export function useTokenSelection({ compl, removeToken }: UseTokenSelectionProps) {
     const [highlightedTokens, setHighlightedTokens] = useState<number[]>(compl.tokens.map(t => t.idx));
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
@@ -65,6 +70,8 @@ export function useTokenSelection(compl: LensCompletion) {
                 // Unhighlight this specific token
                 const newHighlighted = highlightedTokens.filter((id) => id !== tokenId);
                 setHighlightedTokens(newHighlighted);
+                console.log("Removing token click", tokenId);
+                removeToken([tokenId]);
             } else {
                 // If Ctrl/Cmd is pressed, add to existing selection
                 if (e.ctrlKey || e.metaKey || e.shiftKey) {
@@ -75,6 +82,10 @@ export function useTokenSelection(compl: LensCompletion) {
                     // Start new selection (this will clear previous highlights)
                     setStartToken(tokenId);
                     setHighlightedTokens([tokenId]);
+                    
+                    // Remove target token id
+                    const tokensToRemove = highlightedTokens.filter(id => id !== tokenId);
+                    removeToken(tokensToRemove);
                 }
             }
         }

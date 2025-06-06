@@ -3,7 +3,9 @@ import { LensCompletion } from '@/types/lens';
 
 interface LensCompletionsState {
     activeCompletions: LensCompletion[];
+    emphasizedCompletions: number[];
     setActiveCompletions: (completions: LensCompletion[]) => void;
+    setEmphasizedCompletions: (indices: number[]) => void;
     handleNewCompletion: (model: string) => void;
     handleLoadCompletion: (completionToLoad: LensCompletion) => void;
     handleDeleteCompletion: (id: string) => void;
@@ -31,8 +33,11 @@ const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
 
 export const useLensCompletions = create<LensCompletionsState>((set) => ({
     activeCompletions: [],
+    emphasizedCompletions: [],
 
     setActiveCompletions: (completions) => set({ activeCompletions: completions }),
+
+    setEmphasizedCompletions: (indices) => set({ emphasizedCompletions: indices }),
 
     handleNewCompletion: (model) => {
         set((state) => {
@@ -41,11 +46,7 @@ export const useLensCompletions = create<LensCompletionsState>((set) => ({
                 id: generateUniqueId(),
                 prompt: "",
                 model: model,
-                tokens: [{
-                    target_id: -1,
-                    idx: -1,
-                    target_text: "",
-                }],
+                tokens: [],
             };
             return {
                 activeCompletions: [...state.activeCompletions, newCompletion]

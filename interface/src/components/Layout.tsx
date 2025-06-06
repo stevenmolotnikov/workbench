@@ -17,7 +17,7 @@ export function ResizableLayout({ workbench, charts, annotationsOpen }: Resizabl
             direction="horizontal"
             className="flex flex-1 min-h-0 h-full"
         >
-            <ResizablePanel defaultSize={35} minSize={30}>
+            <ResizablePanel className="h-full" defaultSize={35} minSize={30}>
                 {workbench}
             </ResizablePanel>
             <ResizableHandle />

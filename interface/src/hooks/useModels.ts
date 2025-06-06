@@ -16,6 +16,7 @@ export function useModels() {
     const { data: models = [], isLoading, error } = useQuery({
         queryKey: ['models'],
         queryFn: fetchModels,
+        refetchInterval: 120000,
     });
 
     const baseModels = models

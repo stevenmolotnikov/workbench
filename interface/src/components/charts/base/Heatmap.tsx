@@ -53,7 +53,7 @@ export function Heatmap({
     xAxisLabel = "",
     yAxisLabel = "",
     fontSize = 12,
-    cellSpacing = 0.025,
+    cellSpacing = 1,
 }: HeatmapProps) {
     const [tooltip, setTooltip] = useState<TooltipData>({
         value: 0,
@@ -261,7 +261,7 @@ export function Heatmap({
     const shouldHideColorbar = containerDimensions.height < window.innerHeight / 2;
 
     // Calculate space allocation as percentages of container size
-    const yLabelSpace = yAxisLabel ? containerWidth * 0.02 : 0;
+    const yLabelSpace = yAxisLabel ? containerWidth * 0.04 : 0;
     const yTickSpace = yTickLabels.length > 0 ? containerWidth * 0.04 : 0;
 
     const xTickSpace = xTickLabels.length > 0 ? containerHeight * 0.04 : 0;
@@ -282,7 +282,7 @@ export function Heatmap({
     const cellWidth = availableWidthForCells / cols;
     const cellHeight = availableHeightForCells / rows;
 
-    const spacing = cellWidth * cellSpacing;
+    const spacing = 1; // Fixed 1px spacing
     const actualCellWidth = cellWidth - spacing;
     const actualCellHeight = cellHeight - spacing;
 
@@ -398,24 +398,86 @@ export function Heatmap({
 
                             return (
                                 <g key={`${rowIndex}-${colIndex}`}>
-                                    <rect
-                                        x={colIndex * cellWidth + spacing / 2}
-                                        y={rowIndex * cellHeight + spacing / 2}
-                                        width={actualCellWidth}
-                                        height={actualCellHeight}
-                                        fill={getColor(value, minValue, maxValue)}
-                                        stroke={strokeColor}
-                                        strokeWidth={strokeWidth}
-                                        className="cursor-pointer transition-opacity hover:opacity-80"
-                                        onMouseEnter={(e) => {
-                                            handleMouseEnter(e, value);
-                                            handleMouseEnterCell(rowIndex, colIndex);
-                                        }}
-                                        onMouseLeave={handleMouseLeave}
-                                        onMouseDown={(e) => handleMouseDown(rowIndex, colIndex, e)}
-                                        rx={5}
-                                        ry={5}
-                                    />
+                                    {(() => {
+                                        const x = colIndex * cellWidth + spacing / 2;
+                                        const y = rowIndex * cellHeight + spacing / 2;
+                                        const w = actualCellWidth;
+                                        const h = actualCellHeight;
+                                        const r = 5; // radius
+
+                                        // Determine which corners should be rounded
+                                        const isTopLeft = rowIndex === 0 && colIndex === 0;
+                                        const isTopRight = rowIndex === 0 && colIndex === cols - 1;
+                                        const isBottomLeft =
+                                            rowIndex === rows - 1 && colIndex === 0;
+                                        const isBottomRight =
+                                            rowIndex === rows - 1 && colIndex === cols - 1;
+
+                                        // If no corners need rounding, use a simple rect
+                                        if (
+                                            !isTopLeft &&
+                                            !isTopRight &&
+                                            !isBottomLeft &&
+                                            !isBottomRight
+                                        ) {
+                                            return (
+                                                <rect
+                                                    x={x}
+                                                    y={y}
+                                                    width={w}
+                                                    height={h}
+                                                    fill={getColor(value, minValue, maxValue)}
+                                                    stroke={strokeColor}
+                                                    strokeWidth={strokeWidth}
+                                                    className="cursor-pointer transition-opacity hover:opacity-80"
+                                                    onMouseEnter={(e) => {
+                                                        handleMouseEnter(e, value);
+                                                        handleMouseEnterCell(rowIndex, colIndex);
+                                                    }}
+                                                    onMouseLeave={handleMouseLeave}
+                                                    onMouseDown={(e) =>
+                                                        handleMouseDown(rowIndex, colIndex, e)
+                                                    }
+                                                />
+                                            );
+                                        }
+
+                                        // Create path with selective rounded corners
+                                        const pathData = [
+                                            `M ${x + (isTopLeft ? r : 0)} ${y}`,
+                                            `L ${x + w - (isTopRight ? r : 0)} ${y}`,
+                                            isTopRight ? `Q ${x + w} ${y} ${x + w} ${y + r}` : "",
+                                            `L ${x + w} ${y + h - (isBottomRight ? r : 0)}`,
+                                            isBottomRight
+                                                ? `Q ${x + w} ${y + h} ${x + w - r} ${y + h}`
+                                                : "",
+                                            `L ${x + (isBottomLeft ? r : 0)} ${y + h}`,
+                                            isBottomLeft ? `Q ${x} ${y + h} ${x} ${y + h - r}` : "",
+                                            `L ${x} ${y + (isTopLeft ? r : 0)}`,
+                                            isTopLeft ? `Q ${x} ${y} ${x + r} ${y}` : "",
+                                            "Z",
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" ");
+
+                                        return (
+                                            <path
+                                                d={pathData}
+                                                fill={getColor(value, minValue, maxValue)}
+                                                stroke={strokeColor}
+                                                strokeWidth={strokeWidth}
+                                                className="cursor-pointer transition-opacity hover:opacity-80"
+                                                onMouseEnter={(e) => {
+                                                    handleMouseEnter(e, value);
+                                                    handleMouseEnterCell(rowIndex, colIndex);
+                                                }}
+                                                onMouseLeave={handleMouseLeave}
+                                                onMouseDown={(e) =>
+                                                    handleMouseDown(rowIndex, colIndex, e)
+                                                }
+                                            />
+                                        );
+                                    })()}
                                     <text
                                         x={colIndex * cellWidth + cellWidth / 2}
                                         y={rowIndex * cellHeight + cellHeight / 2}
@@ -424,7 +486,7 @@ export function Heatmap({
                                         className="fill-background pointer-events-none"
                                         fontSize={Math.min(
                                             fontSize,
-                                            Math.min(actualCellWidth, actualCellHeight) / 4
+                                            Math.min(actualCellWidth, actualCellHeight) /2
                                         )}
                                     >
                                         {getCellText(value, rowIndex, colIndex)}
@@ -527,7 +589,12 @@ export function Heatmap({
                         marginTop: "-8px",
                     }}
                 >
-                    <div className="text-xs text-gray-300">Value: {tooltip.value.toFixed(3)}</div>
+                    <div className="text-xs text-gray-300">
+                        {labels && labels[Math.floor(tooltip.y / (100 / rows))]?.[Math.floor(tooltip.x / (100 / cols))] && (
+                            <div>Token: {labels[Math.floor(tooltip.y / (100 / rows))][Math.floor(tooltip.x / (100 / cols))]}</div>
+                        )}
+                        <div>Value: {tooltip.value.toFixed(3)}</div>
+                    </div>
                     {/* Tooltip arrow */}
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>

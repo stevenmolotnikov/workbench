@@ -21,7 +21,7 @@ export function PromptBuilder() {
     }
 
     return (
-        <div className="overflow-y-visible">
+        <div className="h-full flex flex-col">
             <div className="p-4 border-b">
                 <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium">Model</h2>
@@ -34,16 +34,16 @@ export function PromptBuilder() {
                             // className="w-8 h-8"
                             onClick={createNewCompletion}
                             id="new-completion"
-                            disabled={isLoading}
+                            disabled={isLoading || activeCompletions.length >= 5}
                         >
                             <Plus size={16} />
                         </Button>
                     </div>
                 </div>
             </div>
-            <div className="flex-1 p-4 space-y-4 overflow-y-visible">
-                {activeCompletions.map((compl) => (
-                    <CompletionCard key={compl.id} compl={compl} />
+            <div className="flex-1 p-4 overflow-y-auto space-y-4">
+                {activeCompletions.map((compl, index) => (
+                    <CompletionCard key={compl.id} compl={compl} index={index} />
                 ))}
                 {activeCompletions.length === 0 && (
                     <p className="text-center py-4">No active completions.</p>
