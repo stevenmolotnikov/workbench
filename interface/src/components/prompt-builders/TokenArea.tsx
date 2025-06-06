@@ -21,7 +21,7 @@ const TOKEN_STYLES = {
     base: "text-sm whitespace-pre select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
     filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
-    hover: "",
+    hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
     annotated: "bg-white after:absolute after:inset-0 after:border after:border-primary/30",
     emphasized: "bg-yellow-500 after:absolute after:inset-0 after:border after:border-primary/30",
     transparent: "bg-transparent",

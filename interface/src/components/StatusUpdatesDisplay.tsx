@@ -38,7 +38,7 @@ export function StatusUpdatesDisplay() {
     // Determine the status type for styling
     const getStatusType = () => {
         if (error || (!isConnected && isEnabled)) {
-            return "error";
+            return "warning";
         }
 
         if (latestUpdate?.type === "job-sent") {
@@ -79,9 +79,11 @@ export function StatusUpdatesDisplay() {
                         ? "text-green-600"
                         : getStatusType() === "loading"
                         ? "text-blue-600 animate-pulse"
+                        : getStatusType() === "warning"
+                        ? "text-yellow-600"
                         : getStatusType() === "ready"
                         ? "text-gray-600"
-                        : "text-slate-600"
+                        : "text-gray-600"
                 }`}
             >
                 ●

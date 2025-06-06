@@ -62,12 +62,6 @@ export function useTutorialManager() {
                         eventData.tokenIndex === trigger.expectedTokenIndex;
                     break;
 
-                case "tokenSelection":
-                    shouldAdvance =
-                        eventData.type === "tokenSelection" &&
-                        eventData.tokenIndex === trigger.expectedTokenIndex;
-                    break;
-
             }
 
             if (shouldAdvance) {

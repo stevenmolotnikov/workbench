@@ -17,6 +17,7 @@ interface LensWorkbenchState {
 
     // Layout management
     setLayout: (layout: Layout) => void;
+    clearGridPositions: () => void;
 
     // Grid position management
     setChartMode: (position: number, chartModeIndex: number) => void;
@@ -65,6 +66,10 @@ const getInitialGridPositions = (layout: Layout): GridPosition[] => {
 export const useCharts = create<LensWorkbenchState>((set, get) => ({
     layout: "1x1",
     gridPositions: getInitialGridPositions("1x1"),
+
+    clearGridPositions: () => {
+        set({ gridPositions: getInitialGridPositions("1x1") });
+    },
 
     setLayout: (layout) => {
         set((state) => {

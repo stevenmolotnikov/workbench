@@ -10,6 +10,7 @@ export type Annotation =
 
 
 interface AnnotationState {
+    isOpen: boolean;
     annotations: Annotation[];
     pendingAnnotation: Annotation | null;
     emphasizedAnnotation: Annotation | null;
@@ -27,10 +28,14 @@ interface AnnotationState {
 }
 
 export const useAnnotations = create<AnnotationState>((set) => ({
+    isOpen: false,
     annotations: [],
     pendingAnnotation: null,
     emphasizedAnnotation: null,
-    addPendingAnnotation: (annotation) => set({ pendingAnnotation: annotation }),
+    addPendingAnnotation: (annotation) => set((state) => {
+        if (!state.isOpen) return state;
+        return { pendingAnnotation: annotation };
+    }),
 
     setEmphasizedAnnotation: (annotation) => set({ emphasizedAnnotation: annotation }),
     clearEmphasizedAnnotation: () => set({ emphasizedAnnotation: null }),

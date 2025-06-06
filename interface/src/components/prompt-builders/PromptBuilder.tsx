@@ -1,13 +1,13 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export function PromptBuilder() {
     const { handleNewCompletion, activeCompletions } = useLensCompletions();
@@ -17,7 +17,7 @@ export function PromptBuilder() {
 
     function createNewCompletion() {
         handleNewCompletion(modelName);
-        handleClick('#new-completion');
+        handleClick("#new-completion");
     }
 
     return (
@@ -29,15 +29,16 @@ export function PromptBuilder() {
                     <div className="flex items-center gap-2">
                         <ModelSelector />
 
-                        <Button
+                        <TooltipButton
                             size="icon"
                             // className="w-8 h-8"
                             onClick={createNewCompletion}
                             id="new-completion"
                             disabled={isLoading || activeCompletions.length >= 5}
+                            tooltip="Create a new completion"
                         >
                             <Plus size={16} />
-                        </Button>
+                        </TooltipButton>
                     </div>
                 </div>
             </div>

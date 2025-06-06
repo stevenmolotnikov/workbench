@@ -4,14 +4,16 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import { Annotations } from "@/components/charts/Annotations";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 interface ResizableLayoutProps {
     workbench: React.ReactNode;
     charts: React.ReactNode;
-    annotationsOpen: boolean;
 }
 
-export function ResizableLayout({ workbench, charts, annotationsOpen }: ResizableLayoutProps) {    
+export function ResizableLayout({ workbench, charts }: ResizableLayoutProps) {    
+    const { isOpen: annotationsOpen } = useAnnotations();
+
     return (
         <ResizablePanelGroup
             direction="horizontal"

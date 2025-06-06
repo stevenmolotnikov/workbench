@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Token } from "@/types/tokenizer";
 import { LensCompletion } from "@/types/lens";
+import { useTutorialManager } from "./useTutorialManager";
 
 interface UseTokenSelectionProps {
     compl: LensCompletion;
@@ -11,6 +12,7 @@ export function useTokenSelection({ compl, removeToken }: UseTokenSelectionProps
     const [highlightedTokens, setHighlightedTokens] = useState<number[]>(compl.tokens.map(t => t.idx));
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
+    const { handleTokenHighlight } = useTutorialManager();
 
     const getTokenIdFromEvent = (e: React.MouseEvent): number | null => {
         const target = e.target as HTMLElement;
@@ -65,7 +67,11 @@ export function useTokenSelection({ compl, removeToken }: UseTokenSelectionProps
         if (e.button !== 0) return;
         setIsSelecting(true);
         const tokenId = getTokenIdFromEvent(e);
+
         if (tokenId !== null) {
+            handleTokenHighlight(tokenId);
+            console.log("token clicked", tokenId);
+
             if (highlightedTokens.includes(tokenId)) {
                 // Unhighlight this specific token
                 const newHighlighted = highlightedTokens.filter((id) => id !== tokenId);

@@ -49,14 +49,26 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
         logits = logits[0,idxs,:].softmax(dim=-1)
         values_indices = t.sort(logits, dim=-1, descending=True)
 
-        values = values_indices[0].tolist().save()
-        indices = values_indices[1].tolist().save()
+        values = values_indices[0].save()
+        indices = values_indices[1].save()
 
-    results = {
-        token_index : {
-            "ids": indices[idx],
-            "values": values[idx]
-        } for idx, token_index in enumerate(idxs)
-    }
+
+    results = {}
+
+    for idx, token_index in enumerate(idxs):
+        idx_values = values[idx]
+        idx_indices = indices[idx]
+
+        # Round values to 2 decimal places
+        idx_values = t.round(idx_values * 100) / 100
+        nonzero = idx_values > 0
+
+        nonzero_values = idx_values[nonzero].tolist()
+        nonzero_indices = idx_indices[nonzero].tolist()
+
+        results[token_index] = {
+            "ids": nonzero_indices,
+            "values": nonzero_values
+        }
 
     return results

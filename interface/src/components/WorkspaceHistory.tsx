@@ -11,6 +11,7 @@ import { useAnnotations } from "@/stores/useAnnotations";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { useModels } from '@/hooks/useModels';
 import { cn } from "@/lib/utils";
+import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export function WorkspaceHistory() {
     const { workspaces, session, isLoading, deleteWorkspace, createWorkspace } =
@@ -88,15 +89,16 @@ export function WorkspaceHistory() {
                     <h2 className="text-sm">Workspaces</h2>
                     <span className="text-xs">({workspaces.length}/5)</span>
                 </div>
-                <Button
+                <TooltipButton
                     size="icon"
                     variant="outline"
                     className="h-8 w-8"
                     onClick={() => addPendingWorkspace(exportWorkspace())}
                     disabled={isLoading || !session}
+                    tooltip="Create a new workspace"
                 >
                     <Save size={6} />
-                </Button>
+                </TooltipButton>
             </div>
             <div className="flex-1 overflow-auto">
                 <div className="p-4 space-y-2">
