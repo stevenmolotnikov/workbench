@@ -1,176 +1,168 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 
-import { Prediction } from "@/types/workspace";
-import { PatchingCompletion } from "@/types/patching";
-
-import { Route, RouteOff, RotateCcw, Sparkle, ALargeSmall } from "lucide-react";
-import { useConnection } from '../../hooks/useConnection';
-import { useTokenization } from '../../hooks/useTokenization';
-import { Edges } from './Edge';
+import { Route, RouteOff, RotateCcw, ALargeSmall, Snowflake, Eraser } from "lucide-react";
+import { useConnection } from "../../hooks/useConnection";
+import { Edges } from "./Edge";
 import { Button } from "../ui/button";
-import { TokenAreaWithPrediction } from "./TokenAreaWithPrediction";
+import { ConnectableTokenArea } from "./ConnectableTokenArea";
 import { Textarea } from "@/components/ui/textarea";
-import config from "@/lib/config";
 import { useSelectedModel } from "@/stores/useSelectedModel";
+import { ModelSelector } from "../ModelSelector";
+import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
+import { Token } from "@/types/tokenizer";
+import { batchTokenizeText } from "@/actions/tokenize";
 
-interface PatchingWorkbenchProps {
-    connectionsHook: ReturnType<typeof useConnection>;
-    source: PatchingCompletion;
-    destination: PatchingCompletion;
-    setSource: (conv: PatchingCompletion) => void;
-    setDestination: (conv: PatchingCompletion) => void;
-}
-
-export function PatchingWorkbench({ connectionsHook, source, destination, setSource, setDestination }: PatchingWorkbenchProps) {
-    const defaultPrediction: Prediction = { id: "", indices: [], str_indices: [] };
-
+export function PatchingWorkbench() {
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
-    const [sourcePrediction, setSourcePrediction] = useState<Prediction>(defaultPrediction);
-    const [destinationPrediction, setDestinationPrediction] = useState<Prediction>(defaultPrediction);
-    
+    const [isFreezingTokens, setIsFreezingTokens] = useState<boolean>(false);
+    const [isAblatingTokens, setIsAblatingTokens] = useState<boolean>(false);
     const { modelName } = useSelectedModel();
-    const {
-        sourceTokenData,
-        destinationTokenData, 
-        isTokenizing,
-        tokenError,
-        handleTokenize: baseHandleTokenize,
-        updateTokens
-    } = useTokenization();
+    const { source, destination, setSource, setDestination } = usePatchingCompletions();
 
-    const {
-        connections,
-        isDragging,
-        currentConnection,
-        selectedEdgeIndex,
-        svgRef,
-        handleBoxMouseDown,
-        handleBoxMouseUp,
-        handleEdgeSelect,
-        handleBackgroundClick,
-        removeConnection,
-        clearConnections,
-    } = connectionsHook;
+    const [sourceTokenData, setSourceTokenData] = useState<Token[] | null>(null);
+    const [destinationTokenData, setDestinationTokenData] = useState<Token[] | null>(null);
+    const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
-    const handleTokenize = useCallback(async () => {
-        if (!modelName) return;
-        await baseHandleTokenize(modelName, source, destination);
-        updateTokens(sourceTokenData, destinationTokenData, setSource, setDestination, source, destination);
-    }, [modelName, source, destination, baseHandleTokenize, updateTokens, sourceTokenData, destinationTokenData, setSource, setDestination]);
+    const connectionsHook = useConnection();
 
-    const runConversation = async () => {
+    const { handleBackgroundClick, clearConnections } = connectionsHook;
+
+    const handleTokenize = async () => {
         try {
-            const response = await fetch(config.getApiUrl(config.endpoints.execute), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ conversations: [source, destination] }),
-            });
-            const data = await response.json();
-            setSourcePrediction(data.results[0]);
-            setDestinationPrediction(data.results[1]);
-        } catch (error) {
-            console.error('Error sending request:', error);
+            setTokenizerLoading(true);
+
+            const inputTexts = [source.prompt, destination.prompt];
+            const tokenData = await batchTokenizeText(inputTexts, modelName);
+            setSourceTokenData(tokenData[0]);
+            setDestinationTokenData(tokenData[1]);
+        } catch (err) {
+            console.error("Error tokenizing text:", err);
+        } finally {
+            setTokenizerLoading(false);
         }
     };
 
-    const handleTokenSelection = useCallback((indices: number[], completion: PatchingCompletion, setter: (comp: PatchingCompletion) => void) => {
-        if (indices.length === 1 && indices[0] === -1) {
-            setter({
-                ...completion,
-                tokens: completion.tokens.map(t => ({ ...t, highlighted: false }))
-            });
-        } else {
-            const updatedTokens = completion.tokens.map(token => ({
-                ...token,
-                highlighted: indices.includes(token.idx)
-            }));
-            
-            const existingIndices = completion.tokens.map(t => t.idx);
-            const newTokens = indices.filter(idx => !existingIndices.includes(idx))
-                .map(idx => ({ idx, highlighted: true }));
-            
-            setter({
-                ...completion,
-                tokens: [...updatedTokens, ...newTokens]
-            });
+    const handleModeToggle = (mode: 'connect' | 'freeze' | 'ablate') => {
+        switch (mode) {
+            case 'connect':
+                setIsConnecting(!isConnecting);
+                setIsFreezingTokens(false);
+                setIsAblatingTokens(false);
+                break;
+            case 'freeze':
+                setIsFreezingTokens(!isFreezingTokens);
+                setIsConnecting(false);
+                setIsAblatingTokens(false);
+                break;
+            case 'ablate':
+                setIsAblatingTokens(!isAblatingTokens);
+                setIsConnecting(false);
+                setIsFreezingTokens(false);
+                break;
         }
-    }, []);
-
-    const shouldEnableTokenize = !isTokenizing && modelName && (source.prompt || destination.prompt);
+    };
 
     return (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="relative h-1/2" onClick={handleBackgroundClick}>
-                <div className="absolute inset-0 pointer-events-none" >
-                    <Edges
-                        connections={connections}
-                        isDragging={isDragging}
-                        currentConnection={currentConnection}
-                        svgRef={svgRef}
-                        onEdgeSelect={handleEdgeSelect}
-                        selectedEdgeIndex={selectedEdgeIndex}
-                    />
-                </div>
+            <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Model</h2>
 
+                    <ModelSelector />
+                </div>
+            </div>
+
+            <div className="h-1/2" onClick={handleBackgroundClick}>
                 <div className="flex flex-col p-4 gap-4 h-full">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-sm font-medium">Tokenized Text</h2>
+                        <h2 className="text-sm font-medium">Patching</h2>
                         <div className="flex items-center gap-2">
-                            <Button onClick={clearConnections} size="icon" className="w-8 h-8" variant="outline" title="Clear connections">
+                            <Button
+                                onClick={clearConnections}
+                                size="icon"
+                                className="w-8 h-8"
+                                variant="outline"
+                                title="Clear connections"
+                            >
                                 <RotateCcw className="w-4 h-4" />
                             </Button>
-                            <Button onClick={handleTokenize} size="icon" className="w-8 h-8" variant="outline" disabled={!shouldEnableTokenize} title="Tokenize text">
+                            <Button
+                                onClick={handleTokenize}
+                                size="icon"
+                                className="w-8 h-8"
+                                variant="outline"
+                                title="Tokenize text"
+                            >
                                 <ALargeSmall className="w-4 h-4" />
                             </Button>
-                            <Button onClick={() => setIsConnecting(!isConnecting)} size="icon" className="w-8 h-8" title={isConnecting ? "Disable connecting" : "Enable connecting"}>
-                                {isConnecting ? <RouteOff className="w-4 h-4" /> : <Route className="w-4 h-4" />}
+                            <Button
+                                onClick={() => handleModeToggle('freeze')}
+                                size="icon"
+                                className="w-8 h-8"
+                                variant={isFreezingTokens ? "default" : "outline"}
+                                title={isFreezingTokens ? "Disable freeze mode" : "Enable freeze mode"}
+                            >
+                                <Snowflake className="w-4 h-4" />
                             </Button>
-                            <Button onClick={runConversation} size="icon" className="w-8 h-8" title="Run prediction">
-                                <Sparkle className="w-4 h-4" />
+                            <Button
+                                onClick={() => handleModeToggle('ablate')}
+                                size="icon"
+                                className="w-8 h-8"
+                                variant={isAblatingTokens ? "default" : "outline"}
+                                title={isAblatingTokens ? "Disable ablate mode" : "Enable ablate mode"}
+                            >
+                                <Eraser className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                onClick={() => handleModeToggle('connect')}
+                                size="icon"
+                                className="w-8 h-8"
+                                variant={isConnecting ? "default" : "outline"}
+                                title={isConnecting ? "Disable connecting" : "Enable connecting"}
+                            >
+                                {isConnecting ? (
+                                    <RouteOff className="w-4 h-4" />
+                                ) : (
+                                    <Route className="w-4 h-4" />
+                                )}
                             </Button>
                         </div>
                     </div>
 
-                    {tokenError && <div className="text-red-500 text-sm">{tokenError}</div>}
+                    <div className="relative h-full w-full flex flex-col gap-4">
+                        <div className="flex flex-col w-full px-3 py-2 border rounded">
+                            <ConnectableTokenArea
+                                tokenData={destinationTokenData}
+                                isConnecting={isConnecting}
+                                isFreezingTokens={isFreezingTokens}
+                                isAblatingTokens={isAblatingTokens}
+                                useConnections={connectionsHook}
+                                counterId={1}
+                                tokenizerLoading={tokenizerLoading}
+                            />
+                        </div>
 
-                    <TokenAreaWithPrediction
-                        counterId={0}
-                        title="Source"
-                        text={source.prompt}
-                        prediction={sourcePrediction}
-                        tokenData={sourceTokenData}
-                        completion={source}
-                        setter={setSource}
-                        isConnecting={isConnecting}
-                        connectionMouseDown={(e) => handleBoxMouseDown(e, 0)}
-                        connectionMouseUp={(e) => handleBoxMouseUp(e, 0)}
-                        onTokenUnhighlight={removeConnection}
-                        isTokenizing={isTokenizing}
-                        tokenError={tokenError}
-                        onTokenSelection={(indices) => handleTokenSelection(indices, source, setSource)}
-                    />
-                    
-                    <TokenAreaWithPrediction
-                        counterId={1}
-                        title="Destination"
-                        text={destination.prompt}
-                        prediction={destinationPrediction}
-                        tokenData={destinationTokenData}
-                        completion={destination}
-                        setter={setDestination}
-                        isConnecting={isConnecting}
-                        connectionMouseDown={(e) => handleBoxMouseDown(e, 1)}
-                        connectionMouseUp={(e) => handleBoxMouseUp(e, 1)}
-                        onTokenUnhighlight={removeConnection}
-                        isTokenizing={isTokenizing}
-                        tokenError={tokenError}
-                        onTokenSelection={(indices) => handleTokenSelection(indices, destination, setDestination)}
-                    />
+                        <div className="flex flex-col w-full px-3 py-2 border rounded">
+                            <ConnectableTokenArea
+                                tokenData={sourceTokenData}
+                                isConnecting={isConnecting}
+                                isFreezingTokens={isFreezingTokens}
+                                isAblatingTokens={isAblatingTokens}
+                                useConnections={connectionsHook}
+                                counterId={0}
+                                tokenizerLoading={tokenizerLoading}
+                            />
+                        </div>
+
+                        <div className="absolute inset-0 pointer-events-none">
+                            <Edges useConnections={connectionsHook} />
+                        </div>
+                    </div>
                 </div>
             </div>
-            
+
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
                 <Textarea
                     value={source.prompt}

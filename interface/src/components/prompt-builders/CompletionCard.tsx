@@ -11,7 +11,7 @@ import { useLensCompletions } from "@/stores/useLensCompletions";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
-import { tokenizeText } from "@/components/prompt-builders/tokenize";
+import { tokenizeText } from "@/actions/tokenize";
 import { Token } from "@/types/tokenizer";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";

@@ -25,7 +25,7 @@ export async function isTokenizerCached(modelName: string): Promise<boolean> {
 }
 
 export async function tokenizeText(
-  text: string | { role: string; content: string }[] | null,
+  text: string | null,
   modelName: string,
   addSpecialTokens: boolean = true
 ): Promise<Token[] | null> {
@@ -41,20 +41,8 @@ export async function tokenizeText(
     // Get cached tokenizer or load if not cached
     const tokenizer = await getTokenizer(modelName);
 
-    console.log(modelName)
-
-    let textToTokenize: string | null = null;
-    
-    if (Array.isArray(text)) {
-      // If text is an array of message objects, apply chat template
-      const templateOutput = await tokenizer.apply_chat_template(text, { tokenize: false });
-      textToTokenize = typeof templateOutput === 'string' ? templateOutput : null;
-    } else {
-      textToTokenize = text;
-    }
-
-    if (textToTokenize && textToTokenize.trim()) {
-      const token_ids = await tokenizer.encode(textToTokenize, { add_special_tokens: addSpecialTokens });
+    if (text.trim()) {
+      const token_ids = await tokenizer.encode(text, { add_special_tokens: addSpecialTokens });
       const tokens = token_ids.map((id) => tokenizer.decode([id]));
 
       return tokens.map((token: string, index: number) => ({
@@ -68,6 +56,60 @@ export async function tokenizeText(
   } catch (error) {
     console.error('Error tokenizing text:', error);
     throw new Error(`Failed to tokenize text: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export async function tokenizeChat(
+  messages: { role: string; content: string }[],
+  modelName: string,
+  addSpecialTokens: boolean = true
+): Promise<Token[] | null> {
+  try {
+    if (!modelName) {
+      throw new Error('No model specified');
+    }
+
+    if (!messages || messages.length === 0) {
+      return [];
+    }
+
+    const tokenizer = await getTokenizer(modelName);
+    const templateOutput = await tokenizer.apply_chat_template(messages, { tokenize: false });
+    
+    if (typeof templateOutput !== 'string') {
+      throw new Error('Chat template did not return a string');
+    }
+
+    return tokenizeText(templateOutput, modelName, addSpecialTokens);
+  } catch (error) {
+    console.error('Error tokenizing chat:', error);
+    throw new Error(`Failed to tokenize chat: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+export async function batchTokenizeText(
+  texts: string[],
+  modelName: string,
+  addSpecialTokens: boolean = true
+): Promise<(Token[] | null)[]> {
+  try {
+    if (!modelName) {
+      throw new Error('No model specified');
+    }
+
+    if (!texts || texts.length === 0) {
+      return [];
+    }
+
+    // Process all texts in parallel
+    const tokenizationPromises = texts.map(text => 
+      tokenizeText(text, modelName, addSpecialTokens)
+    );
+
+    return Promise.all(tokenizationPromises);
+  } catch (error) {
+    console.error('Error batch tokenizing texts:', error);
+    throw new Error(`Failed to batch tokenize texts: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

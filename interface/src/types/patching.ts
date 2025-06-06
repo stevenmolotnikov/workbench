@@ -1,5 +1,6 @@
 import { Annotation, Completion, ChartMode } from "@/types/workspace";
-import { Smile, ChartArea, Grid3X3, Layers  } from "lucide-react";
+import { Grid3X3 } from "lucide-react";
+import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 
 // Token completion for patching - similar to lens TokenCompletion
 export interface PatchingTokenCompletion {
@@ -54,27 +55,9 @@ export interface Connection {
 
 export const ActivationPatchingModes: ChartMode[] = [
     {
-        name: "Attention Heads",
-        description: "Visualize attention patterns across transformer heads.",
-        icon: ChartArea,
-        component: () => null // TODO: Add actual component
-    },
-    {
-        name: "Transformer Blocks",
-        description: "Visualize transformer block activations.",
-        icon: Layers,
-        component: () => null // TODO: Add actual component
-    },
-    {
-        name: "MLP Outputs",
-        description: "Visualize MLP layer outputs.",
+        name: "Patching Heatmap",
+        description: "Visualize patching heatmap.",
         icon: Grid3X3,
-        component: () => null // TODO: Add actual component
-    },
-    {
-        name: "Attention Outputs",
-        description: "Visualize attention mechanism outputs.",
-        icon: Smile,
-        component: () => null // TODO: Add actual component
+        component: PatchingHeatmap
     },
 ]

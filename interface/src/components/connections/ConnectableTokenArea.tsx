@@ -1,140 +1,266 @@
-// "use client";
+"use client";
 
-// import { useRef } from "react";
+import { useRef, useState } from "react";
+import { Token } from "@/types/tokenizer";
+import { cn } from "@/lib/utils";
+import { useConnection } from "@/hooks/useConnection";
 
-// import { Token } from "@/types/tokenizer";
-// import { cn } from "@/lib/utils";
-// import { PatchingTokenCompletion } from "@/types/patching";
+interface ConnectableTokenAreaProps {
+    tokenData?: Token[] | null;
+    model?: string;
+    isConnecting?: boolean;
+    isFreezingTokens?: boolean;
+    isAblatingTokens?: boolean;
+    useConnections: ReturnType<typeof useConnection>;
+    counterId: number;
+    tokenizerLoading?: boolean;
+}
 
-// interface ConnectableTokenAreaProps {
-//     text: string | { role: string; content: string }[] | null;
-//     tokenData?: Token[] | null;
-//     model?: string;
-//     isConnecting?: boolean;
-//     connectionMouseDown?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
-//     connectionMouseUp?: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
-//     counterId: number;
-//     onTokenUnhighlight?: (tokenIndex: number, counterIndex: number) => void;
-//     isTokenizing?: boolean;
-//     tokenError?: string | null;
-//     onTokenSelection?: (indices: number[]) => void;
-//     filledTokens?: PatchingTokenCompletion[];
-// }
+// Token styling constants
+const TOKEN_STYLES = {
+    base: "text-sm whitespace-pre select-none !box-border relative",
+    highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
+    hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
+    transparent: "bg-transparent",
+} as const;
 
-// // Token styling constants
-// const TOKEN_STYLES = {
-//     base: "text-sm whitespace-pre border select-none",
-//     highlight: "bg-primary/50 border-primary/50",
-//     hover: "hover:bg-primary/30 hover:border-primary/30",
-//     transparent: "border-transparent",
-//     clickable: "cursor-pointer",
-// } as const;
+// Utility functions
+const fixToken = (token: string): { result: string; numNewlines: number } => {
+    const numNewlines = (token.match(/\n/g) || []).length;
 
-// // Utility functions
-// const fixToken = (token: string): string => 
-//     token
-//         .replace("Ġ", ' ')
-//         .replace("<0x0A>", '\\n')
-//         .replace("Ċ", '\\n')
-//         .replace(/\r\n/g, '\\r\\n')
-//         .replace(/\n/g, '\\n')
-//         .replace(/\r/g, '\\r')
-//         .replace(/\t/g, '\\t');
+    const result = token
+        .replace("Ġ", " ")
+        .replace("<0x0A>", "\\n")
+        .replace("Ċ", "\\n")
+        .replace(/\r\n/g, "\\r\\n")
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t");
 
-// const getTokenStyles = (
-//     isHighlighted: boolean, 
-//     isGroupStart: boolean, 
-//     isGroupEnd: boolean, 
-//     isConnecting: boolean,
-//     fixedText: string
-// ) => cn(
-//     TOKEN_STYLES.base,
-//     !isHighlighted && 'rounded',
-//     isHighlighted && isGroupStart && !isGroupEnd && 'rounded-l',
-//     isHighlighted && isGroupEnd && !isGroupStart && 'rounded-r',
-//     isHighlighted && isGroupStart && isGroupEnd && 'rounded',
-//     isHighlighted && !isGroupStart && !isGroupEnd && 'rounded-none',
-//     isHighlighted ? TOKEN_STYLES.highlight : TOKEN_STYLES.transparent,
-//     !isConnecting && TOKEN_STYLES.hover,
-//     isHighlighted && isConnecting && TOKEN_STYLES.clickable,
-//     fixedText === '\\n' ? 'w-full' : 'w-fit'
-// );
+    return { result, numNewlines };
+};
 
-// const renderStateMessage = (message: string, isError = false) => (
-//     <div className={cn("text-sm", isError ? "text-red-500" : "text-muted-foreground")}>
-//         {message}
-//     </div>
-// );
+export function ConnectableTokenArea({
+    tokenData,
+    isConnecting,
+    isFreezingTokens,
+    isAblatingTokens,
+    useConnections,
+    counterId,
+    tokenizerLoading,
+}: ConnectableTokenAreaProps) {
+    const { 
+        handleTokenMouseDown, 
+        handleTokenMouseUp, 
+        handleFreezeTokenClick,
+        handleAblateTokenClick,
+        removeConnection, 
+        isDragging,
+        frozenTokens,
+        ablatedTokens
+    } = useConnections;
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [highlightedTokens, setHighlightedTokens] = useState<number[]>([]);
+    const [isSelecting, setIsSelecting] = useState(false);
+    const [startToken, setStartToken] = useState<number | null>(null);
 
-// export function ConnectableTokenArea({ 
-//     text, 
-//     tokenData, 
-//     isConnecting, 
-//     connectionMouseDown, 
-//     connectionMouseUp, 
-//     counterId, 
-//     onTokenUnhighlight,
-//     isTokenizing = false,
-//     tokenError = null,
-//     onTokenSelection,
-//     filledTokens = []
-// }: ConnectableTokenAreaProps) {
-//     const containerRef = useRef<HTMLDivElement>(null);
+    // Token selection utilities
+    const getTokenIdFromEvent = (e: React.MouseEvent): number | null => {
+        const target = e.target as HTMLElement;
+        const tokenElement = target.closest("[data-token-id]");
+        if (tokenElement) {
+            return parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
+        }
+        return null;
+    };
 
-//     // Convert PatchingTokenCompletion to TokenCompletion format for useTokenSelection
-//     const convertedFilledTokens = filledTokens.map(token => ({
-//         ...token,
-//         target_id: -1,
-//         target_text: "",
-//     }));
+    const getGroupInformation = (i: number, tokenData: Token[]) => {
+        const isHighlighted = highlightedTokens.includes(i);
+        const isPrevHighlighted = i > 0 && highlightedTokens.includes(i - 1);
+        const isNextHighlighted = i < tokenData.length - 1 && highlightedTokens.includes(i + 1);
 
-//     const { handleMouseDown, handleMouseUp, handleMouseMove, getGroupInformation } = useTokenSelection({
-//         counterId,
-//         onTokenUnhighlight: onTokenUnhighlight || (() => {}),
-//         filledTokens: convertedFilledTokens,
-//         onTokenSelection
-//     });
+        const isGroupStart = isHighlighted && !isPrevHighlighted;
+        const isGroupEnd = isHighlighted && !isNextHighlighted;
 
-//     const mouseDownHandler = (e: React.MouseEvent<HTMLDivElement>) => {
-//         if (isConnecting) {
-//             connectionMouseDown?.(e, counterId);
-//         } else {
-//             handleMouseDown(e);
-//         }
-//     };
+        let groupId = -1;
+        if (isHighlighted) {
+            if (isGroupStart) {
+                groupId = i;
+            } else {
+                let groupStart = i;
+                while (groupStart > 0 && highlightedTokens.includes(groupStart - 1)) {
+                    groupStart--;
+                }
+                groupId = groupStart;
+            }
+        }
 
-//     // Early returns for different states
-//     if (isTokenizing) return renderStateMessage("Tokenizing...");
-//     if (tokenError) return renderStateMessage(tokenError, true);
-//     if (!tokenData || tokenData.length === 0) {
-//         return renderStateMessage("Click tokenize button to view tokens.");
-//     }
+        return { isHighlighted, groupId, isGroupStart, isGroupEnd };
+    };
 
-//     return (
-//         <div
-//             className="max-h-40 overflow-y-auto custom-scrollbar select-none flex flex-wrap"
-//             ref={containerRef}
-//             onMouseDown={mouseDownHandler}
-//             onMouseUp={isConnecting ? (e) => connectionMouseUp?.(e, counterId) : handleMouseUp}
-//             onMouseMove={isConnecting ? undefined : handleMouseMove}
-//             onMouseLeave={isConnecting ? undefined : handleMouseUp}
-//         >
-//             {tokenData.map((token, i) => {
-//                 const fixedText = fixToken(token.text);
-//                 const { isHighlighted, groupId, isGroupStart, isGroupEnd } = getGroupInformation(i, tokenData);
-                
-//                 return (
-//                     <div
-//                         key={`token-${i}`}
-//                         data-token-id={i}
-//                         data-group-id={groupId}
-//                         className={getTokenStyles(isHighlighted, isGroupStart, isGroupEnd, !!isConnecting, fixedText)}
-//                     >
-//                         {fixedText}
-//                     </div>
-//                 );
-//             })}
-//         </div>
-//     );
-// }
+    const getTokenStyles = (
+        token: Token,
+        isHighlighted: boolean,
+        isGroupStart: boolean,
+        isGroupEnd: boolean,
+        tokenIndex: number
+    ) => {
+        const { result: fixedText } = fixToken(token.text);
 
+        // Check if token is frozen or ablated
+        const isFrozen = frozenTokens.some(t => t.tokenId === tokenIndex && t.counterId === counterId);
+        const isAblated = ablatedTokens.some(t => t.tokenId === tokenIndex && t.counterId === counterId);
+
+        // Determine background and border based on highlighted state
+        let backgroundStyle: string;
+        if (isAblated) {
+            backgroundStyle = "bg-red-500/30 after:absolute after:inset-0 after:border after:border-red-500/30";
+        } else if (isHighlighted) {
+            backgroundStyle = TOKEN_STYLES.highlight;
+        } else {
+            backgroundStyle = TOKEN_STYLES.transparent;
+        }
+
+        // Determine border radius based on grouping
+        let borderRadius = "";
+        if (isHighlighted || isAblated) {
+            if (isGroupStart && isGroupEnd) borderRadius = "rounded after:rounded";
+            else if (isGroupStart) borderRadius = "rounded-l after:rounded-l";
+            else if (isGroupEnd) borderRadius = "rounded-r after:rounded-r";
+            else borderRadius = "rounded-none after:rounded-none";
+        } else {
+            borderRadius = "rounded after:rounded";
+        }
+
+        const interactionStyles = !isConnecting && !isFreezingTokens && !isAblatingTokens ? TOKEN_STYLES.hover : "";
+        const cursorStyle = (isConnecting || isFreezingTokens || isAblatingTokens) && (isHighlighted || isAblated || isFrozen) ? "cursor-pointer" : "";
+
+        return cn(
+            TOKEN_STYLES.base,
+            borderRadius,
+            backgroundStyle,
+            interactionStyles,
+            cursorStyle,
+            fixedText === "\\n" ? "w-full" : "w-fit"
+        );
+    };
+
+    // Mouse event handlers
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.button !== 0) return;
+
+        if (isFreezingTokens) {
+            handleFreezeTokenClick(e, counterId);
+            return;
+        }
+
+        if (isAblatingTokens) {
+            handleAblateTokenClick(e, counterId);
+            return;
+        }
+
+        if (isConnecting) {
+            handleTokenMouseDown(e, counterId);
+            return;
+        }
+
+        setIsSelecting(true);
+        const tokenId = getTokenIdFromEvent(e);
+
+        if (tokenId !== null) {
+            if (highlightedTokens.includes(tokenId)) {
+                const newHighlighted = highlightedTokens.filter((id) => id !== tokenId);
+                setHighlightedTokens(newHighlighted);
+                removeConnection(tokenId, counterId);
+            } else {
+                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                    setStartToken(tokenId);
+                    const newHighlighted = [...highlightedTokens, tokenId];
+                    setHighlightedTokens(newHighlighted);
+                } else {
+                    setStartToken(tokenId);
+                    setHighlightedTokens([tokenId]);
+                }
+            }
+        }
+    };
+
+    const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isConnecting) {
+            handleTokenMouseUp(e, counterId);
+            return;
+        }
+
+        setIsSelecting(false);
+        setStartToken(null);
+    };
+
+    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Don't end drag operation when mouse leaves during connection dragging
+        if (isConnecting && isDragging) {
+            return;
+        }
+        
+        // For normal token selection, end the selection
+        handleMouseUp(e);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isConnecting || !isSelecting || startToken === null) return;
+
+        const currentToken = getTokenIdFromEvent(e);
+        if (currentToken === null) return;
+
+        const start = Math.min(startToken, currentToken);
+        const end = Math.max(startToken, currentToken);
+        const newHighlightedTokens = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            const combined = [...highlightedTokens, ...newHighlightedTokens];
+            const unique = [...new Set(combined)];
+            setHighlightedTokens(unique);
+        } else {
+            setHighlightedTokens(newHighlightedTokens);
+        }
+    };
+
+    // Early returns for different states
+    if (tokenizerLoading) return <div>Tokenizing...</div>;
+    if (!tokenData || tokenData.length === 0) {
+        return <div>Click tokenize button to view tokens.</div>;
+    }
+
+    return (
+        <div
+            className="max-h-40 overflow-y-auto custom-scrollbar select-none whitespace-pre-wrap"
+            style={{ display: "inline" }}
+            ref={containerRef}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+        >
+            {tokenData.map((token, i) => {
+                const { isHighlighted, groupId, isGroupStart, isGroupEnd } = getGroupInformation(
+                    i,
+                    tokenData
+                );
+                const styles = getTokenStyles(token, isHighlighted, isGroupStart, isGroupEnd, i);
+                const { result, numNewlines } = fixToken(token.text);
+
+                return (
+                    <span key={`token-${i}`}>
+                        <span
+                            data-token-id={i}
+                            data-group-id={groupId}
+                            className={styles}
+                        >
+                            {result}
+                        </span>
+                        {numNewlines > 0 && "\n".repeat(numNewlines)}
+                    </span>
+                );
+            })}
+        </div>
+    );
+}

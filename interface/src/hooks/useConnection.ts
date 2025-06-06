@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Connection } from '@/types/patching';
+import { usePatchingCompletions } from '@/stores/usePatchingCompletions';
 
 interface UseConnectionReturn {
     connections: Connection[];
@@ -7,8 +8,12 @@ interface UseConnectionReturn {
     currentConnection: Partial<Connection>;
     selectedEdgeIndex: number | null;
     svgRef: React.RefObject<SVGSVGElement>;
-    handleBoxMouseDown: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
-    handleBoxMouseUp: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    frozenTokens: { tokenId: number; counterId: number }[];
+    ablatedTokens: { tokenId: number; counterId: number }[];
+    handleTokenMouseDown: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    handleTokenMouseUp: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    handleFreezeTokenClick: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
+    handleAblateTokenClick: (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => void;
     handleEdgeSelect: (index: number) => void;
     handleBackgroundClick: () => void;
     removeConnection: (tokenIndex: number, counterIndex: number) => void;
@@ -17,7 +22,7 @@ interface UseConnectionReturn {
 
 // Utility functions
 const isHighlighted = (tokenElement: HTMLElement) => 
-    tokenElement.classList.contains('bg-primary/50');
+    tokenElement.classList.contains('bg-primary/30');
 
 const getGroupTokenIndices = (groupId: number): number[] => {
     const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
@@ -54,19 +59,23 @@ const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement): numbe
 };
 
 export function useConnection(): UseConnectionReturn {
-    const [connections, setConnections] = useState<Connection[]>([]);
+    const { 
+        connections, 
+        addConnection, 
+        removeConnection, 
+        removeConnectionByIndex, 
+        clearConnections,
+        frozenTokens,
+        ablatedTokens,
+        addFrozenToken,
+        removeFrozenToken,
+        addAblatedToken,
+        removeAblatedToken
+    } = usePatchingCompletions();
     const [isDragging, setIsDragging] = useState(false);
     const [currentConnection, setCurrentConnection] = useState<Partial<Connection>>({});
     const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
-
-    const clearConnections = () => setConnections([]);
-
-    const removeConnection = (tokenIndex: number, counterIndex: number) => {
-        setConnections(prev => prev.filter(conn => 
-            !conn.start.tokenIndices.includes(tokenIndex) && conn.start.counterIndex !== counterIndex
-        ));
-    };
 
     const checkIfAlreadyConnected = useCallback((tokenIndices: number[]) => 
         connections.some(conn => 
@@ -92,7 +101,7 @@ export function useConnection(): UseConnectionReturn {
         return { x: x - svgRect.left, y };
     };
 
-    const handleBoxMouseDown = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
+    const handleTokenMouseDown = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         const target = e.target as HTMLElement;
         const tokenElement = target.closest('[data-token-id]') as HTMLElement;
         if (!tokenElement || !isHighlighted(tokenElement)) return;
@@ -109,7 +118,7 @@ export function useConnection(): UseConnectionReturn {
         });
     };
 
-    const handleBoxMouseUp = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
+    const handleTokenMouseUp = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
         if (!isDragging || !currentConnection.start) {
             setIsDragging(false);
             setCurrentConnection({});
@@ -136,10 +145,10 @@ export function useConnection(): UseConnectionReturn {
         const position = calculatePosition(tokenElement, groupId, false);
         if (position) {
             const endPoint = { ...position, tokenIndices, counterIndex };
-            setConnections(prev => [...prev, {
+            addConnection({
                 start: currentConnection.start,
                 end: endPoint
-            } as Connection]);
+            } as Connection);
         }
 
         setIsDragging(false);
@@ -161,20 +170,27 @@ export function useConnection(): UseConnectionReturn {
         }));
     }, [isDragging]);
 
-    // Effects
+    // Change cursor while dragging
     useEffect(() => {
         document.body.style.cursor = isDragging ? 'pointer' : 'default';
         return () => { document.body.style.cursor = 'default'; };
     }, [isDragging]);
 
+    // Handle keyboard events for connection deletion
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Backspace' && selectedEdgeIndex !== null) {
-                setConnections(prev => prev.filter((_, i) => i !== selectedEdgeIndex));
+                removeConnectionByIndex(selectedEdgeIndex);
                 setSelectedEdgeIndex(null);
             }
         };
 
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedEdgeIndex, removeConnectionByIndex]);
+
+    // Handle window mouse up for connection cancellation
+    useEffect(() => {
         const handleWindowMouseUp = (e: MouseEvent) => {
             if (!isDragging) return;
             
@@ -187,19 +203,52 @@ export function useConnection(): UseConnectionReturn {
             }
         };
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('mouseup', handleWindowMouseUp);
+        return () => window.removeEventListener('mouseup', handleWindowMouseUp);
+    }, [isDragging]);
 
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('mouseup', handleWindowMouseUp);
-        };
-    }, [isDragging, selectedEdgeIndex, handleMouseMove]);
+    // Handle mouse movement during dragging
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [handleMouseMove]);
 
     const handleEdgeSelect = (index: number) => setSelectedEdgeIndex(index);
     const handleBackgroundClick = () => setSelectedEdgeIndex(null);
+
+    const handleFreezeTokenClick = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
+        const target = e.target as HTMLElement;
+        const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+        if (!tokenElement) return;
+
+        const tokenId = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
+        if (tokenId === -1) return;
+
+        // Check if already frozen and toggle
+        const isAlreadyFrozen = frozenTokens.some(t => t.tokenId === tokenId && t.counterId === counterIndex);
+        if (isAlreadyFrozen) {
+            removeFrozenToken(tokenId, counterIndex);
+        } else {
+            addFrozenToken(tokenId, counterIndex);
+        }
+    };
+
+    const handleAblateTokenClick = (e: React.MouseEvent<HTMLDivElement>, counterIndex: number) => {
+        const target = e.target as HTMLElement;
+        const tokenElement = target.closest('[data-token-id]') as HTMLElement;
+        if (!tokenElement) return;
+
+        const tokenId = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
+        if (tokenId === -1) return;
+
+        // Check if already ablated and toggle
+        const isAlreadyAblated = ablatedTokens.some(t => t.tokenId === tokenId && t.counterId === counterIndex);
+        if (isAlreadyAblated) {
+            removeAblatedToken(tokenId, counterIndex);
+        } else {
+            addAblatedToken(tokenId, counterIndex);
+        }
+    };
 
     return {
         connections,
@@ -207,8 +256,12 @@ export function useConnection(): UseConnectionReturn {
         currentConnection,
         selectedEdgeIndex,
         svgRef,
-        handleBoxMouseDown,
-        handleBoxMouseUp,
+        frozenTokens,
+        ablatedTokens,
+        handleTokenMouseDown,
+        handleTokenMouseUp,
+        handleFreezeTokenClick,
+        handleAblateTokenClick,
         handleEdgeSelect,
         handleBackgroundClick,
         removeConnection,

@@ -7,27 +7,10 @@ import { ChartSelector } from "@/components/charts/ChartSelector";
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 import { TutorialsSidebar } from "./TutorialsSidebar";
-import { ActivationPatchingModes, PatchingCompletion } from "@/types/patching";
-import { useConnection } from "@/hooks/useConnection";
-
+import { ActivationPatchingModes } from "@/types/patching";
 
 export function ActivationPatching() {
-    const [annotationsOpen, setAnnotationsOpen] = useState(false);
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
-    const connectionsHook = useConnection();
-
-    const makeDefaultCompletion = (name: string): PatchingCompletion => ({
-        id: name,
-        prompt: "",
-        tokens: [],
-    });
-
-    const [source, setSource] = useState<PatchingCompletion>(makeDefaultCompletion("source"));
-    const [destination, setDestination] = useState<PatchingCompletion>(makeDefaultCompletion("destination"));
-
-    const toggleAnnotations = useCallback(() => {
-        setAnnotationsOpen(!annotationsOpen);
-    }, [annotationsOpen]);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -55,22 +38,10 @@ export function ActivationPatching() {
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <WorkbenchMenu
-                    toggleAnnotations={toggleAnnotations}
-                    toggleTutorials={toggleTutorials}
-                />
+                <WorkbenchMenu tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
 
                 <ResizableLayout
-                    annotationsOpen={annotationsOpen}
-                    workbench={
-                        <PatchingWorkbench
-                            connectionsHook={connectionsHook}
-                            source={source}
-                            destination={destination}
-                            setSource={setSource}
-                            setDestination={setDestination}
-                        />
-                    }
+                    workbench={<PatchingWorkbench />}
                     charts={<ChartSelector modes={ActivationPatchingModes} />}
                 />
             </div>

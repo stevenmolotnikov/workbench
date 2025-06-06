@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
-import { tokenizeText, decodeTokenIds } from "@/components/prompt-builders/tokenize";
+import { tokenizeText, decodeTokenIds } from "@/actions/tokenize";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import { useLensCompletions } from "@/stores/useLensCompletions";
