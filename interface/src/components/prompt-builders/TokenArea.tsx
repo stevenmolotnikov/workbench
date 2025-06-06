@@ -115,7 +115,7 @@ export function TokenArea({
 
     const renderEmptyState = () => (
         <span className="text-sm text-muted-foreground">
-            Tokenize to view tokens.
+            Tokenizing...
         </span>
     );
 
@@ -182,6 +182,10 @@ export function TokenArea({
             </div>
         );
     };
+
+    if (!tokenData || tokenData.length === 0) {
+        return renderEmptyState();
+    }
 
     return renderTokens();
 }

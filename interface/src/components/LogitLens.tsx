@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
-import { LogitLensWorkspace, LogitLensModes } from "@/types/lens";
+import { LogitLensModes } from "@/types/lens";
 import { WorkbenchMenu } from "./WorkbenchMenu";
 
 import { ChartSelector } from "@/components/charts/ChartSelector";

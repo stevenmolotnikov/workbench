@@ -33,6 +33,7 @@ const TokenDisplay = ({
     const [decodedTokens, setDecodedTokens] = useState<string[]>([]);
     const [tokenBadges, setTokenBadges] = useState<TokenBadge[]>([]);
     const [notificationMessage, setNotificationMessage] = useState<string>("");
+    const [selectedPredictionId, setSelectedPredictionId] = useState<number | null>(null);
     const { modelName } = useSelectedModel();
 
     // Decode token IDs when predictions change
@@ -45,7 +46,7 @@ const TokenDisplay = ({
 
             try {
                 // Only decode the first 3 tokens
-                const topTokenIds = predictions[selectedIdx].ids.slice(0, 3);
+                const topTokenIds = predictions[selectedIdx].ids.slice(0, 5);
                 const decoded = await decodeTokenIds(topTokenIds, modelName);
                 setDecodedTokens(decoded);
             } catch (error) {
@@ -96,18 +97,12 @@ const TokenDisplay = ({
                     setTargetToken("");
                     return;
                 } else {
+                    // Clear any existing user badges (only one target token)
+                    setTokenBadges([]);
+                    
+                    // Mark this prediction as selected (don't add duplicate badge)
+                    setSelectedPredictionId(tokenId);
                     setNotificationMessage("");
-                }
-
-                // Add to badges if not already present
-                const existingBadge = tokenBadges.find((badge) => badge.id === tokenId);
-                if (!existingBadge) {
-                    const newBadge: TokenBadge = {
-                        text: tokens[0].text,
-                        probability,
-                        id: tokenId,
-                    };
-                    setTokenBadges((prev) => [...prev, newBadge]);
                 }
 
                 // Update the token in the completion
@@ -128,6 +123,20 @@ const TokenDisplay = ({
 
     const removeBadge = (badgeId: number) => {
         setTokenBadges((prev) => prev.filter((badge) => badge.id !== badgeId));
+        // Also clear selection if this was the selected prediction token
+        if (selectedPredictionId === badgeId) {
+            setSelectedPredictionId(null);
+        }
+    };
+
+    const togglePredictionSelection = (tokenId: number) => {
+        if (selectedPredictionId === tokenId) {
+            // Deselect if already selected
+            setSelectedPredictionId(null);
+        } else {
+            // Select this token
+            setSelectedPredictionId(tokenId);
+        }
     };
 
     // Create prediction badges from top predictions
@@ -155,19 +164,26 @@ const TokenDisplay = ({
 
             {/* All badges displayed inline */}
             <div className="flex flex-wrap gap-2 items-center">
-                {allBadges.map((badge, index) => (
-                    <div
-                        key={`${badge.id}-${badge.isPrediction ? "pred" : "user"}`}
-                        className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors"
-                        onClick={badge.isPrediction ? undefined : () => removeBadge(badge.id)}
-                        title={badge.isPrediction ? "Top prediction" : "Click to remove"}
-                    >
-                        <span className="font-medium">{fixString(badge.text)}</span>
-                        <span className="ml-1 text-xs opacity-70">
-                            {badge.probability.toFixed(4)}
-                        </span>
-                    </div>
-                ))}
+                {allBadges.map((badge, index) => {
+                    const isSelected = selectedPredictionId === badge.id;
+                    const shouldHighlight = !badge.isPrediction || isSelected;
+                    
+                    return (
+                        <div
+                            key={`${badge.id}-${badge.isPrediction ? "pred" : "user"}`}
+                            className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors ${
+                                shouldHighlight ? "border border-primary" : "border border-transparent"
+                            }`}
+                            onClick={badge.isPrediction ? () => togglePredictionSelection(badge.id) : () => removeBadge(badge.id)}
+                            title={badge.isPrediction ? (isSelected ? "Click to deselect" : "Click to select") : "Click to remove"}
+                        >
+                            <span className="font-medium">{fixString(badge.text)}</span>
+                            <span className="ml-1 text-xs opacity-70">
+                                {badge.probability.toFixed(4)}
+                            </span>
+                        </div>
+                    );
+                })}
                 {tempTokenText.length > 1 && (
                     <div className="text-xs text-red-500 bg-red-500/10 border border-red-200 px-2 py-1 rounded">
                         Multi-token input: {tempTokenText.join(" + ")} ({tempTokenText.length}{" "}

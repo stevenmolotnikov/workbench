@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 
 function Account() {
     const [session, setSession] = useState<Session | null>(null);
@@ -36,10 +38,10 @@ function Account() {
     }, []);
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div className="text-center">Loading...</div>;
     }
 
-    return <div>Hello {JSON.stringify(session)}</div>;
+    return <div className="text-xl font-semibold">Hello {session?.user.user_metadata.name || "there"}!</div>;
 }
 
 export default function HomePage() {
@@ -50,9 +52,21 @@ export default function HomePage() {
     }
 
     return (
-        <div>
-            <Account />
-            <Button onClick={logOut}>Log Out</Button>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+            <Card className="w-full max-w-md mx-auto flex flex-col items-center">
+                <CardHeader className="flex flex-col items-center">
+                    <CardTitle className="text-2xl mb-2">Welcome!</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-4">
+                    <Account />
+                </CardContent>
+                <CardFooter className="flex flex-col gap-2 w-full">
+                    <Button onClick={logOut} variant="outline" className="w-full">Log Out</Button>
+                    <Link href="/workbench/lens" className="w-full">
+                        <Button className="w-full">Workbench</Button>
+                    </Link>
+                </CardFooter>
+            </Card>
         </div>
     );
 }

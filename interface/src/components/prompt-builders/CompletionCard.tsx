@@ -33,6 +33,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     // Tokenization state
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
+    const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
@@ -72,6 +73,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         }
 
         try {
+            setTokenizerLoading(true);
             const tokens = await tokenizeText(compl.prompt, modelName);
             setTokenData(tokens);
             setLastTokenizedText(compl.prompt);
@@ -79,6 +81,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             console.error("Error tokenizing text:", err);
         } finally {
             handleClick("#tokenize-button");
+            setTokenizerLoading(false);
         }
     };
 
@@ -254,7 +257,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                         placeholder="Enter your prompt here."
                         id="completion-text"
                     />
-                    {tokenData && (
+                    {(tokenData || tokenizerLoading) && (
                         <div
                             className={cn(
                                 "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded",
