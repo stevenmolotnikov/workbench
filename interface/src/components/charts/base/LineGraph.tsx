@@ -5,7 +5,7 @@ import { ChartContainer } from "@/components/ui/chart";
 import { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface DataPoint {
     layer: number;
@@ -21,7 +21,6 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
     const {
         addPendingAnnotation,
         emphasizedAnnotation,
-        setAnnotations,
         annotations,
         pendingAnnotation,
     } = useAnnotations();
@@ -35,7 +34,7 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
         return <div>No data to display.</div>;
     }
 
-    const { chartData, chartConfig, maxLayer } = data;
+    const { chartData, chartConfig, maxLayer, lineData } = data;
 
     const handleDotClick = (lineId: string, layer: number) => {
         addPendingAnnotation({
@@ -86,13 +85,14 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
         lineId: string
     ): Array<{ start: number; end: number; isTemporary?: boolean }> => {
         const highlights: Array<{ start: number; end: number; isTemporary?: boolean }> = [];
+        const lineMaxLayer = lineData[lineId] || maxLayer; // Use per-line max layer
 
         // Add highlights from confirmed annotations (convert layer numbers to percentages)
         annotations.forEach((annotation) => {
             if (annotation.type === "lineGraphRange" && annotation.data.lineId === lineId) {
                 highlights.push({
-                    start: (annotation.data.start / maxLayer) * 100,
-                    end: (annotation.data.end / maxLayer) * 100,
+                    start: (annotation.data.start / lineMaxLayer) * 100,
+                    end: (annotation.data.end / lineMaxLayer) * 100,
                 });
             }
         });
@@ -103,16 +103,16 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
             pendingAnnotation?.data.lineId === lineId
         ) {
             highlights.push({
-                start: (pendingAnnotation.data.start / maxLayer) * 100,
-                end: (pendingAnnotation.data.end / maxLayer) * 100,
+                start: (pendingAnnotation.data.start / lineMaxLayer) * 100,
+                end: (pendingAnnotation.data.end / lineMaxLayer) * 100,
             });
         }
 
         // Add temporary highlight during dragging (convert layer numbers to percentages)
         if (highlightedLine === lineId && refAreaLeft && refAreaRight) {
             highlights.push({
-                start: (Number(refAreaLeft) / maxLayer) * 100,
-                end: (Number(refAreaRight) / maxLayer) * 100,
+                start: (Number(refAreaLeft) / lineMaxLayer) * 100,
+                end: (Number(refAreaRight) / lineMaxLayer) * 100,
                 isTemporary: true,
             });
         }
@@ -209,9 +209,10 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
     };
 
     const rangeIsEmphasized = (lineId: string, start: number, end: number) => {
-        // Convert percentage back to layer numbers for comparison
-        const startLayer = Math.round((start / 100) * maxLayer);
-        const endLayer = Math.round((end / 100) * maxLayer);
+        // Convert percentage back to layer numbers for comparison using per-line max layer
+        const lineMaxLayer = lineData[lineId] || maxLayer;
+        const startLayer = Math.round((start / 100) * lineMaxLayer);
+        const endLayer = Math.round((end / 100) * lineMaxLayer);
 
         const value =
             emphasizedAnnotation?.type === "lineGraphRange" &&
@@ -354,8 +355,8 @@ export function LineGraph({ chartIndex, data }: LineGraphProps) {
                             type="linear"
                             stroke={`url(#${fixId(seriesKey)})`}
                             strokeWidth={highlightedLine === seriesKey ? 4 : 2}
-                            dot={(payload) => renderDot(seriesKey, payload)}
-                            activeDot={(payload) => activeDot(seriesKey, payload)}
+                            dot={(payload: unknown) => renderDot(seriesKey, payload)}
+                            activeDot={(payload: unknown) => activeDot(seriesKey, payload)}
                             connectNulls={true}
                         />
                     ))}

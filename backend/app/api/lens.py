@@ -162,8 +162,6 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
 
     results = postprocess(results)
 
-    print(results)
-
     return LensResponse(
         **{"data": results, "metadata": {"maxLayer": len(results) - 1}}
     )

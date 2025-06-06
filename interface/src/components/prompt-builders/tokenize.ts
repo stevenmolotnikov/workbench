@@ -26,7 +26,8 @@ export async function isTokenizerCached(modelName: string): Promise<boolean> {
 
 export async function tokenizeText(
   text: string | { role: string; content: string }[] | null,
-  modelName: string
+  modelName: string,
+  addSpecialTokens: boolean = true
 ): Promise<Token[] | null> {
   try {
     if (!modelName) {
@@ -40,6 +41,8 @@ export async function tokenizeText(
     // Get cached tokenizer or load if not cached
     const tokenizer = await getTokenizer(modelName);
 
+    console.log(modelName)
+
     let textToTokenize: string | null = null;
     
     if (Array.isArray(text)) {
@@ -51,7 +54,7 @@ export async function tokenizeText(
     }
 
     if (textToTokenize && textToTokenize.trim()) {
-      const token_ids = await tokenizer.encode(textToTokenize, { add_special_tokens: false });
+      const token_ids = await tokenizer.encode(textToTokenize, { add_special_tokens: addSpecialTokens });
       const tokens = token_ids.map((id) => tokenizer.decode([id]));
 
       return tokens.map((token: string, index: number) => ({

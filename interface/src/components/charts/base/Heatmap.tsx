@@ -328,6 +328,32 @@ export function Heatmap({
     // Create gradient for continuous color bar
     const gradientId = `heatmap-gradient-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Calculate Y-axis label skipping
+    const calculateYLabelSkip = (): number => {
+        if (yTickLabels.length === 0) return 1;
+        
+        // Minimum spacing between labels in pixels (including font size)
+        const minLabelSpacing = fontSize * 1.5;
+        
+        // Available space per label based on cell height
+        const spacePerLabel = cellHeight;
+        
+        // If we have enough space, show all labels
+        if (spacePerLabel >= minLabelSpacing) {
+            return 1;
+        }
+        
+        // Calculate how many labels we need to skip to maintain minimum spacing
+        const skipRatio = Math.ceil(minLabelSpacing / spacePerLabel);
+        
+        // Ensure we don't skip too many (always show at least a few labels)
+        const maxSkip = Math.max(1, Math.floor(yTickLabels.length / 5));
+        
+        return Math.min(skipRatio, maxSkip);
+    };
+
+    const yLabelSkip = calculateYLabelSkip();
+
     return (
         <div ref={containerRef} className="relative w-full h-full">
             <svg
@@ -500,19 +526,24 @@ export function Heatmap({
                 {/* Y-axis tick labels */}
                 {yTickLabels.length > 0 && !shouldHideColorbar && (
                     <g transform={`translate(${chartStartX - 10}, ${chartStartY})`}>
-                        {yTickLabels.map((label, index) => (
-                            <text
-                                key={index}
-                                x={0}
-                                y={index * cellHeight + cellHeight / 2}
-                                textAnchor="end"
-                                dominantBaseline="middle"
-                                className="fill-muted-foreground"
-                                fontSize={fontSize}
-                            >
-                                {label}
-                            </text>
-                        ))}
+                        {yTickLabels.map((label, index) => {
+                            // Skip labels based on calculated skip ratio
+                            if (index % yLabelSkip !== 0) return null;
+                            
+                            return (
+                                <text
+                                    key={index}
+                                    x={0}
+                                    y={index * cellHeight + cellHeight / 2}
+                                    textAnchor="end"
+                                    dominantBaseline="middle"
+                                    className="fill-muted-foreground"
+                                    fontSize={fontSize}
+                                >
+                                    {label}
+                                </text>
+                            );
+                        })}
                     </g>
                 )}
 

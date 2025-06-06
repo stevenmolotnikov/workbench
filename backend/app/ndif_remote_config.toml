@@ -5,7 +5,7 @@
 # model.lm_head
 
 remote = true
-next_public_base_url = "http://localhost:3000"
+next_public_base_url = "https://interp-workbench.vercel.app"
 callback_url = "/api/status-update"
 
 [models]

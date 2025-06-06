@@ -18,8 +18,13 @@ interface ChartConfig {
     [key: string]: { label: string; color: string };
 }
 
+export interface LineData {
+    [key: string]: number;
+}
+
 export interface LineGraphData {
     chartData: ChartDataPoint[];
     chartConfig: ChartConfig;
     maxLayer: number;
+    lineData: LineData;
 }

@@ -28,6 +28,8 @@ export function LensLineGraph({ index }: { index: number }) {
 
         try {
             const {activeCompletions} = useLensCompletions.getState();
+
+            console.log(JSON.stringify(activeCompletions, null, 2))
             const response = await fetch("/api/lens-line", {
                 method: "POST",
                 headers: {

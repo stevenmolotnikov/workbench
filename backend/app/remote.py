@@ -13,7 +13,7 @@ image = (
     modal.Image.debian_slim()
     .apt_install("git") # Required for building nnsight from source
     .pip_install(*dependencies)
-    .add_local_file("app/ndif_config.toml", remote_path="/root/app/config.toml")
+    .add_local_file("app/ndif_remote_config.toml", remote_path="/root/app/config.toml")
 )
 
 @app.function(

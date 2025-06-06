@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { tokenizeText } from "@/components/prompt-builders/tokenize";
 import { Token } from "@/types/tokenizer";
-import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
@@ -37,7 +36,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
-    const { modelName } = useSelectedModel();
     const { handleUpdateCompletion, handleDeleteCompletion } = useLensCompletions();
 
     // Helper functions
@@ -46,7 +44,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     };
 
     const textHasChanged = compl.prompt !== lastTokenizedText;
-    const shouldEnableTokenize = modelName && compl.prompt && (!tokenData || textHasChanged);
+    const shouldEnableTokenize = compl.prompt && (!tokenData || textHasChanged);
 
     const removeToken = (idxs: number[]) => {
         handleUpdateCompletion(compl.id, {
@@ -57,11 +55,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     const tokenSelection = useTokenSelection({ compl, removeToken });
 
     const handleTokenize = async () => {
-        if (!modelName) {
-            console.error("No model selected");
-            return;
-        }
-
         if (!compl.prompt) {
             setTokenData(null);
             setLastTokenizedText(null);
@@ -74,7 +67,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
         try {
             setTokenizerLoading(true);
-            const tokens = await tokenizeText(compl.prompt, modelName);
+            const tokens = await tokenizeText(compl.prompt, compl.model);
             setTokenData(tokens);
             setLastTokenizedText(compl.prompt);
         } catch (err) {
@@ -172,12 +165,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     useEffect(() => {
         const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
 
-        if (hasTargetCompletions && compl.prompt && modelName && !tokenData) {
+        if (hasTargetCompletions && compl.prompt && !tokenData) {
             handleTokenize().then(() => {
                 handlePredictions();
             });
         }
-    }, [compl.tokens, compl.prompt, modelName]);
+    }, [compl.tokens, compl.prompt]);
 
     const emphasizedCompletions = useLensCompletions((state) => state.emphasizedCompletions);
 

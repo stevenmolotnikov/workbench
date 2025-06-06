@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { TokenPredictions } from "@/types/workspace";
 import { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
-import { useSelectedModel } from "@/hooks/useSelectedModel";
 import { tokenizeText, decodeTokenIds } from "@/components/prompt-builders/tokenize";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
@@ -34,12 +33,11 @@ const TokenDisplay = ({
     const [tokenBadges, setTokenBadges] = useState<TokenBadge[]>([]);
     const [notificationMessage, setNotificationMessage] = useState<string>("");
     const [selectedPredictionId, setSelectedPredictionId] = useState<number | null>(null);
-    const { modelName } = useSelectedModel();
 
     // Decode token IDs when predictions change
     useEffect(() => {
         const decodeTokens = async () => {
-            if (!modelName || !predictions[selectedIdx]?.ids) {
+            if (!predictions[selectedIdx]?.ids) {
                 setDecodedTokens([]);
                 return;
             }
@@ -47,7 +45,7 @@ const TokenDisplay = ({
             try {
                 // Only decode the first 3 tokens
                 const topTokenIds = predictions[selectedIdx].ids.slice(0, 5);
-                const decoded = await decodeTokenIds(topTokenIds, modelName);
+                const decoded = await decodeTokenIds(topTokenIds, compl.model);
                 setDecodedTokens(decoded);
             } catch (error) {
                 console.error("Error decoding tokens:", error);
@@ -56,7 +54,7 @@ const TokenDisplay = ({
         };
 
         decodeTokens();
-    }, [predictions, selectedIdx, modelName]);
+    }, [predictions, selectedIdx]);
 
     const fixString = (str: string | undefined) => {
         if (!str) return "";
@@ -70,13 +68,8 @@ const TokenDisplay = ({
     };
 
     const handleTokenSubmit = async (text: string) => {
-        if (!modelName) {
-            console.error("No model selected");
-            return;
-        }
-
         try {
-            const tokens = await tokenizeText(text, modelName);
+            const tokens = await tokenizeText(text, compl.model, false);
             if (!tokens || tokens.length === 0) return;
 
             // Only process if there's a single token
@@ -221,8 +214,6 @@ interface PredictionDisplayProps {
 }
 
 export const PredictionDisplay = ({ predictions, compl, selectedIdx }: PredictionDisplayProps) => {
-    const { modelName } = useSelectedModel();
-
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
     const updateToken = (idx: number, targetId: number, targetText: string) => {
@@ -247,13 +238,8 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
     };
 
     const handleTargetTokenUpdate = async (text: string) => {
-        if (!modelName) {
-            console.error("No model selected");
-            return;
-        }
-
         try {
-            const tokens = await tokenizeText(text, modelName);
+            const tokens = await tokenizeText(text, compl.model, false);
             if (!tokens || tokens.length === 0) return;
 
             // Only update if there's a single token

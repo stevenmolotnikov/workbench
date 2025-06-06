@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensCompletions } from "@/stores/useLensCompletions";
-import { useSelectedModel } from "@/hooks/useSelectedModel";
+import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";

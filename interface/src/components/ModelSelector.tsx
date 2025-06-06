@@ -11,14 +11,26 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils";
 import { useModels } from "@/hooks/useModels";
-import { useSelectedModel } from "@/hooks/useSelectedModel";
+import { useSelectedModel } from "@/stores/useSelectedModel";
+import { useEffect } from "react";
 
 export function ModelSelector() {
     const { baseModels, chatModels, isLoading } = useModels();
-    const { modelName, handleModelChange } = useSelectedModel();
+    const { modelName, handleModelChange, initializeDefaultModel } = useSelectedModel();
+
+    // Initialize default model when models are loaded
+    useEffect(() => {
+        if (!isLoading) {
+            initializeDefaultModel(baseModels, chatModels);
+        }
+    }, [baseModels, chatModels, isLoading, initializeDefaultModel]);
+
+    const handleChange = (name: string) => {
+        handleModelChange(name, baseModels);
+    };
 
     return (
-        <Select value={modelName} onValueChange={handleModelChange}>
+        <Select value={modelName} onValueChange={handleChange}>
             <SelectTrigger className={cn("w-[220px]", {
                 "animate-pulse": isLoading
             })}>

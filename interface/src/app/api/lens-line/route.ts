@@ -1,7 +1,7 @@
 import config from "@/lib/config";
 import { LensLineResponse } from "@/types/lens";
 import { NextResponse, NextRequest } from 'next/server';
-import { LineGraphData } from "@/types/charts";
+import { LineGraphData, LineData } from "@/types/charts";
 
 const defaultColors = [
     "hsl(var(--chart-1))",
@@ -12,11 +12,12 @@ const defaultColors = [
 ];
 
 function processChartData(data: LensLineResponse) {
-    if (!data?.data?.length) return { chartData: [], chartConfig: {}, maxLayer: 0 };
+    if (!data?.data?.length) return { chartData: [], chartConfig: {}, maxLayer: 0, lineData: {} };
 
-    const transformedData = {};
-    const dynamicConfig = {};
+    const transformedData: { [key: number]: { layer: number; [key: string]: number | string | null } } = {};
+    const dynamicConfig: { [key: string]: { label: string; color: string } } = {};
     const maxLayer = data.metadata.maxLayer;
+    const lineMaxLayers: LineData = {};
 
     // Make color config and transform data
     let colorIndex = 0;
@@ -35,12 +36,17 @@ function processChartData(data: LensLineResponse) {
                 colorIndex++;
             }
             transformedData[layerValue][lineKey] = point.prob;
+            
+            // Track max layer for each line
+            if (!lineMaxLayers[lineKey] || layerValue > lineMaxLayers[lineKey]) {
+                lineMaxLayers[lineKey] = layerValue;
+            }
         });
     });
 
     const sortedData = Object.values(transformedData).sort((a, b) => a.layer - b.layer);
 
-    return { chartData: sortedData, chartConfig: dynamicConfig, maxLayer };
+    return { chartData: sortedData, chartConfig: dynamicConfig, maxLayer, lineData: lineMaxLayers };
 }
 
 export async function POST(request: NextRequest) {

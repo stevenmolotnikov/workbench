@@ -13,7 +13,7 @@ import { Button } from "../ui/button";
 import { TokenAreaWithPrediction } from "./TokenAreaWithPrediction";
 import { Textarea } from "@/components/ui/textarea";
 import config from "@/lib/config";
-import { useSelectedModel } from "@/hooks/useSelectedModel";
+import { useSelectedModel } from "@/stores/useSelectedModel";
 
 interface PatchingWorkbenchProps {
     connectionsHook: ReturnType<typeof useConnection>;
