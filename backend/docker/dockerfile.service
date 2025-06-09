@@ -1,0 +1,13 @@
+FROM workbench_conda:latest
+
+# New build stage, so need to redeclare NAME
+ARG NAME
+COPY ./src.tar.gz ./src.tar.gz
+COPY start.sh ./start.sh
+
+RUN tar -xvf ./src.tar.gz \
+    && rm ./src.tar.gz
+
+SHELL ["/bin/bash", "-c"]
+
+CMD source activate service && bash ./start.sh
