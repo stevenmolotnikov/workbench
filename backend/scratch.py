@@ -1,14 +1,79 @@
+# %%
+
+from typing import List, Literal, Union
+
+from pydantic import BaseModel, model_validator, ConfigDict
+from pydantic.alias_generators import to_camel
+from transformers import AutoTokenizer
 from itertools import chain
-from typing import List
 
 import einops
-from fastapi import APIRouter, Request
-from nnsight import LanguageModel
 import nnsight as ns
 import torch as t
-from transformers import AutoTokenizer
 
-from ..schema.patch import PatchRequest, Connection
+t.set_grad_enabled(False)
+
+from nnsight import LanguageModel
+
+
+class Completion(BaseModel):
+    id: str
+    prompt: str
+    model: str
+
+
+class Point(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    token_indices: List[int]
+    counter_index: int
+
+    def __hash__(self):
+        return hash((tuple(self.token_indices), self.counter_index))
+
+
+class Connection(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    edit_type: Literal["patch"]
+    start: Point
+    end: Point
+
+    def __hash__(self):
+        return hash((self.edit_type, self.start, self.end))
+
+
+class Freeze(BaseModel):
+    edit_type: Literal["freeze"]
+    loc: Point
+
+
+class Ablate(BaseModel):
+    edit_type: Literal["ablate"]
+    loc: Point
+
+
+Edit = Union[Connection, Freeze, Ablate]
+
+
+class PatchRequest(BaseModel):
+    model: str
+    source: Completion
+    destination: Completion
+    edits: List[Edit]
+    submodule: Literal["attn", "mlp", "blocks", "heads"]
+    patch_tokens: bool
+
+    # Which tokens are being predicted
+    correct_id: int
+    incorrect_id: int = None
+
+    @model_validator(mode="after")
+    def validate_request(self):
+        if self.submodule == "heads" and self.patch_tokens:
+            raise ValueError("Cannot patch heads and tokens simultaneously")
+
+        return self
 
 
 """
@@ -24,6 +89,7 @@ Dh: size of each attention head
 """
 
 EPS = 1e-10
+
 
 def get_components(model, patching_request: PatchRequest):
     layers = model.model.layers
@@ -405,26 +471,73 @@ def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):
     #             hidden_BLD = component.output
 
 
-router = APIRouter()
+rename = {"embed_out": "lm_head", "norm": "ln_f", "self_attn": "attn"}
 
-@router.post("/patch")
-def patch(patching_request: PatchRequest, request: Request):
-    state = request.app.state.m
-    model = state.get_model(patching_request.model)
+model = LanguageModel(
+    "Qwen/Qwen3-0.6B-Base", device_map="cpu", dispatch=True, rename=rename
+)
 
-    if patching_request.patch_tokens:
+
+def patch(request: PatchRequest):
+    if request.patch_tokens:
         has_connections = any(
-            isinstance(edit, Connection) for edit in patching_request.edits
+            isinstance(edit, Connection) for edit in request.edits
         )
 
         if has_connections:
-            return patch_tokens_sync(model, patching_request)
+            return patch_tokens_sync(model, request)
 
-        return patch_tokens(model, patching_request)
+        return patch_tokens(model, request)
 
     else:
-        if patching_request.submodule == "heads":
-            return patch_heads(model, patching_request)
+        if request.submodule == "heads":
+            return patch_heads(model, request)
 
-        return patch_components(model, patching_request)
+        return patch_components(model, request)
+
+
+# %%
+
+tok = model.tokenizer
+# tok.batch_decode(tok.encode(" Rome"))
+tok.encode(" Paris")
+
+# %%
+
+source_completion = Completion(
+    id="1",
+    prompt="The Colosseum is in the city of",
+    model="Qwen/Qwen3-0.6B-Base",
+)
+destination_completion = Completion(
+    id="2",
+    prompt="The Eiffel Tower is in the city of",
+    model="Qwen/Qwen3-0.6B-Base",
+)
+
+edits = [
+    Connection(
+        edit_type="patch",
+        start=Point(token_indices=[0, 1, 2, 3, 4], counter_index=0),
+        end=Point(token_indices=[0, 1, 2, 3, 4], counter_index=1),
+    )
+]
+
+request = PatchRequest(
+    model="Qwen/Qwen3-0.6B-Base",
+    source=source_completion,
+    destination=destination_completion,
+    edits=edits,
+    submodule="blocks",
+    patch_tokens=True,
+    correct_id=12095,
+    incorrect_id=21718,
+)
+
+
+# %%
+
+result = patch(request)
+
+# %%
 

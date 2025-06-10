@@ -9,14 +9,6 @@ from nnsight.intervention.backends.callback import CallbackBackend
 
 from .schema.config import ModelsConfig
 
-
-def process_name(name):
-    """Fix named_modules names."""
-    if name != "":
-        assert name.startswith(".")
-    return name[1:]
-
-
 def _wrapped_trace(self, *args, callback_url: str, remote: bool, **kwargs):
     backend = None
 
