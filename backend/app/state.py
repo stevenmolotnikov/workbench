@@ -9,8 +9,10 @@ from nnsight.intervention.backends.callback import CallbackBackend
 
 from .schema.config import ModelsConfig
 
-def _wrapped_trace(self, *args, callback_url: str, remote: bool, **kwargs):
+def _wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: bool, **kwargs):
     backend = None
+
+    callback_url = f"{callback_base_url}?job_id={job_id}"
 
     if remote:
         backend = CallbackBackend(
@@ -60,7 +62,7 @@ class AppState:
             )
 
             wrapped_trace = partial(
-                _wrapped_trace, remote=remote, callback_url=callback_url
+                _wrapped_trace, remote=remote, callback_base_url=callback_url
             )
             model.wrapped_trace = types.MethodType(wrapped_trace, model)
             

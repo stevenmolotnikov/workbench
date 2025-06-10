@@ -7,6 +7,7 @@ export interface StatusUpdate {
     data?: Record<string, unknown>;
     message?: string;
     timestamp?: string;
+    jobId?: string;
 }
 
 interface StatusUpdatesState {
@@ -16,14 +17,15 @@ interface StatusUpdatesState {
     isEnabled: boolean;
     error: string | null;
     eventSource: EventSource | null;
-    
+    currentJobId: string | null;
+
     // Actions
-    clearUpdates: () => void;
-    startStatusUpdates: () => void;
-    stopStatusUpdates: () => void;
+    addUpdate: (update: StatusUpdate) => void;
     setConnected: (connected: boolean) => void;
     setError: (error: string | null) => void;
-    addUpdate: (update: StatusUpdate) => void;
+    startStatusUpdates: (jobId?: string) => void;
+    stopStatusUpdates: () => void;
+    clearUpdates: () => void;
 }
 
 export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
@@ -33,9 +35,16 @@ export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
     isEnabled: false,
     error: null,
     eventSource: null,
+    currentJobId: null,
 
-    clearUpdates: () => {
-        set({ updates: [], latestUpdate: null });
+    addUpdate: (update: StatusUpdate) => {
+        set((state) => {
+            const newUpdates = [...state.updates, update];
+            return {
+                updates: newUpdates,
+                latestUpdate: update,
+            };
+        });
     },
 
     setConnected: (connected: boolean) => {
@@ -46,11 +55,11 @@ export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
         set({ error });
     },
 
-    addUpdate: (update: StatusUpdate) => {
-        set((state) => ({
-            updates: [...state.updates, update],
-            latestUpdate: update
-        }));
+    clearUpdates: () => {
+        set({
+            updates: [],
+            latestUpdate: null,
+        });
     },
 
     stopStatusUpdates: () => {
@@ -59,19 +68,24 @@ export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
             eventSource.close();
         }
         set({
-            isConnected: false,
             isEnabled: false,
-            error: null,
-            eventSource: null
+            isConnected: false,
+            eventSource: null,
+            currentJobId: null,
         });
     },
 
-    startStatusUpdates: () => {
-        const { isEnabled, eventSource } = get();
+    startStatusUpdates: (jobId?: string) => {
+        const { isEnabled, eventSource, currentJobId } = get();
         
-        // Don't start if already enabled
-        if (isEnabled || eventSource) {
+        // Don't start if already enabled for the same job
+        if (isEnabled && eventSource && currentJobId === jobId) {
             return;
+        }
+        
+        // Stop previous connection if switching jobs
+        if (eventSource) {
+            eventSource.close();
         }
 
         // Clear previous updates when starting new job
@@ -79,20 +93,23 @@ export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
             isEnabled: true, 
             error: null,
             updates: [],
-            latestUpdate: null
+            latestUpdate: null,
+            currentJobId: jobId
         });
         
         // Set initial "Job sent" status
         const jobSentUpdate: StatusUpdate = {
             type: 'job-sent',
             message: 'Job sent',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            jobId
         };
         
         get().addUpdate(jobSentUpdate);
 
-        // Create EventSource connection
-        const newEventSource = new EventSource('/api/status-stream');
+        // Create EventSource connection with optional job_id parameter
+        const url = jobId ? `/api/status-stream?job_id=${jobId}` : '/api/status-stream';
+        const newEventSource = new EventSource(url);
         set({ eventSource: newEventSource });
 
         newEventSource.onopen = () => {
@@ -103,10 +120,15 @@ export const useStatusUpdates = create<StatusUpdatesState>((set, get) => ({
         newEventSource.onmessage = (event) => {
             try {
                 const update: StatusUpdate = JSON.parse(event.data);
-                get().addUpdate(update);
                 
-                if (update.type === 'connected') {
-                    get().setConnected(true);
+                // Only process updates for the current job or global updates
+                const currentJob = get().currentJobId;
+                if (!currentJob || !update.jobId || update.jobId === currentJob) {
+                    get().addUpdate(update);
+                    
+                    if (update.type === 'connected') {
+                        get().setConnected(true);
+                    }
                 }
             } catch (err) {
                 console.error('Error parsing SSE message:', err);

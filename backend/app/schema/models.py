@@ -2,15 +2,15 @@ from typing import List
 
 from pydantic import BaseModel
 
-from .base import Completion
+from .base import Completion, NDIFRequest
 from .lens import Token
 
-class ExecuteRequest(BaseModel):
+class ExecuteRequest(NDIFRequest):
     completions: List[Completion]
     model: str
 
 
-class ExecuteSelectedRequest(BaseModel):
+class ExecuteSelectedRequest(NDIFRequest):
     completion: Completion
     tokens: List[Token]
     model: str

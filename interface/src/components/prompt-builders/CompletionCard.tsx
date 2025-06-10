@@ -120,7 +120,8 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             return;
         }
 
-        startStatusUpdates();
+        const jobId = updatedCompl.id;
+        startStatusUpdates(jobId);
 
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
@@ -132,6 +133,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                     completion: updatedCompl,
                     model: updatedCompl.model,
                     tokens: updatedCompl.tokens,
+                    job_id: jobId,
                 }),
             });
             const data: TokenPredictions = await response.json();

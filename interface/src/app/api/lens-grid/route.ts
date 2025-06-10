@@ -1,25 +1,17 @@
+import { NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
 import { LensGridResponse } from "@/types/lens";
 import { HeatmapData } from "@/types/charts";
-import { NextResponse, NextRequest } from 'next/server';
 
 function processHeatmapData(data: LensGridResponse) {
-    const { layer, probs, pred_strs } = data;
-
-    const yTickLabels = Array.from({ length: pred_strs.length }, (_, i) => i);
-
     return {
-        data: probs,
-        labels: pred_strs,
-        yTickLabels: yTickLabels,
-        yAxisLabel: "Layers",
-        xAxisLabel: "Tokens",
-        xTickLabels: pred_strs[pred_strs.length - 1] // TODO: Add x tick labels
+        data: data.probs,
+        labels: data.pred_strs,
     };
 }
 
 export async function POST(request: NextRequest) {
-    const { completion } = await request.json();
+    const { completion, job_id } = await request.json();
 
     if (!completion) {
         return NextResponse.json(
@@ -34,7 +26,7 @@ export async function POST(request: NextRequest) {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ completion }),
+            body: JSON.stringify({ completion, job_id }),
         });
 
         const rawData: LensGridResponse = await response.json();

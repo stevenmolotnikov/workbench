@@ -10,3 +10,6 @@ class Completion(BaseModel):
     id: str
     prompt: str
     model: str
+
+class NDIFRequest(BaseModel):
+    job_id: str

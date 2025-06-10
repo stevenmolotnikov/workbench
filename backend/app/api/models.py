@@ -15,7 +15,7 @@ async def execute(execute_request: ExecuteRequest, request: Request):
         tok = model.tokenizer
         prompt = completion.prompt
 
-        with model.trace(prompt, remote=state.remote):
+        with model.wrapped_trace(prompt, job_id=execute_request.job_id):
             logits = model.lm_head.output
             values_indices = t.topk(logits[:,-1,:], k=10, dim=-1)
             # values = values_indices[0].tolist().save()
@@ -43,7 +43,7 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
 
     prompt = execute_request.completion.prompt
 
-    with model.wrapped_trace(prompt):
+    with model.wrapped_trace(prompt, job_id=execute_request.job_id):
         logits = model.lm_head.output
 
         logits = logits[0,idxs,:].softmax(dim=-1)

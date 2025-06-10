@@ -1,6 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
 import { LensLineResponse } from "@/types/lens";
-import { NextResponse, NextRequest } from 'next/server';
 import { LineGraphData, LineData } from "@/types/charts";
 
 const defaultColors = [
@@ -50,7 +50,7 @@ function processChartData(data: LensLineResponse) {
 }
 
 export async function POST(request: NextRequest) {
-    const { completions } = await request.json();
+    const { completions, job_id } = await request.json();
     
     try {
         const response = await fetch(config.getApiUrl(config.endpoints.targetedLens), {
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify({ completions }),
+            body: JSON.stringify({ completions, job_id }),
         });
 
         const rawData: LensLineResponse = await response.json();

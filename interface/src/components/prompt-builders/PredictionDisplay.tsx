@@ -44,7 +44,7 @@ const TokenDisplay = ({
 
             try {
                 // Only decode the first 3 tokens
-                const topTokenIds = predictions[selectedIdx].ids.slice(0, 5);
+                const topTokenIds = predictions[selectedIdx].ids.slice(0, 3);
                 const decoded = await decodeTokenIds(topTokenIds, compl.model);
                 setDecodedTokens(decoded);
             } catch (error) {
@@ -78,25 +78,25 @@ const TokenDisplay = ({
 
                 // Find the probability of this token in current predictions
                 const tokenIndex = predictions[selectedIdx]?.ids.findIndex((id) => id === tokenId);
-                const probability =
-                    tokenIndex !== -1 ? predictions[selectedIdx].values[tokenIndex] : 0;
 
-                // Show notification if token not found in predictions
+                // Clear any existing user badges (only one target token)
+                setTokenBadges([]);
+                
                 if (tokenIndex === -1) {
-                    setNotificationMessage(
-                        `Token "${tokens[0].text}" not found in predictions (probability ≤ 0 or very low)`
-                    );
-                    setTimeout(() => setNotificationMessage(""), 3000);
-                    setTargetToken("");
-                    return;
+                    // Token not in predictions - add it as a user badge with probability 0
+                    setTokenBadges([{
+                        text: tokens[0].text,
+                        probability: 0,
+                        id: tokenId
+                    }]);
+                    // Don't set selectedPredictionId since it's not a prediction
+                    setSelectedPredictionId(null);
                 } else {
-                    // Clear any existing user badges (only one target token)
-                    setTokenBadges([]);
-                    
-                    // Mark this prediction as selected (don't add duplicate badge)
+                    // Token is in predictions - mark it as selected
                     setSelectedPredictionId(tokenId);
-                    setNotificationMessage("");
                 }
+                
+                setNotificationMessage("");
 
                 // Update the token in the completion
                 handleTargetTokenUpdate(text);
@@ -122,13 +122,19 @@ const TokenDisplay = ({
         }
     };
 
-    const togglePredictionSelection = (tokenId: number) => {
+    const togglePredictionSelection = (tokenId: number, tokenText: string) => {
         if (selectedPredictionId === tokenId) {
             // Deselect if already selected
             setSelectedPredictionId(null);
+            // Clear the target token
+            handleTargetTokenUpdate("");
         } else {
             // Select this token
             setSelectedPredictionId(tokenId);
+            // Clear any user-added badges when selecting a prediction
+            setTokenBadges([]);
+            // Set as target token
+            handleTargetTokenUpdate(tokenText);
         }
     };
 
@@ -167,7 +173,7 @@ const TokenDisplay = ({
                             className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors ${
                                 shouldHighlight ? "border border-primary" : "border border-transparent"
                             }`}
-                            onClick={badge.isPrediction ? () => togglePredictionSelection(badge.id) : () => removeBadge(badge.id)}
+                            onClick={badge.isPrediction ? () => togglePredictionSelection(badge.id, badge.text) : () => removeBadge(badge.id)}
                             title={badge.isPrediction ? (isSelected ? "Click to deselect" : "Click to select") : "Click to remove"}
                         >
                             <span className="font-medium">{fixString(badge.text)}</span>

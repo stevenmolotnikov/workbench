@@ -15,6 +15,13 @@ import {
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
+import { LensCompletion } from "@/types/lens";
+
+// Generate a unique ID for the job
+const generateJobId = (): string => {
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+};
+
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
     const [completionIndex, setCompletionIndex] = useState<string>("1");
@@ -31,30 +38,45 @@ export function LensHeatmap({ index }: { index: number }) {
         removeChart(index);
     };
 
+    const hasPrompt = (compl: LensCompletion) => {
+        return compl.prompt.trim() !== "";
+    };
+
     const handleRunChart = async () => {
         setIsLoading(true);
 
         const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = generateJobId();
 
-        startStatusUpdates();
+        startStatusUpdates(jobId);
 
         try {
             const { activeCompletions } = useLensCompletions.getState();
+
+            const filteredCompletions = activeCompletions.filter((compl) => hasPrompt(compl));
+
+            if (filteredCompletions.length === 0) {
+                throw new Error("No completions with prompts found");
+            }
+
+            // Use the first completion for the heatmap
+            const completion = filteredCompletions[0];
+
             const response = await fetch("/api/lens-grid", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: activeCompletions[parseInt(completionIndex) - 1],
+                    completion: completion,
+                    job_id: jobId,
                 }),
             });
 
             if (!response.ok) throw new Error(response.statusText);
 
             const data = await response.json();
-
-            setChartData(index, { type: "lineGraph", data });
+            setChartData(index, { type: "heatmap", data });
         } catch (error) {
             console.error(`Error executing chart at position ${index}:`, error);
             setChartData(index, null);

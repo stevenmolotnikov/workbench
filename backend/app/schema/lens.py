@@ -2,7 +2,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from .base import Completion
+from .base import Completion, NDIFRequest
 
 class Token(BaseModel):
     idx: int
@@ -14,7 +14,7 @@ class TargetedLensCompletion(Completion):
     name: str
     tokens: List[Token]
 
-class TargetedLensRequest(BaseModel):
+class TargetedLensRequest(NDIFRequest):
     completions: List[TargetedLensCompletion]
 
 ##### TARGETED LENS RESPONSE SCHEMA #####
@@ -36,7 +36,7 @@ class LensResponse(BaseModel):
 
 ##### GRID LENS REQUEST SCHEMA #####
 
-class GridLensRequest(BaseModel):
+class GridLensRequest(NDIFRequest):
     completion: Completion
 
 ##### GRID LENS RESPONSE SCHEMA #####
