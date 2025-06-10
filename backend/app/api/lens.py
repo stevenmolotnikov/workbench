@@ -4,6 +4,8 @@ from fastapi import APIRouter, Request
 import torch as t
 import nnsight as ns
 
+from ..utils import send_update
+
 from ..schema.lens import (
     TargetedLensRequest,
     GridLensRequest,
@@ -157,7 +159,16 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
     results = []
     for model_name, model_requests in grouped_requests.items():
         model = state.get_model(model_name)
-        model_results = logit_lens_targeted(model, model_requests, lens_request.job_id)
+
+        try:
+            model_results = logit_lens_targeted(model, model_requests, lens_request.job_id)
+
+        except ConnectionError:
+            await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
+            return LensResponse(
+                **{"data": [], "metadata": {"maxLayer": 0}}
+            )
+
         results.extend(model_results)
 
     results = postprocess(results)
@@ -175,7 +186,13 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     tok = model.tokenizer
     prompt = lens_request.completion.prompt
 
-    pred_ids, probs = logit_lens_grid(model, prompt, lens_request.job_id)
+    try:
+        pred_ids, probs = logit_lens_grid(model, prompt, lens_request.job_id)
+    except ConnectionError:
+        await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
+        return GridLensResponse(
+            **{"data": [], "metadata": {"maxLayer": 0}}
+        )
 
     pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
 

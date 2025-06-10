@@ -1,7 +1,0 @@
-FROM workbench_base:latest
-
-# Update environment with service-specific dependencies
-ARG NAME
-COPY environment.yml .
-
-RUN conda env update --name service -f environment.yml

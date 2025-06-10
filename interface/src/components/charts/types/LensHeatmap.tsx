@@ -77,6 +77,8 @@ export function LensHeatmap({ index }: { index: number }) {
 
             const data = await response.json();
             setChartData(index, { type: "heatmap", data });
+
+            console.log("Data", data);
         } catch (error) {
             console.error(`Error executing chart at position ${index}:`, error);
             setChartData(index, null);

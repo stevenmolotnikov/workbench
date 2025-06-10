@@ -1,18 +1,25 @@
 import React, { useState, useRef, useEffect } from "react";
-import { HeatmapData } from "@/types/charts";
-import { useAnnotations, type Annotation } from "@/stores/useAnnotations";
+import { useAnnotations } from "@/stores/useAnnotations";
 import { CellPosition, HeatmapAnnotation } from "@/types/lens";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 // Convert value to color
-const getColor = (value: number, minValue: number, maxValue: number): string => {
+const getColor = (value: number, minValue: number, maxValue: number, theme: string | undefined): string => {
     if (maxValue === minValue) return "#e5e5e5";
 
     const normalized = (value - minValue) / (maxValue - minValue);
 
-    // Interpolate between #e5e5e5 (light gray) and #3b82f6 (blue)
-    const r1 = 229,
-        g1 = 229,
+    let r1, g1, b1;
+    if (theme === "light" || theme === undefined) {
+        r1 = 224;
+        g1 = 242;
+        b1 = 254; // #e5e5e5
+    } else {
+        r1 = 229;
+        g1 = 229;
         b1 = 229; // #e5e5e5
+    }
 
     const r2 = 96,
         g2 = 165,
@@ -30,6 +37,7 @@ interface TooltipData {
     x: number;
     y: number;
     visible: boolean;
+    isColorbar?: boolean;
 }
 
 interface HeatmapProps {
@@ -60,6 +68,7 @@ export function Heatmap({
         x: 0,
         y: 0,
         visible: false,
+        isColorbar: false,
     });
 
     const { annotations, pendingAnnotation, addPendingAnnotation, setAnnotations } =
@@ -250,6 +259,8 @@ export function Heatmap({
     const minValue = Math.min(...flatData);
     const maxValue = Math.max(...flatData);
 
+    const { theme } = useTheme();
+
     const rows = data.length;
     const cols = data[0].length;
 
@@ -266,9 +277,11 @@ export function Heatmap({
 
     const xTickSpace = xTickLabels.length > 0 ? containerHeight * 0.04 : 0;
     const xLabelSpace = xAxisLabel ? containerHeight * 0.04 : 0;
-    const xLabelOffset = shouldHideColorbar ? 10 : 20;
 
-    const colorScaleSpace = shouldHideColorbar ? 0 : containerHeight * 0.1;
+    // const xLabelOffset = shouldHideColorbar ? 10 : 20;
+    // const colorScaleSpace = shouldHideColorbar ? 0 : containerHeight * 0.1;
+    const xLabelOffset = shouldHideColorbar ? 10 : 20;
+    const colorScaleSpace = containerHeight * 0;
 
     const chartStartX = yLabelSpace + yTickSpace;
     const chartStartY = containerHeight * 0; // Small top margin proportional to height
@@ -315,6 +328,7 @@ export function Heatmap({
                 x: ((rect.left + rect.width / 2 - svgRect.left) / svgRect.width) * 100,
                 y: ((rect.top - svgRect.top) / svgRect.height) * 100,
                 visible: true,
+                isColorbar: false,
             });
         }
     };
@@ -331,24 +345,24 @@ export function Heatmap({
     // Calculate Y-axis label skipping
     const calculateYLabelSkip = (): number => {
         if (yTickLabels.length === 0) return 1;
-        
+
         // Minimum spacing between labels in pixels (including font size)
         const minLabelSpacing = fontSize * 1.5;
-        
+
         // Available space per label based on cell height
         const spacePerLabel = cellHeight;
-        
+
         // If we have enough space, show all labels
         if (spacePerLabel >= minLabelSpacing) {
             return 1;
         }
-        
+
         // Calculate how many labels we need to skip to maintain minimum spacing
         const skipRatio = Math.ceil(minLabelSpacing / spacePerLabel);
-        
+
         // Ensure we don't skip too many (always show at least a few labels)
         const maxSkip = Math.max(1, Math.floor(yTickLabels.length / 5));
-        
+
         return Math.min(skipRatio, maxSkip);
     };
 
@@ -452,7 +466,7 @@ export function Heatmap({
                                                     y={y}
                                                     width={w}
                                                     height={h}
-                                                    fill={getColor(value, minValue, maxValue)}
+                                                    fill={getColor(value, minValue, maxValue, theme)}
                                                     stroke={strokeColor}
                                                     strokeWidth={strokeWidth}
                                                     className="cursor-pointer transition-opacity hover:opacity-80"
@@ -489,7 +503,7 @@ export function Heatmap({
                                         return (
                                             <path
                                                 d={pathData}
-                                                fill={getColor(value, minValue, maxValue)}
+                                                fill={getColor(value, minValue, maxValue, theme)}
                                                 stroke={strokeColor}
                                                 strokeWidth={strokeWidth}
                                                 className="cursor-pointer transition-opacity hover:opacity-80"
@@ -509,10 +523,10 @@ export function Heatmap({
                                         y={rowIndex * cellHeight + cellHeight / 2}
                                         textAnchor="middle"
                                         dominantBaseline="middle"
-                                        className="fill-background pointer-events-none"
+                                        className="pointer-events-none fill-black"
                                         fontSize={Math.min(
                                             fontSize,
-                                            Math.min(actualCellWidth, actualCellHeight) /2
+                                            Math.min(actualCellWidth, actualCellHeight) / 2
                                         )}
                                     >
                                         {getCellText(value, rowIndex, colIndex)}
@@ -529,7 +543,7 @@ export function Heatmap({
                         {yTickLabels.map((label, index) => {
                             // Skip labels based on calculated skip ratio
                             if (index % yLabelSkip !== 0) return null;
-                            
+
                             return (
                                 <text
                                     key={index}
@@ -567,7 +581,8 @@ export function Heatmap({
                 )}
 
                 {/* Continuous color scale legend */}
-                {!shouldHideColorbar && (
+                {/* {!shouldHideColorbar && ( */}
+                {false && (
                     <g
                         transform={`translate(${chartStartX}, ${
                             chartStartY + chartHeight + xTickSpace + (xAxisLabel ? 50 : 10)
@@ -578,34 +593,69 @@ export function Heatmap({
                             x={0}
                             y={0}
                             width={chartWidth * 0.6}
-                            height={10}
-                            rx={2.5}
-                            ry={2.5}
+                            height={6}
+                            rx={3}
+                            ry={3}
                             fill={`url(#${gradientId})`}
                             stroke="#cccccc"
                             strokeWidth={0.2}
+                            className="cursor-pointer"
+                            onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const svgRect = (e.currentTarget.closest('svg') as SVGElement).getBoundingClientRect();
+                                const relativeX = e.clientX - rect.left;
+                                const ratio = relativeX / rect.width;
+                                const value = minValue + (maxValue - minValue) * Math.max(0, Math.min(1, ratio));
+                                
+                                setTooltip({
+                                    value,
+                                    x: ((rect.left + relativeX - svgRect.left) / svgRect.width) * 100,
+                                    y: ((rect.top - svgRect.top) / svgRect.height) * 100,
+                                    visible: true,
+                                    isColorbar: true,
+                                });
+                            }}
+                            onMouseMove={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const svgRect = (e.currentTarget.closest('svg') as SVGElement).getBoundingClientRect();
+                                const relativeX = e.clientX - rect.left;
+                                const ratio = relativeX / rect.width;
+                                const value = minValue + (maxValue - minValue) * Math.max(0, Math.min(1, ratio));
+                                
+                                setTooltip({
+                                    value,
+                                    x: ((rect.left + relativeX - svgRect.left) / svgRect.width) * 100,
+                                    y: ((rect.top - svgRect.top) / svgRect.height) * 100,
+                                    visible: true,
+                                    isColorbar: true,
+                                });
+                            }}
+                            onMouseLeave={() => {
+                                setTooltip(prev => ({ ...prev, visible: false }));
+                            }}
                         />
-
-                        {/* Scale labels */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => {
-                            const value = minValue + (maxValue - minValue) * ratio;
-                            const xPos = ratio * (chartWidth * 0.6);
-                            return (
-                                <g key={index}>
-                                    {/* Label */}
-                                    <text
-                                        x={xPos}
-                                        y={25}
-                                        textAnchor="middle"
-                                        dominantBaseline="hanging"
-                                        className="fill-muted-foreground"
-                                        fontSize={fontSize * 0.9}
-                                    >
-                                        {value.toFixed(2)}
-                                    </text>
-                                </g>
-                            );
-                        })}
+                        
+                        {/* End labels */}
+                        <text
+                            x={0}
+                            y={25}
+                            textAnchor="start"
+                            dominantBaseline="hanging"
+                            className="fill-muted-foreground"
+                            fontSize={fontSize * 0.9}
+                        >
+                            {minValue.toFixed(2)}
+                        </text>
+                        <text
+                            x={chartWidth * 0.6}
+                            y={25}
+                            textAnchor="end"
+                            dominantBaseline="hanging"
+                            className="fill-muted-foreground"
+                            fontSize={fontSize * 0.9}
+                        >
+                            {maxValue.toFixed(2)}
+                        </text>
                     </g>
                 )}
             </svg>
@@ -621,9 +671,19 @@ export function Heatmap({
                     }}
                 >
                     <div className="text-xs text-gray-300">
-                        {labels && labels[Math.floor(tooltip.y / (100 / rows))]?.[Math.floor(tooltip.x / (100 / cols))] && (
-                            <div>Token: {labels[Math.floor(tooltip.y / (100 / rows))][Math.floor(tooltip.x / (100 / cols))]}</div>
-                        )}
+                        {!tooltip.isColorbar && labels &&
+                            labels[Math.floor(tooltip.y / (100 / rows))]?.[
+                                Math.floor(tooltip.x / (100 / cols))
+                            ] && (
+                                <div>
+                                    Token:{" "}
+                                    {
+                                        labels[Math.floor(tooltip.y / (100 / rows))][
+                                            Math.floor(tooltip.x / (100 / cols))
+                                        ]
+                                    }
+                                </div>
+                            )}
                         <div>Value: {tooltip.value.toFixed(3)}</div>
                     </div>
                     {/* Tooltip arrow */}

@@ -1,38 +1,10 @@
 from fastapi import APIRouter, Request
 import torch as t
 
-from ..schema.models import ExecuteRequest, ExecuteSelectedRequest
+from ..schema.models import ExecuteSelectedRequest
+from ..utils import send_update
 
 router = APIRouter()
-
-@router.post("/execute")
-async def execute(execute_request: ExecuteRequest, request: Request):
-    state = request.app.state.m
-    
-    results = []
-    for completion in execute_request.completions:
-        model = state.get_model(execute_request.model)
-        tok = model.tokenizer
-        prompt = completion.prompt
-
-        with model.wrapped_trace(prompt, job_id=execute_request.job_id):
-            logits = model.lm_head.output
-            values_indices = t.topk(logits[:,-1,:], k=10, dim=-1)
-            # values = values_indices[0].tolist().save()
-            indices = values_indices[1].tolist().save()
-
-        results.append({
-            "id": completion.id,
-            "str_indices": tok.batch_decode(indices[0]),
-            "indices": indices[0]
-        })
-
-        print(results)
-
-    return {
-        "results": results
-    }
-
 
 @router.post("/execute_selected")
 async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
@@ -43,15 +15,21 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
 
     prompt = execute_request.completion.prompt
 
-    with model.wrapped_trace(prompt, job_id=execute_request.job_id):
-        logits = model.lm_head.output
+    try:
+        with model.wrapped_trace(prompt, job_id=execute_request.job_id):
+            logits = model.lm_head.output
 
-        logits = logits[0,idxs,:].softmax(dim=-1)
-        values_indices = t.sort(logits, dim=-1, descending=True)
+            logits = logits[0,idxs,:].softmax(dim=-1)
+            values_indices = t.sort(logits, dim=-1, descending=True)
 
-        values = values_indices[0].save()
-        indices = values_indices[1].save()
+            values = values_indices[0].save()
+            indices = values_indices[1].save()
 
+    except ConnectionError:
+        await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
+        return {
+            "results": {}
+        }
 
     results = {}
 

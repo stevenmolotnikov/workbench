@@ -1,7 +1,5 @@
-FROM workbench_conda:latest
+FROM workbench_uv:latest
 
-# New build stage, so need to redeclare NAME
-ARG NAME
 COPY ./src.tar.gz ./src.tar.gz
 COPY start.sh ./start.sh
 

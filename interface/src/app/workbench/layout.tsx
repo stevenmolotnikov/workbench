@@ -2,7 +2,7 @@
 
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import React from "react";
-import { TerminalStatusLine } from "@/components/TerminalStatus";
+
 import { WorkbenchStatus } from "@/components/WorkbenchStatus";
 
 export default function WorkbenchLayout({

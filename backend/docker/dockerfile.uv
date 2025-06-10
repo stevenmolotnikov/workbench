@@ -1,0 +1,6 @@
+FROM workbench_base:latest
+
+# Update environment with service-specific dependencies
+COPY requirements.txt .
+
+RUN uv pip install -r requirements.txt
