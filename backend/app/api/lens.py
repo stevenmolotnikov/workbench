@@ -44,7 +44,10 @@ def logit_lens_grid(model, prompt, job_id):
     probs = [p.tolist() for p in probs]
     pred_ids = [p.tolist() for p in pred_ids]
 
-    return pred_ids, probs
+    tok = model.tokenizer
+    input_strs = tok.batch_decode(tok.encode(prompt))
+
+    return pred_ids, probs, input_strs
 
 
 def logit_lens_targeted(model, model_requests, job_id):
@@ -187,7 +190,7 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     prompt = lens_request.completion.prompt
 
     try:
-        pred_ids, probs = logit_lens_grid(model, prompt, lens_request.job_id)
+        pred_ids, probs, input_strs = logit_lens_grid(model, prompt, lens_request.job_id)
     except ConnectionError:
         await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return GridLensResponse(
@@ -198,6 +201,7 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
 
     return GridLensResponse(
         id=lens_request.completion.id,
+        input_strs=input_strs,
         probs=probs,
         pred_strs=pred_strs,
     )

@@ -4,7 +4,7 @@ import { LensGridResponse } from "@/types/lens";
 import { HeatmapData } from "@/types/charts";
 
 function processHeatmapData(data: LensGridResponse) {
-    const { layer, probs, pred_strs } = data;
+    const { layer, probs, pred_strs, input_strs } = data;
 
     const yTickLabels = Array.from({ length: pred_strs.length }, (_, i) => i);
 
@@ -14,7 +14,7 @@ function processHeatmapData(data: LensGridResponse) {
         yTickLabels: yTickLabels,
         yAxisLabel: "Layers",
         xAxisLabel: "Tokens",
-        xTickLabels: pred_strs[pred_strs.length - 1] // TODO: Add x tick labels
+        xTickLabels: input_strs
     };
 }
 

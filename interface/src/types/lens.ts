@@ -73,6 +73,7 @@ export interface LensLineResponse {
 
 export interface LensGridResponse {
     layer: number;
+    input_strs: string[];
     probs: number[][];
     pred_strs: string[][];
 }

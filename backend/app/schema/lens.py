@@ -43,5 +43,6 @@ class GridLensRequest(NDIFRequest):
 
 class GridLensResponse(BaseModel):
     id: str
+    input_strs: List[str]
     probs: List[List[float]]
     pred_strs: List[List[str]]
