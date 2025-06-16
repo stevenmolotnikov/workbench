@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Settings2 } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensCompletions } from "@/stores/useLensCompletions";
@@ -8,6 +8,48 @@ import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+export function DropdownMenuCheckboxes() {
+    const { tokenizeOnEnter, graphOnTokenize, setTokenizeOnEnter, setGraphOnTokenize } = useLensCompletions();
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button size="icon">
+                    <Settings2 size={16} />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+                <DropdownMenuLabel>Completion Settings</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                    checked={tokenizeOnEnter}
+                    onCheckedChange={setTokenizeOnEnter}
+                >
+                    Tokenize on Enter
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                    checked={graphOnTokenize}
+                    onCheckedChange={setGraphOnTokenize}
+                >
+                    Graph on Tokenize
+                </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 export function PromptBuilder() {
     const { handleNewCompletion, activeCompletions } = useLensCompletions();
@@ -39,6 +81,8 @@ export function PromptBuilder() {
                         >
                             <Plus size={16} />
                         </TooltipButton>
+
+                        <DropdownMenuCheckboxes />
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import { Keyboard, ALargeSmall, Loader2, X, Pencil, KeyboardOff } from "lucide-react";
+import { Keyboard, ALargeSmall, Loader2, X, Pencil, KeyboardOff, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import { Token } from "@/types/tokenizer";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
+import { useCharts } from "@/stores/useCharts";
 
 interface CompletionCardProps {
     index: number;
@@ -23,6 +24,10 @@ interface CompletionCardProps {
 }
 
 export function CompletionCard({ index, compl }: CompletionCardProps) {
+    const {
+        addChart,
+    } = useCharts();
+
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
@@ -36,7 +41,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
-    const { handleUpdateCompletion, handleDeleteCompletion } = useLensCompletions();
+    const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } = useLensCompletions();
 
     // Helper functions
     const handleDeleteCompletionWithCleanup = (id: string) => {
@@ -163,6 +168,21 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         handleTextInput(e.target.value);
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (tokenizeOnEnter && e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (shouldEnableTokenize) {
+                handleTokenize();
+            }
+        }
+    };
+
+    const handleAddChart = () => {
+        const { gridPositions, setConfiguringPosition } = useCharts.getState();
+        const nextPosition = gridPositions.length;
+        setConfiguringPosition(nextPosition);
+    };
+
     // Auto-tokenize and show predictions on component mount if there are target completions
     useEffect(() => {
         const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
@@ -240,6 +260,15 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                                 )
                             )}
                         </TooltipButton>
+                        <TooltipButton
+                            variant="outline"
+                            size="icon"
+                            id="add-chart-button"
+                            onClick={handleAddChart}
+                            tooltip="Add Chart"
+                        >
+                            <LineChart size={16} className="w-8 h-8" />
+                        </TooltipButton>
                     </div>
                 </div>
 
@@ -248,6 +277,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                     <Textarea
                         value={compl.prompt}
                         onChange={handlePromptChange}
+                        onKeyDown={handleKeyDown}
                         className="h-24"
                         placeholder="Enter your prompt here."
                         id="completion-text"

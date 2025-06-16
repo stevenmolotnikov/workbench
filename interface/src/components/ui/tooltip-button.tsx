@@ -39,7 +39,7 @@ export function TooltipButton({
                         </Button>
                     </span>
                 </TooltipTrigger>
-                <TooltipContent className="bg-background">{tooltip}</TooltipContent>
+                <TooltipContent className="bg-background border text-foreground">{tooltip}</TooltipContent>
             </Tooltip>
         </TooltipProvider>
     );

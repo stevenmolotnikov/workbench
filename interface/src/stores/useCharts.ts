@@ -12,7 +12,10 @@ export interface GridPosition {
 }
 
 interface LensWorkbenchState {
-    layout: Layout;
+    configuringPosition: number | null;
+    setConfiguringPosition: (position: number | null) => void;
+
+    layout: Layout; // Number of charts per row
     gridPositions: GridPosition[];
 
     // Layout management
@@ -22,6 +25,7 @@ interface LensWorkbenchState {
     // Grid position management
     setChartMode: (position: number, chartModeIndex: number) => void;
     removeChart: (position: number) => void;
+    addChart: () => void; // Add a new chart
 
     // Chart data management
     setChartData: (position: number, chartData: ChartData | null) => void;
@@ -29,34 +33,7 @@ interface LensWorkbenchState {
     setGridPositions: (gridPositions: GridPosition[]) => void;
 }
 
-const countToLayout = (count: number): Layout => {
-    switch (count) {
-        case 1:
-            return "1x1";
-        case 2:
-            return "2x1";
-        case 4:
-            return "2x2";
-        default:
-            throw new Error(`Invalid count: ${count}`);
-    }
-};
-
-const getInitialGridPositions = (layout: Layout): GridPosition[] => {
-    let count: number;
-    switch (layout) {
-        case "2x1":
-            count = 2;
-            break;
-        case "2x2":
-            count = 4;
-            break;
-        case "1x1":
-            count = 1;
-            break;
-        default:
-            throw new Error(`Invalid layout: ${layout}`);
-    }
+const getInitialGridPositions = (count: number = 1): GridPosition[] => {
     return Array.from({ length: count }, () => ({
         chartMode: undefined,
         chartData: null,
@@ -64,53 +41,38 @@ const getInitialGridPositions = (layout: Layout): GridPosition[] => {
 };
 
 export const useCharts = create<LensWorkbenchState>((set, get) => ({
-    layout: "1x1",
-    gridPositions: getInitialGridPositions("1x1"),
+    configuringPosition: null,
+    setConfiguringPosition: (position) => set({ configuringPosition: position }),
+
+    layout: "2x1", // Default to 2 charts per row
+    gridPositions: [], // Start with no charts
 
     clearGridPositions: () => {
-        set({ gridPositions: getInitialGridPositions("1x1") });
+        set({ gridPositions: [] });
     },
 
     setLayout: (layout) => {
-        set((state) => {
-            const newCount = layout === "2x1" ? 2 : layout === "2x2" ? 4 : 1;
-            const currentPositions = state.gridPositions;
-
-            let newGridPositions: GridPosition[];
-
-            if (newCount >= currentPositions.length) {
-                // Expanding or same size: keep existing positions and add new empty ones
-                newGridPositions = [...currentPositions];
-
-                // Add new empty positions if needed
-                while (newGridPositions.length < newCount) {
-                    newGridPositions.push({
-                        chartMode: undefined,
-                        chartData: null,
-                    });
-                }
-            } else {
-                // Shrinking: truncate to new size (chart data automatically removed)
-                newGridPositions = currentPositions.slice(0, newCount);
-            }
-
-            return {
-                layout,
-                gridPositions: newGridPositions,
-            };
-        });
+        set({ layout });
     },
 
     setChartMode: (position, chartModeIndex) => {
         set((state) => {
             const newGridPositions = [...state.gridPositions];
-            if (newGridPositions[position]) {
-                newGridPositions[position] = {
-                    ...newGridPositions[position],
-                    chartMode: chartModeIndex,
-                    chartData: null, // Clear data when changing chart type
-                };
+            
+            // If position is beyond current length, add new positions up to that point
+            while (newGridPositions.length <= position) {
+                newGridPositions.push({
+                    chartMode: undefined,
+                    chartData: null,
+                });
             }
+            
+            newGridPositions[position] = {
+                ...newGridPositions[position],
+                chartMode: chartModeIndex,
+                chartData: null, // Clear data when changing chart type
+            };
+            
             return { gridPositions: newGridPositions };
         });
     },
@@ -118,14 +80,18 @@ export const useCharts = create<LensWorkbenchState>((set, get) => ({
     removeChart: (position) => {
         set((state) => {
             const newGridPositions = [...state.gridPositions];
+            newGridPositions.splice(position, 1);
+            return { gridPositions: newGridPositions };
+        });
+    },
 
-            if (newGridPositions[position]) {
-                newGridPositions[position] = {
-                    chartMode: undefined,
-                    chartData: null,
-                };
-            }
-
+    addChart: () => {
+        set((state) => {
+            const newGridPositions = [...state.gridPositions];
+            newGridPositions.push({
+                chartMode: undefined,
+                chartData: null,
+            });
             return { gridPositions: newGridPositions };
         });
     },
@@ -149,6 +115,6 @@ export const useCharts = create<LensWorkbenchState>((set, get) => ({
     },
 
     setGridPositions: (gridPositions) => {
-        set({ gridPositions, layout: countToLayout(gridPositions.length) });
+        set({ gridPositions });
     },
 }));

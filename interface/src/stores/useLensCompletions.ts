@@ -2,6 +2,11 @@ import { create } from 'zustand';
 import { LensCompletion } from '@/types/lens';
 
 interface LensCompletionsState {
+    tokenizeOnEnter: boolean;
+    graphOnTokenize: boolean;
+    setTokenizeOnEnter: (tokenizeOnEnter: boolean) => void;
+    setGraphOnTokenize: (graphOnTokenize: boolean) => void;
+
     activeCompletions: LensCompletion[];
     emphasizedCompletions: number[];
     setActiveCompletions: (completions: LensCompletion[]) => void;
@@ -32,8 +37,14 @@ const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
 };
 
 export const useLensCompletions = create<LensCompletionsState>((set) => ({
+    tokenizeOnEnter: true,
+    graphOnTokenize: false,
+
     activeCompletions: [],
     emphasizedCompletions: [],
+
+    setTokenizeOnEnter: (tokenizeOnEnter) => set({ tokenizeOnEnter }),
+    setGraphOnTokenize: (graphOnTokenize) => set({ graphOnTokenize }),
 
     setActiveCompletions: (completions) => set({ activeCompletions: completions }),
 
