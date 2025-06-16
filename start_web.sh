@@ -1,0 +1,1 @@
+cd workbench/_web && bun run dev

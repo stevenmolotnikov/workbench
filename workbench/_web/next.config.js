@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
   images: {
@@ -9,6 +11,10 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  env: {
+    // This will load the .env.local file from the parent directory
+    ENV_FILE: path.resolve(__dirname, '../.env.local'),
   },
   webpack: (config) => {
     // Fallbacks for @huggingface/transformers package

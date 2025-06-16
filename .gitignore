@@ -41,3 +41,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.next
+node_modules
+
+# ----- PYTHON -----
+
+.venv
+uv.lock
+__pycache__
+*.DS_Store
+
+*.egg-info
