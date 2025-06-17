@@ -9,7 +9,7 @@ cp .env.template .env.local
 cp models.template.toml models.local.toml
 ```
 
-Check out some example model templates under workbench/_web/_model_config_examples.
+Check out some example model templates under `workbench/_web/_model_config_examples`.
 
 ## Start the backend server and frontend UI
 
