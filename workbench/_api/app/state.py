@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import tomllib
 import types
 from typing import Dict
@@ -40,15 +41,14 @@ class AppState:
         return self.config
 
     def _load(self, config_path: str):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(current_dir, config_path)
+        # current --> _api --> workbench --> /
+        root_dir = Path(__file__).parent.parent.parent.parent
 
-        with open(config_path, "rb") as f:
+        with open(root_dir / config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
 
         remote = config.remote
-        next_public_base_url = config.next_public_base_url
-        callback_url = f"{next_public_base_url}{config.callback_url}"
+        callback_url = config.callback_url
 
         hf_token = os.environ.get("HF_TOKEN", None)
 

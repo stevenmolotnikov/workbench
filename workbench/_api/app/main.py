@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api import lens, patch, models
 from .state import AppState
 
-def fastapi_app(remote: bool = False, config_path: str = "ndif_config.toml"):
+def fastapi_app(remote: bool = False, config_path: str = "models.local.toml"):
     app = FastAPI()
 
     allowed_origins = []

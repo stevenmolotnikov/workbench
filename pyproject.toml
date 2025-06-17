@@ -11,7 +11,11 @@ dependencies = [
     "aws-cdk-lib>=2.0.0",
     "constructs>=10.0.0",
     "nnsight",
+    "typer>=0.16.0"
 ]
+
+[project.scripts]
+workbench = "cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
