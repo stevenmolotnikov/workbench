@@ -3,24 +3,36 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChartMode } from "@/types/workspace";
+import { useCharts } from "@/stores/useCharts";
 
 interface SelectionMenuProps {
     modes: ChartMode[];
     setConfiguringPosition: (position: number | null) => void;
-    handleAddChart: (index: number) => void;
 }
 
 export function SelectionMenu({
     modes,
     setConfiguringPosition,
-    handleAddChart,
 }: SelectionMenuProps) {
+    const {
+        setSelectedChartType,
+        setSelectionPhase,
+    } = useCharts();
+
+    const handleChartTypeSelection = (chartTypeIndex: number) => {
+        setSelectedChartType(chartTypeIndex);
+        setSelectionPhase('destination');
+    };
     return (
         <div className="absolute inset-0 z-20 flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-background/50 backdrop-blur-sm"
-                onClick={() => setConfiguringPosition(null)}
+                onClick={() => {
+                    setConfiguringPosition(null);
+                    setSelectionPhase(null);
+                    setSelectedChartType(null);
+                }}
             ></div>
             {/* Selection Panel */}
             <Card className="relative max-w-md w-full">
@@ -30,7 +42,11 @@ export function SelectionMenu({
                         variant="ghost"
                         size="sm"
                         className="p-1 h-auto rounded-full"
-                        onClick={() => setConfiguringPosition(null)}
+                        onClick={() => {
+                            setConfiguringPosition(null);
+                            setSelectionPhase(null);
+                            setSelectedChartType(null);
+                        }}
                     >
                         <X className="h-4 w-4" />
                     </Button>
@@ -45,7 +61,7 @@ export function SelectionMenu({
                                     "cursor-pointer hover:bg-muted/60 hover:border-muted-foreground/50"
                                 )}
                                 onClick={() => {
-                                    handleAddChart(index);
+                                    handleChartTypeSelection(index);
                                 }}
                             >
                                 <CardContent className="p-4 flex flex-col items-center">

@@ -41,11 +41,16 @@ class AppState:
         return self.config
 
     def _load(self, config_path: str):
-        # current --> _api --> workbench --> /
-        root_dir = Path(__file__).parent.parent.parent.parent
+        if not config_path.startswith("/root/"):
+            # current --> _api --> workbench --> /
+            root_dir = Path(__file__).parent.parent.parent.parent
 
-        with open(root_dir / config_path, "rb") as f:
-            config = ModelsConfig(**tomllib.load(f))
+            with open(root_dir / config_path, "rb") as f:
+                config = ModelsConfig(**tomllib.load(f))
+
+        else:
+            with open(config_path, "rb") as f:
+                config = ModelsConfig(**tomllib.load(f))
 
         remote = config.remote
         callback_url = config.callback_url

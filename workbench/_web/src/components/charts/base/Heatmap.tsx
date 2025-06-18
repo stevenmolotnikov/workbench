@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { CellPosition, HeatmapAnnotation } from "@/types/lens";
 import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
 
 // Convert value to color
 const getColor = (value: number, minValue: number, maxValue: number, theme: string | undefined): string => {
@@ -61,7 +60,6 @@ export function Heatmap({
     xAxisLabel = "",
     yAxisLabel = "",
     fontSize = 12,
-    cellSpacing = 1,
 }: HeatmapProps) {
     const [tooltip, setTooltip] = useState<TooltipData>({
         value: 0,

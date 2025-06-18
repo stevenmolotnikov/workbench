@@ -24,9 +24,6 @@ interface CompletionCardProps {
 }
 
 export function CompletionCard({ index, compl }: CompletionCardProps) {
-    const {
-        addChart,
-    } = useCharts();
 
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
@@ -70,11 +67,60 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             setShowPredictions(false);
         }
 
+        // Check if this is the first time tokenizing (no existing token data)
+        const isFirstTimeTokenizing = !tokenData;
+
         try {
             setTokenizerLoading(true);
             const tokens = await tokenizeText(compl.prompt, compl.model);
             setTokenData(tokens);
             setLastTokenizedText(compl.prompt);
+
+            // Auto-add and run heatmap chart on first tokenization if setting is enabled
+            if (isFirstTimeTokenizing) {
+                const { graphOnTokenize } = useLensCompletions.getState();
+                
+                if (graphOnTokenize) {
+                    const { gridPositions, setChartMode, setChartData, pushCompletionId } = useCharts.getState();
+                    const chartIndex = gridPositions.length;
+                    
+                    // Add heatmap chart (index 1 in LogitLensModes)
+                    // Index 0 = "Target Token" (LineGraph), Index 1 = "Prediction Grid" (Heatmap)
+                    setChartMode(chartIndex, 1);
+
+                    // Auto-run the heatmap chart
+                    try {
+                        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+                        const jobId = compl.id;
+                        
+                        startStatusUpdates(jobId);
+
+                        const response = await fetch("/api/lens-grid", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                completion: compl,
+                                job_id: jobId,
+                            }),
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            setChartData(chartIndex, { type: "heatmap", data });
+                        }
+
+                        stopStatusUpdates();
+                    } catch (chartError) {
+                        console.error("Error auto-running heatmap chart:", chartError);
+                        const { stopStatusUpdates } = useStatusUpdates.getState();
+                        stopStatusUpdates();
+                    } finally {
+                        pushCompletionId(chartIndex, compl.id);
+                    }
+                }
+            }
         } catch (err) {
             console.error("Error tokenizing text:", err);
         } finally {
@@ -177,10 +223,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         }
     };
 
-    const handleAddChart = () => {
-        const { gridPositions, setConfiguringPosition } = useCharts.getState();
+    const handleAddChart = (index: number) => {
+        const { gridPositions, setConfiguringPosition, setSelectionPhase, setCompletionIndex } = useCharts.getState();
         const nextPosition = gridPositions.length;
         setConfiguringPosition(nextPosition);
+        setCompletionIndex(index);
+        setSelectionPhase('type');
     };
 
     // Auto-tokenize and show predictions on component mount if there are target completions
@@ -264,7 +312,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                             variant="outline"
                             size="icon"
                             id="add-chart-button"
-                            onClick={handleAddChart}
+                            onClick={() => handleAddChart(index)}
                             tooltip="Add Chart"
                         >
                             <LineChart size={16} className="w-8 h-8" />

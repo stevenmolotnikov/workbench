@@ -38,7 +38,7 @@ const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
 
 export const useLensCompletions = create<LensCompletionsState>((set) => ({
     tokenizeOnEnter: true,
-    graphOnTokenize: false,
+    graphOnTokenize: true,
 
     activeCompletions: [],
     emphasizedCompletions: [],

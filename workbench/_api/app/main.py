@@ -10,6 +10,7 @@ def fastapi_app(remote: bool = False, config_path: str = "models.local.toml"):
     allowed_origins = []
     if remote:
         allowed_origins.append("https://interp-workbench.vercel.app")
+        allowed_origins.append("http://localhost:3000")
     else:
         allowed_origins.append("http://localhost:3000")
 
