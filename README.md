@@ -3,8 +3,8 @@
 ## Clone the repo and configure `.env`
 
 ```bash
-git clone https://github.com/TransluceAI/docent.git
-cd docent
+git clone https://github.com/cadentj/interp-workbench.git
+cd interp-workbench
 cp .env.template .env.local
 cp models.template.toml models.local.toml
 ```
