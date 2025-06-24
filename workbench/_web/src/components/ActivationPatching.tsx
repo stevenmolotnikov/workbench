@@ -3,14 +3,15 @@
 import { useState, useCallback } from "react";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 import { WorkbenchMenu } from "./WorkbenchMenu";
-import { ChartSelector } from "@/components/charts/ChartSelector";
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 import { TutorialsSidebar } from "./TutorialsSidebar";
-import { ActivationPatchingModes } from "@/types/patching";
+import { PatchingHeatmap } from "./charts/types/PatchingHeatmap";
 
 export function ActivationPatching() {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
+
+    const [heatmapData, setHeatmapData] = useState<HeatmapProps | null>(null);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -41,8 +42,14 @@ export function ActivationPatching() {
                 <WorkbenchMenu tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
 
                 <ResizableLayout
-                    workbench={<PatchingWorkbench />}
-                    charts={<ChartSelector modes={ActivationPatchingModes} />}
+                    workbench={<PatchingWorkbench setHeatmapData={setHeatmapData} />}
+                    charts={
+                        <div className="h-full w-full bg-card p-4">
+                            <div className="relative h-full w-full">
+                                <PatchingHeatmap isLoading={false} data={heatmapData} />
+                            </div>
+                        </div>
+                    }
                 />
             </div>
         </div>

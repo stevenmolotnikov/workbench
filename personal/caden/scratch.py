@@ -1,32 +1,19 @@
 # %%
 
-from typing import List, Literal, Union
 
-from pydantic import BaseModel, model_validator, ConfigDict
-from pydantic.alias_generators import to_camel
-from transformers import AutoTokenizer
-from itertools import chain
+from typing import List, Literal, Union, Optional
 
-import einops
-import nnsight as ns
-import torch as t
-
-t.set_grad_enabled(False)
-
-from nnsight import LanguageModel
+from pydantic import BaseModel, model_validator, Field, ConfigDict
 
 
 class Completion(BaseModel):
     id: str
     prompt: str
-    model: str
-
 
 class Point(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    token_indices: List[int]
-    counter_index: int
+    token_indices: List[int] = Field(alias="tokenIndices")
 
     def __hash__(self):
         return hash((tuple(self.token_indices), self.counter_index))
@@ -35,21 +22,18 @@ class Point(BaseModel):
 class Connection(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    edit_type: Literal["patch"]
     start: Point
     end: Point
 
     def __hash__(self):
-        return hash((self.edit_type, self.start, self.end))
+        return hash((self.start, self.end))
 
 
 class Freeze(BaseModel):
-    edit_type: Literal["freeze"]
     loc: Point
 
 
 class Ablate(BaseModel):
-    edit_type: Literal["ablate"]
     loc: Point
 
 
@@ -57,16 +41,21 @@ Edit = Union[Connection, Freeze, Ablate]
 
 
 class PatchRequest(BaseModel):
+    model_config = ConfigDict(
+        # Allow extra fields (like x, y) to be ignored
+        extra='ignore'
+    )
+    
     model: str
     source: Completion
     destination: Completion
     edits: List[Edit]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
-    patch_tokens: bool
+    patch_tokens: bool = Field(alias="patchTokens")
 
     # Which tokens are being predicted
-    correct_id: int
-    incorrect_id: int = None
+    correct_id: int = Field(alias="correctId")
+    incorrect_id: Optional[int] = Field(default=None, alias="incorrectId")
 
     @model_validator(mode="after")
     def validate_request(self):
@@ -76,468 +65,16 @@ class PatchRequest(BaseModel):
         return self
 
 
-"""
-Dimension key:
-
-B: batch size
-L: sequence length
-M: memory length (length of sequence being attended to)
-D: model dimension (sometimes called d_model or embedding_dim)
-V: vocabulary size
-H: number of attention heads in a layer
-Dh: size of each attention head
-"""
-
-EPS = 1e-10
-
-
-def get_components(model, patching_request: PatchRequest):
-    layers = model.model.layers
-    match patching_request.submodule:
-        case "blocks":
-            return layers
-        case "attn":
-            return [layer.attn for layer in layers]
-        case "mlp":
-            return [layer.mlp for layer in layers]
-        case _:
-            raise ValueError(f"Invalid submodule: {patching_request.submodule}")
-
-
-def logit_difference(model, patching_request: PatchRequest):
-    logits = model.lm_head.output
-    return (
-        logits[0, -1, patching_request.correct_id]
-        - logits[0, -1, patching_request.incorrect_id]
-    )
-
-
-def compute_ioi_metric(source_diff, destination_diff, patched_diff):
-    return (patched_diff - destination_diff) / (
-        (source_diff - destination_diff) + EPS
-    )
-
-
-def get_prob(model, patching_request: PatchRequest):
-    logits = model.lm_head.output
-    probs = t.softmax(logits, dim=-1)
-    return probs[0, -1, patching_request.correct_id]
-
-
-def patch_components(model: LanguageModel, patching_request: PatchRequest):
-    components = get_components(model, patching_request)
-    is_tuple = patching_request.submodule == "blocks"
-
-    source_cache = {}
-
-    with model.session():
-        results = ns.list().save()
-
-        with model.trace(patching_request.source.prompt):
-            for component in components:
-                hidden_BLD = component.output
-
-                if is_tuple:
-                    hidden_BLD = hidden_BLD[0]
-
-                source_cache[component] = hidden_BLD
-
-            if patching_request.incorrect_id is not None:
-                source_diff = logit_difference(model, patching_request)
-
-        with model.trace(patching_request.destination.prompt):
-            destination_diff = logit_difference(model, patching_request)
-
-        for component in components:
-            with model.trace(patching_request.destination.prompt):
-                if is_tuple:
-                    hidden_BLD_tuple = component.output
-                    component.output = (
-                        source_cache[component],
-                        hidden_BLD_tuple[1],
-                    )
-                else:
-                    component.output = source_cache[component]
-
-                if patching_request.incorrect_id is not None:
-                    patched_diff = logit_difference(model, patching_request)
-                    ioi_metric = compute_ioi_metric(
-                        source_diff, destination_diff, patched_diff
-                    )
-                    results.append(ioi_metric)
-                else:
-                    prob = get_prob(model, patching_request)
-                    results.append(prob)
-
-    return results
-
-
-def patch_heads(
-    model: LanguageModel, n_heads: int, patching_request: PatchRequest
-):
-    components = [layer.attn.o_proj for layer in model.model.layers]
-
-    source_cache = {}
-    results = ns.dict().save()
-
-    with model.session():
-        # Cache source activations
-        with model.trace(patching_request.source.prompt):
-            for component in components:
-                hidden_BLD = component.input
-                hidden_BLHDh = einops.rearrange(
-                    hidden_BLD,
-                    "b l (n_heads d_head) -> b l n_heads d_head",
-                    n_heads=n_heads,
-                )
-
-                for head_idx in range(n_heads):
-                    source_cache[(component, head_idx)] = hidden_BLHDh[
-                        :, :, head_idx, :
-                    ]
-
-                if patching_request.incorrect_id is not None:
-                    source_diff = logit_difference(model, patching_request)
-
-        with model.trace(patching_request.destination.prompt):
-            destination_diff = logit_difference(model, patching_request)
-
-        for layer_idx, component in enumerate(components):
-            for head_idx in range(n_heads):
-                with model.trace(patching_request.destination.prompt):
-                    hidden_BLD = component.input
-                    hidden_BLHDh = einops.rearrange(
-                        hidden_BLD,
-                        "b l (n_heads d_head) -> b l n_heads d_head",
-                        n_heads=n_heads,
-                    )
-
-                    hidden_BLHDh[:, :, head_idx, :] = source_cache[
-                        (component, head_idx)
-                    ]
-
-                    hidden_BLD = einops.rearrange(
-                        hidden_BLHDh,
-                        "b l n_heads d_head -> b l (n_heads d_head)",
-                    )
-
-                    component.input = hidden_BLD
-
-                    if patching_request.incorrect_id is not None:
-                        patched_diff = logit_difference(model, patching_request)
-                        ioi_metric = compute_ioi_metric(
-                            source_diff, destination_diff, patched_diff
-                        )
-                        results[(layer_idx, head_idx)] = ioi_metric
-                    else:
-                        prob = get_prob(model, patching_request)
-                        results[(layer_idx, head_idx)] = prob
-
-    return results
-
-
-def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
-    components = get_components(model, patching_request)
-    is_tuple = patching_request.submodule == "blocks"
-
-    # Compute n_tokens
-    destination_prompt = patching_request.destination.prompt
-    destination_tokens = model.tokenizer.encode(destination_prompt)
-    n_tokens = len(destination_tokens)
-
-    source_cache = {}
-
-    with model.session():
-        results = ns.dict().save()
-
-        with model.trace(
-            patching_request.source.prompt, output_attentions=True
-        ):
-            for component in components:
-                hidden_BLD = component.output
-
-                if is_tuple:
-                    hidden_BLD = hidden_BLD[0]
-
-                for token_idx in range(n_tokens):
-                    source_cache[(component, token_idx)] = hidden_BLD[
-                        :, token_idx, :
-                    ]
-
-            if patching_request.incorrect_id is not None:
-                source_diff = logit_difference(model, patching_request)
-
-        with model.trace(patching_request.destination.prompt):
-            destination_diff = logit_difference(model, patching_request)
-
-        for layer_idx, component in enumerate(components):
-            ns.log(f"Patching layer {layer_idx}")
-            for token_idx in range(n_tokens):
-                with model.trace(destination_prompt, output_attentions=True):
-                    if is_tuple:
-                        hidden_BLD_tuple = component.output
-                        hidden_BLD = hidden_BLD_tuple[0]
-
-                        hidden_BLD[:, token_idx, :] = source_cache[
-                            (component, token_idx)
-                        ]
-                        component.output = (hidden_BLD, hidden_BLD_tuple[1])
-
-                    else:
-                        hidden_BLD = component.output
-
-                        hidden_BLD[:, token_idx, :] = source_cache[
-                            (component, token_idx)
-                        ]
-                        component.output = hidden_BLD
-
-                    if patching_request.incorrect_id is not None:
-                        patched_diff = logit_difference(model, patching_request)
-                        ioi_metric = compute_ioi_metric(
-                            source_diff, destination_diff, patched_diff
-                        )
-                        results[(layer_idx, token_idx)] = ioi_metric
-                    else:
-                        prob = get_prob(model, patching_request)
-                        results[(layer_idx, token_idx)] = prob
-
-    return results
-
-
-def compute_patching_idxs(
-    tok: AutoTokenizer,
-    connections: List[Connection],
-    source_prompt: str,
-    destination_prompt: str,
-):
-    # Tokenize prompts
-    source_tokens = tok.encode(source_prompt)
-    destination_tokens = tok.encode(destination_prompt)
-
-    # Extract all token indices from connections
-    start_idxs = [conn.start.token_indices for conn in connections]
-    end_idxs = [conn.end.token_indices for conn in connections]
-
-    # Get min of last tokens from each connection
-    min_start = min(idxs[-1] for idxs in start_idxs)
-    min_end = min(idxs[-1] for idxs in end_idxs)
-
-    # Compute valid indices and return intersection
-    source_valid = set(range(min_start, len(source_tokens))) - set(
-        chain(*start_idxs)
-    )
-    dest_valid = set(range(min_end, len(destination_tokens))) - set(
-        chain(*end_idxs)
-    )
-
-    return list(source_valid & dest_valid)
-
-
-def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
-    components = get_components(model, patching_request)
-    is_tuple = patching_request.submodule == "blocks"
-
-    connections = [
-        edit for edit in patching_request.edits if isinstance(edit, Connection)
-    ]
-
-    patching_idxs = compute_patching_idxs(
-        model.tokenizer,
-        connections,
-        patching_request.source.prompt,
-        patching_request.destination.prompt,
-    )
-
-    source_cache = {}
-
-    with model.session():
-        results = ns.dict().save()
-
-        with model.trace(
-            patching_request.source.prompt, output_attentions=True
-        ):
-            for component in components:
-                hidden_BLD = component.output
-
-                if is_tuple:
-                    hidden_BLD = hidden_BLD[0]
-
-                # Cache source activations for connections
-                for connection in connections:
-                    start_token_last_idx = connection.start.token_indices[-1]
-
-                    source_cache[(component, connection)] = hidden_BLD[
-                        :, start_token_last_idx, :
-                    ]
-
-                # Cache source activations for tokens
-                for token_idx in patching_idxs:
-                    source_cache[(component, token_idx)] = hidden_BLD[
-                        :, token_idx, :
-                    ]
-
-            if patching_request.incorrect_id is not None:
-                source_diff = logit_difference(model, patching_request)
-
-        with model.trace(
-            patching_request.destination.prompt, output_attentions=True
-        ):
-            destination_diff = logit_difference(model, patching_request)
-
-        for layer_idx, component in enumerate(components):
-            # Patch tokens
-            for token_idx in patching_idxs:
-                with model.trace(
-                    patching_request.destination.prompt, output_attentions=True
-                ):
-                    if is_tuple:
-                        hidden_BLD_tuple = component.output
-
-                        hidden_BLD = hidden_BLD_tuple[0]
-
-                    else:
-                        hidden_BLD = component.output
-
-                    # Patch in the token
-                    hidden_BLD[:, token_idx, :] = source_cache[
-                        (component, token_idx)
-                    ]
-
-                    # Set new output
-                    if is_tuple:
-                        component.output = (hidden_BLD, hidden_BLD_tuple[1])
-
-                    else:
-                        component.output = hidden_BLD
-
-                    if patching_request.incorrect_id is not None:
-                        patched_diff = logit_difference(model, patching_request)
-                        ioi_metric = compute_ioi_metric(
-                            source_diff, destination_diff, patched_diff
-                        )
-                        results[(layer_idx, token_idx)] = ioi_metric
-                    else:
-                        prob = get_prob(model, patching_request)
-                        results[(layer_idx, token_idx)] = prob
-
-            # Patch connections
-            for connection in connections:
-                with model.trace(
-                    patching_request.destination.prompt, output_attentions=True
-                ):
-                    if is_tuple:
-                        hidden_BLD_tuple = component.output
-
-                        hidden_BLD = hidden_BLD_tuple[0]
-
-                    else:
-                        hidden_BLD = component.output
-
-                    end_token_last_idx = connection.end.token_indices[-1]
-
-                    hidden_BLD[:, end_token_last_idx, :] = source_cache[
-                        (component, connection)
-                    ]
-
-                    # Set new output
-                    if is_tuple:
-                        component.output = (hidden_BLD, hidden_BLD_tuple[1])
-
-                    else:
-                        component.output = hidden_BLD
-
-                    if patching_request.incorrect_id is not None:
-                        patched_diff = logit_difference(model, patching_request)
-                        ioi_metric = compute_ioi_metric(
-                            source_diff, destination_diff, patched_diff
-                        )
-                        results[(layer_idx, end_token_last_idx)] = ioi_metric
-                    else:
-                        prob = get_prob(model, patching_request)
-                        results[(layer_idx, end_token_last_idx)] = prob
-
-    return results
-
-
-def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):
-    pass
-    # components = get_components(model, patching_request)
-
-    # source_cache = {}
-
-    # with model.session():
-    #     with model.trace(patching_request.source.prompt):
-    #         for component in components:
-    #             hidden_BLD = component.output
-
-
-rename = {"embed_out": "lm_head", "norm": "ln_f", "self_attn": "attn"}
-
-model = LanguageModel(
-    "Qwen/Qwen3-0.6B-Base", device_map="cpu", dispatch=True, rename=rename
-)
-
-
-def patch(request: PatchRequest):
-    if request.patch_tokens:
-        has_connections = any(
-            isinstance(edit, Connection) for edit in request.edits
-        )
-
-        if has_connections:
-            return patch_tokens_sync(model, request)
-
-        return patch_tokens(model, request)
-
-    else:
-        if request.submodule == "heads":
-            return patch_heads(model, request)
-
-        return patch_components(model, request)
-
-
+# %%
+test = {"edits":[{"start":{"x":64.72500991821289,"y":22.800000190734863,"tokenIndices":[1,1],"counterIndex":1},"end":{"x":64.72500991821289,"y":53.600006103515625,"tokenIndices":[1,1],"counterIndex":0}}],"model":"Qwen/Qwen3-0.6B","source":{"id":"source","prompt":"counter_index"},"destination":{"id":"destination","prompt":"counter_index"},"submodule":"blocks","correctId":0,"patchTokens":False,"incorrectId":0}
 # %%
 
-tok = model.tokenizer
-# tok.batch_decode(tok.encode(" Rome"))
-tok.encode(" Paris")
+from nnsight import LanguageModel
 
+model = LanguageModel("Qwen/Qwen3-0.6B")
 # %%
 
-source_completion = Completion(
-    id="1",
-    prompt="The Colosseum is in the city of",
-    model="Qwen/Qwen3-0.6B-Base",
-)
-destination_completion = Completion(
-    id="2",
-    prompt="The Eiffel Tower is in the city of",
-    model="Qwen/Qwen3-0.6B-Base",
-)
+with model.trace("counter_index", output_attentions=True):
+    test = model.model.layers[0].output.save()
 
-edits = [
-    Connection(
-        edit_type="patch",
-        start=Point(token_indices=[0, 1, 2, 3, 4], counter_index=0),
-        end=Point(token_indices=[0, 1, 2, 3, 4], counter_index=1),
-    )
-]
-
-request = PatchRequest(
-    model="Qwen/Qwen3-0.6B-Base",
-    source=source_completion,
-    destination=destination_completion,
-    edits=edits,
-    submodule="blocks",
-    patch_tokens=True,
-    correct_id=12095,
-    incorrect_id=21718,
-)
-
-
-# %%
-
-result = patch(request)
-
-# %%
-
+test[1]

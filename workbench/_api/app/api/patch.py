@@ -25,6 +25,7 @@ Dh: size of each attention head
 
 EPS = 1e-10
 
+
 def get_components(model, patching_request: PatchRequest):
     layers = model.model.layers
     match patching_request.submodule:
@@ -67,7 +68,9 @@ def patch_components(model: LanguageModel, patching_request: PatchRequest):
     with model.session():
         results = ns.list().save()
 
-        with model.trace(patching_request.source.prompt):
+        with model.wrapped_trace(
+            patching_request.source.prompt, job_id=patching_request.job_id
+        ):
             for component in components:
                 hidden_BLD = component.output
 
@@ -79,11 +82,16 @@ def patch_components(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.wrapped_trace(
+            patching_request.destination.prompt, job_id=patching_request.job_id
+        ):
             destination_diff = logit_difference(model, patching_request)
 
         for component in components:
-            with model.trace(patching_request.destination.prompt):
+            with model.wrapped_trace(
+                patching_request.destination.prompt,
+                job_id=patching_request.job_id,
+            ):
                 if is_tuple:
                     hidden_BLD_tuple = component.output
                     component.output = (
@@ -116,7 +124,9 @@ def patch_heads(
 
     with model.session():
         # Cache source activations
-        with model.trace(patching_request.source.prompt):
+        with model.wrapped_trace(
+            patching_request.source.prompt, job_id=patching_request.job_id
+        ):
             for component in components:
                 hidden_BLD = component.input
                 hidden_BLHDh = einops.rearrange(
@@ -133,12 +143,17 @@ def patch_heads(
                 if patching_request.incorrect_id is not None:
                     source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.wrapped_trace(
+            patching_request.destination.prompt, job_id=patching_request.job_id
+        ):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
             for head_idx in range(n_heads):
-                with model.trace(patching_request.destination.prompt):
+                with model.wrapped_trace(
+                    patching_request.destination.prompt,
+                    job_id=patching_request.job_id,
+                ):
                     hidden_BLD = component.input
                     hidden_BLHDh = einops.rearrange(
                         hidden_BLD,
@@ -184,8 +199,8 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
     with model.session():
         results = ns.dict().save()
 
-        with model.trace(
-            patching_request.source.prompt, output_attentions=True
+        with model.wrapped_trace(
+            patching_request.source.prompt, job_id=patching_request.job_id
         ):
             for component in components:
                 hidden_BLD = component.output
@@ -201,13 +216,17 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.wrapped_trace(
+            patching_request.destination.prompt, job_id=patching_request.job_id
+        ):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
             ns.log(f"Patching layer {layer_idx}")
             for token_idx in range(n_tokens):
-                with model.trace(destination_prompt, output_attentions=True):
+                with model.wrapped_trace(
+                    destination_prompt, job_id=patching_request.job_id
+                ):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
                         hidden_BLD = hidden_BLD_tuple[0]
@@ -287,8 +306,8 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
     with model.session():
         results = ns.dict().save()
 
-        with model.trace(
-            patching_request.source.prompt, output_attentions=True
+        with model.wrapped_trace(
+            patching_request.source.prompt, job_id=patching_request.job_id
         ):
             for component in components:
                 hidden_BLD = component.output
@@ -313,16 +332,18 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(
-            patching_request.destination.prompt, output_attentions=True
+        with model.wrapped_trace(
+            patching_request.destination.prompt, job_id=patching_request.job_id
         ):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
             # Patch tokens
             for token_idx in patching_idxs:
-                with model.trace(
-                    patching_request.destination.prompt, output_attentions=True
+                with model.wrapped_trace(
+                    patching_request.destination.prompt,
+                    output_attentions=True,
+                    job_id=patching_request.job_id,
                 ):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
@@ -356,8 +377,10 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
 
             # Patch connections
             for connection in connections:
-                with model.trace(
-                    patching_request.destination.prompt, output_attentions=True
+                with model.wrapped_trace(
+                    patching_request.destination.prompt,
+                    output_attentions=True,
+                    job_id=patching_request.job_id,
                 ):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
@@ -400,12 +423,13 @@ def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):
     # source_cache = {}
 
     # with model.session():
-    #     with model.trace(patching_request.source.prompt):
+    #     with model.wrapped_trace(patching_request.source.prompt):
     #         for component in components:
     #             hidden_BLD = component.output
 
 
 router = APIRouter()
+
 
 @router.post("/patch")
 def patch(patching_request: PatchRequest, request: Request):
@@ -427,4 +451,3 @@ def patch(patching_request: PatchRequest, request: Request):
             return patch_heads(model, patching_request)
 
         return patch_components(model, patching_request)
-

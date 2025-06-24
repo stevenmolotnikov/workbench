@@ -1,15 +1,14 @@
-from typing import List, Literal, Union
+from typing import List, Literal, Union, Optional
 
-from pydantic import BaseModel, model_validator, AliasGenerator, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel, model_validator, Field, ConfigDict
 
 from .base import Completion
+
 
 class Point(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    token_indices: List[int]
-    counter_index: int
+    token_indices: List[int] = Field(alias="tokenIndices")
 
     def __hash__(self):
         return hash((tuple(self.token_indices), self.counter_index))
@@ -18,21 +17,18 @@ class Point(BaseModel):
 class Connection(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    edit_type: Literal["patch"]
     start: Point
     end: Point
 
     def __hash__(self):
-        return hash((self.edit_type, self.start, self.end))
+        return hash((self.start, self.end))
 
 
 class Freeze(BaseModel):
-    edit_type: Literal["freeze"]
     loc: Point
 
 
 class Ablate(BaseModel):
-    edit_type: Literal["ablate"]
     loc: Point
 
 
@@ -40,16 +36,22 @@ Edit = Union[Connection, Freeze, Ablate]
 
 
 class PatchRequest(BaseModel):
+    model_config = ConfigDict(
+        # Allow extra fields (like x, y) to be ignored
+        extra='ignore'
+    )
+    
     model: str
     source: Completion
     destination: Completion
     edits: List[Edit]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
-    patch_tokens: bool
+    patch_tokens: bool = Field(alias="patchTokens")
+    job_id: str = Field(alias="jobId")
 
     # Which tokens are being predicted
-    correct_id: int
-    incorrect_id: int = None
+    correct_id: int = Field(alias="correctId")
+    incorrect_id: Optional[int] = Field(default=None, alias="incorrectId")
 
     @model_validator(mode="after")
     def validate_request(self):

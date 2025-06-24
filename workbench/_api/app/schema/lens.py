@@ -13,6 +13,7 @@ class Token(BaseModel):
 class TargetedLensCompletion(Completion):
     name: str
     tokens: List[Token]
+    model: str
 
 class TargetedLensRequest(NDIFRequest):
     completions: List[TargetedLensCompletion]
@@ -36,8 +37,11 @@ class LensResponse(BaseModel):
 
 ##### GRID LENS REQUEST SCHEMA #####
 
+class GridLensCompletion(Completion):
+    model: str
+
 class GridLensRequest(NDIFRequest):
-    completion: Completion
+    completion: GridLensCompletion
 
 ##### GRID LENS RESPONSE SCHEMA #####
 

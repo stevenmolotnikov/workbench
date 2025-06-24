@@ -21,7 +21,6 @@ import {
 import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { TutorialsToggle } from "./TutorialsToggle";
-import { Layout } from "@/types/workspace";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
@@ -29,11 +28,12 @@ interface WorkbenchModeProps {
 }
 
 export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeProps) {
-    const { layout, setLayout } = useCharts();
+    const { layout, setLayout, clearGridPositions  } = useCharts();
     const router = useRouter();
     const pathname = usePathname();
 
     const handleValueChange = (value: string) => {
+        clearGridPositions();
         router.push(`/workbench/${value}`);
     };
 

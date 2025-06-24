@@ -39,7 +39,7 @@ interface TooltipData {
     isColorbar?: boolean;
 }
 
-interface HeatmapProps {
+export interface HeatmapProps {
     chartIndex: number;
     data: number[][];
     labels?: string[][];

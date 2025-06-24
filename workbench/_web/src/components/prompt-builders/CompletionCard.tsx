@@ -24,7 +24,6 @@ interface CompletionCardProps {
 }
 
 export function CompletionCard({ index, compl }: CompletionCardProps) {
-
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
@@ -38,7 +37,8 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
-    const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } = useLensCompletions();
+    const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } =
+        useLensCompletions();
 
     // Helper functions
     const handleDeleteCompletionWithCleanup = (id: string) => {
@@ -50,7 +50,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
     const removeToken = (idxs: number[]) => {
         handleUpdateCompletion(compl.id, {
-            tokens: compl.tokens.filter(t => !idxs.includes(t.idx)),
+            tokens: compl.tokens.filter((t) => !idxs.includes(t.idx)),
         });
     };
 
@@ -79,20 +79,22 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             // Auto-add and run heatmap chart on first tokenization if setting is enabled
             if (isFirstTimeTokenizing) {
                 const { graphOnTokenize } = useLensCompletions.getState();
-                
+
                 if (graphOnTokenize) {
-                    const { gridPositions, setChartMode, setChartData, pushCompletionId } = useCharts.getState();
+                    const { gridPositions, setChartMode, setChartData, pushCompletionId } =
+                        useCharts.getState();
                     const chartIndex = gridPositions.length;
-                    
+
                     // Add heatmap chart (index 1 in LogitLensModes)
                     // Index 0 = "Target Token" (LineGraph), Index 1 = "Prediction Grid" (Heatmap)
                     setChartMode(chartIndex, 1);
 
                     // Auto-run the heatmap chart
                     try {
-                        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+                        const { startStatusUpdates, stopStatusUpdates } =
+                            useStatusUpdates.getState();
                         const jobId = compl.id;
-                        
+
                         startStatusUpdates(jobId);
 
                         const response = await fetch("/api/lens-grid", {
@@ -136,12 +138,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     const highlightedTokens = tokenSelection.highlightedTokens;
 
     const updateTokens = () => {
-        const existingIndices = new Set(compl.tokens.map(t => t.idx));
+        const existingIndices = new Set(compl.tokens.map((t) => t.idx));
 
         // Create new tokens only for indices that don't already exist
         const newTokens = highlightedTokens
-            .filter(idx => !existingIndices.has(idx))
-            .map(idx => ({
+            .filter((idx) => !existingIndices.has(idx))
+            .map((idx) => ({
                 idx,
                 target_id: -1,
                 target_text: "",
@@ -215,7 +217,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (tokenizeOnEnter && e.key === 'Enter' && !e.shiftKey) {
+        if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             if (shouldEnableTokenize) {
                 handleTokenize();
@@ -224,11 +226,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     };
 
     const handleAddChart = (index: number) => {
-        const { gridPositions, setConfiguringPosition, setSelectionPhase, setCompletionIndex } = useCharts.getState();
+        const { gridPositions, setConfiguringPosition, setSelectionPhase, setCompletionIndex } =
+            useCharts.getState();
         const nextPosition = gridPositions.length;
         setConfiguringPosition(nextPosition);
         setCompletionIndex(index);
-        setSelectionPhase('type');
+        setSelectionPhase("type");
     };
 
     // Auto-tokenize and show predictions on component mount if there are target completions
@@ -262,7 +265,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
             <div
                 className={cn(
-                    "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out",
+                    "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out w-full min-w-0 max-w-full",
                     showPredictions ? "rounded-t-lg" : "rounded-lg",
                     emphasizedCompletions.includes(index) && "border-primary"
                 )}
@@ -300,12 +303,10 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                         >
                             {loadingPredictions ? (
                                 <Loader2 className="w-8 h-8 animate-spin" />
+                            ) : showPredictions ? (
+                                <KeyboardOff size={16} className="w-8 h-8" />
                             ) : (
-                                showPredictions ? (
-                                    <KeyboardOff size={16} className="w-8 h-8" />
-                                ) : (
-                                    <Keyboard size={16} className="w-8 h-8" />
-                                )
+                                <Keyboard size={16} className="w-8 h-8" />
                             )}
                         </TooltipButton>
                         <TooltipButton
@@ -350,11 +351,13 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                 </div>
             </div>
             {showPredictions && (
-                <PredictionDisplay
-                    predictions={predictions || {}}
-                    compl={compl}
-                    selectedIdx={selectedIdx}
-                />
+                <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
+                    <PredictionDisplay
+                        predictions={predictions || {}}
+                        compl={compl}
+                        selectedIdx={selectedIdx}
+                    />
+                </div>
             )}
         </div>
     );

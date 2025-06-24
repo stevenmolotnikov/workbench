@@ -20,7 +20,10 @@ def _wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: boo
             callback_url, self.to_model_key(), blocking=True
         )
 
-    return self.trace(*args, backend=backend, **kwargs)
+    # Fix bc ndif remote has caching true so block output kv states
+    output_attentions = True
+
+    return self.trace(*args, backend=backend, output_attentions=output_attentions, **kwargs)
 
 
 class AppState:

@@ -139,13 +139,13 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
                             return (
                                 <div
                                     key={index}
-                                    className={`h-full relative ${
+                                    className={`h-full relative w-full min-w-0 max-w-full ${
                                         isClickable ? "cursor-pointer" : ""
                                     }`}
                                     onClick={() => isClickable && handleSelectExistingChart(index)}
                                 >
                                     <div
-                                        className={`h-full relative transition-all duration-200 ${
+                                        className={`h-full relative w-full min-w-0 max-w-full transition-all duration-200 ${
                                             isClickable && !isCompatible
                                                 ? "opacity-30 pointer-events-none"
                                                 : ""
