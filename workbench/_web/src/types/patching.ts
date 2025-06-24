@@ -10,7 +10,7 @@ export interface ActivationPatchingRequest {
     destination: Completion;
     submodule: "attn" | "mlp" | "blocks" | "heads";
     correctId: number;
-    incorrectId: number | null;
+    incorrectId: number | undefined;
     patchTokens: boolean;
     jobId: string;
 }

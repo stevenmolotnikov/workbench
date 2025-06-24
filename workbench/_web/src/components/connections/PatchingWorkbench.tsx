@@ -7,134 +7,40 @@ import {
     RouteOff,
     RotateCcw,
     ALargeSmall,
-    Snowflake,
-    Eraser,
     Play,
-    Settings2,
 } from "lucide-react";
-import { useConnection } from "../../hooks/useConnection";
 import { Edges } from "./Edge";
+import useEdges from "@/hooks/useEdges";
 import { Button } from "../ui/button";
 import { ConnectableTokenArea } from "./ConnectableTokenArea";
 import { Textarea } from "@/components/ui/textarea";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { ModelSelector } from "../ModelSelector";
 import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
+import { useConnections } from "@/stores/useConnections";
 import { Token } from "@/types/tokenizer";
-import { batchTokenizeText, decodeTokenIds } from "@/actions/tokenize";
+import { batchTokenizeText } from "@/actions/tokenize";
 import { ActivationPatchingRequest } from "@/types/patching";
-import config from "@/lib/config";
 import { HeatmapProps } from "@/components/charts/base/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
-import { TargetTokenBadge } from "./TargetTokenBadge";
 import { cn } from "@/lib/utils";
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { PatchingSettings } from "./PatchingSettingsDropdown";
 
-export function PatchingSettings({
-    tokenizeOnEnter,
-    setTokenizeOnEnter,
-    component,
-    setComponent,
-    patchTokens,
-    setPatchTokens,
-}: {
-    tokenizeOnEnter: boolean;
-    setTokenizeOnEnter: (value: boolean) => void;
-    component: string;
-    setComponent: (value: string) => void;
-    patchTokens: boolean;
-    setPatchTokens: (value: boolean) => void;
-}) {
-    const handleComponentChange = (value: string) => {
-        if (value === "head" && patchTokens) {
-            // If selecting head while patch tokens is enabled, disable patch tokens
-            setPatchTokens(false);
-        }
-        setComponent(value);
-    };
 
-    const handlePatchTokensChange = (value: boolean) => {
-        if (value && component === "head") {
-            // If enabling patch tokens while component is head, change component to blocks
-            setComponent("blocks");
-        }
-        setPatchTokens(value);
-    };
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button size="icon">
-                    <Settings2 size={16} />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-64">
-                <DropdownMenuLabel>Completion Settings</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                    checked={tokenizeOnEnter}
-                    onCheckedChange={setTokenizeOnEnter}
-                >
-                    Tokenize on Enter
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={patchTokens}
-                    onCheckedChange={handlePatchTokensChange}
-                >
-                    Patch Tokens
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-2">
-                    <div className="text-sm font-medium mb-2">Component</div>
-                    <Select value={component} onValueChange={handleComponentChange}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="blocks">blocks</SelectItem>
-                            <SelectItem value="heads">heads</SelectItem>
-                            <SelectItem value="attn">attn</SelectItem>
-                            <SelectItem value="mlp">mlp</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
 
 export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: HeatmapProps) => void }) {
     const [tokenizeOnEnter, setTokenizeOnEnter] = useState<boolean>(true);
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
-    const [isFreezingTokens, setIsFreezingTokens] = useState<boolean>(false);
-    const [isAblatingTokens, setIsAblatingTokens] = useState<boolean>(false);
     const [component, setComponent] = useState<string>("blocks");
     const [patchTokens, setPatchTokens] = useState<boolean>(false);
-    const [metric, setMetric] = useState<string>("logit-difference");
     const { modelName } = useSelectedModel();
-    const { 
-        source, 
-        destination, 
-        targetTokens, 
-        activeTokenType,
-        setSource, 
+    const {
+        source,
+        destination,
+        correctToken,
+        incorrectToken,
+        setSource,
         setDestination,
-        setCorrectToken,
-        setIncorrectToken,
-        setActiveTokenType
     } = usePatchingCompletions();
     const [selectedArea, setSelectedArea] = useState<"source" | "destination" | null>(null);
 
@@ -142,28 +48,21 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
     const [destinationTokenData, setDestinationTokenData] = useState<Token[] | null>(null);
     const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
-    // Prediction-related state
-    const [predictions, setPredictions] = useState<{
-        source: {
-            ids: number[];
-            values: number[];
-        };
-        destination: {
-            ids: number[];
-            values: number[];
-        };
-    } | null>(null);
-    const [predictionLoading, setPredictionLoading] = useState(false);
-    const [decodedSourceTokens, setDecodedSourceTokens] = useState<string[]>([]);
-    const [decodedDestTokens, setDecodedDestTokens] = useState<string[]>([]);
 
-    const connectionsHook = useConnection();
+    const { 
+        setSelectedEdgeIndex, 
+        clearConnections,
+    } = useConnections();
 
-    const { handleBackgroundClick, clearConnections } = connectionsHook;
+    const handleBackgroundClick = () => {
+        setSelectedEdgeIndex(null);
+    }
 
     const clear = () => {
         clearConnections();
     }
+
+    const { svgRef } = useEdges();
 
     const handleTokenize = async () => {
         try {
@@ -180,53 +79,14 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
         }
     };
 
-    const handleRunPredictions = async () => {
-        if (!source.prompt.trim() || !destination.prompt.trim()) {
+    const handleRunPatching = async () => {
+        const { connections } = useConnections.getState();
+        const { source, destination } = usePatchingCompletions.getState();
+
+        if (!correctToken) {
+            console.error("Correct and incorrect tokens must be set");
             return;
         }
-
-        setPredictionLoading(true);
-        try {
-            const response = await fetch(config.getApiUrl(config.endpoints.executePair), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    source: source,
-                    destination: destination,
-                    model: modelName,
-                    job_id: "prediction_job",
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            setPredictions(data);
-
-            // Decode the top 3 tokens for both source and destination
-            const sourceTopIds = data.source.ids.slice(0, 3);
-            const destTopIds = data.destination.ids.slice(0, 3);
-
-            const [decodedSource, decodedDest] = await Promise.all([
-                decodeTokenIds(sourceTopIds, modelName),
-                decodeTokenIds(destTopIds, modelName),
-            ]);
-
-            setDecodedSourceTokens(decodedSource);
-            setDecodedDestTokens(decodedDest);
-        } catch (error) {
-            console.error("Error running predictions:", error);
-        } finally {
-            setPredictionLoading(false);
-        }
-    };
-
-    const handleRunPatching = async () => {
-        const { connections, source, destination } = usePatchingCompletions.getState();
 
         const request: ActivationPatchingRequest = {
             edits: connections,
@@ -234,47 +94,29 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
             source: source,
             destination: destination,
             submodule: component as "blocks" | "attn" | "mlp" | "heads",
-            correctId: 0,
+            correctId: correctToken.id,
             patchTokens: patchTokens,
-            incorrectId: 0,
+            incorrectId: incorrectToken?.id,
             jobId: "123",
         };
 
-        try {
-            const response = await fetch(config.getApiUrl(config.endpoints.patch), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(request),
-            });
+        console.log(JSON.stringify(request, null, 2));
 
-            const data = await response.json();
-            console.log(data);
-            setHeatmapData(data);
-        } catch (err) {
-            console.error("Error running patching:", err);
-        }
-    };
+        // try {
+        //     const response = await fetch(config.getApiUrl(config.endpoints.patch), {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-Type": "application/json",
+        //         },
+        //         body: JSON.stringify(request),
+        //     });
 
-    const handleModeToggle = (mode: "connect" | "freeze" | "ablate") => {
-        switch (mode) {
-            case "connect":
-                setIsConnecting(!isConnecting);
-                setIsFreezingTokens(false);
-                setIsAblatingTokens(false);
-                break;
-            case "freeze":
-                setIsFreezingTokens(!isFreezingTokens);
-                setIsConnecting(false);
-                setIsAblatingTokens(false);
-                break;
-            case "ablate":
-                setIsAblatingTokens(!isAblatingTokens);
-                setIsConnecting(false);
-                setIsFreezingTokens(false);
-                break;
-        }
+        //     const data = await response.json();
+        //     console.log(data);
+        //     setHeatmapData(data);
+        // } catch (err) {
+        //     console.error("Error running patching:", err);
+        // }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -339,30 +181,8 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                             >
                                 <ALargeSmall className="w-4 h-4" />
                             </Button>
-                            {/* <Button
-                                onClick={() => handleModeToggle("freeze")}
-                                size="icon"
-                                className="w-8 h-8"
-                                variant={isFreezingTokens ? "default" : "outline"}
-                                title={
-                                    isFreezingTokens ? "Disable freeze mode" : "Enable freeze mode"
-                                }
-                            >
-                                <Snowflake className="w-4 h-4" />
-                            </Button>
                             <Button
-                                onClick={() => handleModeToggle("ablate")}
-                                size="icon"
-                                className="w-8 h-8"
-                                variant={isAblatingTokens ? "default" : "outline"}
-                                title={
-                                    isAblatingTokens ? "Disable ablate mode" : "Enable ablate mode"
-                                }
-                            >
-                                <Eraser className="w-4 h-4" />
-                            </Button> */}
-                            <Button
-                                onClick={() => handleModeToggle("connect")}
+                                onClick={() => setIsConnecting(!isConnecting)}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant={isConnecting ? "default" : "outline"}
@@ -392,9 +212,7 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                             <ConnectableTokenArea
                                 tokenData={sourceTokenData}
                                 isConnecting={isConnecting}
-                                isFreezingTokens={isFreezingTokens}
-                                isAblatingTokens={isAblatingTokens}
-                                useConnections={connectionsHook}
+                                svgRef={svgRef}
                                 counterId={0}
                                 tokenizerLoading={tokenizerLoading}
                             />
@@ -407,36 +225,21 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                             <ConnectableTokenArea
                                 tokenData={destinationTokenData}
                                 isConnecting={isConnecting}
-                                isFreezingTokens={isFreezingTokens}
-                                isAblatingTokens={isAblatingTokens}
-                                useConnections={connectionsHook}
+                                svgRef={svgRef}
                                 counterId={1}
                                 tokenizerLoading={tokenizerLoading}
                             />
                         </div>
 
                         <div className="absolute inset-0 pointer-events-none">
-                            <Edges useConnections={connectionsHook} />
+                            <Edges svgRef={svgRef} />
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Prompts</h2>
-                    <div className="flex items-center gap-2">
-
-                        <Button
-                            onClick={handleRunPredictions}
-                            disabled={predictionLoading || !source.prompt.trim() || !destination.prompt.trim()}
-                            className="w-8 h-8"
-                            size="icon"
-                        >
-                            <Play className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
+                <h2 className="text-sm font-medium">Prompts</h2>
                 <div className="flex flex-col flex-1 relative">
                     <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Source Prompt</div>
                     <Textarea
@@ -465,51 +268,7 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
             </div>
 
             <div className="border-t p-4">
-                <div className="flex items-center justify-between">
-
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-medium">Metric</h2>
-                        <Select value={metric} onValueChange={(value) => {
-                            setMetric(value);
-                            // Clear active token type when metric changes
-                            setActiveTokenType(null);
-                        }}>
-                            <SelectTrigger className="w-fit h-8">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="logit-difference">Logit Difference</SelectItem>
-                                <SelectItem value="target-prob">Target Prob</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        
-                        {/* Target Token Badges */}
-                        <div className="flex items-center gap-2 ml-2">
-                            <TargetTokenBadge
-                                label="Correct"
-                                value={targetTokens.correct}
-                                isActive={activeTokenType === 'correct'}
-                                onClick={() => setActiveTokenType(activeTokenType === 'correct' ? null : 'correct')}
-                            />
-                            {metric === "logit-difference" && (
-                                <TargetTokenBadge
-                                    label="Incorrect"
-                                    value={targetTokens.incorrect}
-                                    isActive={activeTokenType === 'incorrect'}
-                                    onClick={() => setActiveTokenType(activeTokenType === 'incorrect' ? null : 'incorrect')}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                </div>
-                <JointPredictionDisplay
-                    modelName={modelName}
-                    predictions={predictions}
-                    decodedSourceTokens={decodedSourceTokens}
-                    decodedDestTokens={decodedDestTokens}
-                    activeTokenType={activeTokenType}
-                />
+                <JointPredictionDisplay/>
             </div>
 
         </div>

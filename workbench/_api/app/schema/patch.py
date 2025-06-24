@@ -24,16 +24,15 @@ class Connection(BaseModel):
         return hash((self.start, self.end))
 
 
-class Freeze(BaseModel):
-    loc: Point
+# class Freeze(BaseModel):
+#     loc: Point
 
 
-class Ablate(BaseModel):
-    loc: Point
+# class Ablate(BaseModel):
+#     loc: Point
 
 
-Edit = Union[Connection, Freeze, Ablate]
-
+# Edit = Union[Connection, Freeze, Ablate]
 
 class PatchRequest(BaseModel):
     model_config = ConfigDict(
@@ -44,7 +43,7 @@ class PatchRequest(BaseModel):
     model: str
     source: Completion
     destination: Completion
-    edits: List[Edit]
+    edits: List[Connection]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
     patch_tokens: bool = Field(alias="patchTokens")
     job_id: str = Field(alias="jobId")
