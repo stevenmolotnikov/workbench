@@ -21,3 +21,6 @@ clean:
 	docker stop workbench-api 2>/dev/null || true
 	docker rm workbench-api 2>/dev/null || true
 	docker system prune -f
+
+modal:
+	modal deploy modal/image.py
