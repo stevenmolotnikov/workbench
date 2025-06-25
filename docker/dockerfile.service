@@ -1,11 +1,12 @@
 FROM workbench_uv:latest
 
-COPY workbench/_api/app ./app
-COPY models.local.toml .
-COPY scripts/api.sh ./api.sh
+COPY workbench/_api ./app
+COPY models.toml .
+COPY .env .
+COPY scripts/docker.sh ./docker.sh
 
-RUN chmod +x ./api.sh
+RUN chmod +x ./docker.sh
 
 EXPOSE 8000
 
-CMD ["./api.sh"]
+CMD ["./docker.sh"]

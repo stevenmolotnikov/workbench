@@ -7,4 +7,8 @@ _is_docker = os.environ.get("ENVIRONMENT", "dev").lower() == "docker"
 ROOT_DIR = Path(__file__).parent.parent if _is_docker else Path(__file__).parent.parent.parent
 ENV = load_env(ROOT_DIR)
 
+os.environ["HF_TOKEN"] = ENV["HF_TOKEN"]
+
+print("STUFF BELOW!")
+
 __all__ = ["ENV", "ROOT_DIR"]

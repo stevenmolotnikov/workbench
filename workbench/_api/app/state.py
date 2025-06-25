@@ -52,7 +52,7 @@ class AppState:
         return self.config
 
     def _load(self):
-        config_path = os.path.join(ROOT_DIR, "models.local.toml")
+        config_path = os.path.join(ROOT_DIR, "models.toml")
 
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
@@ -64,7 +64,6 @@ class AppState:
             model = LanguageModel(
                 cfg.name,
                 rename=cfg.rename,
-                token=ENV["HF_TOKEN"],
                 device_map="cpu",
                 dispatch=not remote,
             )
