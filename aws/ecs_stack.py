@@ -282,21 +282,21 @@ class NDIFEcsStack(Stack):
         # TODO we need to figure out dev deployments, like test.ndif.dev, etc.
         # Create a Route53 record for the load balancer
         # Look up the existing hosted zone for ndif.dev
-        hosted_zone = route53.HostedZone.from_lookup(
-            self, f"{self.name}NdifDevZone", domain_name="api.ndif.us"
-        )
+        # hosted_zone = route53.HostedZone.from_lookup(
+        #     self, f"{self.name}NdifDevZone", domain_name="api.ndif.us"
+        # )
 
-        # Create an A record that points to the load balancer
-        route53.ARecord(
-            self,
-            f"{self.name}NdifLoadBalancerRecord",
-            zone=hosted_zone,
-            record_name="api.ndif.us",
-            delete_existing=True,
-            target=route53.RecordTarget.from_alias(
-                route53_targets.LoadBalancerTarget(nlb)
-            ),
-        )
+        # # Create an A record that points to the load balancer
+        # route53.ARecord(
+        #     self,
+        #     f"{self.name}NdifLoadBalancerRecord",
+        #     zone=hosted_zone,
+        #     record_name="api.ndif.us",
+        #     delete_existing=True,
+        #     target=route53.RecordTarget.from_alias(
+        #         route53_targets.LoadBalancerTarget(nlb)
+        #     ),
+        # )
 
         # Output the DNS name
         CfnOutput(
