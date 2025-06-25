@@ -1,9 +1,3 @@
-# STANDARD NAMING:
-# model.layers.i.attn
-# model.layers.i.mlp
-# model.ln_f
-# model.lm_head
-
 remote = true
 next_public_base_url = "https://interp-workbench.vercel.app"
 callback_url = "/api/status-update"

@@ -1,0 +1,7 @@
+FROM workbench_base:latest
+
+# Copy pyproject.toml for dependency installation
+COPY pyproject.toml .
+
+# Install dependencies from pyproject.toml
+RUN uv pip install .

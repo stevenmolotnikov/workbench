@@ -12,3 +12,7 @@ class Completion(BaseModel):
 
 class NDIFRequest(BaseModel):
     job_id: str
+
+class Token(BaseModel):
+    idx: int
+    target_id: int

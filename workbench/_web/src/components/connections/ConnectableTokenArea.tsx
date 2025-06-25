@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Token } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/stores/useConnections";
+import { usePatchingTokens } from "@/stores/usePatchingTokens";
 import { Connection } from "@/types/patching";
 
 interface ConnectableTokenAreaProps {
-    tokenData?: Token[] | null;
     model?: string;
     isConnecting?: boolean;
     counterId: number;
@@ -19,6 +19,7 @@ interface ConnectableTokenAreaProps {
 const TOKEN_STYLES = {
     base: "text-sm whitespace-pre select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
+    indicator: "bg-primary/20 after:absolute after:inset-0 after:border after:border-primary/30",
     hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
     transparent: "bg-transparent",
 } as const;
@@ -79,13 +80,28 @@ const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement): numbe
 
 
 export function ConnectableTokenArea({
-    tokenData,
     isConnecting,
     svgRef,
     counterId,
     tokenizerLoading,
 }: ConnectableTokenAreaProps) {
     const { connections, isDragging, currentConnection, setIsDragging, setCurrentConnection, addConnection, removeConnection } = useConnections();
+    const { 
+        sourceTokenData,
+        destinationTokenData,
+        highlightedSourceTokens, 
+        highlightedDestinationTokens, 
+        setHighlightedSourceTokens, 
+        setHighlightedDestinationTokens,
+        setHoveredTokenIdx,
+        hoveredTokenIdx
+    } = usePatchingTokens();
+
+    const tokenData = counterId === 0 ? sourceTokenData : destinationTokenData;
+
+    // Get the appropriate highlighted tokens based on counterId
+    const highlightedTokens = counterId === 0 ? highlightedSourceTokens : highlightedDestinationTokens;
+    const setHighlightedTokens = counterId === 0 ? setHighlightedSourceTokens : setHighlightedDestinationTokens;
 
     const checkIfAlreadyConnected = useCallback((tokenIndices: number[]) =>
         connections.some((conn: Connection) =>
@@ -168,7 +184,6 @@ export function ConnectableTokenArea({
     };
 
     const containerRef = useRef<HTMLDivElement>(null);
-    const [highlightedTokens, setHighlightedTokens] = useState<number[]>([]);
     const [isSelecting, setIsSelecting] = useState(false);
     const [startToken, setStartToken] = useState<number | null>(null);
 
@@ -208,6 +223,7 @@ export function ConnectableTokenArea({
 
     const getTokenStyles = (
         token: Token,
+        tokenIndex: number,
         isHighlighted: boolean,
         isGroupStart: boolean,
         isGroupEnd: boolean,
@@ -240,8 +256,9 @@ export function ConnectableTokenArea({
             TOKEN_STYLES.base,
             borderRadius,
             backgroundStyle,
-            interactionStyles,
+            !isHighlighted && interactionStyles,
             cursorStyle,
+            ((tokenIndex === hoveredTokenIdx) && !isConnecting) ? TOKEN_STYLES.indicator : "",
             fixedText === "\\n" ? "w-full" : "w-fit"
         );
     };
@@ -286,17 +303,14 @@ export function ConnectableTokenArea({
         setStartToken(null);
     };
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        // Don't end drag operation when mouse leaves during connection dragging
-        if (isConnecting && isDragging) {
-            return;
+    const handleContainerMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Always update hover state on mouse move
+        const tokenId = getTokenIdFromEvent(e);
+        if (tokenId !== null && tokenId !== hoveredTokenIdx) {
+            setHoveredTokenIdx(tokenId);
         }
 
-        // For normal token selection, end the selection
-        handleMouseUp(e);
-    };
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Handle token selection dragging
         if (isConnecting || !isSelecting || startToken === null) return;
 
         const currentToken = getTokenIdFromEvent(e);
@@ -315,6 +329,18 @@ export function ConnectableTokenArea({
         }
     };
 
+    const handleContainerMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Don't end drag operation when mouse leaves during connection dragging
+        if (isConnecting && isDragging) {
+            return;
+        }
+
+        // For normal token selection, end the selection
+        handleMouseUp(e);
+        
+        setHoveredTokenIdx(null);
+    };
+
     // Early returns for different states
     if (tokenizerLoading) return <div className="text-sm">Tokenizing...</div>;
     if (!tokenData || tokenData.length === 0) {
@@ -328,15 +354,15 @@ export function ConnectableTokenArea({
             ref={containerRef}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            onMouseMove={handleContainerMouseMove}
+            onMouseLeave={handleContainerMouseLeave}
         >
             {tokenData.map((token, i) => {
                 const { isHighlighted, groupId, isGroupStart, isGroupEnd } = getGroupInformation(
                     i,
                     tokenData
                 );
-                const styles = getTokenStyles(token, isHighlighted, isGroupStart, isGroupEnd, i);
+                const styles = getTokenStyles(token, i, isHighlighted, isGroupStart, isGroupEnd);
                 const { result, numNewlines } = fixToken(token.text);
 
                 return (

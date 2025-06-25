@@ -1,10 +1,30 @@
 from fastapi import APIRouter, Request
 import torch as t
 
-from ..schema.models import ExecuteSelectedRequest, ExecutePairRequest, ExecutePairResponse
+from pydantic import BaseModel
+
 from ..utils import send_update
+from ..data_models import Completion, NDIFRequest, Token
 
 router = APIRouter()
+
+class ExecuteSelectedRequest(NDIFRequest):
+    completion: Completion
+    tokens: list[Token]
+    model: str
+
+class ExecutePairRequest(NDIFRequest):
+    source: Completion
+    destination: Completion
+    model: str
+
+class CompletionResponse(BaseModel):
+    ids: list[int]
+    values: list[float]
+
+class ExecutePairResponse(NDIFRequest):
+    source: CompletionResponse
+    destination: CompletionResponse
 
 @router.post("/execute_selected")
 async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):

@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { ModelSelector } from "../ModelSelector";
 import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
+import { usePatchingTokens } from "@/stores/usePatchingTokens";
 import { useConnections } from "@/stores/useConnections";
 import { Token } from "@/types/tokenizer";
 import { batchTokenizeText } from "@/actions/tokenize";
@@ -25,6 +26,7 @@ import { HeatmapProps } from "@/components/charts/base/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
 import { cn } from "@/lib/utils";
 import { PatchingSettings } from "./PatchingSettingsDropdown";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
 
 
@@ -43,11 +45,13 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
         setDestination,
     } = usePatchingCompletions();
     const [selectedArea, setSelectedArea] = useState<"source" | "destination" | null>(null);
-
-    const [sourceTokenData, setSourceTokenData] = useState<Token[] | null>(null);
-    const [destinationTokenData, setDestinationTokenData] = useState<Token[] | null>(null);
     const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
+    const {
+        setSourceTokenData,
+        setDestinationTokenData,
+        clearHighlightedTokens,
+    } = usePatchingTokens();
 
     const { 
         setSelectedEdgeIndex, 
@@ -60,12 +64,14 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
 
     const clear = () => {
         clearConnections();
+        clearHighlightedTokens();
     }
 
     const { svgRef } = useEdges();
 
     const handleTokenize = async () => {
         try {
+            clear();
             setTokenizerLoading(true);
 
             const inputTexts = [source.prompt, destination.prompt];
@@ -210,7 +216,6 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                             selectedArea === "source" ? "border-blue-500" : ""
                         )}>
                             <ConnectableTokenArea
-                                tokenData={sourceTokenData}
                                 isConnecting={isConnecting}
                                 svgRef={svgRef}
                                 counterId={0}
@@ -223,7 +228,6 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                             selectedArea === "destination" ? "border-blue-500" : ""
                         )}>
                             <ConnectableTokenArea
-                                tokenData={destinationTokenData}
                                 isConnecting={isConnecting}
                                 svgRef={svgRef}
                                 counterId={1}
@@ -265,9 +269,6 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
                     />
                 </div>
 
-            </div>
-
-            <div className="border-t p-4">
                 <JointPredictionDisplay/>
             </div>
 

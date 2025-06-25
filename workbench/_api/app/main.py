@@ -1,22 +1,21 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import lens, patch, models
 from .state import AppState
 
-def fastapi_app(remote: bool = False, config_path: str = "models.local.toml"):
-    app = FastAPI()
 
-    allowed_origins = []
-    if remote:
-        allowed_origins.append("https://interp-workbench.vercel.app")
-        allowed_origins.append("http://localhost:3000")
-    else:
-        allowed_origins.append("http://localhost:3000")
+ALLOWED_ORIGINS = [
+    "https://interp-workbench.vercel.app",
+    "http://localhost:3000",
+]
+
+def fastapi_app():
+    app = FastAPI()
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,
+        allow_origins=ALLOWED_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -28,7 +27,7 @@ def fastapi_app(remote: bool = False, config_path: str = "models.local.toml"):
     app.include_router(patch, prefix="/api")
     app.include_router(models, prefix="/api")
 
-    app.state.m = AppState(config_path)
+    app.state.m = AppState()
 
     @app.get("/models")
     async def get_models():
@@ -36,3 +35,5 @@ def fastapi_app(remote: bool = False, config_path: str = "models.local.toml"):
         return config.get_model_list()
 
     return app
+
+app = fastapi_app()

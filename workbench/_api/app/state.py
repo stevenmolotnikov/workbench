@@ -1,41 +1,49 @@
 import os
-from pathlib import Path
 import tomllib
 import types
-from typing import Dict
 from functools import partial
 
 from nnsight import LanguageModel, CONFIG
-from nnsight.intervention.backends.callback import CallbackBackend
+from pydantic import BaseModel
 
-from .schema.config import ModelsConfig
+from ..ns_utils import wrapped_trace
+from .. import ENV, ROOT_DIR
 
-def _wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: bool, **kwargs):
-    backend = None
+class ModelConfig(BaseModel):
+    """Configuration for an individual model."""
 
-    callback_url = f"{callback_base_url}?job_id={job_id}"
+    name: str
+    chat: bool
+    rename: dict[str, str]
 
-    if remote:
-        backend = CallbackBackend(
-            callback_url, self.to_model_key(), blocking=True
-        )
+class ModelsConfig(BaseModel):
+    """Root configuration containing all models."""
 
-    # Fix bc ndif remote has caching true so block output kv states
-    output_attentions = True
+    remote: bool
+    callback_url: str
+    
+    models: dict[str, ModelConfig]
 
-    return self.trace(*args, backend=backend, output_attentions=output_attentions, **kwargs)
-
+    def get_model_list(self) -> list[dict[str, str]]:
+        """Get list of models that are served and if they are chat or base."""
+        return [
+            {
+                "name": model.name,
+                "type": "chat" if model.chat else "base",
+            }
+            for model in self.models.values()
+        ]
 
 class AppState:
-    def __init__(self, config_path: str):
+    def __init__(self):
         # Set NDIF key
-        CONFIG.set_default_api_key(os.environ["NDIF_API_KEY"])
+        CONFIG.set_default_api_key(ENV["NDIF_API_KEY"])
 
         # Defaults
-        self.models: Dict[str, LanguageModel] = {}
+        self.models: dict[str, LanguageModel] = {}
         self.remote = False
 
-        self.config = self._load(config_path)
+        self.config = self._load()
 
     def get_model(self, model_name: str):
         return self.models[model_name]
@@ -43,36 +51,28 @@ class AppState:
     def get_config(self):
         return self.config
 
-    def _load(self, config_path: str):
-        if not config_path.startswith("/root/"):
-            # current --> _api --> workbench --> /
-            root_dir = Path(__file__).parent.parent.parent.parent
+    def _load(self):
+        config_path = os.path.join(ROOT_DIR, "models.local.toml")
 
-            with open(root_dir / config_path, "rb") as f:
-                config = ModelsConfig(**tomllib.load(f))
-
-        else:
-            with open(config_path, "rb") as f:
-                config = ModelsConfig(**tomllib.load(f))
+        with open(config_path, "rb") as f:
+            config = ModelsConfig(**tomllib.load(f))
 
         remote = config.remote
         callback_url = config.callback_url
-
-        hf_token = os.environ.get("HF_TOKEN", None)
 
         for _, cfg in config.models.items():
             model = LanguageModel(
                 cfg.name,
                 rename=cfg.rename,
-                token=hf_token,
+                token=ENV["HF_TOKEN"],
                 device_map="cpu",
                 dispatch=not remote,
             )
 
-            wrapped_trace = partial(
-                _wrapped_trace, remote=remote, callback_base_url=callback_url
+            wrapped_trace_fn = partial(
+                wrapped_trace, remote=remote, callback_base_url=callback_url
             )
-            model.wrapped_trace = types.MethodType(wrapped_trace, model)
+            model.wrapped_trace = types.MethodType(wrapped_trace_fn, model)
             
             self.models[cfg.name] = model
 

@@ -3,15 +3,54 @@ from collections import defaultdict
 from fastapi import APIRouter, Request
 import torch as t
 import nnsight as ns
+from pydantic import BaseModel
 
 from ..utils import send_update
+from ..data_models import Completion, NDIFRequest, Token
 
-from ..schema.lens import (
-    TargetedLensRequest,
-    GridLensRequest,
-    GridLensResponse,
-    LensResponse,
-)
+
+##### TARGETED LENS REQUEST SCHEMA #####
+
+class TargetedLensCompletion(Completion):
+    name: str
+    tokens: list[Token]
+    model: str
+
+class TargetedLensRequest(NDIFRequest):
+    completions: list[TargetedLensCompletion]
+
+##### TARGETED LENS RESPONSE SCHEMA #####
+
+class Point(BaseModel):
+    name: str
+    prob: float
+
+class LayerResults(BaseModel):
+    layer: int
+    points: list[Point]
+
+class LensMetadata(BaseModel):
+    maxLayer: int
+
+class LensResponse(BaseModel):
+    data: list[LayerResults]
+    metadata: LensMetadata
+
+##### GRID LENS REQUEST SCHEMA #####
+
+class GridLensCompletion(Completion):
+    model: str
+
+class GridLensRequest(NDIFRequest):
+    completion: GridLensCompletion
+
+##### GRID LENS RESPONSE SCHEMA #####
+
+class GridLensResponse(BaseModel):
+    id: str
+    input_strs: list[str]
+    probs: list[list[float]]
+    pred_strs: list[list[str]]
 
 router = APIRouter()
 
@@ -99,7 +138,7 @@ def logit_lens_targeted(model, model_requests, job_id):
     return all_results
 
 
-def preprocess(lens_request: TargetedLensRequest | GridLensRequest):
+def preprocess(lens_request: TargetedLensRequest):
     # Batch prompts for the same model
     grouped_requests = defaultdict(list)
     for completion in lens_request.completions:

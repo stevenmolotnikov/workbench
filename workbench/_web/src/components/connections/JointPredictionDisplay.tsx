@@ -11,39 +11,95 @@ import { useSelectedModel } from "@/stores/useSelectedModel";
 import { cn } from "@/lib/utils";
 import { Token } from "@/types/tokenizer";
 
+
+const fixString = (str: string) => {
+    return str.replace(" ", "_");
+};
+
+interface PredictionBadgesProps {
+    label: string;
+    badges: Token[];
+    activeTokenType: "correct" | "incorrect" | null;
+    handlePredictionSelect: (badge: Token) => void;
+}
+
+function PredictionBadges({
+    label,
+    badges,
+    activeTokenType,
+    handlePredictionSelect,
+}: PredictionBadgesProps) {
+    return (
+        <div className="gap-2 flex flex-row items-center justify-between">
+            <div className="text-sm">{label}</div>
+
+            <div className="flex gap-2 items-center">
+                {badges.map((badge) => {
+                    return (
+                        <div
+                            key={`dest-${badge.id}`}
+                            className={`inline-flex items-center px-2 py-1 rounded-md bg-card text-muted-foreground text-xs transition-colors border border-transparent ${activeTokenType
+                                ? "cursor-pointer hover:bg-muted/80"
+                                : "opacity-50"
+                                }`}
+                            onClick={() => handlePredictionSelect(badge)}
+                            title={
+                                !activeTokenType
+                                    ? "Select a target badge first"
+                                    : "Click to select"
+                            }
+                        >
+                            <span className="font-medium">{fixString(badge.text)}</span>
+                            <span className="ml-1 text-xs opacity-70">
+                                {badge.probability?.toFixed(4)}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    )
+}
+
 interface TargetTokenBadgeProps {
     label: string;
-    value?: Token;
+    value: Token | null;
     isActive: boolean;
     onClick: () => void;
     className?: string;
+    disabled?: boolean;
 }
 
-export function TargetTokenBadge({
+function TargetTokenBadge({
     label,
     value,
     isActive,
     onClick,
-    className
+    className,
+    disabled
 }: TargetTokenBadgeProps) {
     const isEmpty = !value;
-
-    const fixString = (str: string) => {
-        return str.replace(" ", "_");
-    };
 
     return (
         <div
             className={cn(
-                "inline-flex items-center px-2 py-1 rounded-md border h-8 text-xs cursor-pointer transition-colors",
+                "inline-flex items-center px-2 py-1 rounded-md border h-8 text-xs transition-colors",
                 isEmpty
-                    ? "border-muted-foreground/30 border-dashed bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
-                    : "border-muted bg-muted text-muted-foreground hover:bg-muted/80",
-                isActive && "border-primary",
+                    ? "border-muted-foreground/30 border-dashed bg-muted/20 text-muted-foreground"
+                    : "border-muted bg-muted text-muted-foreground",
+                isActive && !disabled && "border-primary",
+                disabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/80",
                 className
             )}
-            onClick={onClick}
-            title={isEmpty ? `Click to select ${label.toLowerCase()} token` : `${label}: ${value}`}
+            onClick={disabled ? undefined : onClick}
+            title={disabled
+                ? "Disabled"
+                : isEmpty
+                    ? `Click to select ${label.toLowerCase()} token`
+                    : `${label}: ${value}`
+            }
         >
             {isEmpty ? (
                 <span className="text-muted-foreground/60">
@@ -92,12 +148,6 @@ export function JointPredictionDisplay() {
     const [decodedSourceTokens, setDecodedSourceTokens] = useState<string[]>([]);
     const [decodedDestTokens, setDecodedDestTokens] = useState<string[]>([]);
     const [predictions, setPredictions] = useState<PredictionResults | null>(null);
-
-
-    const fixString = (str: string | undefined) => {
-        if (!str) return "";
-        return str.replace(" ", "_");
-    };
 
     const setTopTokens = async (data: PredictionResults) => {
         const sourceTopIds = data.source.ids.slice(0, 3);
@@ -163,6 +213,7 @@ export function JointPredictionDisplay() {
                 }
                 setTargetTokenInput("");
                 setNotificationMessage("");
+                setActiveTokenType(null);
             } else {
                 setNotificationMessage(
                     `Input "${text}" tokenizes to ${tokens.length} tokens. Please enter a single token.`
@@ -183,6 +234,8 @@ export function JointPredictionDisplay() {
         } else {
             setIncorrectToken(token);
         }
+
+        setActiveTokenType(null);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -213,8 +266,8 @@ export function JointPredictionDisplay() {
     }
 
     return (
-        <div className="bg-card/30 p-4 space-y-2 rounded border">
-            <div className="flex flex-row items-center justify-between border-b pb-4">
+        <div className="bg-card/30 p-4 rounded border">
+            <div className="flex flex-row items-center justify-between">
                 <div className="flex flex-row items-center">
                     {/* <h2 className="text-sm font-medium">Prompts</h2> */}
                     <Select value={metric} onValueChange={handleSelectMetric}>
@@ -234,6 +287,7 @@ export function JointPredictionDisplay() {
                             value={correctToken}
                             isActive={activeTokenType === 'correct'}
                             onClick={() => setActiveTokenType(activeTokenType === 'correct' ? null : 'correct')}
+                            disabled={metric === undefined}
                         />
                         {metric === "logit-difference" && (
                             <TargetTokenBadge
@@ -241,6 +295,7 @@ export function JointPredictionDisplay() {
                                 value={incorrectToken}
                                 isActive={activeTokenType === 'incorrect'}
                                 onClick={() => setActiveTokenType(activeTokenType === 'incorrect' ? null : 'incorrect')}
+                                disabled={metric === undefined}
                             />
                         )}
                     </div>
@@ -255,100 +310,56 @@ export function JointPredictionDisplay() {
                 </Button>
             </div>
 
-
-            <div>
-                {/* Predictions Display */}
-                {predictions && (
-                    <div className="gap-4 my-4 pl-2 flex flex-col">
+            {predictions && (
+                <div className="border-t mt-4">
+                    {/* Predictions Display */}
+                    <div className="gap-4 mt-4 pl-2 flex flex-col">
                         {/* Source Predictions */}
-                        <div className="flex flex-row items-center justify-between">
-                            <div className="text-sm">Source</div>
-                            <div className="flex gap-2 items-center">
-                                {sourceBadges.map((badge) => {
-                                    return (
-                                        <div
-                                            key={`source-${badge.id}`}
-                                            className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs transition-colors border border-transparent ${activeTokenType
-                                                ? "cursor-pointer hover:bg-muted/80"
-                                                : "opacity-50"
-                                                }`}
-                                            onClick={() => handlePredictionSelect(badge)}
-                                            title={
-                                                !activeTokenType
-                                                    ? "Select a target badge first"
-                                                    : "Click to select"
-                                            }
-                                        >
-                                            <span className="font-medium">{fixString(badge.text)}</span>
-                                            <span className="ml-1 text-xs opacity-70">
-                                                {badge.probability?.toFixed(4)}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                        <PredictionBadges
+                            label="Source"
+                            badges={sourceBadges}
+                            activeTokenType={activeTokenType}
+                            handlePredictionSelect={handlePredictionSelect}
+                        />
 
                         {/* Destination Predictions */}
-                        <div className="gap-2 flex flex-row items-center justify-between">
-                            <div className="text-sm">Destination</div>
-                            
-                            <div className="flex gap-2 items-center">
-                                {destBadges.map((badge) => {
-                                    return (
-                                        <div
-                                            key={`dest-${badge.id}`}
-                                            className={`inline-flex items-center px-2 py-1 rounded-md bg-card text-muted-foreground text-xs transition-colors border border-transparent ${activeTokenType
-                                                ? "cursor-pointer hover:bg-muted/80"
-                                                : "opacity-50"
-                                                }`}
-                                            onClick={() => handlePredictionSelect(badge)}
-                                            title={
-                                                !activeTokenType
-                                                    ? "Select a target badge first"
-                                                    : "Click to select"
-                                            }
-                                        >
-                                            <span className="font-medium">{fixString(badge.text)}</span>
-                                            <span className="ml-1 text-xs opacity-70">
-                                                {badge.probability?.toFixed(4)}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        <PredictionBadges
+                            label="Destination"
+                            badges={destBadges}
+                            activeTokenType={activeTokenType}
+                            handlePredictionSelect={handlePredictionSelect}
+                        />
+                    </div>
+
+                    {/* Notification message */}
+                    {notificationMessage && (
+                        <div className="text-xs border bg-destructive/50 mt-4 text-destructive-foreground border-destructive-foreground/50 h-8 px-3 flex items-center rounded">
+                            {notificationMessage}
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Notification message */}
-                {notificationMessage && (
-                    <div className="text-xs border bg-destructive/50 text-destructive-foreground border-destructive-foreground/50 h-8 px-3 flex items-center rounded">
-                        {notificationMessage}
+                    {/* Token Input */}
+                    <div className="flex items-center mt-4 gap-2">
+                        <Input
+                            className="h-8"
+                            placeholder={activeTokenType ? `Enter ${activeTokenType} token and press Enter` : "Select a target badge to enter tokens"}
+                            value={targetTokenInput}
+                            onChange={(e) => setTargetTokenInput(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            disabled={!activeTokenType}
+                        />
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleTokenSubmit(targetTokenInput)}
+                            disabled={!targetTokenInput.trim() || !activeTokenType}
+                        >
+                            <Plus size={16} />
+                        </Button>
                     </div>
-                )}
-
-                {/* Token Input */}
-                <div className="flex items-center gap-2">
-                    <Input
-                        className="h-8"
-                        placeholder={activeTokenType ? `Enter ${activeTokenType} token and press Enter` : "Select a target badge to enter tokens"}
-                        value={targetTokenInput}
-                        onChange={(e) => setTargetTokenInput(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                        disabled={!activeTokenType}
-                    />
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleTokenSubmit(targetTokenInput)}
-                        disabled={!targetTokenInput.trim() || !activeTokenType}
-                    >
-                        <Plus size={16} />
-                    </Button>
                 </div>
-            </div>
+            )}
         </div>
     );
 } 

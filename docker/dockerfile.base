@@ -1,3 +1,5 @@
+# uv derived image
+# using python3.12 for toml
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm
 
 # Install base utilities
