@@ -7,11 +7,13 @@ import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 import { TutorialsSidebar } from "./TutorialsSidebar";
 import { PatchingHeatmap } from "./charts/types/PatchingHeatmap";
+import { HeatmapProps } from "./charts/base/Heatmap";
 
 export function ActivationPatching() {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
 
     const [heatmapData, setHeatmapData] = useState<HeatmapProps | null>(null);
+    const [patchingLoading, setPatchingLoading] = useState<boolean>(false);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -19,6 +21,14 @@ export function ActivationPatching() {
 
     const closeTutorials = useCallback(() => {
         setTutorialsOpen(false);
+    }, []);
+
+    const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
+        setHeatmapData(data);
+    }, []);
+
+    const handleSetPatchingLoading = useCallback((loading: boolean) => {
+        setPatchingLoading(loading);
     }, []);
 
     return (
@@ -42,11 +52,11 @@ export function ActivationPatching() {
                 <WorkbenchMenu tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
 
                 <ResizableLayout
-                    workbench={<PatchingWorkbench setHeatmapData={setHeatmapData} />}
+                    workbench={<PatchingWorkbench setHeatmapData={handleSetHeatmapData} setPatchingLoading={handleSetPatchingLoading} />}
                     charts={
                         <div className="h-full w-full bg-card p-4">
                             <div className="relative h-full w-full">
-                                <PatchingHeatmap isLoading={false} data={heatmapData} />
+                                <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
                             </div>
                         </div>
                     }

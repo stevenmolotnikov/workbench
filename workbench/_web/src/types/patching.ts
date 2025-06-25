@@ -17,8 +17,8 @@ export interface ActivationPatchingRequest {
 
 export interface ActivationPatchingResponse {
     results: number[][];
-    rowLabels: string[];
-    colLabels: string[];
+    rowLabels?: string[];
+    colLabels?: string[];
 }
 
 export interface ActivationPatchingWorkspace {

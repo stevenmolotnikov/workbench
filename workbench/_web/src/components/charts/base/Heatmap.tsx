@@ -306,11 +306,11 @@ export function Heatmap({
     const svgHeight = chartStartY + chartHeight + xTickSpace + xLabelSpace + colorScaleSpace;
 
     // Function to get cell text content
-    const getCellText = (value: number, rowIndex: number, colIndex: number): string => {
+    const getCellText = (value: number, rowIndex: number, colIndex: number): string | null => {
         if (labels && labels[rowIndex] && labels[rowIndex][colIndex] !== undefined) {
             return labels[rowIndex][colIndex];
         }
-        return value.toFixed(2);
+        return null; // Return null when no labels are provided
     };
 
     // Handle mouse events for tooltip
@@ -516,19 +516,21 @@ export function Heatmap({
                                             />
                                         );
                                     })()}
-                                    <text
-                                        x={colIndex * cellWidth + cellWidth / 2}
-                                        y={rowIndex * cellHeight + cellHeight / 2}
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
-                                        className="pointer-events-none fill-black"
-                                        fontSize={Math.min(
-                                            fontSize,
-                                            Math.min(actualCellWidth, actualCellHeight) / 2
-                                        )}
-                                    >
-                                        {getCellText(value, rowIndex, colIndex)}
-                                    </text>
+                                    {getCellText(value, rowIndex, colIndex) && (
+                                        <text
+                                            x={colIndex * cellWidth + cellWidth / 2}
+                                            y={rowIndex * cellHeight + cellHeight / 2}
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            className="pointer-events-none fill-black"
+                                            fontSize={Math.min(
+                                                fontSize,
+                                                Math.min(actualCellWidth, actualCellHeight) / 2
+                                            )}
+                                        >
+                                            {getCellText(value, rowIndex, colIndex)}
+                                        </text>
+                                    )}
                                 </g>
                             );
                         })

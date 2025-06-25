@@ -44,14 +44,14 @@ const fixToken = (token: string): { result: string; numNewlines: number } => {
 const isHighlighted = (tokenElement: HTMLElement) =>
     tokenElement.classList.contains('bg-primary/30');
 
-const getGroupTokenIndices = (groupId: number): number[] => {
+const getGroupTokenIndices = (groupId: string | number): number[] => {
     const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
     return groupTokens
         .map(token => parseInt(token.getAttribute('data-token-id') || '-1'))
         .filter(idx => idx !== -1);
 };
 
-const calculateGroupCenter = (groupId: number, tokenElement: HTMLElement): number => {
+const calculateGroupCenter = (groupId: string | number, tokenElement: HTMLElement): number => {
     const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`)) as HTMLElement[];
     if (groupTokens.length <= 1) {
         const rect = tokenElement.getBoundingClientRect();
@@ -111,13 +111,14 @@ export function ConnectableTokenArea({
 
     const getTokenData = (tokenElement: HTMLElement) => {
         const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
-        const groupId = parseInt(tokenElement.getAttribute('data-group-id') || '-1');
+        const groupIdAttr = tokenElement.getAttribute('data-group-id') || '-1';
+        const groupId = groupIdAttr === '-1' ? -1 : groupIdAttr;
         const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
-        return { tokenIndex, groupId, tokenIndices };
+        return { groupId, tokenIndices };
     };
 
 
-    const calculatePosition = (tokenElement: HTMLElement, groupId: number, isStart: boolean) => {
+    const calculatePosition = (tokenElement: HTMLElement, groupId: string | number, isStart: boolean) => {
         const rect = tokenElement.getBoundingClientRect();
         const svgRect = svgRef.current?.getBoundingClientRect();
         if (!svgRect) return null;
@@ -134,7 +135,7 @@ export function ConnectableTokenArea({
         const tokenElement = target.closest('[data-token-id]') as HTMLElement;
         if (!tokenElement || !isHighlighted(tokenElement)) return;
 
-        const { tokenIndices, groupId } = getTokenData(tokenElement);
+        const { groupId, tokenIndices } = getTokenData(tokenElement);
         if (checkIfAlreadyConnected(tokenIndices)) return;
 
         const position = calculatePosition(tokenElement, groupId, true);
@@ -163,7 +164,8 @@ export function ConnectableTokenArea({
             return;
         }
 
-        const { tokenIndices, groupId } = getTokenData(tokenElement);
+        const { groupId, tokenIndices } = getTokenData(tokenElement);
+
         if (checkIfAlreadyConnected(tokenIndices)) {
             setIsDragging(false);
             setCurrentConnection({});
@@ -205,7 +207,7 @@ export function ConnectableTokenArea({
         const isGroupStart = isHighlighted && !isPrevHighlighted;
         const isGroupEnd = isHighlighted && !isNextHighlighted;
 
-        let groupId = -1;
+        let groupId: number = -1;
         if (isHighlighted) {
             if (isGroupStart) {
                 groupId = i;
@@ -218,7 +220,9 @@ export function ConnectableTokenArea({
             }
         }
 
-        return { isHighlighted, groupId, isGroupStart, isGroupEnd };
+        const groupIdString = `${counterId}-${groupId}`;
+
+        return { isHighlighted, groupIdString, isGroupStart, isGroupEnd };
     };
 
     const getTokenStyles = (
@@ -358,7 +362,7 @@ export function ConnectableTokenArea({
             onMouseLeave={handleContainerMouseLeave}
         >
             {tokenData.map((token, i) => {
-                const { isHighlighted, groupId, isGroupStart, isGroupEnd } = getGroupInformation(
+                const { isHighlighted, groupIdString, isGroupStart, isGroupEnd } = getGroupInformation(
                     i,
                     tokenData
                 );
@@ -369,7 +373,7 @@ export function ConnectableTokenArea({
                     <span key={`token-${i}`}>
                         <span
                             data-token-id={i}
-                            data-group-id={groupId}
+                            data-group-id={groupIdString}
                             className={styles}
                         >
                             {result}

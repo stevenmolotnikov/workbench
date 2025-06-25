@@ -6,7 +6,7 @@ from functools import partial
 from nnsight import LanguageModel, CONFIG
 from pydantic import BaseModel
 
-from ..ns_utils import wrapped_trace
+from ..ns_utils import wrapped_trace, wrapped_session
 from .. import ENV, ROOT_DIR
 
 class ModelConfig(BaseModel):
@@ -15,6 +15,7 @@ class ModelConfig(BaseModel):
     name: str
     chat: bool
     rename: dict[str, str]
+    config: dict[str, int | str]
 
 class ModelsConfig(BaseModel):
     """Root configuration containing all models."""
@@ -72,6 +73,17 @@ class AppState:
                 wrapped_trace, remote=remote, callback_base_url=callback_url
             )
             model.wrapped_trace = types.MethodType(wrapped_trace_fn, model)
+
+            wrapped_session_fn = partial(
+                wrapped_session, remote=remote, callback_base_url=callback_url
+            )
+            model.wrapped_session = types.MethodType(wrapped_session_fn, model)
+
+            model.config.update(cfg.config)
+
+            print(cfg.rename)
+            if cfg.name == "EleutherAI/gpt-j-6b":
+                print(model.model.layers[0].attn.o_proj)
             
             self.models[cfg.name] = model
 

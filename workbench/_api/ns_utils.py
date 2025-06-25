@@ -110,3 +110,16 @@ def wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: bool
 
     return self.trace(*args, backend=backend, output_attentions=output_attentions, **kwargs)
 
+
+def wrapped_session(self, *args, job_id: str, callback_base_url: str, remote: bool, **kwargs):
+    backend = None
+
+    callback_url = f"{callback_base_url}?job_id={job_id}"
+
+    if remote:
+        backend = CallbackBackend(
+            callback_url, self.to_model_key(), blocking=True
+        )
+
+    return self.session(*args, backend=backend, **kwargs)
+

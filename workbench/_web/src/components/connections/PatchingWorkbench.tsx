@@ -26,11 +26,20 @@ import { HeatmapProps } from "@/components/charts/base/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
 import { cn } from "@/lib/utils";
 import { PatchingSettings } from "./PatchingSettingsDropdown";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
+// Generate a unique ID for the job
+const generateJobId = (): string => {
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+};
 
-
-export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: HeatmapProps) => void }) {
+export function PatchingWorkbench({ 
+    setHeatmapData, 
+    setPatchingLoading 
+}: { 
+    setHeatmapData: (data: HeatmapProps) => void;
+    setPatchingLoading: (loading: boolean) => void;
+}) {
     const [tokenizeOnEnter, setTokenizeOnEnter] = useState<boolean>(true);
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
     const [component, setComponent] = useState<string>("blocks");
@@ -94,6 +103,12 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
             return;
         }
 
+        setPatchingLoading(true);
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = generateJobId();
+        
+        startStatusUpdates(jobId);
+
         const request: ActivationPatchingRequest = {
             edits: connections,
             model: modelName,
@@ -103,26 +118,28 @@ export function PatchingWorkbench({ setHeatmapData }: { setHeatmapData: (data: H
             correctId: correctToken.id,
             patchTokens: patchTokens,
             incorrectId: incorrectToken?.id,
-            jobId: "123",
+            jobId: jobId,
         };
 
-        console.log(JSON.stringify(request, null, 2));
+        try {
+            const response = await fetch("/api/patch-grid", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(request),
+            });
 
-        // try {
-        //     const response = await fetch(config.getApiUrl(config.endpoints.patch), {
-        //         method: "POST",
-        //         headers: {
-        //             "Content-Type": "application/json",
-        //         },
-        //         body: JSON.stringify(request),
-        //     });
+            if (!response.ok) throw new Error(response.statusText);
 
-        //     const data = await response.json();
-        //     console.log(data);
-        //     setHeatmapData(data);
-        // } catch (err) {
-        //     console.error("Error running patching:", err);
-        // }
+            const data = await response.json();
+            setHeatmapData(data);
+        } catch (err) {
+            console.error("Error running patching:", err);
+        } finally {
+            setPatchingLoading(false);
+            stopStatusUpdates();
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
