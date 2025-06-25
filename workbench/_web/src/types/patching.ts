@@ -2,32 +2,23 @@ import { Annotation, Completion, ChartMode } from "@/types/workspace";
 import { Grid3X3 } from "lucide-react";
 import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 
-// Token completion for patching - similar to lens TokenCompletion
-export interface PatchingTokenCompletion {
-    idx: number;
-    highlighted: boolean;
-}
-
-// Extended completion interface for patching that includes tokens
-export interface PatchingCompletion extends Completion {
-    tokens: PatchingTokenCompletion[];
-}
 
 export interface ActivationPatchingRequest {
-    connections: Connection[];
+    edits: Edit[];
     model: string;
-    source: PatchingCompletion;
-    destination: PatchingCompletion;
-    submodule: string;
-    correct_id: number;
-    incorrect_id: number;
-    patch_tokens: boolean;
+    source: Completion;
+    destination: Completion;
+    submodule: "attn" | "mlp" | "blocks" | "heads";
+    correctId: number;
+    incorrectId: number | undefined;
+    patchTokens: boolean;
+    jobId: string;
 }
 
 export interface ActivationPatchingResponse {
     results: number[][];
-    rowLabels: string[];
-    colLabels: string[];
+    rowLabels?: string[];
+    colLabels?: string[];
 }
 
 export interface ActivationPatchingWorkspace {
@@ -38,19 +29,18 @@ export interface ActivationPatchingWorkspace {
     graphData: ActivationPatchingResponse;
 }
 
+type Edit = Connection;
+
+interface Point {
+    x: number;
+    y: number;
+    tokenIndices: number[]; // Array of token indices in the group
+    counterIndex: number; // 0 for first counter, 1 for second counter
+}
+
 export interface Connection {
-    start: { 
-        x: number; 
-        y: number; 
-        tokenIndices: number[]; // Array of token indices in the group
-        counterIndex: number; // 0 for first counter, 1 for second counter
-    };
-    end: { 
-        x: number; 
-        y: number; 
-        tokenIndices: number[]; // Array of token indices in the group
-        counterIndex: number; // 0 for first counter, 1 for second counter
-    };
+    start: Point;
+    end: Point;
 }
 
 export const ActivationPatchingModes: ChartMode[] = [

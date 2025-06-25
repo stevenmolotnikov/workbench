@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { CellPosition, HeatmapAnnotation } from "@/types/lens";
 import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
 
 // Convert value to color
 const getColor = (value: number, minValue: number, maxValue: number, theme: string | undefined): string => {
@@ -40,7 +39,7 @@ interface TooltipData {
     isColorbar?: boolean;
 }
 
-interface HeatmapProps {
+export interface HeatmapProps {
     chartIndex: number;
     data: number[][];
     labels?: string[][];
@@ -61,7 +60,6 @@ export function Heatmap({
     xAxisLabel = "",
     yAxisLabel = "",
     fontSize = 12,
-    cellSpacing = 1,
 }: HeatmapProps) {
     const [tooltip, setTooltip] = useState<TooltipData>({
         value: 0,
@@ -308,11 +306,11 @@ export function Heatmap({
     const svgHeight = chartStartY + chartHeight + xTickSpace + xLabelSpace + colorScaleSpace;
 
     // Function to get cell text content
-    const getCellText = (value: number, rowIndex: number, colIndex: number): string => {
+    const getCellText = (value: number, rowIndex: number, colIndex: number): string | null => {
         if (labels && labels[rowIndex] && labels[rowIndex][colIndex] !== undefined) {
             return labels[rowIndex][colIndex];
         }
-        return value.toFixed(2);
+        return null; // Return null when no labels are provided
     };
 
     // Handle mouse events for tooltip
@@ -518,19 +516,21 @@ export function Heatmap({
                                             />
                                         );
                                     })()}
-                                    <text
-                                        x={colIndex * cellWidth + cellWidth / 2}
-                                        y={rowIndex * cellHeight + cellHeight / 2}
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
-                                        className="pointer-events-none fill-black"
-                                        fontSize={Math.min(
-                                            fontSize,
-                                            Math.min(actualCellWidth, actualCellHeight) / 2
-                                        )}
-                                    >
-                                        {getCellText(value, rowIndex, colIndex)}
-                                    </text>
+                                    {getCellText(value, rowIndex, colIndex) && (
+                                        <text
+                                            x={colIndex * cellWidth + cellWidth / 2}
+                                            y={rowIndex * cellHeight + cellHeight / 2}
+                                            textAnchor="middle"
+                                            dominantBaseline="middle"
+                                            className="pointer-events-none fill-black"
+                                            fontSize={Math.min(
+                                                fontSize,
+                                                Math.min(actualCellWidth, actualCellHeight) / 2
+                                            )}
+                                        >
+                                            {getCellText(value, rowIndex, colIndex)}
+                                        </text>
+                                    )}
                                 </g>
                             );
                         })

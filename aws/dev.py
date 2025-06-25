@@ -14,7 +14,7 @@ dev_environment = EnvironmentSchema(
        
         ServiceSchema(
             name="WorkBenchBackend",
-            instance_type="c6a.large",
+            instance_type="c7g.large",
             containers=[
                 ContainerSchema(
                     name="WorkBenchBackend",
@@ -29,7 +29,7 @@ dev_environment = EnvironmentSchema(
                     environment_variables={
                         "NDIF_API_KEY": "<key here>",
                         "HF_TOKEN": "<key here>"
-                    },
+                    },  
                 ),
                 
             ],

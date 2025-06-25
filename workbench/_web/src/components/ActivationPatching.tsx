@@ -3,14 +3,17 @@
 import { useState, useCallback } from "react";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 import { WorkbenchMenu } from "./WorkbenchMenu";
-import { ChartSelector } from "@/components/charts/ChartSelector";
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 import { TutorialsSidebar } from "./TutorialsSidebar";
-import { ActivationPatchingModes } from "@/types/patching";
+import { PatchingHeatmap } from "./charts/types/PatchingHeatmap";
+import { HeatmapProps } from "./charts/base/Heatmap";
 
 export function ActivationPatching() {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
+
+    const [heatmapData, setHeatmapData] = useState<HeatmapProps | null>(null);
+    const [patchingLoading, setPatchingLoading] = useState<boolean>(false);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -18,6 +21,14 @@ export function ActivationPatching() {
 
     const closeTutorials = useCallback(() => {
         setTutorialsOpen(false);
+    }, []);
+
+    const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
+        setHeatmapData(data);
+    }, []);
+
+    const handleSetPatchingLoading = useCallback((loading: boolean) => {
+        setPatchingLoading(loading);
     }, []);
 
     return (
@@ -41,8 +52,14 @@ export function ActivationPatching() {
                 <WorkbenchMenu tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
 
                 <ResizableLayout
-                    workbench={<PatchingWorkbench />}
-                    charts={<ChartSelector modes={ActivationPatchingModes} />}
+                    workbench={<PatchingWorkbench setHeatmapData={handleSetHeatmapData} setPatchingLoading={handleSetPatchingLoading} />}
+                    charts={
+                        <div className="h-full w-full bg-card p-4">
+                            <div className="relative h-full w-full">
+                                <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
+                            </div>
+                        </div>
+                    }
                 />
             </div>
         </div>

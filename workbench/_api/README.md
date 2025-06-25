@@ -1,0 +1,1 @@
+`modal deploy -m app.remote`

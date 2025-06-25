@@ -1,0 +1,365 @@
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RotateCcw, Plus } from "lucide-react";
+import { tokenizeText } from "@/actions/tokenize";
+import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import config from "@/lib/config";
+import { decodeTokenIds } from "@/actions/tokenize";
+import { useSelectedModel } from "@/stores/useSelectedModel";
+import { cn } from "@/lib/utils";
+import { Token } from "@/types/tokenizer";
+
+
+const fixString = (str: string) => {
+    return str.replace(" ", "_");
+};
+
+interface PredictionBadgesProps {
+    label: string;
+    badges: Token[];
+    activeTokenType: "correct" | "incorrect" | null;
+    handlePredictionSelect: (badge: Token) => void;
+}
+
+function PredictionBadges({
+    label,
+    badges,
+    activeTokenType,
+    handlePredictionSelect,
+}: PredictionBadgesProps) {
+    return (
+        <div className="gap-2 flex flex-row items-center justify-between">
+            <div className="text-sm">{label}</div>
+
+            <div className="flex gap-2 items-center">
+                {badges.map((badge) => {
+                    return (
+                        <div
+                            key={`dest-${badge.id}`}
+                            className={`inline-flex items-center px-2 py-1 rounded-md bg-card text-muted-foreground text-xs transition-colors border border-transparent ${activeTokenType
+                                ? "cursor-pointer hover:bg-muted/80"
+                                : "opacity-50"
+                                }`}
+                            onClick={() => handlePredictionSelect(badge)}
+                            title={
+                                !activeTokenType
+                                    ? "Select a target badge first"
+                                    : "Click to select"
+                            }
+                        >
+                            <span className="font-medium">{fixString(badge.text)}</span>
+                            <span className="ml-1 text-xs opacity-70">
+                                {badge.probability?.toFixed(4)}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    )
+}
+
+interface TargetTokenBadgeProps {
+    label: string;
+    value: Token | null;
+    isActive: boolean;
+    onClick: () => void;
+    className?: string;
+    disabled?: boolean;
+}
+
+function TargetTokenBadge({
+    label,
+    value,
+    isActive,
+    onClick,
+    className,
+    disabled
+}: TargetTokenBadgeProps) {
+    const isEmpty = !value;
+
+    return (
+        <div
+            className={cn(
+                "inline-flex items-center px-2 py-1 rounded-md border h-8 text-xs transition-colors",
+                isEmpty
+                    ? "border-muted-foreground/30 border-dashed bg-muted/20 text-muted-foreground"
+                    : "border-muted bg-muted text-muted-foreground",
+                isActive && !disabled && "border-primary",
+                disabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer hover:border-muted-foreground/50 hover:bg-muted/80",
+                className
+            )}
+            onClick={disabled ? undefined : onClick}
+            title={disabled
+                ? "Disabled"
+                : isEmpty
+                    ? `Click to select ${label.toLowerCase()} token`
+                    : `${label}: ${value}`
+            }
+        >
+            {isEmpty ? (
+                <span className="text-muted-foreground/60">
+                    {label}
+                </span>
+            ) : (
+                <>
+                    <span className="font-medium text-xs opacity-60 mr-1">
+                        {label}:
+                    </span>
+                    <span className="font-medium">
+                        {fixString(value.text)}
+                    </span>
+                </>
+            )}
+        </div>
+    );
+}
+
+interface PredictionResults {
+    source: {
+        ids: number[];
+        values: number[];
+    };
+    destination: {
+        ids: number[];
+        values: number[];
+    };
+}
+
+export function JointPredictionDisplay() {
+    const { modelName } = useSelectedModel();
+    const {
+        setCorrectToken,
+        setIncorrectToken,
+        correctToken,
+        incorrectToken,
+        source,
+        destination,
+    } = usePatchingCompletions();
+    const [targetTokenInput, setTargetTokenInput] = useState("");
+    const [notificationMessage, setNotificationMessage] = useState("");
+    const [activeTokenType, setActiveTokenType] = useState<"correct" | "incorrect" | null>(null);
+    const [metric, setMetric] = useState<string | undefined>(undefined);
+    const [predictionLoading, setPredictionLoading] = useState(false);
+    const [decodedSourceTokens, setDecodedSourceTokens] = useState<string[]>([]);
+    const [decodedDestTokens, setDecodedDestTokens] = useState<string[]>([]);
+    const [predictions, setPredictions] = useState<PredictionResults | null>(null);
+
+    const setTopTokens = async (data: PredictionResults) => {
+        const sourceTopIds = data.source.ids.slice(0, 3);
+        const destTopIds = data.destination.ids.slice(0, 3);
+
+        const [decodedSource, decodedDest] = await Promise.all([
+            decodeTokenIds(sourceTopIds, modelName),
+            decodeTokenIds(destTopIds, modelName),
+        ]);
+
+        setDecodedSourceTokens(decodedSource);
+        setDecodedDestTokens(decodedDest);
+    }
+
+
+    const handleRunPredictions = async () => {
+        if (!source.prompt.trim() || !destination.prompt.trim()) {
+            return;
+        }
+
+        setPredictionLoading(true);
+        try {
+            const response = await fetch(config.getApiUrl(config.endpoints.executePair), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    source: source,
+                    destination: destination,
+                    model: modelName,
+                    job_id: "prediction_job",
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setPredictions(data);
+            setTopTokens(data);
+        } catch (error) {
+            console.error("Error running predictions:", error);
+        } finally {
+            setPredictionLoading(false);
+        }
+    };
+
+    const handleTokenSubmit = async (text: string) => {
+        if (!text.trim() || !activeTokenType) return;
+
+        try {
+            const tokens = await tokenizeText(text, modelName, false);
+            if (!tokens || tokens.length === 0) return;
+
+            // Assert the text tokenizes to a single token
+            if (tokens.length === 1) {
+                if (activeTokenType === 'correct') {
+                    setCorrectToken(tokens[0]);
+                } else {
+                    setIncorrectToken(tokens[0]);
+                }
+                setTargetTokenInput("");
+                setNotificationMessage("");
+                setActiveTokenType(null);
+            } else {
+                setNotificationMessage(
+                    `Input "${text}" tokenizes to ${tokens.length} tokens. Please enter a single token.`
+                );
+                setTimeout(() => setNotificationMessage(""), 3000);
+                setTargetTokenInput("");
+            }
+        } catch (error) {
+            console.error("Error tokenizing text:", error);
+        }
+    };
+
+    const handlePredictionSelect = (token: Token) => {
+        if (!activeTokenType) return;
+
+        if (activeTokenType === 'correct') {
+            setCorrectToken(token);
+        } else {
+            setIncorrectToken(token);
+        }
+
+        setActiveTokenType(null);
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && targetTokenInput.trim()) {
+            handleTokenSubmit(targetTokenInput);
+        }
+    };
+
+
+    function createTokenBadges(decodedTokens: string[], predictions: { ids: number[]; values: number[] }): Token[] {
+        return decodedTokens.map((tokenStr, idx) => ({
+            text: tokenStr,
+            probability: predictions.values[idx],
+            id: predictions.ids[idx],
+        }));
+    }
+
+    const sourceBadges = predictions ? createTokenBadges(decodedSourceTokens, predictions.source) : [];
+    const destBadges = predictions ? createTokenBadges(decodedDestTokens, predictions.destination) : [];
+
+    function handleSelectMetric(value: string) {
+        if (metric === undefined) {
+            handleRunPredictions();
+        }
+
+        setMetric(value);
+        setActiveTokenType(null);
+    }
+
+    return (
+        <div className="bg-card/30 p-4 rounded border">
+            <div className="flex flex-row items-center justify-between">
+                <div className="flex flex-row items-center">
+                    {/* <h2 className="text-sm font-medium">Prompts</h2> */}
+                    <Select value={metric} onValueChange={handleSelectMetric}>
+                        <SelectTrigger className="w-32 h-8" disabled={source.prompt === "" || destination.prompt === ""}>
+                            <SelectValue placeholder="Select metric" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="logit-difference">Logit Diff</SelectItem>
+                            <SelectItem value="target-prob">Target Prob</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {/* Target Token Badges */}
+                    <div className="flex items-center gap-2 ml-2">
+                        <TargetTokenBadge
+                            label="Correct"
+                            value={correctToken}
+                            isActive={activeTokenType === 'correct'}
+                            onClick={() => setActiveTokenType(activeTokenType === 'correct' ? null : 'correct')}
+                            disabled={metric === undefined}
+                        />
+                        {metric === "logit-difference" && (
+                            <TargetTokenBadge
+                                label="Incorrect"
+                                value={incorrectToken}
+                                isActive={activeTokenType === 'incorrect'}
+                                onClick={() => setActiveTokenType(activeTokenType === 'incorrect' ? null : 'incorrect')}
+                                disabled={metric === undefined}
+                            />
+                        )}
+                    </div>
+                </div>
+                <Button
+                    onClick={handleRunPredictions}
+                    disabled={predictionLoading || !source.prompt.trim() || !destination.prompt.trim()}
+                    className="w-8 h-8"
+                    size="icon"
+                >
+                    <RotateCcw className="w-4 h-4" />
+                </Button>
+            </div>
+
+            {predictions && (
+                <div className="border-t mt-4">
+                    {/* Predictions Display */}
+                    <div className="gap-4 mt-4 pl-2 flex flex-col">
+                        {/* Source Predictions */}
+                        <PredictionBadges
+                            label="Source"
+                            badges={sourceBadges}
+                            activeTokenType={activeTokenType}
+                            handlePredictionSelect={handlePredictionSelect}
+                        />
+
+                        {/* Destination Predictions */}
+                        <PredictionBadges
+                            label="Destination"
+                            badges={destBadges}
+                            activeTokenType={activeTokenType}
+                            handlePredictionSelect={handlePredictionSelect}
+                        />
+                    </div>
+
+                    {/* Notification message */}
+                    {notificationMessage && (
+                        <div className="text-xs border bg-destructive/50 mt-4 text-destructive-foreground border-destructive-foreground/50 h-8 px-3 flex items-center rounded">
+                            {notificationMessage}
+                        </div>
+                    )}
+
+                    {/* Token Input */}
+                    <div className="flex items-center mt-4 gap-2">
+                        <Input
+                            className="h-8"
+                            placeholder={activeTokenType ? `Enter ${activeTokenType} token and press Enter` : "Select a target badge to enter tokens"}
+                            value={targetTokenInput}
+                            onChange={(e) => setTargetTokenInput(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            disabled={!activeTokenType}
+                        />
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleTokenSubmit(targetTokenInput)}
+                            disabled={!targetTokenInput.trim() || !activeTokenType}
+                        >
+                            <Plus size={16} />
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+} 

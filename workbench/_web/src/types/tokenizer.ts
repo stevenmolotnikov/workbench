@@ -2,8 +2,9 @@ import { Tensor } from '@huggingface/transformers';
 
 export interface Token {
     id: number;
-    idx: number;
     text: string;
+    idx?: number;
+    probability?: number;
 }
 
 type BatchEncoding = {

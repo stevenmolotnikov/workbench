@@ -35,7 +35,7 @@ yarn-error.log*
 !.env.template
 
 # Models config files
-models.*.toml
+models.toml
 !models.template.toml
 
 
@@ -56,3 +56,5 @@ __pycache__
 *.DS_Store
 
 *.egg-info
+
+cdk.out

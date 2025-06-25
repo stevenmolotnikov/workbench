@@ -1,4 +1,4 @@
-export type Layout = "1x1" | "2x1" | "2x2";
+export type Layout = 0 | 1 | 2 | 3;
 
 export interface Prediction {
     id: string;

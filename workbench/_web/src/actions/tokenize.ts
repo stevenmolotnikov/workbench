@@ -38,11 +38,10 @@ export async function tokenizeText(
       return [];
     }
 
-    // Get cached tokenizer or load if not cached
     const tokenizer = await getTokenizer(modelName);
 
     if (text.trim()) {
-      const token_ids = await tokenizer.encode(text, { add_special_tokens: addSpecialTokens });
+      const token_ids = tokenizer.encode(text, { add_special_tokens: addSpecialTokens });
       const tokens = token_ids.map((id) => tokenizer.decode([id]));
 
       return tokens.map((token: string, index: number) => ({

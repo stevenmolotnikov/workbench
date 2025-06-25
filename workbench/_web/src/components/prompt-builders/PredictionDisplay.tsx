@@ -81,21 +81,23 @@ const TokenDisplay = ({
 
                 // Clear any existing user badges (only one target token)
                 setTokenBadges([]);
-                
+
                 if (tokenIndex === -1) {
                     // Token not in predictions - add it as a user badge with probability 0
-                    setTokenBadges([{
-                        text: tokens[0].text,
-                        probability: 0,
-                        id: tokenId
-                    }]);
+                    setTokenBadges([
+                        {
+                            text: tokens[0].text,
+                            probability: 0,
+                            id: tokenId,
+                        },
+                    ]);
                     // Don't set selectedPredictionId since it's not a prediction
                     setSelectedPredictionId(null);
                 } else {
                     // Token is in predictions - mark it as selected
                     setSelectedPredictionId(tokenId);
                 }
-                
+
                 setNotificationMessage("");
 
                 // Update the token in the completion
@@ -166,15 +168,27 @@ const TokenDisplay = ({
                 {allBadges.map((badge, index) => {
                     const isSelected = selectedPredictionId === badge.id;
                     const shouldHighlight = !badge.isPrediction || isSelected;
-                    
+
                     return (
                         <div
                             key={`${badge.id}-${badge.isPrediction ? "pred" : "user"}`}
                             className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors ${
-                                shouldHighlight ? "border border-primary" : "border border-transparent"
+                                shouldHighlight
+                                    ? "border border-primary"
+                                    : "border border-transparent"
                             }`}
-                            onClick={badge.isPrediction ? () => togglePredictionSelection(badge.id, badge.text) : () => removeBadge(badge.id)}
-                            title={badge.isPrediction ? (isSelected ? "Click to deselect" : "Click to select") : "Click to remove"}
+                            onClick={
+                                badge.isPrediction
+                                    ? () => togglePredictionSelection(badge.id, badge.text)
+                                    : () => removeBadge(badge.id)
+                            }
+                            title={
+                                badge.isPrediction
+                                    ? isSelected
+                                        ? "Click to deselect"
+                                        : "Click to select"
+                                    : "Click to remove"
+                            }
                         >
                             <span className="font-medium">{fixString(badge.text)}</span>
                             <span className="ml-1 text-xs opacity-70">
@@ -263,7 +277,7 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
     };
 
     return (
-        <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
+        <>
             {predictions && predictions[selectedIdx] ? (
                 <TokenDisplay
                     predictions={predictions}
@@ -275,6 +289,6 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
             ) : (
                 <div className="text-sm text-muted-foreground">No token selected</div>
             )}
-        </div>
+        </>
     );
 };

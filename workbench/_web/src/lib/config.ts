@@ -14,6 +14,7 @@ const config = {
         patch: '/api/patch',
         execute: '/api/execute',
         executeSelected: '/api/execute_selected',
+        executePair: '/api/execute_pair',
         processData: '/process-data',
     },
     

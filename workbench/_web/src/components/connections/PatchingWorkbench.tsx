@@ -2,35 +2,85 @@
 
 import { useState } from "react";
 
-import { Route, RouteOff, RotateCcw, ALargeSmall, Snowflake, Eraser } from "lucide-react";
-import { useConnection } from "../../hooks/useConnection";
+import {
+    Route,
+    RouteOff,
+    RotateCcw,
+    ALargeSmall,
+    Play,
+} from "lucide-react";
 import { Edges } from "./Edge";
+import useEdges from "@/hooks/useEdges";
 import { Button } from "../ui/button";
 import { ConnectableTokenArea } from "./ConnectableTokenArea";
 import { Textarea } from "@/components/ui/textarea";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { ModelSelector } from "../ModelSelector";
 import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
+import { usePatchingTokens } from "@/stores/usePatchingTokens";
+import { useConnections } from "@/stores/useConnections";
 import { Token } from "@/types/tokenizer";
 import { batchTokenizeText } from "@/actions/tokenize";
+import { ActivationPatchingRequest } from "@/types/patching";
+import { HeatmapProps } from "@/components/charts/base/Heatmap";
+import { JointPredictionDisplay } from "./JointPredictionDisplay";
+import { cn } from "@/lib/utils";
+import { PatchingSettings } from "./PatchingSettingsDropdown";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
-export function PatchingWorkbench() {
+// Generate a unique ID for the job
+const generateJobId = (): string => {
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+};
+
+export function PatchingWorkbench({ 
+    setHeatmapData, 
+    setPatchingLoading 
+}: { 
+    setHeatmapData: (data: HeatmapProps) => void;
+    setPatchingLoading: (loading: boolean) => void;
+}) {
+    const [tokenizeOnEnter, setTokenizeOnEnter] = useState<boolean>(true);
     const [isConnecting, setIsConnecting] = useState<boolean>(false);
-    const [isFreezingTokens, setIsFreezingTokens] = useState<boolean>(false);
-    const [isAblatingTokens, setIsAblatingTokens] = useState<boolean>(false);
+    const [component, setComponent] = useState<string>("blocks");
+    const [patchTokens, setPatchTokens] = useState<boolean>(false);
     const { modelName } = useSelectedModel();
-    const { source, destination, setSource, setDestination } = usePatchingCompletions();
-
-    const [sourceTokenData, setSourceTokenData] = useState<Token[] | null>(null);
-    const [destinationTokenData, setDestinationTokenData] = useState<Token[] | null>(null);
+    const {
+        source,
+        destination,
+        correctToken,
+        incorrectToken,
+        setSource,
+        setDestination,
+    } = usePatchingCompletions();
+    const [selectedArea, setSelectedArea] = useState<"source" | "destination" | null>(null);
     const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
-    const connectionsHook = useConnection();
+    const {
+        setSourceTokenData,
+        setDestinationTokenData,
+        clearHighlightedTokens,
+    } = usePatchingTokens();
 
-    const { handleBackgroundClick, clearConnections } = connectionsHook;
+    const { 
+        setSelectedEdgeIndex, 
+        clearConnections,
+    } = useConnections();
+
+    const handleBackgroundClick = () => {
+        setSelectedEdgeIndex(null);
+    }
+
+    const clear = () => {
+        clearConnections();
+        clearHighlightedTokens();
+    }
+
+    const { svgRef } = useEdges();
 
     const handleTokenize = async () => {
         try {
+            clear();
             setTokenizerLoading(true);
 
             const inputTexts = [source.prompt, destination.prompt];
@@ -44,23 +94,58 @@ export function PatchingWorkbench() {
         }
     };
 
-    const handleModeToggle = (mode: 'connect' | 'freeze' | 'ablate') => {
-        switch (mode) {
-            case 'connect':
-                setIsConnecting(!isConnecting);
-                setIsFreezingTokens(false);
-                setIsAblatingTokens(false);
-                break;
-            case 'freeze':
-                setIsFreezingTokens(!isFreezingTokens);
-                setIsConnecting(false);
-                setIsAblatingTokens(false);
-                break;
-            case 'ablate':
-                setIsAblatingTokens(!isAblatingTokens);
-                setIsConnecting(false);
-                setIsFreezingTokens(false);
-                break;
+    const handleRunPatching = async () => {
+        const { connections } = useConnections.getState();
+        const { source, destination } = usePatchingCompletions.getState();
+
+        if (!correctToken) {
+            console.error("Correct and incorrect tokens must be set");
+            return;
+        }
+
+        setPatchingLoading(true);
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = generateJobId();
+        
+        startStatusUpdates(jobId);
+
+        const request: ActivationPatchingRequest = {
+            edits: connections,
+            model: modelName,
+            source: source,
+            destination: destination,
+            submodule: component as "blocks" | "attn" | "mlp" | "heads",
+            correctId: correctToken.id,
+            patchTokens: patchTokens,
+            incorrectId: incorrectToken?.id,
+            jobId: jobId,
+        };
+
+        try {
+            const response = await fetch("/api/patch-grid", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(request),
+            });
+
+            if (!response.ok) throw new Error(response.statusText);
+
+            const data = await response.json();
+            setHeatmapData(data);
+        } catch (err) {
+            console.error("Error running patching:", err);
+        } finally {
+            setPatchingLoading(false);
+            stopStatusUpdates();
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleTokenize();
         }
     };
 
@@ -68,9 +153,31 @@ export function PatchingWorkbench() {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="p-4 border-b">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Model</h2>
+                    <h2 className="text-sm font-medium">Patching Settings</h2>
 
-                    <ModelSelector />
+                    <div className="flex items-center gap-2">
+                        <ModelSelector />
+                        <PatchingSettings
+                            tokenizeOnEnter={tokenizeOnEnter}
+                            setTokenizeOnEnter={setTokenizeOnEnter}
+                            component={component}
+                            setComponent={setComponent}
+                            patchTokens={patchTokens}
+                            setPatchTokens={setPatchTokens}
+                        />
+                    </div>
+                </div>
+                <div className="mt-2 space-y-1 text-xs">
+                    <div className="flex justify-between items-center">
+                        <span >Component</span>
+                        <span className="font-medium ">{component}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span >Patch Tokens</span>
+                        <span className={`font-medium ${patchTokens ? "text-green-600" : "text-gray-400"}`}>
+                            {patchTokens ? "enabled" : "disabled"}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -80,7 +187,7 @@ export function PatchingWorkbench() {
                         <h2 className="text-sm font-medium">Patching</h2>
                         <div className="flex items-center gap-2">
                             <Button
-                                onClick={clearConnections}
+                                onClick={clear}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant="outline"
@@ -98,25 +205,7 @@ export function PatchingWorkbench() {
                                 <ALargeSmall className="w-4 h-4" />
                             </Button>
                             <Button
-                                onClick={() => handleModeToggle('freeze')}
-                                size="icon"
-                                className="w-8 h-8"
-                                variant={isFreezingTokens ? "default" : "outline"}
-                                title={isFreezingTokens ? "Disable freeze mode" : "Enable freeze mode"}
-                            >
-                                <Snowflake className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                onClick={() => handleModeToggle('ablate')}
-                                size="icon"
-                                className="w-8 h-8"
-                                variant={isAblatingTokens ? "default" : "outline"}
-                                title={isAblatingTokens ? "Disable ablate mode" : "Enable ablate mode"}
-                            >
-                                <Eraser className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                onClick={() => handleModeToggle('connect')}
+                                onClick={() => setIsConnecting(!isConnecting)}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant={isConnecting ? "default" : "outline"}
@@ -128,55 +217,78 @@ export function PatchingWorkbench() {
                                     <Route className="w-4 h-4" />
                                 )}
                             </Button>
+                            <Button
+                                onClick={() => handleRunPatching()}
+                                size="icon"
+                                className="w-8 h-8"
+                            >
+                                <Play className="w-4 h-4" />
+                            </Button>
                         </div>
                     </div>
 
                     <div className="relative h-full w-full flex flex-col gap-4">
-                        <div className="flex flex-col w-full px-3 py-2 border rounded">
+                        <div className={cn(
+                            "flex flex-col w-full px-3 py-2 border rounded bg-card",
+                            selectedArea === "source" ? "border-blue-500" : ""
+                        )}>
                             <ConnectableTokenArea
-                                tokenData={destinationTokenData}
                                 isConnecting={isConnecting}
-                                isFreezingTokens={isFreezingTokens}
-                                isAblatingTokens={isAblatingTokens}
-                                useConnections={connectionsHook}
-                                counterId={1}
-                                tokenizerLoading={tokenizerLoading}
-                            />
-                        </div>
-
-                        <div className="flex flex-col w-full px-3 py-2 border rounded">
-                            <ConnectableTokenArea
-                                tokenData={sourceTokenData}
-                                isConnecting={isConnecting}
-                                isFreezingTokens={isFreezingTokens}
-                                isAblatingTokens={isAblatingTokens}
-                                useConnections={connectionsHook}
+                                svgRef={svgRef}
                                 counterId={0}
                                 tokenizerLoading={tokenizerLoading}
                             />
                         </div>
 
+                        <div className={cn(
+                            "flex flex-col w-full px-3 py-2 border rounded bg-card",
+                            selectedArea === "destination" ? "border-blue-500" : ""
+                        )}>
+                            <ConnectableTokenArea
+                                isConnecting={isConnecting}
+                                svgRef={svgRef}
+                                counterId={1}
+                                tokenizerLoading={tokenizerLoading}
+                            />
+                        </div>
+
                         <div className="absolute inset-0 pointer-events-none">
-                            <Edges useConnections={connectionsHook} />
+                            <Edges svgRef={svgRef} />
                         </div>
                     </div>
                 </div>
             </div>
 
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
-                <Textarea
-                    value={source.prompt}
-                    onChange={(e) => setSource({ ...source, prompt: e.target.value })}
-                    className="flex-1 resize-none h-full"
-                    placeholder="Enter your prompt here..."
-                />
-                <Textarea
-                    value={destination.prompt}
-                    onChange={(e) => setDestination({ ...destination, prompt: e.target.value })}
-                    className="flex-1 resize-none h-full"
-                    placeholder="Enter your prompt here..."
-                />
+                <h2 className="text-sm font-medium">Prompts</h2>
+                <div className="flex flex-col flex-1 relative">
+                    <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Source Prompt</div>
+                    <Textarea
+                        value={source.prompt}
+                        onChange={(e) => setSource({ ...source, prompt: e.target.value })}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() => setSelectedArea("source")}
+                        onBlur={() => setSelectedArea(null)}
+                        className="flex-1 resize-none h-full"
+                        placeholder="Enter your source prompt here..."
+                    />
+                </div>
+                <div className="flex flex-col flex-1 relative">
+                    <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Destination Prompt</div>
+                    <Textarea
+                        value={destination.prompt}
+                        onChange={(e) => setDestination({ ...destination, prompt: e.target.value })}
+                        onKeyDown={handleKeyDown}
+                        onFocus={() => setSelectedArea("destination")}
+                        onBlur={() => setSelectedArea(null)}
+                        className="flex-1 resize-none h-full"
+                        placeholder="Enter your destination prompt here..."
+                    />
+                </div>
+
+                <JointPredictionDisplay/>
             </div>
+
         </div>
     );
 }

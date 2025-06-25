@@ -9,7 +9,10 @@ class Message(BaseModel):
 class Completion(BaseModel):
     id: str
     prompt: str
-    model: str
 
 class NDIFRequest(BaseModel):
     job_id: str
+
+class Token(BaseModel):
+    idx: int
+    target_id: int

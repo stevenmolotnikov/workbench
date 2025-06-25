@@ -28,22 +28,18 @@ interface WorkbenchModeProps {
 }
 
 export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeProps) {
-    const { layout, setLayout } = useCharts();
+    const { layout, setLayout, clearGridPositions  } = useCharts();
     const router = useRouter();
     const pathname = usePathname();
 
     const handleValueChange = (value: string) => {
+        clearGridPositions();
         router.push(`/workbench/${value}`);
     };
 
     const toggleAnnotations = () => {
         const { isOpen } = useAnnotations.getState();
         useAnnotations.setState({ isOpen: !isOpen });
-    };
-
-    const adjustChartsPerRow = (adjustment: number) => {
-        const newLayout = Math.max(1, Math.min(6, layout + adjustment)); // Min 1, Max 6 charts per row
-        setLayout(newLayout);
     };
 
     return (
@@ -71,39 +67,12 @@ export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeP
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                        <div className="flex items-center gap-2 p-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => adjustChartsPerRow(-1)}
-                                disabled={layout <= 1}
-                                className="h-6 w-6 p-0"
-                            >
-                                <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="text-sm font-medium w-8 text-center">{layout}</span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => adjustChartsPerRow(1)}
-                                disabled={layout >= 6}
-                                className="h-6 w-6 p-0"
-                            >
-                                <Plus className="h-3 w-3" />
-                            </Button>
-                        </div>
-                        <div className="border-t pt-1">
-                            <DropdownMenuItem onClick={() => setLayout(1)}>1 per row</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setLayout(2)}>2 per row</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setLayout(3)}>3 per row</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setLayout(4)}>4 per row</DropdownMenuItem>
-                        </div>
+                        <DropdownMenuItem onClick={() => setLayout(1)}>1 per row</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLayout(2)}>2 per row</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setLayout(3)}>3 per row</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <TutorialsToggle 
-                    tutorialsOpen={tutorialsOpen} 
-                    toggleTutorials={toggleTutorials} 
-                />
+                <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
             </div>
         </div>
     );

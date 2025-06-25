@@ -3,15 +3,54 @@ from collections import defaultdict
 from fastapi import APIRouter, Request
 import torch as t
 import nnsight as ns
+from pydantic import BaseModel
 
 from ..utils import send_update
+from ..data_models import Completion, NDIFRequest, Token
 
-from ..schema.lens import (
-    TargetedLensRequest,
-    GridLensRequest,
-    GridLensResponse,
-    LensResponse,
-)
+
+##### TARGETED LENS REQUEST SCHEMA #####
+
+class TargetedLensCompletion(Completion):
+    name: str
+    tokens: list[Token]
+    model: str
+
+class TargetedLensRequest(NDIFRequest):
+    completions: list[TargetedLensCompletion]
+
+##### TARGETED LENS RESPONSE SCHEMA #####
+
+class Point(BaseModel):
+    name: str
+    prob: float
+
+class LayerResults(BaseModel):
+    layer: int
+    points: list[Point]
+
+class LensMetadata(BaseModel):
+    maxLayer: int
+
+class LensResponse(BaseModel):
+    data: list[LayerResults]
+    metadata: LensMetadata
+
+##### GRID LENS REQUEST SCHEMA #####
+
+class GridLensCompletion(Completion):
+    model: str
+
+class GridLensRequest(NDIFRequest):
+    completion: GridLensCompletion
+
+##### GRID LENS RESPONSE SCHEMA #####
+
+class GridLensResponse(BaseModel):
+    id: str
+    input_strs: list[str]
+    probs: list[list[float]]
+    pred_strs: list[list[str]]
 
 router = APIRouter()
 
@@ -62,6 +101,7 @@ def logit_lens_targeted(model, model_requests, job_id):
             # Get user queried indices
             idxs = request["idxs"]
             target_ids = request["target_ids"]
+            target_id_strs = tok.batch_decode(target_ids)
             results = []
 
             prompt_id_strs = tok.batch_decode(tok.encode(request["prompt"]))
@@ -87,6 +127,7 @@ def logit_lens_targeted(model, model_requests, job_id):
                             "name": request["name"],
                             "layer_idx": layer_idx,
                             "target_probs": target_probs.save(),
+                            "target_id_strs": target_id_strs,
                             "idxs": idxs,
                             "prompt_id_strs": prompt_id_strs,
                         }
@@ -97,7 +138,7 @@ def logit_lens_targeted(model, model_requests, job_id):
     return all_results
 
 
-def preprocess(lens_request: TargetedLensRequest | GridLensRequest):
+def preprocess(lens_request: TargetedLensRequest):
     # Batch prompts for the same model
     grouped_requests = defaultdict(list)
     for completion in lens_request.completions:
@@ -126,20 +167,20 @@ def preprocess(lens_request: TargetedLensRequest | GridLensRequest):
 def postprocess(results):
     processed_results = defaultdict(list)
     for result in results:
-        # preds = result["preds"].value
         target_probs = result["target_probs"].tolist()
         target_idxs = result["idxs"]
-        target_prompt_id_strs = result["prompt_id_strs"]
+        prompt_id_strs = result["prompt_id_strs"]
+        target_id_strs = result["target_id_strs"]
 
         # If only a single token is selected, pred_probs is a float
         if not isinstance(target_probs, list):
             target_probs = [target_probs]
 
         layer_idx = result["layer_idx"]
-        for idx, prob in zip(target_idxs, target_probs):
+        for idx, prob, id_str in zip(target_idxs, target_probs, target_id_strs):
             processed_results[layer_idx].append(
                 {
-                    "name": result["name"] + f" - (\"{target_prompt_id_strs[idx]}\" | {idx})",
+                    "name": result["name"] + f" - (\"{prompt_id_strs[idx]}\" → \"{id_str}\")",
                     "prob": round(prob, 2),
                 }
             )

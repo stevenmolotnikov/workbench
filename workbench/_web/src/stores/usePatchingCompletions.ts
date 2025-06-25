@@ -1,47 +1,31 @@
 import { create } from 'zustand';
-import { PatchingCompletion, Connection } from '@/types/patching';
-
-interface TokenReference {
-    tokenId: number;
-    counterId: number;
-}
+import { Completion } from '@/types/workspace';
+import { Token } from '@/types/tokenizer';
 
 interface PatchingCompletionsState {
-    source: PatchingCompletion;
-    destination: PatchingCompletion;
-    connections: Connection[];
-    frozenTokens: TokenReference[];
-    ablatedTokens: TokenReference[];
-    setSource: (completion: PatchingCompletion) => void;
-    setDestination: (completion: PatchingCompletion) => void;
-    updateSource: (updates: Partial<PatchingCompletion>) => void;
-    updateDestination: (updates: Partial<PatchingCompletion>) => void;
-    setConnections: (connections: Connection[]) => void;
-    addConnection: (connection: Connection) => void;
-    removeConnection: (tokenIndex: number, counterIndex: number) => void;
-    removeConnectionByIndex: (index: number) => void;
-    clearConnections: () => void;
-    addFrozenToken: (tokenId: number, counterId: number) => void;
-    removeFrozenToken: (tokenId: number, counterId: number) => void;
-    addAblatedToken: (tokenId: number, counterId: number) => void;
-    removeAblatedToken: (tokenId: number, counterId: number) => void;
-    clearFrozenTokens: () => void;
-    clearAblatedTokens: () => void;
-    resetCompletions: () => void;
+    source: Completion;
+    destination: Completion;
+    correctToken: Token | null;
+    incorrectToken: Token | null;
+    
+    setSource: (completion: Completion) => void;
+    setDestination: (completion: Completion) => void;
+    updateSource: (updates: Partial<Completion>) => void;
+    updateDestination: (updates: Partial<Completion>) => void;
+    setCorrectToken: (token: Token) => void;
+    setIncorrectToken: (token: Token) => void;
 }
 
-const makeDefaultCompletion = (name: string): PatchingCompletion => ({
+const makeDefaultCompletion = (name: string): Completion => ({
     id: name,
     prompt: "",
-    tokens: [],
 });
 
 export const usePatchingCompletions = create<PatchingCompletionsState>((set, get) => ({
     source: makeDefaultCompletion("source"),
     destination: makeDefaultCompletion("destination"),
-    connections: [],
-    frozenTokens: [],
-    ablatedTokens: [],
+    correctToken: null,
+    incorrectToken: null,
 
     setSource: (completion) => set({ source: completion }),
 
@@ -55,49 +39,7 @@ export const usePatchingCompletions = create<PatchingCompletionsState>((set, get
         destination: { ...state.destination, ...updates }
     })),
 
-    setConnections: (connections) => set({ connections }),
+    setCorrectToken: (token) => set({ correctToken: token }),
+    setIncorrectToken: (token) => set({ incorrectToken: token }),
 
-    addConnection: (connection) => set((state) => ({
-        connections: [...state.connections, connection]
-    })),
-
-    removeConnection: (tokenIndex, counterIndex) => set((state) => ({
-        connections: state.connections.filter(conn => 
-            !conn.start.tokenIndices.includes(tokenIndex) && conn.start.counterIndex !== counterIndex
-        )
-    })),
-
-    removeConnectionByIndex: (index) => set((state) => ({
-        connections: state.connections.filter((_, i) => i !== index)
-    })),
-
-    clearConnections: () => set({ connections: [], frozenTokens: [], ablatedTokens: [] }),
-
-    addFrozenToken: (tokenId, counterId) => set((state) => ({
-        frozenTokens: [...state.frozenTokens.filter(t => !(t.tokenId === tokenId && t.counterId === counterId)), { tokenId, counterId }]
-    })),
-
-    removeFrozenToken: (tokenId, counterId) => set((state) => ({
-        frozenTokens: state.frozenTokens.filter(t => !(t.tokenId === tokenId && t.counterId === counterId))
-    })),
-
-    addAblatedToken: (tokenId, counterId) => set((state) => ({
-        ablatedTokens: [...state.ablatedTokens.filter(t => !(t.tokenId === tokenId && t.counterId === counterId)), { tokenId, counterId }]
-    })),
-
-    removeAblatedToken: (tokenId, counterId) => set((state) => ({
-        ablatedTokens: state.ablatedTokens.filter(t => !(t.tokenId === tokenId && t.counterId === counterId))
-    })),
-
-    clearFrozenTokens: () => set({ frozenTokens: [] }),
-
-    clearAblatedTokens: () => set({ ablatedTokens: [] }),
-
-    resetCompletions: () => set({
-        source: makeDefaultCompletion("source"),
-        destination: makeDefaultCompletion("destination"),
-        connections: [],
-        frozenTokens: [],
-        ablatedTokens: [],
-    }),
 }));

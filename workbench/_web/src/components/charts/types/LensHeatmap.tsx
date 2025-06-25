@@ -24,12 +24,12 @@ const generateJobId = (): string => {
 
 export function LensHeatmap({ index }: { index: number }) {
     const [isLoading, setIsLoading] = useState(false);
-    const [completionIndex, setCompletionIndex] = useState<string>("1");
 
     const { annotations, setAnnotations } = useAnnotations();
-    const { gridPositions, removeChart, setChartData } = useCharts();
+    const { removeChart, setChartData } = useCharts();
 
-    const gridPosition = gridPositions[index];
+    const completionIds = useCharts((state) => state.gridPositions[index]?.completion_ids || []);
+    const chartData = useCharts((state) => state.gridPositions[index]?.chartData);
 
     const handleRemoveChart = () => {
         setAnnotations(
@@ -102,7 +102,15 @@ export function LensHeatmap({ index }: { index: number }) {
         return () => {
             handleEmphasizeCompletion(-1);
         };
-    }, [completionIndex]);
+    }, [completionIds]);
+
+    useEffect(() => {
+        console.log("rerunning", completionIds);
+        if (completionIds.length > 0 && !isLoading) {
+            console.log(`Auto-running chart ${index} due to completion_ids change`);
+            handleRunChart();
+        }
+    }, [completionIds]);
 
     const activeCompletionsLength = useLensCompletions((state) => state.activeCompletions.length);
     const memoizedCompletionItems = useMemo(() => {
@@ -119,7 +127,7 @@ export function LensHeatmap({ index }: { index: number }) {
 
     return (
         <div
-            onMouseEnter={() => handleEmphasizeCompletion(parseInt(completionIndex) - 1)}
+            onMouseEnter={() => handleEmphasizeCompletion(parseInt(completionIds[0]))}
             onMouseLeave={() => handleEmphasizeCompletion(-1)}
             className="h-full w-full"
         >
@@ -131,31 +139,31 @@ export function LensHeatmap({ index }: { index: number }) {
                     <div>
                         <div className="text-md font-bold">Lens Heatmap</div>
                         <span className="text-xs text-muted-foreground">
-                            Completion {completionIndex}
+                            Completion {JSON.stringify(completionIds)}
                         </span>
                     </div>
                 }
                 chart={
-                    gridPosition.chartData ? (
-                        <Heatmap chartIndex={index} {...gridPosition.chartData.data} />
+                    chartData ? (
+                        <Heatmap chartIndex={index} {...chartData.data} />
                     ) : (
                         <div className="flex items-center justify-center h-full">
                             <p className="text-muted-foreground">No data</p>
                         </div>
                     )
                 }
-                configContent={
-                    <>
-                        <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuRadioGroup
-                            value={completionIndex}
-                            onValueChange={setCompletionIndex}
-                        >
-                            {memoizedCompletionItems}
-                        </DropdownMenuRadioGroup>
-                    </>
-                }
+                // configContent={
+                //     <>
+                //         <DropdownMenuLabel>Set Completion</DropdownMenuLabel>
+                //         <DropdownMenuSeparator />
+                //         <DropdownMenuRadioGroup
+                //             value={completionIds[0]}
+                //             onValueChange={setCompletionIndex}
+                //         >
+                //             {memoizedCompletionItems}
+                //         </DropdownMenuRadioGroup>
+                //     </>
+                // }
             />
         </div>
     );
