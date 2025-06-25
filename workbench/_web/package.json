@@ -5,7 +5,7 @@
   "scripts": {
     "copy-env": "node scripts/copy-env.js",
     "dev": "npm run copy-env && next dev -H 0.0.0.0 --turbopack",
-    "build": "npm run copy-env && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "bunx biome lint --write && bunx tsc --noEmit",
     "format": "bunx biome format --write"
