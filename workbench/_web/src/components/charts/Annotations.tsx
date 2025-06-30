@@ -15,7 +15,9 @@ import {
     FolderOpen,
     GripVertical,
     Edit2,
-    Check
+    Check,
+    AlertCircle,
+    RotateCcw
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -34,6 +36,16 @@ import {
     useDraggable,
     useDroppable,
 } from "@dnd-kit/core";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { useCharts } from "@/stores/useCharts";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 
 const AnnotationTitle = {
     lineGraph: "Point",
@@ -43,19 +55,23 @@ const AnnotationTitle = {
 };
 
 function formatAnnotationDetails(annotation: Annotation) {
+    const orphanedInfo = annotation.data.isOrphaned 
+        ? ` • Chart #${annotation.data.originalChartIndex} (deleted)` 
+        : '';
+    
     switch (annotation.type) {
         case "lineGraph":
-            return `Layer ${annotation.data.layer}`;
+            return `Layer ${annotation.data.layer}${orphanedInfo}`;
         case "lineGraphRange":
-            return `Layers ${annotation.data.start}-${annotation.data.end}`;
+            return `Layers ${annotation.data.start}-${annotation.data.end}${orphanedInfo}`;
         case "heatmap":
             const positions = annotation.data.positions;
             if (positions.length === 1) {
-                return `Cell (${positions[0].row}, ${positions[0].col})`;
+                return `Cell (${positions[0].row}, ${positions[0].col})${orphanedInfo}`;
             }
-            return `${positions.length} cells selected`;
+            return `${positions.length} cells selected${orphanedInfo}`;
         case "token":
-            return "Token annotation";
+            return `Token annotation${orphanedInfo}`;
         default:
             return "";
     }
@@ -125,10 +141,19 @@ function DraggableAnnotation({
                 isDragging ? "opacity-50" : ""
             } ${
                 isOver && !isDragging ? "ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20" : ""
+            } ${
+                annotation.data.isOrphaned ? "opacity-60 border-orange-500/30" : ""
             }`}
             onMouseEnter={() => onEmphasize(annotation)}
             onMouseLeave={onClearEmphasize}
         >
+            {/* Orphaned indicator */}
+            {annotation.data.isOrphaned && (
+                <div className="absolute top-2 left-2 text-orange-600 dark:text-orange-400">
+                    <AlertCircle className="h-4 w-4" />
+                </div>
+            )}
+            
             {/* Drag handle */}
             <div
                 {...listeners}
@@ -211,6 +236,10 @@ function DroppableGroup({
 }: DroppableGroupProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(group.name);
+    const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    
+    const { clearGridPositions, setGridPositions } = useCharts();
+    const { setActiveCompletions } = useLensCompletions();
 
     const { setNodeRef, isOver } = useDroppable({
         id: `group-${group.id}`,
@@ -238,97 +267,164 @@ function DroppableGroup({
         }
     };
 
+    const handleRestoreCollection = () => {
+        if (!group.workspaceSnapshot) return;
+        
+        // Clear current workspace and restore from snapshot
+        clearGridPositions();
+        setGridPositions(group.workspaceSnapshot.gridPositions);
+        setActiveCompletions(group.workspaceSnapshot.completions);
+        
+        setShowRestoreDialog(false);
+    };
+
     return (
-        <div
-            ref={setNodeRef}
-            className={`bg-card border rounded-lg transition-all duration-200 ${
-                isOver ? "ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20" : ""
-            }`}
-        >
-            {/* Group header */}
-            <div className="flex items-center justify-between p-4 border-b">
-                <div className="flex items-center gap-2 flex-1">
+        <>
+            <div
+                ref={setNodeRef}
+                className={`bg-card border rounded-lg transition-all duration-200 ${
+                    isOver ? "ring-2 ring-blue-500 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20" : ""
+                } ${
+                    group.workspaceSnapshot ? "border-purple-500/30" : ""
+                }`}
+            >
+                {/* Group header */}
+                <div className="flex items-center justify-between p-4 border-b">
+                    <div className="flex items-center gap-2 flex-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => onToggleExpansion(group.id)}
+                        >
+                            {group.isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                            ) : (
+                                <ChevronRight className="h-4 w-4" />
+                            )}
+                        </Button>
+                        
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                        
+                        {isEditing ? (
+                            <Input
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onKeyDown={handleKeyPress}
+                                onBlur={handleNameEdit}
+                                className="h-6 text-sm font-medium"
+                                autoFocus
+                            />
+                        ) : (
+                            <span className="text-sm font-medium">{group.name}</span>
+                        )}
+                        
+                        <span className="text-xs text-muted-foreground">
+                            ({group.annotations.length})
+                        </span>
+                        
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 ml-2"
+                            onClick={handleNameEdit}
+                        >
+                            {isEditing ? (
+                                <Check className="h-3 w-3" />
+                            ) : (
+                                <Edit2 className="h-3 w-3" />
+                            )}
+                        </Button>
+                        
+                        {/* Restore collection button */}
+                        {group.workspaceSnapshot && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 ml-auto mr-2 text-purple-600 dark:text-purple-400"
+                                onClick={() => setShowRestoreDialog(true)}
+                            >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                <span className="text-xs">Restore</span>
+                            </Button>
+                        )}
+                    </div>
+                    
                     <Button
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => onToggleExpansion(group.id)}
+                        onClick={() => onDeleteGroup(group.id)}
                     >
-                        {group.isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                        ) : (
-                            <ChevronRight className="h-4 w-4" />
-                        )}
-                    </Button>
-                    
-                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                    
-                    {isEditing ? (
-                        <Input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onKeyDown={handleKeyPress}
-                            onBlur={handleNameEdit}
-                            className="h-6 text-sm font-medium"
-                            autoFocus
-                        />
-                    ) : (
-                        <span className="text-sm font-medium">{group.name}</span>
-                    )}
-                    
-                    <span className="text-xs text-muted-foreground">
-                        ({group.annotations.length})
-                    </span>
-                    
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 ml-2"
-                        onClick={handleNameEdit}
-                    >
-                        {isEditing ? (
-                            <Check className="h-3 w-3" />
-                        ) : (
-                            <Edit2 className="h-3 w-3" />
-                        )}
+                        <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => onDeleteGroup(group.id)}
-                >
-                    <X className="h-4 w-4" />
-                </Button>
+
+                {/* Collection metadata */}
+                {group.isExpanded && (group.description || group.hypothesis) && (
+                    <div className="px-4 py-3 border-b bg-muted/30">
+                        {group.hypothesis && (
+                            <div className="mb-2">
+                                <span className="text-xs font-medium text-muted-foreground">Hypothesis:</span>
+                                <p className="text-sm mt-1">{group.hypothesis}</p>
+                            </div>
+                        )}
+                        {group.description && (
+                            <div>
+                                <span className="text-xs font-medium text-muted-foreground">Description:</span>
+                                <p className="text-sm mt-1">{group.description}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Group content */}
+                {group.isExpanded && (
+                    <div className="p-4 space-y-3">
+                        {group.annotations.map((annotation) => (
+                            <DraggableAnnotation
+                                key={annotation.data.id}
+                                annotation={annotation}
+                                isInGroup={group.id}
+                                onDelete={onDelete}
+                                onEmphasize={onEmphasize}
+                                onClearEmphasize={onClearEmphasize}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                {/* Drop indicator for groups */}
+                {isOver && (
+                    <div className="absolute inset-0 rounded-lg border-2 border-dashed border-blue-500 bg-blue-50/20 dark:bg-blue-950/30 flex items-center justify-center pointer-events-none">
+                        <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-white/90 dark:bg-gray-900/90 px-2 py-1 rounded">
+                            Drop to add to group
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Group content */}
-            {group.isExpanded && (
-                <div className="p-4 space-y-3">
-                    {group.annotations.map((annotation) => (
-                        <DraggableAnnotation
-                            key={annotation.data.id}
-                            annotation={annotation}
-                            isInGroup={group.id}
-                            onDelete={onDelete}
-                            onEmphasize={onEmphasize}
-                            onClearEmphasize={onClearEmphasize}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Drop indicator for groups */}
-            {isOver && (
-                <div className="absolute inset-0 rounded-lg border-2 border-dashed border-blue-500 bg-blue-50/20 dark:bg-blue-950/30 flex items-center justify-center pointer-events-none">
-                    <div className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-white/90 dark:bg-gray-900/90 px-2 py-1 rounded">
-                        Drop to add to group
-                    </div>
-                </div>
-            )}
-        </div>
+            {/* Restore dialog */}
+            <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Restore Collection</DialogTitle>
+                        <DialogDescription>
+                            This will clear your current workspace and restore the saved state from "{group.name}". 
+                            Any unsaved work will be lost. Are you sure?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleRestoreCollection}>
+                            Restore Collection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
@@ -341,6 +437,7 @@ export function Annotations() {
         cancelPendingAnnotation,
         deleteAnnotation,
         createGroup,
+        createGroupWithSnapshot,
         addAnnotationToGroup,
         deleteGroup,
         toggleGroupExpansion,
@@ -349,6 +446,9 @@ export function Annotations() {
         clearEmphasizedAnnotation,
         getUngroupedAnnotations,
     } = useAnnotations();
+
+    const { gridPositions } = useCharts();
+    const { activeCompletions } = useLensCompletions();
 
     const [text, setText] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -405,9 +505,13 @@ export function Annotations() {
             const annotation1 = draggedData.annotation;
             const annotation2 = overData.annotation;
             
-            // Create a new group with both annotations
+            // Create a new group with both annotations and capture workspace snapshot
             const groupName = `Group ${groups.length + 1}`;
-            createGroup(groupName, [annotation1, annotation2]);
+            const workspaceSnapshot = {
+                gridPositions: [...gridPositions],
+                completions: [...activeCompletions],
+            };
+            createGroupWithSnapshot(groupName, [annotation1, annotation2], workspaceSnapshot);
         }
         
         // Handle dropping on a group

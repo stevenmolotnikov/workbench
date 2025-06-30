@@ -51,6 +51,7 @@ export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeP
                 <SelectContent>
                     <SelectItem value="lens">Lens</SelectItem>
                     <SelectItem value="patch">Patch</SelectItem>
+                    <SelectItem value="summaries">Summaries</SelectItem>
                 </SelectContent>
             </Select>
             <div className="flex items-center gap-2">

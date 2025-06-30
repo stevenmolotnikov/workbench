@@ -13,6 +13,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useAnnotations } from "@/stores/useAnnotations";
+import type { Annotation } from "@/stores/useAnnotations";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
 import type { LensCompletion } from "@/types/lens";
@@ -32,9 +33,21 @@ export function LensHeatmap({ index }: { index: number }) {
     const chartData = useCharts((state) => state.gridPositions[index]?.chartData);
 
     const handleRemoveChart = () => {
-        setAnnotations(
-            annotations.filter((a) => !(a.type === "heatmap" && a.data.chartIndex === index))
-        );
+        // Mark annotations as orphaned instead of deleting them
+        const orphanedAnnotations = annotations.map((a) => {
+            if (a.type === "heatmap" && a.data.chartIndex === index) {
+                return {
+                    ...a,
+                    data: {
+                        ...a.data,
+                        isOrphaned: true,
+                        originalChartIndex: a.data.chartIndex,
+                    },
+                };
+            }
+            return a;
+        });
+        setAnnotations(orphanedAnnotations);
         removeChart(index);
     };
 

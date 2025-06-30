@@ -48,6 +48,7 @@ export interface LogitLensWorkspace {
     completions: LensCompletion[];
     graphData: GridPosition[];
     annotations: WorkspaceAnnotation[];
+    groups?: any[]; // AnnotationGroup[] from useAnnotations
 }
 
 // Line Chart Data Schema

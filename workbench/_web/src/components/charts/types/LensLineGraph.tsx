@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LineGraph } from "@/components/charts/base/LineGraph";
 import { useCharts } from "@/stores/useCharts";
 import { useLensCompletions } from "@/stores/useLensCompletions";
 import { ChartCard } from "../ChartCard";
 import { useAnnotations } from "@/stores/useAnnotations";
+import type { Annotation } from "@/stores/useAnnotations";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
 import type { LensCompletion, TokenCompletion } from "@/types/lens";
@@ -22,7 +23,21 @@ export function LensLineGraph({ index }: { index: number }) {
     const gridPosition = gridPositions[index];
 
     const handleRemoveChart = () => {
-        setAnnotations(annotations.filter((a) => !(a.type === "lineGraph" && a.data.chartIndex === index)));
+        // Mark annotations as orphaned instead of deleting them
+        const orphanedAnnotations = annotations.map((a: Annotation) => {
+            if ((a.type === "lineGraph" || a.type === "lineGraphRange") && a.data.chartIndex === index) {
+                return {
+                    ...a,
+                    data: {
+                        ...a.data,
+                        isOrphaned: true,
+                        originalChartIndex: a.data.chartIndex,
+                    },
+                };
+            }
+            return a;
+        });
+        setAnnotations(orphanedAnnotations);
         removeChart(index);
     };
 

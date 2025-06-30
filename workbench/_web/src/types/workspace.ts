@@ -19,6 +19,9 @@ export interface Model {
 export interface Annotation {
     id: string;
     text: string;
+    isOrphaned?: boolean;
+    originalChartIndex?: number;
+    groupId?: string;
 }
 
 export type ChartType = "heatmap" | "lineGraph";

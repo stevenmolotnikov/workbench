@@ -15,6 +15,15 @@ export interface AnnotationGroup {
     annotations: Annotation[];
     isExpanded: boolean;
     createdAt: Date;
+    // Collection metadata
+    description?: string;
+    hypothesis?: string;
+    tags?: string[];
+    // Workspace state for collection restoration
+    workspaceSnapshot?: {
+        gridPositions: any[]; // GridPosition[] from useCharts
+        completions: any[]; // LensCompletion[] from useLensCompletions
+    };
 }
 
 export type AnnotationItem = Annotation | AnnotationGroup;
@@ -32,14 +41,17 @@ interface AnnotationState {
     cancelPendingAnnotation: () => void;
     deleteAnnotation: (id: string) => void;
     setAnnotations: (annotations: Annotation[]) => void;
+    setGroups: (groups: AnnotationGroup[]) => void;
 
     // Group management
     createGroup: (name: string, annotations: Annotation[]) => void;
+    createGroupWithSnapshot: (name: string, annotations: Annotation[], workspaceSnapshot?: AnnotationGroup['workspaceSnapshot']) => void;
     addAnnotationToGroup: (annotationId: string, groupId: string) => void;
     removeAnnotationFromGroup: (annotationId: string, groupId: string) => void;
     deleteGroup: (groupId: string) => void;
     toggleGroupExpansion: (groupId: string) => void;
     updateGroupName: (groupId: string, name: string) => void;
+    updateGroupMetadata: (groupId: string, metadata: { description?: string; hypothesis?: string; tags?: string[] }) => void;
 
     // Emphasize annotations on hover
     setEmphasizedAnnotation: (annotation: Annotation) => void;
@@ -83,6 +95,8 @@ export const useAnnotations = create<AnnotationState>((set, get) => ({
 
     setAnnotations: (annotations) => set({ annotations }),
 
+    setGroups: (groups) => set({ groups }),
+
     deleteAnnotation: (id) =>
         set((state) => {
             // Remove from ungrouped annotations
@@ -101,36 +115,44 @@ export const useAnnotations = create<AnnotationState>((set, get) => ({
             };
         }),
 
-    createGroup: (name, annotations) =>
-        set((state) => {
-            const groupId = nanoid();
-            const newGroup: AnnotationGroup = {
-                id: groupId,
-                name,
-                annotations,
-                isExpanded: true,
-                createdAt: new Date(),
-            };
+    createGroup: (name, annotations) => {
+        const newGroup: AnnotationGroup = {
+            id: nanoid(),
+            name,
+            annotations: [...annotations],
+            isExpanded: true,
+            createdAt: new Date(),
+        };
 
-            // Remove annotations from ungrouped list
-            const annotationIds = annotations.map((a) => a.data.id);
-            const newAnnotations = state.annotations.filter(
-                (a) => !annotationIds.includes(a.data.id)
-            );
+        set((state) => ({
+            groups: [...state.groups, newGroup],
+            annotations: state.annotations.filter(
+                (a) => !annotations.some((groupAnnotation) => 
+                    groupAnnotation.data.id === a.data.id
+                )
+            ),
+        }));
+    },
 
-            // Remove annotations from other groups
-            const newGroups = state.groups.map((group) => ({
-                ...group,
-                annotations: group.annotations.filter(
-                    (a) => !annotationIds.includes(a.data.id)
-                ),
-            })).filter((group) => group.annotations.length > 0);
+    createGroupWithSnapshot: (name, annotations, workspaceSnapshot) => {
+        const newGroup: AnnotationGroup = {
+            id: nanoid(),
+            name,
+            annotations: [...annotations],
+            isExpanded: true,
+            createdAt: new Date(),
+            workspaceSnapshot,
+        };
 
-            return {
-                annotations: newAnnotations,
-                groups: [...newGroups, newGroup],
-            };
-        }),
+        set((state) => ({
+            groups: [...state.groups, newGroup],
+            annotations: state.annotations.filter(
+                (a) => !annotations.some((groupAnnotation) => 
+                    groupAnnotation.data.id === a.data.id
+                )
+            ),
+        }));
+    },
 
     addAnnotationToGroup: (annotationId, groupId) =>
         set((state) => {
@@ -212,6 +234,16 @@ export const useAnnotations = create<AnnotationState>((set, get) => ({
                 group.id === groupId ? { ...group, name } : group
             ),
         })),
+
+    updateGroupMetadata: (groupId, metadata) => {
+        set((state) => ({
+            groups: state.groups.map((group) =>
+                group.id === groupId
+                    ? { ...group, ...metadata }
+                    : group
+            ),
+        }));
+    },
 
     getUngroupedAnnotations: () => {
         const state = get();
