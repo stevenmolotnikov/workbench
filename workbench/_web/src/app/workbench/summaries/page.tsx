@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useCharts } from "@/stores/useCharts";
+import { useLensCompletions } from "@/stores/useLensCompletions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,57 +14,52 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-    Grid3X3, 
-    List, 
-    Search, 
+    ArrowLeft,
+    Search,
     Filter,
-    ChevronDown,
-    AlertCircle,
     CircleDotDashed,
     Spline,
+    Grid3X3,
     ALargeSmall,
-    Calendar,
-    Tag,
-    FolderOpen
+    FolderOpen,
+    AlertCircle,
+    BarChart3
 } from "lucide-react";
 import type { Annotation, AnnotationGroup } from "@/stores/useAnnotations";
-import { formatDistanceToNow } from "date-fns";
 
-type ViewMode = "grid" | "list";
-type SortBy = "date" | "type" | "group" | "chartIndex";
 type FilterBy = "all" | "orphaned" | "grouped" | "ungrouped" | "lineGraph" | "heatmap" | "token";
 
-export default function SummariesPage() {
+export default function ExportPage() {
+    const router = useRouter();
     const { annotations, groups } = useAnnotations();
     const { gridPositions } = useCharts();
+    const { activeCompletions } = useLensCompletions();
     
-    const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [searchQuery, setSearchQuery] = useState("");
-    const [sortBy, setSortBy] = useState<SortBy>("date");
     const [filterBy, setFilterBy] = useState<FilterBy>("all");
-    
+    const [selectedAnnotation, setSelectedAnnotation] = useState<Annotation | null>(null);
+
     // Get all annotations including those in groups
     const allAnnotations = useMemo(() => {
-        const ungroupedAnnotations = annotations;
+        const ungroupedAnnotations = annotations.map(annotation => ({...annotation, groupId: undefined}));
         const groupedAnnotations = groups.flatMap((group: AnnotationGroup) => 
             group.annotations.map((annotation: Annotation) => ({
                 ...annotation,
-                data: { ...annotation.data, groupId: group.id }
+                groupId: group.id
             }))
         );
         return [...ungroupedAnnotations, ...groupedAnnotations];
     }, [annotations, groups]);
-    
+
     // Filter annotations
     const filteredAnnotations = useMemo(() => {
         let filtered = allAnnotations;
         
         // Apply text search
         if (searchQuery) {
-            filtered = filtered.filter((annotation: Annotation) =>
+            filtered = filtered.filter((annotation) =>
                 annotation.data.text.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
@@ -70,52 +67,39 @@ export default function SummariesPage() {
         // Apply filter
         switch (filterBy) {
             case "orphaned":
-                filtered = filtered.filter((a: Annotation) => a.data.isOrphaned);
+                filtered = filtered.filter((a) => a.data.isOrphaned);
                 break;
             case "grouped":
-                filtered = filtered.filter((a: Annotation) => a.data.groupId);
+                filtered = filtered.filter((a) => a.groupId);
                 break;
             case "ungrouped":
-                filtered = filtered.filter((a: Annotation) => !a.data.groupId);
+                filtered = filtered.filter((a) => !a.groupId);
                 break;
             case "lineGraph":
-                filtered = filtered.filter((a: Annotation) => a.type === "lineGraph" || a.type === "lineGraphRange");
+                filtered = filtered.filter((a) => a.type === "lineGraph" || a.type === "lineGraphRange");
                 break;
             case "heatmap":
-                filtered = filtered.filter((a: Annotation) => a.type === "heatmap");
+                filtered = filtered.filter((a) => a.type === "heatmap");
                 break;
             case "token":
-                filtered = filtered.filter((a: Annotation) => a.type === "token");
+                filtered = filtered.filter((a) => a.type === "token");
                 break;
         }
         
-        // Apply sorting
-        filtered.sort((a: Annotation, b: Annotation) => {
-            switch (sortBy) {
-                case "date":
-                    // Newest first (assuming ID contains timestamp)
-                    return b.data.id.localeCompare(a.data.id);
-                case "type":
-                    return a.type.localeCompare(b.type);
-                case "group":
-                    return (a.data.groupId || "").localeCompare(b.data.groupId || "");
-                case "chartIndex":
-                    const aIndex = "chartIndex" in a.data ? a.data.chartIndex : -1;
-                    const bIndex = "chartIndex" in b.data ? b.data.chartIndex : -1;
-                    return aIndex - bIndex;
-                default:
-                    return 0;
-            }
+        // Sort by most recent first
+        filtered.sort((a, b) => {
+            return b.data.id.localeCompare(a.data.id);
         });
         
         return filtered;
-    }, [allAnnotations, searchQuery, filterBy, sortBy]);
-    
+    }, [allAnnotations, searchQuery, filterBy]);
+
     const getAnnotationIcon = (type: Annotation["type"]) => {
         switch (type) {
             case "lineGraph":
+                return CircleDotDashed;
             case "lineGraphRange":
-                return type === "lineGraph" ? CircleDotDashed : Spline;
+                return Spline;
             case "heatmap":
                 return Grid3X3;
             case "token":
@@ -145,217 +129,229 @@ export default function SummariesPage() {
         const group = groups.find((g: AnnotationGroup) => g.id === groupId);
         return group?.name || "Unknown Group";
     };
-    
+
+    const getRelatedChart = (annotation: Annotation & { groupId?: string }) => {
+        const chartIndex = 'chartIndex' in annotation.data ? (annotation.data as any).chartIndex : undefined;
+        if (chartIndex !== undefined && gridPositions[chartIndex]) {
+            return gridPositions[chartIndex];
+        }
+        return null;
+    };
+
+    const handleBackToWorkbench = () => {
+        router.back();
+    };
+
     return (
-        <div className="container mx-auto py-6 space-y-6">
+        <div className="flex flex-col h-[94vh]">
             {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold">Summaries</h1>
-                <p className="text-muted-foreground mt-2">
-                    View and manage all your annotations and collections in one place
-                </p>
+            <div className="border-b p-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="sm" onClick={handleBackToWorkbench}>
+                            <ArrowLeft size={16} />
+                            Back
+                        </Button>
+                        <div>
+                            <h1 className="text-2xl font-bold">Clean View</h1>
+                            <p className="text-muted-foreground">
+                                Review your annotations and charts without distractions
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{allAnnotations.length} annotations</span>
+                        <span>{groups.length} collections</span>
+                        <span>{gridPositions.length} charts</span>
+                    </div>
+                </div>
             </div>
-            
+
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4">
-                {/* Search */}
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search annotations..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                    />
+            <div className="border-b p-4">
+                <div className="flex gap-4">
+                    {/* Search */}
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search annotations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+                    
+                    {/* Filter */}
+                    <Select value={filterBy} onValueChange={(value) => setFilterBy(value as FilterBy)}>
+                        <SelectTrigger className="w-[180px]">
+                            <Filter className="h-4 w-4 mr-2" />
+                            <SelectValue placeholder="Filter by..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Annotations</SelectItem>
+                            <SelectItem value="orphaned">Orphaned Only</SelectItem>
+                            <SelectItem value="grouped">Grouped Only</SelectItem>
+                            <SelectItem value="ungrouped">Ungrouped Only</SelectItem>
+                            <SelectItem value="lineGraph">Line Graphs</SelectItem>
+                            <SelectItem value="heatmap">Heatmaps</SelectItem>
+                            <SelectItem value="token">Tokens</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
-                
-                {/* Filter */}
-                <Select value={filterBy} onValueChange={(value) => setFilterBy(value as FilterBy)}>
-                    <SelectTrigger className="w-[180px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Filter by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Annotations</SelectItem>
-                        <SelectItem value="orphaned">Orphaned Only</SelectItem>
-                        <SelectItem value="grouped">Grouped Only</SelectItem>
-                        <SelectItem value="ungrouped">Ungrouped Only</SelectItem>
-                        <SelectItem value="lineGraph">Line Graphs</SelectItem>
-                        <SelectItem value="heatmap">Heatmaps</SelectItem>
-                        <SelectItem value="token">Tokens</SelectItem>
-                    </SelectContent>
-                </Select>
-                
-                {/* Sort */}
-                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortBy)}>
-                    <SelectTrigger className="w-[180px]">
-                        <ChevronDown className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Sort by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="date">Date</SelectItem>
-                        <SelectItem value="type">Type</SelectItem>
-                        <SelectItem value="group">Group</SelectItem>
-                        <SelectItem value="chartIndex">Chart Index</SelectItem>
-                    </SelectContent>
-                </Select>
-                
-                {/* View mode */}
-                <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-                    <TabsList>
-                        <TabsTrigger value="grid">
-                            <Grid3X3 className="h-4 w-4" />
-                        </TabsTrigger>
-                        <TabsTrigger value="list">
-                            <List className="h-4 w-4" />
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
             </div>
-            
-            {/* Summary stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Total Annotations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{allAnnotations.length}</div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Orphaned</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-orange-600">
-                            {allAnnotations.filter((a) => a.data.isOrphaned).length}
-                        </div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Groups</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{groups.length}</div>
-                    </CardContent>
-                </Card>
-                
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-medium">Active Charts</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{gridPositions.length}</div>
-                    </CardContent>
-                </Card>
-            </div>
-            
+
             {/* Content */}
-            {filteredAnnotations.length === 0 ? (
-                <Card className="text-center py-12">
-                    <CardContent>
-                        <p className="text-muted-foreground">
-                            {searchQuery || filterBy !== "all" 
-                                ? "No annotations match your search criteria." 
-                                : "No annotations yet. Create some in the workbench!"}
-                        </p>
-                    </CardContent>
-                </Card>
-            ) : viewMode === "grid" ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredAnnotations.map((annotation) => {
-                        const Icon = getAnnotationIcon(annotation.type);
-                        const groupName = getGroupName(annotation.data.groupId);
+            <div className="flex-1 flex overflow-hidden">
+                {/* Annotations List */}
+                <div className="w-1/2 border-r overflow-auto">
+                    <div className="p-4">
+                        <h2 className="text-lg font-semibold mb-4">Annotations ({filteredAnnotations.length})</h2>
                         
-                        return (
-                            <Card 
-                                key={annotation.data.id}
-                                className={`hover:shadow-lg transition-shadow ${
-                                    annotation.data.isOrphaned ? "border-orange-500/30" : ""
-                                }`}
-                            >
-                                <CardHeader>
-                                    <div className="flex items-start justify-between">
-                                        <Icon className="h-5 w-5 text-muted-foreground" />
-                                        {annotation.data.isOrphaned && (
-                                            <AlertCircle className="h-4 w-4 text-orange-600" />
-                                        )}
-                                    </div>
-                                    <CardTitle className="text-sm mt-2">
-                                        {getAnnotationDetails(annotation)}
-                                    </CardTitle>
-                                    <CardDescription className="text-xs">
-                                        Chart #{annotation.data.chartIndex || 0}
-                                        {annotation.data.isOrphaned && " (deleted)"}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm line-clamp-3 mb-3">{annotation.data.text}</p>
-                                    {groupName && (
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <FolderOpen className="h-3 w-3" />
-                                            {groupName}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-            ) : (
-                <Card>
-                    <CardContent className="p-0">
-                        <div className="divide-y">
-                            {filteredAnnotations.map((annotation) => {
-                                const Icon = getAnnotationIcon(annotation.type);
-                                const groupName = getGroupName(annotation.data.groupId);
-                                
-                                return (
-                                    <div 
-                                        key={annotation.data.id}
-                                        className={`p-4 hover:bg-muted/50 ${
-                                            annotation.data.isOrphaned ? "opacity-75" : ""
-                                        }`}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-medium text-sm">
-                                                        {getAnnotationDetails(annotation)}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Chart #{annotation.data.chartIndex || 0}
-                                                    </span>
-                                                    {annotation.data.isOrphaned && (
-                                                        <span className="flex items-center gap-1 text-xs text-orange-600">
-                                                            <AlertCircle className="h-3 w-3" />
-                                                            Orphaned
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-muted-foreground mb-2">
-                                                    {annotation.data.text}
-                                                </p>
-                                                {groupName && (
-                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <FolderOpen className="h-3 w-3" />
-                                                        {groupName}
+                        {filteredAnnotations.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                                {searchQuery || filterBy !== "all" 
+                                    ? "No annotations match your criteria" 
+                                    : "No annotations yet"}
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {filteredAnnotations.map((annotation) => {
+                                    const Icon = getAnnotationIcon(annotation.type);
+                                    const groupName = getGroupName(annotation.data.groupId);
+                                    const isSelected = selectedAnnotation?.data.id === annotation.data.id;
+                                    
+                                    return (
+                                        <Card 
+                                            key={annotation.data.id}
+                                            className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                                                isSelected ? "ring-2 ring-primary" : ""
+                                            } ${annotation.data.isOrphaned ? "border-orange-500/30" : ""}`}
+                                            onClick={() => setSelectedAnnotation(annotation)}
+                                        >
+                                            <CardContent className="p-4">
+                                                <div className="flex items-start gap-3">
+                                                    <Icon className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="font-medium text-sm">
+                                                                {getAnnotationDetails(annotation)}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Chart #{('chartIndex' in annotation.data ? (annotation.data as any).chartIndex : 0) || 0}
+                                                            </span>
+                                                            {annotation.data.isOrphaned && (
+                                                                <span className="flex items-center gap-1 text-xs text-orange-600">
+                                                                    <AlertCircle className="h-3 w-3" />
+                                                                    Orphaned
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-sm text-foreground mb-2 line-clamp-3">
+                                                            {annotation.data.text}
+                                                        </p>
+                                                        {groupName && (
+                                                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                                <FolderOpen className="h-3 w-3" />
+                                                                {groupName}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Chart Display */}
+                <div className="w-1/2 overflow-auto">
+                    <div className="p-4">
+                        <h2 className="text-lg font-semibold mb-4">Chart Details</h2>
+                        
+                        {!selectedAnnotation ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>Select an annotation to view its associated chart</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Selected Annotation</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <span className="text-sm font-medium">Type: </span>
+                                                <span className="text-sm">{getAnnotationDetails(selectedAnnotation)}</span>
                                             </div>
+                                            <div>
+                                                <span className="text-sm font-medium">Text: </span>
+                                                <p className="text-sm mt-1">{selectedAnnotation.data.text}</p>
+                                            </div>
+                                            {getGroupName(selectedAnnotation.data.groupId) && (
+                                                <div>
+                                                    <span className="text-sm font-medium">Collection: </span>
+                                                    <span className="text-sm">{getGroupName(selectedAnnotation.data.groupId)}</span>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                                    </CardContent>
+                                </Card>
+
+                                {(() => {
+                                    const relatedChart = getRelatedChart(selectedAnnotation);
+                                    return (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">Associated Chart</CardTitle>
+                                                                                                                <CardDescription>
+                                                                    Chart #{('chartIndex' in selectedAnnotation.data ? (selectedAnnotation.data as any).chartIndex : 0) || 0}
+                                                                </CardDescription>
+                                            </CardHeader>
+                                            <CardContent>
+                                                {relatedChart ? (
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <span className="text-sm font-medium">Type: </span>
+                                                            <span className="text-sm capitalize">{relatedChart.chartData?.type || 'Not configured'}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-sm font-medium">Completions: </span>
+                                                            <span className="text-sm">{relatedChart.completion_ids.length}</span>
+                                                        </div>
+                                                        {relatedChart.completion_ids.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <p className="text-sm font-medium mb-2">Completion IDs:</p>
+                                                                <div className="text-xs text-muted-foreground space-y-1">
+                                                                    {relatedChart.completion_ids.map((id, index) => (
+                                                                        <div key={id} className="font-mono">
+                                                                            {index + 1}. {id}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {selectedAnnotation.data.isOrphaned 
+                                                            ? "Chart has been deleted" 
+                                                            : "No chart data available"}
+                                                    </p>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
