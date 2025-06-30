@@ -1,7 +1,7 @@
-import { Completion, ChartMode, Annotation } from "@/types/workspace"
+import type { Completion, ChartMode, Annotation } from "@/types/workspace"
 import { LensHeatmap, LensLineGraph } from "@/components/charts/types";
-import { Annotation as WorkspaceAnnotation } from "@/stores/useAnnotations";
-import { GridPosition } from "@/stores/useCharts";
+import type { Annotation as WorkspaceAnnotation } from "@/stores/useAnnotations";
+import type { GridPosition } from "@/stores/useCharts";
 import { ChartArea, Grid3X3 } from "lucide-react";
 
 // Request Schema

@@ -6,7 +6,7 @@ import { ChartCard } from "../ChartCard";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
-import { LensCompletion, TokenCompletion } from "@/types/lens";
+import type { LensCompletion, TokenCompletion } from "@/types/lens";
 
 // Generate a unique ID for the job
 const generateJobId = (): string => {

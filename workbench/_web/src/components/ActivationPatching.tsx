@@ -7,7 +7,7 @@ import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "./WorkspaceHistory";
 import { TutorialsSidebar } from "./TutorialsSidebar";
 import { PatchingHeatmap } from "./charts/types/PatchingHeatmap";
-import { HeatmapProps } from "./charts/base/Heatmap";
+import type { HeatmapProps } from "./charts/base/Heatmap";
 
 export function ActivationPatching() {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);

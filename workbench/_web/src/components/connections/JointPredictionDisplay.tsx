@@ -9,7 +9,7 @@ import config from "@/lib/config";
 import { decodeTokenIds } from "@/actions/tokenize";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { cn } from "@/lib/utils";
-import { Token } from "@/types/tokenizer";
+import type { Token } from "@/types/tokenizer";
 
 
 const fixString = (str: string) => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Token } from "@/types/tokenizer";
-import { LensCompletion } from "@/types/lens";
+import type { Token } from "@/types/tokenizer";
+import type { LensCompletion } from "@/types/lens";
 import { useTutorialManager } from "./useTutorialManager";
 
 interface UseTokenSelectionProps {
@@ -18,7 +18,7 @@ export function useTokenSelection({ compl, removeToken }: UseTokenSelectionProps
         const target = e.target as HTMLElement;
         const tokenElement = target.closest("[data-token-id]");
         if (tokenElement) {
-            return parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
+            return Number.parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
         }
         return null;
     };

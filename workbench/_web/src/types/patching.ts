@@ -1,4 +1,4 @@
-import { Annotation, Completion, ChartMode } from "@/types/workspace";
+import type { Annotation, Completion, ChartMode } from "@/types/workspace";
 import { Grid3X3 } from "lucide-react";
 import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 

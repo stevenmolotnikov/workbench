@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Completion } from '@/types/workspace';
-import { Token } from '@/types/tokenizer';
+import type { Completion } from '@/types/workspace';
+import type { Token } from '@/types/tokenizer';
 
 interface PatchingCompletionsState {
     source: Completion;

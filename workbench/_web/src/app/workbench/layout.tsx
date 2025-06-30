@@ -1,7 +1,7 @@
 "use client";
 
 import { ModeToggle } from "@/components/ui/mode-toggle";
-import React from "react";
+import type React from "react";
 
 import { WorkbenchStatus } from "@/components/WorkbenchStatus";
 

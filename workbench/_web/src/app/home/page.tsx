@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";

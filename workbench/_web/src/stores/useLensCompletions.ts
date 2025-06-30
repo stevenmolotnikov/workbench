@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { LensCompletion } from '@/types/lens';
+import type { LensCompletion } from '@/types/lens';
 
 interface LensCompletionsState {
     tokenizeOnEnter: boolean;

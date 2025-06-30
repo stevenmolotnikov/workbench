@@ -1,4 +1,4 @@
-import { type StepType } from "@reactour/tour";
+import type { StepType } from "@reactour/tour";
 
 // Discriminated union types for step triggers
 type ClickTrigger = {

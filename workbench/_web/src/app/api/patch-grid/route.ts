@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
-import { ActivationPatchingRequest, ActivationPatchingResponse } from "@/types/patching";
-import { HeatmapData } from "@/types/charts";
+import type { ActivationPatchingRequest, ActivationPatchingResponse } from "@/types/patching";
+import type { HeatmapData } from "@/types/charts";
 
 function processHeatmapData(data: ActivationPatchingResponse): HeatmapData {
     const { results, rowLabels, colLabels } = data;

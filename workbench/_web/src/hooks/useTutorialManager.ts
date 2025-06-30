@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useTour } from "@reactour/tour";
-import { ExtendedStepType } from "@/types/tutorial";
+import type { ExtendedStepType } from "@/types/tutorial";
 
 // Discriminated union types for tutorial events
 type ClickEvent = {

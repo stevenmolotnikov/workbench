@@ -21,8 +21,8 @@ dev_environment = EnvironmentSchema(
                     repo_id="797161732516.dkr.ecr.us-east-1.amazonaws.com/workbench:latest",
                     port_mappings=[
                         PortMappingSchema(
-                            container_port=80,
-                            host_port=80,
+                            container_port=8000,
+                            host_port=8000,
                             public=True,
                         )
                     ],

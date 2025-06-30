@@ -15,7 +15,7 @@ import {
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 
-import { LensCompletion } from "@/types/lens";
+import type { LensCompletion } from "@/types/lens";
 
 // Generate a unique ID for the job
 const generateJobId = (): string => {
@@ -127,7 +127,7 @@ export function LensHeatmap({ index }: { index: number }) {
 
     return (
         <div
-            onMouseEnter={() => handleEmphasizeCompletion(parseInt(completionIds[0]))}
+            onMouseEnter={() => handleEmphasizeCompletion(Number.parseInt(completionIds[0]))}
             onMouseLeave={() => handleEmphasizeCompletion(-1)}
             className="h-full w-full"
         >

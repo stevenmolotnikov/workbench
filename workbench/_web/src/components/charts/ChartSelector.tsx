@@ -1,4 +1,4 @@
-import { ChartMode } from "@/types/workspace";
+import type { ChartMode } from "@/types/workspace";
 import { useCharts } from "@/stores/useCharts";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";

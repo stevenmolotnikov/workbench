@@ -1,9 +1,9 @@
 import { Keyboard, ALargeSmall, Loader2, X, Pencil, KeyboardOff, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LensCompletion } from "@/types/lens";
+import type { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
-import { TokenPredictions } from "@/types/workspace";
+import type { TokenPredictions } from "@/types/workspace";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import config from "@/lib/config";
@@ -12,7 +12,7 @@ import { PredictionDisplay } from "@/components/prompt-builders/PredictionDispla
 import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { tokenizeText } from "@/actions/tokenize";
-import { Token } from "@/types/tokenizer";
+import type { Token } from "@/types/tokenizer";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
