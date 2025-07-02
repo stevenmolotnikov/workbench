@@ -348,7 +348,7 @@ export function ConnectableTokenArea({
     // Early returns for different states
     if (tokenizerLoading) return <div className="text-sm">Tokenizing...</div>;
     if (!tokenData || tokenData.length === 0) {
-        return <div className="text-sm">Click tokenize button to view tokens.</div>;
+        return <div className="text-sm text-muted-foreground italic">No tokens to display.</div>;
     }
 
     return (

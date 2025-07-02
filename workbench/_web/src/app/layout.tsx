@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { TourProvider } from "@/components/providers/TourProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
     title: "Logit Lens - NDIF",
@@ -34,6 +35,7 @@ export default function RootLayout({
                         <TourProvider>{children}</TourProvider>
                     </ThemeProvider>
                 </QueryProvider>
+                <Toaster />
             </body>
         </html>
     );

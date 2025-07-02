@@ -81,10 +81,6 @@ class AppState:
 
             model.config.update(cfg.config)
 
-            print(cfg.rename)
-            if cfg.name == "EleutherAI/gpt-j-6b":
-                print(model.model.layers[0].attn.o_proj)
-            
             self.models[cfg.name] = model
 
         return config

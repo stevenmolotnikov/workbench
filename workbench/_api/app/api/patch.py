@@ -33,6 +33,7 @@ class Point(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     token_indices: List[int] = Field(alias="tokenIndices")
+    counter_index: int = Field(alias="counterIndex")
 
     def __hash__(self):
         return hash((tuple(self.token_indices), self.counter_index))
@@ -308,7 +309,9 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
         for token_idx in range(n_tokens):
             results_grid[layer_idx].append(results[(layer_idx, token_idx)])
 
-    destination_token_ids = [model.tokenizer.decode(token) for token in destination_tokens]
+    destination_token_ids = [
+        model.tokenizer.decode(token) for token in destination_tokens
+    ]
 
     return PatchResponse(
         results=results_grid,
@@ -317,33 +320,82 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
     )
 
 
+from typing import NamedTuple
+
+class PatchingIdxs(NamedTuple):
+    source: List[int]
+    destination: List[int]
+    tok_map: dict[int, int]
+
 def compute_patching_idxs(
     tok: AutoTokenizer,
     connections: List[Connection],
     source_prompt: str,
     destination_prompt: str,
-):
+) -> PatchingIdxs:
     # Tokenize prompts
     source_tokens = tok.encode(source_prompt)
     destination_tokens = tok.encode(destination_prompt)
 
     # Extract all token indices from connections
-    start_idxs = [conn.start.token_indices for conn in connections]
-    end_idxs = [conn.end.token_indices for conn in connections]
+    start_idxs = chain(*[conn.start.token_indices for conn in connections])
+    end_idxs = chain(*[conn.end.token_indices for conn in connections])
 
-    # Get min of last tokens from each connection
-    min_start = min(idxs[-1] for idxs in start_idxs)
-    min_end = min(idxs[-1] for idxs in end_idxs)
+    # Get all indices
+    source_idxs = range(len(source_tokens))
+    dest_idxs = range(len(destination_tokens))
 
     # Compute valid indices and return intersection
-    source_valid = set(range(min_start, len(source_tokens))) - set(
-        chain(*start_idxs)
-    )
-    dest_valid = set(range(min_end, len(destination_tokens))) - set(
-        chain(*end_idxs)
+    source_valid = set(source_idxs) - set(start_idxs)
+    dest_valid = set(dest_idxs) - set(end_idxs)
+
+    assert len(source_valid) == len(dest_valid)
+
+    source_valid = sorted(source_valid)
+    dest_valid = sorted(dest_valid)
+
+    return PatchingIdxs(
+        source=list(source_valid),
+        destination=list(dest_valid),
+        tok_map={
+            d: s
+            for d, s in zip(dest_valid, source_valid)
+        },
     )
 
-    return list(source_valid & dest_valid)
+
+def get_sync_x_labels(
+    connections: List[Connection], destination_prompt: str, tok: AutoTokenizer
+) -> List[str]:
+    tokens = tok.encode(destination_prompt)
+
+    idx_to_connection = {}
+    for connection in connections:
+        for idx in connection.end.token_indices:
+            idx_to_connection[idx] = connection
+
+    x_labels = []
+    x_items = []
+    seen = set()
+
+    for i in range(len(tokens)):
+        c = idx_to_connection.get(i, None)
+
+        if c is not None and c not in seen:
+            start_idx = c.end.token_indices[0]
+            end_idx = c.end.token_indices[-1] + 1
+            x_labels.append(tok.decode(tokens[start_idx:end_idx]))
+            x_items.append(c.end.token_indices[-1])
+            seen.add(c)
+
+        elif c in seen:
+            continue
+        
+        else:
+            x_labels.append(tok.decode(tokens[i]))
+            x_items.append(i)
+
+    return x_labels, x_items
 
 
 def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
@@ -382,7 +434,7 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
                     ]
 
                 # Cache source activations for tokens
-                for token_idx in patching_idxs:
+                for token_idx in patching_idxs.source:
                     source_cache[(component, token_idx)] = hidden_BLD[
                         :, token_idx, :
                     ]
@@ -395,7 +447,7 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
 
         for layer_idx, component in enumerate(components):
             # Patch tokens
-            for token_idx in patching_idxs:
+            for token_idx in patching_idxs.destination:
                 with model.trace(patching_request.destination.prompt):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
@@ -407,7 +459,7 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
 
                     # Patch in the token
                     hidden_BLD[:, token_idx, :] = source_cache[
-                        (component, token_idx)
+                        (component, patching_idxs.tok_map[token_idx])
                     ]
 
                     # Set new output
@@ -461,7 +513,21 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
                         prob = get_prob(model, patching_request)
                         results[(layer_idx, end_token_last_idx)] = prob
 
-    return results
+    x_labels, x_items = get_sync_x_labels(
+        connections, patching_request.destination.prompt, model.tokenizer
+    )
+
+    results_grid = []
+    for layer_idx in range(len(components)):
+        results_grid.append([])
+        for x_item in x_items:
+            results_grid[layer_idx].append(results[(layer_idx, x_item)])
+
+    return PatchResponse(
+        results=results_grid,
+        rowLabels=[layer for layer in range(len(components))],
+        colLabels=x_labels,
+    )
 
 
 def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):

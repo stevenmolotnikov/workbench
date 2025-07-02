@@ -12,8 +12,8 @@ interface PatchingCompletionsState {
     setDestination: (completion: Completion) => void;
     updateSource: (updates: Partial<Completion>) => void;
     updateDestination: (updates: Partial<Completion>) => void;
-    setCorrectToken: (token: Token) => void;
-    setIncorrectToken: (token: Token) => void;
+    setCorrectToken: (token: Token | null) => void;
+    setIncorrectToken: (token: Token | null) => void;
 }
 
 const makeDefaultCompletion = (name: string): Completion => ({

@@ -6,6 +6,7 @@ import type { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 function Account() {
     const [session, setSession] = useState<Session | null>(null);
@@ -45,10 +46,13 @@ function Account() {
 }
 
 export default function HomePage() {
-    function logOut() {
+    const router = useRouter();
+    
+    async function logOut() {
         const supabase = createClient();
         console.log("Logging out");
-        supabase.auth.signOut();
+        await supabase.auth.signOut();
+        router.push("/auth/login");
     }
 
     return (
