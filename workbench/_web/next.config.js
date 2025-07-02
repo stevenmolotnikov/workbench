@@ -1,5 +1,4 @@
 /** @type {import('next').NextConfig} */
-const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
@@ -12,10 +11,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  env: {
-    // This will load the .env.local file from the parent directory
-    ENV_FILE: path.resolve(__dirname, '../.env.local'),
-  },
+  serverExternalPackages: ['sharp', 'onnxruntime-node'],
   webpack: (config) => {
     // Fallbacks for @huggingface/transformers package
     config.resolve.fallback = {
