@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { LineGraphAnnotation, HeatmapAnnotation, LineGraphRangeAnnotation } from "@/types/lens";
-import { Annotation as WorkspaceAnnotation } from "@/types/workspace";
+import type { LineGraphAnnotation, HeatmapAnnotation, LineGraphRangeAnnotation } from "@/types/lens";
+import type { Annotation as WorkspaceAnnotation } from "@/types/workspace";
+import { nanoid } from 'nanoid';
 
 export type Annotation =
     | { type: "lineGraph"; data: LineGraphAnnotation }
@@ -8,10 +9,29 @@ export type Annotation =
     | { type: "heatmap"; data: HeatmapAnnotation }
     | { type: "token"; data: WorkspaceAnnotation };
 
+export interface AnnotationGroup {
+    id: string;
+    name: string;
+    annotations: Annotation[];
+    isExpanded: boolean;
+    createdAt: Date;
+    // Collection metadata
+    description?: string;
+    hypothesis?: string;
+    tags?: string[];
+    // Workspace state for collection restoration
+    workspaceSnapshot?: {
+        gridPositions: any[]; // GridPosition[] from useCharts
+        completions: any[]; // LensCompletion[] from useLensCompletions
+    };
+}
+
+export type AnnotationItem = Annotation | AnnotationGroup;
 
 interface AnnotationState {
     isOpen: boolean;
     annotations: Annotation[];
+    groups: AnnotationGroup[];
     pendingAnnotation: Annotation | null;
     emphasizedAnnotation: Annotation | null;
 
@@ -21,17 +41,34 @@ interface AnnotationState {
     cancelPendingAnnotation: () => void;
     deleteAnnotation: (id: string) => void;
     setAnnotations: (annotations: Annotation[]) => void;
+    setGroups: (groups: AnnotationGroup[]) => void;
+
+    // Group management
+    createGroup: (name: string, annotations: Annotation[]) => void;
+    createGroupWithSnapshot: (name: string, annotations: Annotation[], workspaceSnapshot?: AnnotationGroup['workspaceSnapshot']) => void;
+    addAnnotationToGroup: (annotationId: string, groupId: string) => void;
+    removeAnnotationFromGroup: (annotationId: string, groupId: string) => void;
+    deleteGroup: (groupId: string) => void;
+    toggleGroupExpansion: (groupId: string) => void;
+    updateGroupName: (groupId: string, name: string) => void;
+    updateGroupMetadata: (groupId: string, metadata: { description?: string; hypothesis?: string; tags?: string[] }) => void;
 
     // Emphasize annotations on hover
     setEmphasizedAnnotation: (annotation: Annotation) => void;
     clearEmphasizedAnnotation: () => void;
+
+    // Helper functions
+    getUngroupedAnnotations: () => Annotation[];
+    findAnnotationById: (id: string) => { annotation: Annotation; groupId?: string } | null;
 }
 
-export const useAnnotations = create<AnnotationState>((set) => ({
+export const useAnnotations = create<AnnotationState>((set, get) => ({
     isOpen: false,
     annotations: [],
+    groups: [],
     pendingAnnotation: null,
     emphasizedAnnotation: null,
+
     addPendingAnnotation: (annotation) => set((state) => {
         if (!state.isOpen) return state;
         return { pendingAnnotation: annotation };
@@ -58,9 +95,178 @@ export const useAnnotations = create<AnnotationState>((set) => ({
 
     setAnnotations: (annotations) => set({ annotations }),
 
+    setGroups: (groups) => set({ groups }),
+
     deleteAnnotation: (id) =>
+        set((state) => {
+            // Remove from ungrouped annotations
+            const newAnnotations = state.annotations.filter((a) => a.data.id !== id);
+            
+            // Remove from groups and update groups
+            const newGroups = state.groups.map((group) => ({
+                ...group,
+                annotations: group.annotations.filter((a) => a.data.id !== id),
+            })).filter((group) => group.annotations.length > 0); // Remove empty groups
+
+            return {
+                annotations: newAnnotations,
+                groups: newGroups,
+                emphasizedAnnotation: null,
+            };
+        }),
+
+    createGroup: (name, annotations) => {
+        const newGroup: AnnotationGroup = {
+            id: nanoid(),
+            name,
+            annotations: [...annotations],
+            isExpanded: true,
+            createdAt: new Date(),
+        };
+
         set((state) => ({
-            annotations: state.annotations.filter((a) => a.data.id !== id),
-            emphasizedAnnotation: null,
+            groups: [...state.groups, newGroup],
+            annotations: state.annotations.filter(
+                (a) => !annotations.some((groupAnnotation) => 
+                    groupAnnotation.data.id === a.data.id
+                )
+            ),
+        }));
+    },
+
+    createGroupWithSnapshot: (name, annotations, workspaceSnapshot) => {
+        const newGroup: AnnotationGroup = {
+            id: nanoid(),
+            name,
+            annotations: [...annotations],
+            isExpanded: true,
+            createdAt: new Date(),
+            workspaceSnapshot,
+        };
+
+        set((state) => ({
+            groups: [...state.groups, newGroup],
+            annotations: state.annotations.filter(
+                (a) => !annotations.some((groupAnnotation) => 
+                    groupAnnotation.data.id === a.data.id
+                )
+            ),
+        }));
+    },
+
+    addAnnotationToGroup: (annotationId, groupId) =>
+        set((state) => {
+            const annotation = get().findAnnotationById(annotationId);
+            if (!annotation) return state;
+
+            // Remove from current location
+            const newAnnotations = state.annotations.filter((a) => a.data.id !== annotationId);
+            const newGroups = state.groups.map((group) => {
+                if (group.id === groupId) {
+                    return {
+                        ...group,
+                        annotations: [...group.annotations, annotation.annotation],
+                    };
+                }
+                return {
+                    ...group,
+                    annotations: group.annotations.filter((a) => a.data.id !== annotationId),
+                };
+            }).filter((group) => group.annotations.length > 0);
+
+            return {
+                annotations: newAnnotations,
+                groups: newGroups,
+            };
+        }),
+
+    removeAnnotationFromGroup: (annotationId, groupId) =>
+        set((state) => {
+            const group = state.groups.find((g) => g.id === groupId);
+            if (!group) return state;
+
+            const annotation = group.annotations.find((a) => a.data.id === annotationId);
+            if (!annotation) return state;
+
+            const newGroups = state.groups.map((g) => {
+                if (g.id === groupId) {
+                    return {
+                        ...g,
+                        annotations: g.annotations.filter((a) => a.data.id !== annotationId),
+                    };
+                }
+                return g;
+            }).filter((group) => group.annotations.length > 0);
+
+            return {
+                annotations: [...state.annotations, annotation],
+                groups: newGroups,
+            };
+        }),
+
+    deleteGroup: (groupId) =>
+        set((state) => {
+            const group = state.groups.find((g) => g.id === groupId);
+            if (!group) return state;
+
+            // Move all annotations back to ungrouped
+            const newAnnotations = [...state.annotations, ...group.annotations];
+            const newGroups = state.groups.filter((g) => g.id !== groupId);
+
+            return {
+                annotations: newAnnotations,
+                groups: newGroups,
+            };
+        }),
+
+    toggleGroupExpansion: (groupId) =>
+        set((state) => ({
+            groups: state.groups.map((group) =>
+                group.id === groupId
+                    ? { ...group, isExpanded: !group.isExpanded }
+                    : group
+            ),
         })),
+
+    updateGroupName: (groupId, name) =>
+        set((state) => ({
+            groups: state.groups.map((group) =>
+                group.id === groupId ? { ...group, name } : group
+            ),
+        })),
+
+    updateGroupMetadata: (groupId, metadata) => {
+        set((state) => ({
+            groups: state.groups.map((group) =>
+                group.id === groupId
+                    ? { ...group, ...metadata }
+                    : group
+            ),
+        }));
+    },
+
+    getUngroupedAnnotations: () => {
+        const state = get();
+        return state.annotations.filter((annotation) => annotation.data.text !== "");
+    },
+
+    findAnnotationById: (id) => {
+        const state = get();
+        
+        // Check ungrouped annotations
+        const ungroupedAnnotation = state.annotations.find((a) => a.data.id === id);
+        if (ungroupedAnnotation) {
+            return { annotation: ungroupedAnnotation };
+        }
+
+        // Check grouped annotations
+        for (const group of state.groups) {
+            const annotation = group.annotations.find((a) => a.data.id === id);
+            if (annotation) {
+                return { annotation, groupId: group.id };
+            }
+        }
+
+        return null;
+    },
 }));

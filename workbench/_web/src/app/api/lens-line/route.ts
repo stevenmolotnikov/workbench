@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
-import { LensLineResponse } from "@/types/lens";
-import { LineGraphData, LineData } from "@/types/charts";
+import type { LensLineResponse } from "@/types/lens";
+import type { LineGraphData, LineData } from "@/types/charts";
 
 const defaultColors = [
     "hsl(var(--chart-1))",

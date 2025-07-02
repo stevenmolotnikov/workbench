@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Completion } from '@/types/workspace';
-import { Token } from '@/types/tokenizer';
+import type { Completion } from '@/types/workspace';
+import type { Token } from '@/types/tokenizer';
 
 interface PatchingCompletionsState {
     source: Completion;
@@ -12,8 +12,8 @@ interface PatchingCompletionsState {
     setDestination: (completion: Completion) => void;
     updateSource: (updates: Partial<Completion>) => void;
     updateDestination: (updates: Partial<Completion>) => void;
-    setCorrectToken: (token: Token) => void;
-    setIncorrectToken: (token: Token) => void;
+    setCorrectToken: (token: Token | null) => void;
+    setIncorrectToken: (token: Token | null) => void;
 }
 
 const makeDefaultCompletion = (name: string): Completion => ({

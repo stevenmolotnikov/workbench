@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { Layout } from "@/types/workspace";
-import { LineGraphData, HeatmapData } from "@/types/charts";
+import type { Layout } from "@/types/workspace";
+import type { LineGraphData, HeatmapData } from "@/types/charts";
 
 export type ChartData =
     | { type: "lineGraph"; data: LineGraphData }

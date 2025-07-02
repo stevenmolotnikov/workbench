@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
-import { LensGridResponse } from "@/types/lens";
-import { HeatmapData } from "@/types/charts";
+import type { LensGridResponse } from "@/types/lens";
+import type { HeatmapData } from "@/types/charts";
 
 function processHeatmapData(data: LensGridResponse) {
     const { layer, probs, pred_strs, input_strs } = data;

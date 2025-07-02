@@ -1,4 +1,4 @@
-import { Tensor } from '@huggingface/transformers';
+import type { Tensor } from '@huggingface/transformers';
 
 export interface Token {
     id: number;

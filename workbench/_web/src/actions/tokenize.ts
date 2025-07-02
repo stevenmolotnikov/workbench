@@ -1,7 +1,7 @@
 'use server'
 
 import { PreTrainedTokenizer } from '@huggingface/transformers';
-import { Token } from '@/types/tokenizer';
+import type { Token } from '@/types/tokenizer';
 
 // Module-level cache for tokenizers
 const tokenizerCache = new Map<string, PreTrainedTokenizer>();
@@ -14,6 +14,12 @@ async function getTokenizer(modelName: string): Promise<PreTrainedTokenizer> {
 
   // Load tokenizer and cache it
   console.log(`Loading tokenizer for model: ${modelName}`);
+
+  if (modelName === "openai-community/gpt2") {
+    console.log(`Using Xenova/gpt2 for model: ${modelName}`);
+    modelName = "Xenova/gpt2";
+  }
+
   const tokenizer = await PreTrainedTokenizer.from_pretrained(modelName);
   tokenizerCache.set(modelName, tokenizer);
   
@@ -27,7 +33,7 @@ export async function isTokenizerCached(modelName: string): Promise<boolean> {
 export async function tokenizeText(
   text: string | null,
   modelName: string,
-  addSpecialTokens: boolean = true
+  addSpecialTokens = true
 ): Promise<Token[] | null> {
   try {
     if (!modelName) {
@@ -61,7 +67,7 @@ export async function tokenizeText(
 export async function tokenizeChat(
   messages: { role: string; content: string }[],
   modelName: string,
-  addSpecialTokens: boolean = true
+  addSpecialTokens = true
 ): Promise<Token[] | null> {
   try {
     if (!modelName) {
@@ -89,7 +95,7 @@ export async function tokenizeChat(
 export async function batchTokenizeText(
   texts: string[],
   modelName: string,
-  addSpecialTokens: boolean = true
+  addSpecialTokens = true
 ): Promise<(Token[] | null)[]> {
   try {
     if (!modelName) {

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
-import { LogitLensWorkspace } from "@/types/lens";
-import { ActivationPatchingWorkspace } from "@/types/patching";
+import type { LogitLensWorkspace } from "@/types/lens";
+import type { ActivationPatchingWorkspace } from "@/types/patching";
 
 export type Workspace = LogitLensWorkspace | ActivationPatchingWorkspace;
 

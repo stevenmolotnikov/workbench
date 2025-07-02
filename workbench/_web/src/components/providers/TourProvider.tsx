@@ -1,7 +1,7 @@
 "use client";
 
-import { TourProvider as ReactourTourProvider, PopoverContentProps } from "@reactour/tour";
-import React, { ReactNode } from "react";
+import { TourProvider as ReactourTourProvider, type PopoverContentProps } from "@reactour/tour";
+import React, { type ReactNode } from "react";
 
 interface TourProviderProps {
     children: ReactNode;

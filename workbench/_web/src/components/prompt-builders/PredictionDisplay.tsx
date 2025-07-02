@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { TokenPredictions } from "@/types/workspace";
-import { LensCompletion } from "@/types/lens";
+import type { TokenPredictions } from "@/types/workspace";
+import type { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { tokenizeText, decodeTokenIds } from "@/actions/tokenize";
 import { Button } from "../ui/button";

@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef } from "react";
-import { LensCompletion } from "@/types/lens";
+import type { LensCompletion } from "@/types/lens";
 import { cn } from "@/lib/utils";
-import { Token } from "@/types/tokenizer";
+import type { Token } from "@/types/tokenizer";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useTokenSelection } from "@/hooks/useTokenSelection";
+import type { useTokenSelection } from "@/hooks/useTokenSelection";
 
 interface TokenAreaProps {
     compl: LensCompletion;

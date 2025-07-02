@@ -1,4 +1,4 @@
-import { ExtendedStepType, TutorialChapterProgress, TutorialProgress } from "@/types/tutorial";
+import type { ExtendedStepType, TutorialChapterProgress, TutorialProgress } from "@/types/tutorial";
 
 const LogitLensBeginner: ExtendedStepType[] = [
     {

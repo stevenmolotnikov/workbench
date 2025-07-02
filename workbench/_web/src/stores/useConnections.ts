@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Connection } from '@/types/patching';
+import type { Connection } from '@/types/patching';
 
 interface ConnectionsState {
     connections: Connection[];

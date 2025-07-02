@@ -20,7 +20,7 @@ export function WorkspaceHistory() {
 
     const [pendingWorkspace, setPendingWorkspace] = useState<Workspace | null>(null);
 
-    const { annotations, setAnnotations } = useAnnotations();
+    const { annotations, setAnnotations, groups, setGroups } = useAnnotations();
     const { setGridPositions, gridPositions } = useCharts();
 
     const loadWorkspace = (workspace: Workspace) => {
@@ -31,6 +31,9 @@ export function WorkspaceHistory() {
             setActiveCompletions(workspace.completions);
             setGridPositions(workspace.graphData);
             setAnnotations(workspace.annotations);
+            if (workspace.groups) {
+                setGroups(workspace.groups);
+            }
         }
     };
 
@@ -41,6 +44,7 @@ export function WorkspaceHistory() {
             completions: activeCompletions,
             graphData: gridPositions,
             annotations: annotations,
+            groups: groups,
         };
         return workspace;
     };

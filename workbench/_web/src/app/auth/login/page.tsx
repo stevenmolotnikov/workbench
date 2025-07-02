@@ -17,6 +17,11 @@ export default function LoginPage({ className, ...props }: React.ComponentPropsW
                 redirectTo: `${window.location.origin}/auth/callback`,
             },
         });
+        
+        if (error) {
+            console.error("Error signing in with GitHub:", error);
+            // You might want to show an error toast here
+        }
     };
 
     useEffect(() => {

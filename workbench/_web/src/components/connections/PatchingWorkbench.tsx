@@ -8,6 +8,7 @@ import {
     RotateCcw,
     ALargeSmall,
     Play,
+    ArrowUpDown,
 } from "lucide-react";
 import { Edges } from "./Edge";
 import useEdges from "@/hooks/useEdges";
@@ -19,14 +20,16 @@ import { ModelSelector } from "../ModelSelector";
 import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
 import { usePatchingTokens } from "@/stores/usePatchingTokens";
 import { useConnections } from "@/stores/useConnections";
-import { Token } from "@/types/tokenizer";
 import { batchTokenizeText } from "@/actions/tokenize";
-import { ActivationPatchingRequest } from "@/types/patching";
-import { HeatmapProps } from "@/components/charts/base/Heatmap";
+import type { ActivationPatchingRequest } from "@/types/patching";
+import type { HeatmapProps } from "@/components/charts/base/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
 import { cn } from "@/lib/utils";
 import { PatchingSettings } from "./PatchingSettingsDropdown";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
+import { TooltipButton } from "../ui/tooltip-button";
+import { toast } from "sonner";
+import type { Token } from "@/types/tokenizer";
 
 // Generate a unique ID for the job
 const generateJobId = (): string => {
@@ -45,6 +48,7 @@ export function PatchingWorkbench({
     const [component, setComponent] = useState<string>("blocks");
     const [patchTokens, setPatchTokens] = useState<boolean>(false);
     const { modelName } = useSelectedModel();
+    const [notificationMessage, setNotificationMessage] = useState<string>("");
     const {
         source,
         destination,
@@ -57,6 +61,8 @@ export function PatchingWorkbench({
     const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
 
     const {
+        sourceTokenData,
+        destinationTokenData,
         setSourceTokenData,
         setDestinationTokenData,
         clearHighlightedTokens,
@@ -91,15 +97,61 @@ export function PatchingWorkbench({
             console.error("Error tokenizing text:", err);
         } finally {
             setTokenizerLoading(false);
+            if (sourceTokenData || destinationTokenData) {
+                setNotificationMessage("Predictions stale");
+            }
         }
     };
+
+    const validateConnections = (connections: Connection[], sourceTokenData: Token[], destinationTokenData: Token[]) => {
+
+        // Assert that the connections are valid
+
+        let sourceIdx = 0 
+        let destIdx = 0
+
+        for (const connection of connections) {
+            const startIdx = connection.start.tokenIndices[0]
+            const endIdx = connection.end.tokenIndices[0]
+            
+            const sourceDiff = startIdx - sourceIdx
+            const destDiff = endIdx - destIdx
+
+            if (sourceDiff !== destDiff) {
+                console.error("Invalid connection: source and destination indices are not the same")
+                return false;
+            }
+
+            sourceIdx = connection.start.tokenIndices[connection.start.tokenIndices.length - 1]
+            destIdx = connection.end.tokenIndices[connection.end.tokenIndices.length - 1]
+        }
+
+        const sourceDiff = sourceTokenData.length - sourceIdx
+        const destDiff = destinationTokenData.length - destIdx
+        if (sourceDiff !== destDiff) {
+            console.error("Invalid connection: source and destination indices are not the same")
+            return false
+        }
+
+        return true
+    }
 
     const handleRunPatching = async () => {
         const { connections } = useConnections.getState();
         const { source, destination } = usePatchingCompletions.getState();
 
         if (!correctToken) {
-            console.error("Correct and incorrect tokens must be set");
+            toast.error("Please set a metric");
+            return;
+        }
+
+        if (!sourceTokenData || !destinationTokenData) {
+            toast.error("Source and destination token data must be set");
+            return;
+        }
+
+        if (!validateConnections(connections, sourceTokenData, destinationTokenData)) {
+            toast.error("Invalid connections");
             return;
         }
 
@@ -149,6 +201,14 @@ export function PatchingWorkbench({
         }
     };
 
+    const handlePatchTokens = (value: boolean) => {
+        setPatchTokens(value);
+        if (!value) {
+            setIsConnecting(false);
+            clear();
+        }
+    }
+
     return (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="p-4 border-b">
@@ -163,7 +223,7 @@ export function PatchingWorkbench({
                             component={component}
                             setComponent={setComponent}
                             patchTokens={patchTokens}
-                            setPatchTokens={setPatchTokens}
+                            setPatchTokens={handlePatchTokens}
                         />
                     </div>
                 </div>
@@ -186,44 +246,47 @@ export function PatchingWorkbench({
                     <div className="flex items-center justify-between">
                         <h2 className="text-sm font-medium">Patching</h2>
                         <div className="flex items-center gap-2">
-                            <Button
+                            <TooltipButton
                                 onClick={clear}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant="outline"
-                                title="Clear connections"
+                                tooltip="Clear tokens and connections"
                             >
                                 <RotateCcw className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </TooltipButton>
+                            <TooltipButton
                                 onClick={handleTokenize}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant="outline"
-                                title="Tokenize text"
+                                tooltip="Tokenize text"
                             >
                                 <ALargeSmall className="w-4 h-4" />
-                            </Button>
-                            <Button
+                            </TooltipButton>
+                            <TooltipButton
                                 onClick={() => setIsConnecting(!isConnecting)}
                                 size="icon"
                                 className="w-8 h-8"
                                 variant={isConnecting ? "default" : "outline"}
-                                title={isConnecting ? "Disable connecting" : "Enable connecting"}
+                                disabled={!patchTokens}
+                                tooltip={isConnecting ? "Disable connecting" : "Enable connecting"}
                             >
                                 {isConnecting ? (
                                     <RouteOff className="w-4 h-4" />
                                 ) : (
                                     <Route className="w-4 h-4" />
                                 )}
-                            </Button>
-                            <Button
+                            </TooltipButton>
+                            <TooltipButton
                                 onClick={() => handleRunPatching()}
                                 size="icon"
                                 className="w-8 h-8"
+                                tooltip="Run patching"
+                                disabled={!sourceTokenData || !destinationTokenData}
                             >
                                 <Play className="w-4 h-4" />
-                            </Button>
+                            </TooltipButton>
                         </div>
                     </div>
 
@@ -260,7 +323,18 @@ export function PatchingWorkbench({
             </div>
 
             <div className="flex flex-col p-4 gap-4 border-t h-1/2">
-                <h2 className="text-sm font-medium">Prompts</h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Prompts</h2>
+                    <TooltipButton variant="outline" size="icon" tooltip="Swap prompts" onClick={() => {
+                        const sourcePrompt = source.prompt;
+                        const destinationPrompt = destination.prompt;
+                        setSource({ ...source, prompt: destinationPrompt });
+                        setDestination({ ...destination, prompt: sourcePrompt });
+                        handleTokenize();
+                    }}>
+                        <ArrowUpDown className="w-4 h-4" />
+                    </TooltipButton>
+                </div>
                 <div className="flex flex-col flex-1 relative">
                     <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Source Prompt</div>
                     <Textarea
@@ -286,7 +360,7 @@ export function PatchingWorkbench({
                     />
                 </div>
 
-                <JointPredictionDisplay/>
+                <JointPredictionDisplay notificationMessage={notificationMessage} setNotificationMessage={setNotificationMessage} />
             </div>
 
         </div>

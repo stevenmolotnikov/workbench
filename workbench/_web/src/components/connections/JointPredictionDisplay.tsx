@@ -9,7 +9,10 @@ import config from "@/lib/config";
 import { decodeTokenIds } from "@/actions/tokenize";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { cn } from "@/lib/utils";
-import { Token } from "@/types/tokenizer";
+import type { Token } from "@/types/tokenizer";
+import { BorderBeam } from "@/components/magicui/border-beam";
+import { TooltipButton } from "../ui/tooltip-button";
+import { toast } from "sonner";
 
 
 const fixString = (str: string) => {
@@ -31,7 +34,7 @@ function PredictionBadges({
 }: PredictionBadgesProps) {
     return (
         <div className="gap-2 flex flex-row items-center justify-between">
-            <div className="text-sm">{label}</div>
+            <div className="text-sm">{label} Predictions</div>
 
             <div className="flex gap-2 items-center">
                 {badges.map((badge) => {
@@ -130,7 +133,12 @@ interface PredictionResults {
     };
 }
 
-export function JointPredictionDisplay() {
+interface JointPredictionDisplayProps {
+    notificationMessage: string;
+    setNotificationMessage: (message: string) => void;
+}
+
+export function JointPredictionDisplay({ notificationMessage, setNotificationMessage }: JointPredictionDisplayProps) {
     const { modelName } = useSelectedModel();
     const {
         setCorrectToken,
@@ -141,7 +149,7 @@ export function JointPredictionDisplay() {
         destination,
     } = usePatchingCompletions();
     const [targetTokenInput, setTargetTokenInput] = useState("");
-    const [notificationMessage, setNotificationMessage] = useState("");
+
     const [activeTokenType, setActiveTokenType] = useState<"correct" | "incorrect" | null>(null);
     const [metric, setMetric] = useState<string | undefined>(undefined);
     const [predictionLoading, setPredictionLoading] = useState(false);
@@ -165,6 +173,7 @@ export function JointPredictionDisplay() {
 
     const handleRunPredictions = async () => {
         if (!source.prompt.trim() || !destination.prompt.trim()) {
+            toast.error("Please enter prompts");
             return;
         }
 
@@ -194,6 +203,9 @@ export function JointPredictionDisplay() {
             console.error("Error running predictions:", error);
         } finally {
             setPredictionLoading(false);
+            if (notificationMessage === "Predictions stale") {
+                setNotificationMessage("");
+            }
         }
     };
 
@@ -261,17 +273,23 @@ export function JointPredictionDisplay() {
             handleRunPredictions();
         }
 
+        // Reset target tokens
+        setCorrectToken(null);
+        setIncorrectToken(null);
+
         setMetric(value);
         setActiveTokenType(null);
     }
 
     return (
-        <div className="bg-card/30 p-4 rounded border">
+        <div className="bg-card/30 p-4 rounded border relative">
             <div className="flex flex-row items-center justify-between">
+
+
                 <div className="flex flex-row items-center">
                     {/* <h2 className="text-sm font-medium">Prompts</h2> */}
                     <Select value={metric} onValueChange={handleSelectMetric}>
-                        <SelectTrigger className="w-32 h-8" disabled={source.prompt === "" || destination.prompt === ""}>
+                        <SelectTrigger className="w-40 h-8" disabled={source.prompt === "" || destination.prompt === ""}>
                             <SelectValue placeholder="Select metric" />
                         </SelectTrigger>
                         <SelectContent>
@@ -287,7 +305,7 @@ export function JointPredictionDisplay() {
                             value={correctToken}
                             isActive={activeTokenType === 'correct'}
                             onClick={() => setActiveTokenType(activeTokenType === 'correct' ? null : 'correct')}
-                            disabled={metric === undefined}
+                            disabled={metric === undefined || predictionLoading || notificationMessage === "Predictions stale"}
                         />
                         {metric === "logit-difference" && (
                             <TargetTokenBadge
@@ -295,20 +313,30 @@ export function JointPredictionDisplay() {
                                 value={incorrectToken}
                                 isActive={activeTokenType === 'incorrect'}
                                 onClick={() => setActiveTokenType(activeTokenType === 'incorrect' ? null : 'incorrect')}
-                                disabled={metric === undefined}
+                                disabled={metric === undefined || predictionLoading || notificationMessage === "Predictions stale"}
                             />
                         )}
                     </div>
                 </div>
-                <Button
+                <TooltipButton
                     onClick={handleRunPredictions}
-                    disabled={predictionLoading || !source.prompt.trim() || !destination.prompt.trim()}
+                    disabled={predictionLoading || !source.prompt.trim() || !destination.prompt.trim() || metric === undefined}
                     className="w-8 h-8"
                     size="icon"
+                    tooltip="Run predictions"
                 >
                     <RotateCcw className="w-4 h-4" />
-                </Button>
+                </TooltipButton>
             </div>
+            {predictionLoading &&
+                <BorderBeam
+                    duration={5}
+                    size={50}
+                    className="from-transparent bg-primary to-transparent"
+                />
+                }
+
+
 
             {predictions && (
                 <div className="border-t mt-4">
@@ -333,7 +361,7 @@ export function JointPredictionDisplay() {
 
                     {/* Notification message */}
                     {notificationMessage && (
-                        <div className="text-xs border bg-destructive/50 mt-4 text-destructive-foreground border-destructive-foreground/50 h-8 px-3 flex items-center rounded">
+                        <div className="text-xs border bg-destructive/50 mt-4 h-8 px-3 flex items-center rounded">
                             {notificationMessage}
                         </div>
                     )}
@@ -346,7 +374,7 @@ export function JointPredictionDisplay() {
                             value={targetTokenInput}
                             onChange={(e) => setTargetTokenInput(e.target.value)}
                             onKeyDown={handleKeyPress}
-                            disabled={!activeTokenType}
+                            disabled={!activeTokenType || notificationMessage === "Predictions stale"}
                         />
                         <Button
                             variant="outline"

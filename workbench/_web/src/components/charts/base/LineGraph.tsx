@@ -2,7 +2,7 @@
 
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
-import { LineGraphData } from "@/types/charts";
+import type { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useState } from "react";

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ChartMode } from "@/types/workspace";
+import type { ChartMode } from "@/types/workspace";
 import { useCharts } from "@/stores/useCharts";
 
 interface SelectionMenuProps {

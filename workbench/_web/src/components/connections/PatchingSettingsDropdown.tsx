@@ -37,16 +37,16 @@ export function PatchingSettings({
     setPatchTokens: (value: boolean) => void;
 }) {
     const handleComponentChange = (value: string) => {
-        if (value === "head" && patchTokens) {
-            // If selecting head while patch tokens is enabled, disable patch tokens
+        if (value === "heads" && patchTokens) {
+            // If selecting heads while patch tokens is enabled, disable patch tokens
             setPatchTokens(false);
         }
         setComponent(value);
     };
 
     const handlePatchTokensChange = (value: boolean) => {
-        if (value && component === "head") {
-            // If enabling patch tokens while component is head, change component to blocks
+        if (value && component === "heads") {
+            // If enabling patch tokens while component is heads, change component to blocks
             setComponent("blocks");
         }
         setPatchTokens(value);
@@ -64,12 +64,14 @@ export function PatchingSettings({
                 <DropdownMenuCheckboxItem
                     checked={tokenizeOnEnter}
                     onCheckedChange={setTokenizeOnEnter}
+                    onSelect={event => event.preventDefault()}
                 >
                     Tokenize on Enter
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
                     checked={patchTokens}
                     onCheckedChange={handlePatchTokensChange}
+                    onSelect={event => event.preventDefault()}
                 >
                     Patch Tokens
                 </DropdownMenuCheckboxItem>

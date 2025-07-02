@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Token } from "@/types/tokenizer";
+import type { Token } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { useConnections } from "@/stores/useConnections";
 import { usePatchingTokens } from "@/stores/usePatchingTokens";
-import { Connection } from "@/types/patching";
+import type { Connection } from "@/types/patching";
 
 interface ConnectableTokenAreaProps {
     model?: string;
@@ -47,7 +47,7 @@ const isHighlighted = (tokenElement: HTMLElement) =>
 const getGroupTokenIndices = (groupId: string | number): number[] => {
     const groupTokens = Array.from(document.querySelectorAll(`[data-group-id="${groupId}"]`));
     return groupTokens
-        .map(token => parseInt(token.getAttribute('data-token-id') || '-1'))
+        .map(token => Number.parseInt(token.getAttribute('data-token-id') || '-1'))
         .filter(idx => idx !== -1);
 };
 
@@ -73,7 +73,7 @@ const calculateGroupCenter = (groupId: string | number, tokenElement: HTMLElemen
             left: Math.min(acc.left, rect.left),
             right: Math.max(acc.right, rect.right)
         };
-    }, { left: Infinity, right: -Infinity });
+    }, { left: Number.POSITIVE_INFINITY, right: Number.NEGATIVE_INFINITY });
 
     return (bounds.left + bounds.right) / 2;
 };
@@ -110,7 +110,7 @@ export function ConnectableTokenArea({
         ), [connections]);
 
     const getTokenData = (tokenElement: HTMLElement) => {
-        const tokenIndex = parseInt(tokenElement.getAttribute('data-token-id') || '-1');
+        const tokenIndex = Number.parseInt(tokenElement.getAttribute('data-token-id') || '-1');
         const groupIdAttr = tokenElement.getAttribute('data-group-id') || '-1';
         const groupId = groupIdAttr === '-1' ? -1 : groupIdAttr;
         const tokenIndices = groupId !== -1 ? getGroupTokenIndices(groupId) : [tokenIndex];
@@ -194,7 +194,7 @@ export function ConnectableTokenArea({
         const target = e.target as HTMLElement;
         const tokenElement = target.closest("[data-token-id]");
         if (tokenElement) {
-            return parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
+            return Number.parseInt(tokenElement.getAttribute("data-token-id") || "0", 10);
         }
         return null;
     };
@@ -207,7 +207,7 @@ export function ConnectableTokenArea({
         const isGroupStart = isHighlighted && !isPrevHighlighted;
         const isGroupEnd = isHighlighted && !isNextHighlighted;
 
-        let groupId: number = -1;
+        let groupId = -1;
         if (isHighlighted) {
             if (isGroupStart) {
                 groupId = i;
@@ -348,7 +348,7 @@ export function ConnectableTokenArea({
     // Early returns for different states
     if (tokenizerLoading) return <div className="text-sm">Tokenizing...</div>;
     if (!tokenData || tokenData.length === 0) {
-        return <div className="text-sm">Click tokenize button to view tokens.</div>;
+        return <div className="text-sm text-muted-foreground italic">No tokens to display.</div>;
     }
 
     return (

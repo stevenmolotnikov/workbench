@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { CellPosition, HeatmapAnnotation } from "@/types/lens";
+import type { CellPosition, HeatmapAnnotation } from "@/types/lens";
 import { useTheme } from "next-themes";
 
 // Convert value to color

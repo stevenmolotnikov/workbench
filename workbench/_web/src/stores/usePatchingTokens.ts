@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Token } from '@/types/tokenizer';
+import type { Token } from '@/types/tokenizer';
 
 interface PatchingTokensState {
   // Token data
