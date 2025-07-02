@@ -28,37 +28,37 @@ class ExecutePairResponse(NDIFRequest):
     destination: CompletionResponse
 
 
-async def _execute_selected(state, execute_request):
+def _execute_selected(state, execute_request):
 
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
 
     prompt = execute_request.completion.prompt
 
+    with model.wrapped_trace(prompt, job_id=execute_request.job_id):
+        logits = model.lm_head.output
+
+        logits = logits[0,idxs,:].softmax(dim=-1)
+        values_indices = t.sort(logits, dim=-1, descending=True)
+
+        values = values_indices[0].save()
+        indices = values_indices[1].save()
+
+    return values, indices
+
+
+@router.post("/execute_selected")
+async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
+    state = request.app.state.m
     try:
-        with model.wrapped_trace(prompt, job_id=execute_request.job_id):
-            logits = model.lm_head.output
-
-            logits = logits[0,idxs,:].softmax(dim=-1)
-            values_indices = t.sort(logits, dim=-1, descending=True)
-
-            values = values_indices[0].save()
-            indices = values_indices[1].save()
-
+        values, indices = await asyncio.to_thread(_execute_selected, state, execute_request)
     except ConnectionError:
         await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return {
             "results": {}
         }
-    
-    return values, indices
-    
 
-@router.post("/execute_selected")
-async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
-    state = request.app.state.m
     idxs = [token.idx for token in execute_request.tokens]
-    values, indices = await asyncio.to_thread(_execute_selected, state, execute_request)
 
     results = {}
 
@@ -81,7 +81,7 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
     return results
 
 
-async def _execute_pair(state, execute_request):
+def _execute_pair(state, execute_request):
     model = state.get_model(execute_request.model)
 
     prompts = [
@@ -89,21 +89,14 @@ async def _execute_pair(state, execute_request):
         execute_request.destination.prompt
     ]
 
-    try:
-        with model.wrapped_trace(prompts, job_id=execute_request.job_id):
-            logits = model.lm_head.output
+    with model.wrapped_trace(prompts, job_id=execute_request.job_id):
+        logits = model.lm_head.output
 
-            logits = logits[:,-1,:].softmax(dim=-1)
-            values_indices = t.sort(logits, dim=-1, descending=True)
+        logits = logits[:,-1,:].softmax(dim=-1)
+        values_indices = t.sort(logits, dim=-1, descending=True)
 
-            raw_values = values_indices[0].save()
-            raw_indices = values_indices[1].save()
-
-    except ConnectionError:
-        await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
-        return {
-            "results": {}
-        }
+        raw_values = values_indices[0].save()
+        raw_indices = values_indices[1].save()
 
     return raw_values, raw_indices
 
@@ -112,7 +105,13 @@ async def _execute_pair(state, execute_request):
 async def execute_pair(execute_request: ExecutePairRequest, request: Request):
     state = request.app.state.m
     
-    raw_values, raw_indices = await asyncio.to_thread(_execute_pair, state, execute_request)
+    try:
+        raw_values, raw_indices = await asyncio.to_thread(_execute_pair, state, execute_request)
+    except ConnectionError:
+        await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
+        return {
+            "results": {}
+        }
 
     def round_results(values, indices):
         # Round values to 2 decimal places

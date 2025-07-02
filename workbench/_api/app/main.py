@@ -37,7 +37,7 @@ def fastapi_app():
         return config.get_model_list()
 
     class TokenizeRequest(BaseModel):
-        text: list[str]
+        text: list[str] = []  # Make optional with default empty list
         add_special_tokens: bool = True
         model: str
         operation: str = "tokenize"  # Added to support different operations
