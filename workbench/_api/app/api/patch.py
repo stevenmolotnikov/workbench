@@ -1,5 +1,6 @@
 from itertools import chain
 from typing import List
+import asyncio
 
 import einops
 from fastapi import APIRouter, Request
@@ -546,7 +547,7 @@ router = APIRouter()
 
 
 @router.post("/patch")
-def patch(patching_request: PatchRequest, request: Request):
+async def patch(patching_request: PatchRequest, request: Request):
     state = request.app.state.m
     model = state.get_model(patching_request.model)
 
@@ -556,12 +557,16 @@ def patch(patching_request: PatchRequest, request: Request):
         )
 
         if has_connections:
-            return patch_tokens_sync(model, patching_request)
+            # Run blocking operation in thread pool
+            return await asyncio.to_thread(patch_tokens_sync, model, patching_request)
 
-        return patch_tokens(model, patching_request)
+        # Run blocking operation in thread pool
+        return await asyncio.to_thread(patch_tokens, model, patching_request)
 
     else:
         if patching_request.submodule == "heads":
-            return patch_heads(model, patching_request)
+            # Run blocking operation in thread pool
+            return await asyncio.to_thread(patch_heads, model, patching_request)
 
-        return patch_components(model, patching_request)
+        # Run blocking operation in thread pool
+        return await asyncio.to_thread(patch_components, model, patching_request)

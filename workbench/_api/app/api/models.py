@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 import torch as t
+import asyncio
 
 from pydantic import BaseModel
 
@@ -26,10 +27,9 @@ class ExecutePairResponse(NDIFRequest):
     source: CompletionResponse
     destination: CompletionResponse
 
-@router.post("/execute_selected")
-async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
-    state = request.app.state.m
-    
+
+async def _execute_selected(state, execute_request):
+
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
 
@@ -50,6 +50,15 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
         return {
             "results": {}
         }
+    
+    return values, indices
+    
+
+@router.post("/execute_selected")
+async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
+    state = request.app.state.m
+    idxs = [token.idx for token in execute_request.tokens]
+    values, indices = await asyncio.to_thread(_execute_selected, state, execute_request)
 
     results = {}
 
@@ -72,11 +81,7 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
     return results
 
 
-
-@router.post("/execute_pair")
-async def execute_pair(execute_request: ExecutePairRequest, request: Request):
-    state = request.app.state.m
-    
+async def _execute_pair(state, execute_request):
     model = state.get_model(execute_request.model)
 
     prompts = [
@@ -99,6 +104,15 @@ async def execute_pair(execute_request: ExecutePairRequest, request: Request):
         return {
             "results": {}
         }
+
+    return raw_values, raw_indices
+
+
+@router.post("/execute_pair")
+async def execute_pair(execute_request: ExecutePairRequest, request: Request):
+    state = request.app.state.m
+    
+    raw_values, raw_indices = await asyncio.to_thread(_execute_pair, state, execute_request)
 
     def round_results(values, indices):
         # Round values to 2 decimal places
