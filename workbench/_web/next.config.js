@@ -24,8 +24,13 @@ const nextConfig = {
       path: false,
       crypto: false,
       os: false,
-      externals: ['@huggingface/transformers'],
     };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "sharp$": false,
+      "onnxruntime-node$": false,
+    };
+
 
     return config;
   },
