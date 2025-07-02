@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { Edges } from "./Edge";
 import useEdges from "@/hooks/useEdges";
-import { Button } from "../ui/button";
 import { ConnectableTokenArea } from "./ConnectableTokenArea";
 import { Textarea } from "@/components/ui/textarea";
 import { useSelectedModel } from "@/stores/useSelectedModel";
@@ -343,7 +342,7 @@ export function PatchingWorkbench({
                         onKeyDown={handleKeyDown}
                         onFocus={() => setSelectedArea("source")}
                         onBlur={() => setSelectedArea(null)}
-                        className="flex-1 resize-none h-full"
+                        className="h-24"
                         placeholder="Enter your source prompt here..."
                     />
                 </div>
@@ -355,7 +354,7 @@ export function PatchingWorkbench({
                         onKeyDown={handleKeyDown}
                         onFocus={() => setSelectedArea("destination")}
                         onBlur={() => setSelectedArea(null)}
-                        className="flex-1 resize-none h-full"
+                        className="h-24"
                         placeholder="Enter your destination prompt here..."
                     />
                 </div>

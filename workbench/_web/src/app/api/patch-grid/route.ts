@@ -15,8 +15,8 @@ function processHeatmapData(data: ActivationPatchingResponse): HeatmapData {
         // labels: results.map((row, i) => row.map((_, j) => `${finalRowLabels[i]}, ${finalColLabels[j]}`)),
         xTickLabels: finalColLabels,
         yTickLabels: finalRowLabels,
-        xAxisLabel: "Destination Tokens",
-        yAxisLabel: "Source Layers",
+        xAxisLabel: "Tokens",
+        yAxisLabel: "Layers",
     };
 }
 
