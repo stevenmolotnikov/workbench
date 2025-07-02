@@ -46,6 +46,7 @@
     "react-scan": "^0.3.4",
     "react-sortablejs": "^6.1.4",
     "recharts": "^2.15.3",
+    "sharp": "^0.34.2",
     "sonner": "^2.0.5",
     "sortablejs": "^1.15.6",
     "supabase": "^2.23.4",
