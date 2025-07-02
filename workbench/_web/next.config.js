@@ -24,6 +24,7 @@ const nextConfig = {
       path: false,
       crypto: false,
       os: false,
+      externals: ['@huggingface/transformers'],
     };
 
     return config;
