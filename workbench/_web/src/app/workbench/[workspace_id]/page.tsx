@@ -16,6 +16,8 @@ import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 import { HeatmapProps } from "@/components/charts/base/Heatmap";
 
+import { getWorkspaceById } from "@/lib/api";
+
 export default function Workbench({ params }: { params: { workspace_id: string } }) {
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(true);

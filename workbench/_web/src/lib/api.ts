@@ -18,18 +18,23 @@ export type NewUser = typeof users.$inferInsert;
 // Helper to get authenticated user
 // TODO: Replace this with proper session management
 async function getAuthenticatedUser() {
-  // For now, get the first user from the database
-  // In a real app, you'd get the user ID from cookies/session
-  const [user] = await db
-    .select()
-    .from(users)
-    .limit(1);
-  
-  if (!user) {
-    throw new Error("No user found. Please create a user account first.");
+  try {
+    // For now, get the first user from the database
+    // In a real app, you'd get the user ID from cookies/session
+    const [user] = await db
+      .select()
+      .from(users)
+      .limit(1);
+    
+    if (!user) {
+      throw new Error("No user found. Please create a user account first.");
+    }
+    
+    return user;
+  } catch (error) {
+    console.error("Database connection error:", error);
+    throw new Error("Unable to connect to database. Please ensure the database is set up and accessible.");
   }
-  
-  return user;
 }
 
 // Account creation function
