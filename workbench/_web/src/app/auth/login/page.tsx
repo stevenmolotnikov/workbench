@@ -1,39 +1,75 @@
 "use client";
- 
-import { useEffect } from "react";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Github, TreePine } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
 
-export default function LoginPage({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
+export default function LoginPage() {
     const router = useRouter();
+    const [isLogin, setIsLogin] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    
+    const [formData, setFormData] = useState({
+        email: "",
+        password: "",
+        name: "",
+    });
 
-    const signInWithGithub = async () => {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: "github",
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
-            },
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value,
         });
-        
-        if (error) {
-            console.error("Error signing in with GitHub:", error);
-            // You might want to show an error toast here
+        // Clear error when user starts typing
+        if (error) setError("");
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+
+        try {
+            const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+            const body = isLogin 
+                ? { email: formData.email, password: formData.password }
+                : { email: formData.email, password: formData.password, name: formData.name };
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Store user data in localStorage for simple session management
+                localStorage.setItem("user", JSON.stringify(data.user));
+                router.push("/home");
+            } else {
+                setError(data.message || "An error occurred");
+            }
+        } catch (error) {
+            console.error("Auth error:", error);
+            setError("Network error. Please try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                router.push("/home");
-            }
-        };
-        checkAuth();
-    }, []);
+    const toggleMode = () => {
+        setIsLogin(!isLogin);
+        setError("");
+        setFormData({ email: "", password: "", name: "" });
+    };
 
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
@@ -43,21 +79,114 @@ export default function LoginPage({ className, ...props }: React.ComponentPropsW
                     alt="NDIF Logo"
                     className="h-20 self-center font-medium"
                 />
-                <div className="flex flex-col gap-3 border p-5 bg-muted rounded-lg">
-                    <Button variant="outline" onClick={signInWithGithub} className="w-full">
-                        <Github className="size-8" />
-                        Login with Github
-                    </Button>
-                    <Button
-                        variant="outline"
-                        disabled
-                        onClick={signInWithGithub}
-                        className="w-full"
-                    >
-                        <TreePine className="size-8" />
-                        Login with ORCID
-                    </Button>
-                </div>
+                
+                <Card>
+                    <CardHeader className="text-center">
+                        <CardTitle>{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
+                        <CardDescription>
+                            {isLogin 
+                                ? "Sign in to your account to continue" 
+                                : "Create a new account to get started"
+                            }
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {!isLogin && (
+                                <div className="space-y-2">
+                                    <label htmlFor="name" className="text-sm font-medium leading-none">Name</label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                        <Input
+                                            id="name"
+                                            name="name"
+                                            type="text"
+                                            placeholder="Enter your name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                                <label htmlFor="email" className="text-sm font-medium leading-none">Email</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                    <Input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="Enter your email"
+                                        value={formData.email}
+                                        onChange={handleInputChange}
+                                        className="pl-10"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label htmlFor="password" className="text-sm font-medium leading-none">Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                    <Input
+                                        id="password"
+                                        name="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Enter your password"
+                                        value={formData.password}
+                                        onChange={handleInputChange}
+                                        className="pl-10 pr-10"
+                                        required
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </Button>
+                                </div>
+                                {!isLogin && (
+                                    <p className="text-sm text-gray-500">
+                                        Password must be at least 8 characters long
+                                    </p>
+                                )}
+                            </div>
+                            
+                            {error && (
+                                <div className="text-red-500 text-sm text-center">
+                                    {error}
+                                </div>
+                            )}
+                            
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading ? "Please wait..." : (isLogin ? "Sign In" : "Create Account")}
+                            </Button>
+                        </form>
+                        
+                        <div className="mt-4 text-center">
+                            <Button
+                                variant="link"
+                                onClick={toggleMode}
+                                className="text-sm"
+                            >
+                                {isLogin 
+                                    ? "Don't have an account? Create one" 
+                                    : "Already have an account? Sign in"
+                                }
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

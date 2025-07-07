@@ -13,6 +13,8 @@ interface ChartCardProps {
     chartTitle: React.ReactNode;
     chart: React.ReactNode;
     configContent?: React.ReactNode;
+    showRunButton?: boolean;
+    showRemoveButton?: boolean;
 }
 
 export function ChartCard({
@@ -22,18 +24,22 @@ export function ChartCard({
     chartTitle,
     chart,
     configContent = null,
+    showRunButton = true,
+    showRemoveButton = true,
 }: ChartCardProps) {
     const CardMenu = () => {
         return (
             <div className="absolute top-2 right-2 flex gap-1 z-10">
-            <button
-                onClick={handleRunChart}
-                className="p-1 rounded-full hover:bg-muted transition-colors"
-                title="Run chart"
-                disabled={isLoading}
-            >
-                <Play className="h-4 w-4 text-muted-foreground" />
-            </button>
+            {showRunButton &&
+                <button
+                    onClick={handleRunChart}
+                    className="p-1 rounded-full hover:bg-muted transition-colors"
+                    title="Run chart"
+                    disabled={isLoading}
+                >
+                    <Play className="h-4 w-4 text-muted-foreground" />
+                </button>
+            }
             {configContent && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -48,13 +54,15 @@ export function ChartCard({
                 </DropdownMenu>
             )}
 
-            <button
-                onClick={handleRemoveChart}
-                className="p-1 rounded-full hover:bg-muted transition-colors"
-                title="Remove chart"
-            >
-                <X className="h-4 w-4 text-muted-foreground" />
-            </button>
+            {showRemoveButton &&
+                <button
+                    onClick={handleRemoveChart}
+                    className="p-1 rounded-full hover:bg-muted transition-colors"
+                    title="Remove chart"
+                >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                </button>
+            }
         </div>
         )
     }

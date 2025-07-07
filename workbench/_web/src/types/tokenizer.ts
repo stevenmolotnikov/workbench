@@ -1,5 +1,3 @@
-import type { Tensor } from '@huggingface/transformers';
-
 export interface Token {
     id: number;
     text: string;
@@ -8,14 +6,13 @@ export interface Token {
 }
 
 type BatchEncoding = {
-    input_ids: number[] | number[][] | Tensor;
-    attention_mask: number[] | number[][] | Tensor;
-    token_type_ids?: number[] | number[][] | Tensor;
+    input_ids: number[] | number[][];
+    attention_mask: number[] | number[][];
+    token_type_ids?: number[] | number[][];
 }
 
 export type TokenizerOutput =
     | string
-    | Tensor
     | number[]
     | number[][]
     | BatchEncoding;

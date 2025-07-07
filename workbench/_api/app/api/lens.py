@@ -1,4 +1,5 @@
 from collections import defaultdict
+import asyncio
 
 from fastapi import APIRouter, Request
 import torch as t
@@ -205,7 +206,10 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
         model = state.get_model(model_name)
 
         try:
-            model_results = logit_lens_targeted(model, model_requests, lens_request.job_id)
+            # Run blocking operation in thread pool
+            model_results = await asyncio.to_thread(
+                logit_lens_targeted, model, model_requests, lens_request.job_id
+            )
 
         except ConnectionError:
             await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
@@ -231,7 +235,10 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     prompt = lens_request.completion.prompt
 
     try:
-        pred_ids, probs, input_strs = logit_lens_grid(model, prompt, lens_request.job_id)
+        # Run blocking operation in thread pool
+        pred_ids, probs, input_strs = await asyncio.to_thread(
+            logit_lens_grid, model, prompt, lens_request.job_id
+        )
     except ConnectionError:
         await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return GridLensResponse(

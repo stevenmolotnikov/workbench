@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request
 import torch as t
+import asyncio
 
 from pydantic import BaseModel
 
@@ -26,30 +27,38 @@ class ExecutePairResponse(NDIFRequest):
     source: CompletionResponse
     destination: CompletionResponse
 
-@router.post("/execute_selected")
-async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
-    state = request.app.state.m
-    
+
+def _execute_selected(state, execute_request):
+
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
 
     prompt = execute_request.completion.prompt
 
+    with model.wrapped_trace(prompt, job_id=execute_request.job_id):
+        logits = model.lm_head.output
+
+        logits = logits[0,idxs,:].softmax(dim=-1)
+        values_indices = t.sort(logits, dim=-1, descending=True)
+
+        values = values_indices[0].save()
+        indices = values_indices[1].save()
+
+    return values, indices
+
+
+@router.post("/execute_selected")
+async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
+    state = request.app.state.m
     try:
-        with model.wrapped_trace(prompt, job_id=execute_request.job_id):
-            logits = model.lm_head.output
-
-            logits = logits[0,idxs,:].softmax(dim=-1)
-            values_indices = t.sort(logits, dim=-1, descending=True)
-
-            values = values_indices[0].save()
-            indices = values_indices[1].save()
-
+        values, indices = await asyncio.to_thread(_execute_selected, state, execute_request)
     except ConnectionError:
         await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return {
             "results": {}
         }
+
+    idxs = [token.idx for token in execute_request.tokens]
 
     results = {}
 
@@ -72,11 +81,7 @@ async def execute_selected(execute_request: ExecuteSelectedRequest, request: Req
     return results
 
 
-
-@router.post("/execute_pair")
-async def execute_pair(execute_request: ExecutePairRequest, request: Request):
-    state = request.app.state.m
-    
+def _execute_pair(state, execute_request):
     model = state.get_model(execute_request.model)
 
     prompts = [
@@ -84,16 +89,24 @@ async def execute_pair(execute_request: ExecutePairRequest, request: Request):
         execute_request.destination.prompt
     ]
 
+    with model.wrapped_trace(prompts, job_id=execute_request.job_id):
+        logits = model.lm_head.output
+
+        logits = logits[:,-1,:].softmax(dim=-1)
+        values_indices = t.sort(logits, dim=-1, descending=True)
+
+        raw_values = values_indices[0].save()
+        raw_indices = values_indices[1].save()
+
+    return raw_values, raw_indices
+
+
+@router.post("/execute_pair")
+async def execute_pair(execute_request: ExecutePairRequest, request: Request):
+    state = request.app.state.m
+    
     try:
-        with model.wrapped_trace(prompts, job_id=execute_request.job_id):
-            logits = model.lm_head.output
-
-            logits = logits[:,-1,:].softmax(dim=-1)
-            values_indices = t.sort(logits, dim=-1, descending=True)
-
-            raw_values = values_indices[0].save()
-            raw_indices = values_indices[1].save()
-
+        raw_values, raw_indices = await asyncio.to_thread(_execute_pair, state, execute_request)
     except ConnectionError:
         await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return {

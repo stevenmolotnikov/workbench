@@ -1,45 +1,49 @@
 CREATE TABLE "annotation_groups" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"chart_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"chart_id" uuid,
 	"name" varchar(256)
 );
 --> statement-breakpoint
 CREATE TABLE "annotations" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"chart_id" integer,
-	"group_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"chart_id" uuid,
+	"group_id" uuid,
 	"text" text
 );
 --> statement-breakpoint
 CREATE TABLE "charts" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"workspace_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"workspace_id" uuid,
 	"name" varchar(128),
 	"type" varchar(32),
 	"data" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "lens_workspace" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"workspace_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"workspace_id" uuid,
 	"data" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "patching_workspaces" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"workspace_id" integer,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"workspace_id" uuid,
 	"data" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"email" varchar(256),
-	"name" varchar(256)
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"email" varchar(256) NOT NULL,
+	"password" varchar(256) NOT NULL,
+	"name" varchar(256),
+	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "workspaces" (
-	"id" serial PRIMARY KEY NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid,
 	"name" varchar(256),
+	"type" varchar(32),
 	"public" boolean DEFAULT false
 );
 --> statement-breakpoint
@@ -48,4 +52,5 @@ ALTER TABLE "annotations" ADD CONSTRAINT "annotations_chart_id_charts_id_fk" FOR
 ALTER TABLE "annotations" ADD CONSTRAINT "annotations_group_id_annotation_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."annotation_groups"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "charts" ADD CONSTRAINT "charts_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "lens_workspace" ADD CONSTRAINT "lens_workspace_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "patching_workspaces" ADD CONSTRAINT "patching_workspaces_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "patching_workspaces" ADD CONSTRAINT "patching_workspaces_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD CONSTRAINT "workspaces_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

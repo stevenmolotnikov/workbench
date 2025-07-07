@@ -16,6 +16,7 @@ const config = {
         executeSelected: '/api/execute_selected',
         executePair: '/api/execute_pair',
         processData: '/process-data',
+        tokenize: '/tokenize',
     },
     
     // Helper function to get full API URL

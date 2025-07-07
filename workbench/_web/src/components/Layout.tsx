@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/resizable"
 import { Annotations } from "@/components/charts/Annotations";
 import { useAnnotations } from "@/stores/useAnnotations";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface ResizableLayoutProps {
     workbench: React.ReactNode;
@@ -20,7 +21,9 @@ export function ResizableLayout({ workbench, charts }: ResizableLayoutProps) {
             className="flex flex-1 min-h-0 h-full"
         >
             <ResizablePanel className="h-full" defaultSize={35} minSize={30}>
-                {workbench}
+                <ScrollArea className="h-full">
+                    {workbench}
+                </ScrollArea>
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={50} minSize={35} maxSize={65}>

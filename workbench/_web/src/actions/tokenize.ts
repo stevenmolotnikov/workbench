@@ -1,33 +1,11 @@
 'use server'
 
-import { PreTrainedTokenizer } from '@huggingface/transformers';
 import type { Token } from '@/types/tokenizer';
-
-// Module-level cache for tokenizers
-const tokenizerCache = new Map<string, PreTrainedTokenizer>();
-
-async function getTokenizer(modelName: string): Promise<PreTrainedTokenizer> {
-  // Check if tokenizer is already cached
-  if (tokenizerCache.has(modelName)) {
-    return tokenizerCache.get(modelName)!;
-  }
-
-  // Load tokenizer and cache it
-  console.log(`Loading tokenizer for model: ${modelName}`);
-
-  if (modelName === "openai-community/gpt2") {
-    console.log(`Using Xenova/gpt2 for model: ${modelName}`);
-    modelName = "Xenova/gpt2";
-  }
-
-  const tokenizer = await PreTrainedTokenizer.from_pretrained(modelName);
-  tokenizerCache.set(modelName, tokenizer);
-  
-  return tokenizer;
-}
+import config from '@/lib/config';
 
 export async function isTokenizerCached(modelName: string): Promise<boolean> {
-  return tokenizerCache.has(modelName);
+  // Since caching is now handled by the backend, always return true
+  return true;
 }
 
 export async function tokenizeText(
@@ -44,51 +22,37 @@ export async function tokenizeText(
       return [];
     }
 
-    const tokenizer = await getTokenizer(modelName);
-
-    if (text.trim()) {
-      const token_ids = tokenizer.encode(text, { add_special_tokens: addSpecialTokens });
-      const tokens = token_ids.map((id) => tokenizer.decode([id]));
-
-      return tokens.map((token: string, index: number) => ({
-        id: token_ids[index],
-        text: token,
-        idx: index
-      }));
-    }
-
-    return [];
-  } catch (error) {
-    console.error('Error tokenizing text:', error);
-    throw new Error(`Failed to tokenize text: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-export async function tokenizeChat(
-  messages: { role: string; content: string }[],
-  modelName: string,
-  addSpecialTokens = true
-): Promise<Token[] | null> {
-  try {
-    if (!modelName) {
-      throw new Error('No model specified');
-    }
-
-    if (!messages || messages.length === 0) {
+    if (!text.trim()) {
       return [];
     }
 
-    const tokenizer = await getTokenizer(modelName);
-    const templateOutput = await tokenizer.apply_chat_template(messages, { tokenize: false });
-    
-    if (typeof templateOutput !== 'string') {
-      throw new Error('Chat template did not return a string');
+    const response = await fetch(config.getApiUrl(config.endpoints.tokenize), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: [text],
+        model: modelName,
+        add_special_tokens: addSpecialTokens,
+        operation: 'tokenize',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return tokenizeText(templateOutput, modelName, addSpecialTokens);
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result.tokens;
   } catch (error) {
-    console.error('Error tokenizing chat:', error);
-    throw new Error(`Failed to tokenize chat: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error tokenizing text:', error);
+    throw new Error(`Failed to tokenize text: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -106,21 +70,50 @@ export async function batchTokenizeText(
       return [];
     }
 
-    // Process all texts in parallel
-    const tokenizationPromises = texts.map(text => 
-      tokenizeText(text, modelName, addSpecialTokens)
-    );
+    // Filter out empty texts but remember their positions
+    const nonEmptyTexts = texts.filter(text => text && text.trim());
+    
+    if (nonEmptyTexts.length === 0) {
+      return texts.map(() => []);
+    }
 
-    return Promise.all(tokenizationPromises);
+    const response = await fetch(config.getApiUrl(config.endpoints.tokenize), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: nonEmptyTexts,
+        model: modelName,
+        add_special_tokens: addSpecialTokens,
+        operation: 'tokenize',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    // Map results back to original positions
+    let resultIndex = 0;
+    const results = texts.map(text => {
+      if (!text || !text.trim()) {
+        return [];
+      }
+      return result.results[resultIndex++].tokens;
+    });
+
+    return results;
   } catch (error) {
     console.error('Error batch tokenizing texts:', error);
     throw new Error(`Failed to batch tokenize texts: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
-
-export async function clearTokenizerCache(): Promise<void> {
-  tokenizerCache.clear();
-  console.log('Tokenizer cache cleared');
 }
 
 export async function decodeTokenIds(
@@ -136,13 +129,29 @@ export async function decodeTokenIds(
       return [];
     }
 
-    // Get cached tokenizer or load if not cached
-    const tokenizer = await getTokenizer(modelName);
+    const response = await fetch(config.getApiUrl(config.endpoints.tokenize), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelName,
+        operation: 'decode',
+        token_ids: tokenIds,
+      }),
+    });
 
-    // Decode each token ID individually to get the string representation
-    const decodedTokens = tokenIds.map((id) => tokenizer.decode([id]));
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-    return decodedTokens;
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    return result.decoded_tokens;
   } catch (error) {
     console.error('Error decoding token IDs:', error);
     throw new Error(`Failed to decode token IDs: ${error instanceof Error ? error.message : 'Unknown error'}`);

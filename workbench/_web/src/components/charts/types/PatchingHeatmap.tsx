@@ -29,6 +29,8 @@ export function PatchingHeatmap({ isLoading, data }: { isLoading: boolean, data:
                         </div>
                     )
                 }
+                showRunButton={false}
+                showRemoveButton={false}
             />
         </div>
     );
