@@ -5,6 +5,8 @@ import { workspaces, collections, charts, users } from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
+import { verifyToken, type SessionPayload } from "./session";
 
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
@@ -16,24 +18,33 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
 // Helper to get authenticated user
-// TODO: Replace this with proper session management
-async function getAuthenticatedUser() {
+async function getAuthenticatedUser(): Promise<User | null> {
   try {
-    // For now, get the first user from the database
-    // In a real app, you'd get the user ID from cookies/session
+    // Get the session token from cookies
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get('session-token')?.value;
+    
+    if (!sessionToken) {
+      return null;
+    }
+    
+    // Verify the token
+    const session = verifyToken(sessionToken);
+    if (!session) {
+      return null;
+    }
+    
+    // Get the user from the database
     const [user] = await db
       .select()
       .from(users)
+      .where(eq(users.id, session.id))
       .limit(1);
     
-    if (!user) {
-      throw new Error("No user found. Please create a user account first.");
-    }
-    
-    return user;
+    return user || null;
   } catch (error) {
-    console.error("Database connection error:", error);
-    throw new Error("Unable to connect to database. Please ensure the database is set up and accessible.");
+    console.error("Error getting authenticated user:", error);
+    return null;
   }
 }
 
@@ -87,18 +98,25 @@ export async function createAccount(
 export async function getWorkspaces(includePublic = true) {
   const user = await getAuthenticatedUser();
   
+  // If no user and we're not including public workspaces, return empty array
+  if (!user && !includePublic) {
+    return [];
+  }
+  
   // Get workspaces that belong to the user or are public
+  const whereClause = includePublic
+    ? user
+      ? or(
+          eq(workspaces.userId, user.id),
+          eq(workspaces.public, true)
+        )
+      : eq(workspaces.public, true)
+    : eq(workspaces.userId, user!.id); // Safe due to check above
+  
   const userWorkspaces = await db
     .select()
     .from(workspaces)
-    .where(
-      includePublic
-        ? or(
-            eq(workspaces.userId, user.id),
-            eq(workspaces.public, true)
-          )
-        : eq(workspaces.userId, user.id)
-    );
+    .where(whereClause);
   
   return userWorkspaces;
 }
@@ -112,10 +130,12 @@ export async function getWorkspaceById(id: string) {
     .where(
       and(
         eq(workspaces.id, id),
-        or(
-          eq(workspaces.userId, user.id),
-          eq(workspaces.public, true)
-        )
+        user
+          ? or(
+              eq(workspaces.userId, user.id),
+              eq(workspaces.public, true)
+            )
+          : eq(workspaces.public, true)
       )
     );
   
@@ -151,6 +171,10 @@ export async function createWorkspace(
 ) {
   const user = await getAuthenticatedUser();
   
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
   // Create the workspace
   const [newWorkspace] = await db
     .insert(workspaces)
@@ -173,6 +197,10 @@ export async function updateWorkspace(
   }
 ) {
   const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
   
   // Verify ownership
   const [existing] = await db
@@ -207,6 +235,10 @@ export async function createCollection(
 ) {
   const user = await getAuthenticatedUser();
   
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
   // Verify workspace ownership
   const [workspace] = await db
     .select()
@@ -240,6 +272,10 @@ export async function updateCollection(
   data: Record<string, unknown>
 ) {
   const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
   
   // Verify ownership through workspace
   const [collection] = await db
@@ -276,6 +312,10 @@ export async function createChart(
   data: Record<string, unknown> = {}
 ) {
   const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
   
   // Verify collection ownership through workspace
   const [collection] = await db
@@ -315,6 +355,10 @@ export async function updateChart(
 ) {
   const user = await getAuthenticatedUser();
   
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
   // Verify ownership through collection and workspace
   const [chart] = await db
     .select({
@@ -347,6 +391,10 @@ export async function updateChart(
 
 export async function deleteCollection(collectionId: string) {
   const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
   
   // Verify ownership through workspace
   const [collection] = await db
@@ -383,6 +431,10 @@ export async function deleteCollection(collectionId: string) {
 
 export async function deleteWorkspace(id: string) {
   const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
   
   // Verify ownership
   const [workspace] = await db
@@ -430,17 +482,24 @@ export async function deleteWorkspace(id: string) {
 export async function getWorkspacesWithCollections(includePublic = true) {
   const user = await getAuthenticatedUser();
   
+  // If no user and we're not including public workspaces, return empty array
+  if (!user && !includePublic) {
+    return [];
+  }
+  
+  const whereClause = includePublic
+    ? user
+      ? or(
+          eq(workspaces.userId, user.id),
+          eq(workspaces.public, true)
+        )
+      : eq(workspaces.public, true)
+    : eq(workspaces.userId, user!.id); // Safe due to check above
+  
   const userWorkspaces = await db
     .select()
     .from(workspaces)
-    .where(
-      includePublic
-        ? or(
-            eq(workspaces.userId, user.id),
-            eq(workspaces.public, true)
-          )
-        : eq(workspaces.userId, user.id)
-    );
+    .where(whereClause);
   
   // For each workspace, get its collections and charts
   const workspacesWithCollections = await Promise.all(

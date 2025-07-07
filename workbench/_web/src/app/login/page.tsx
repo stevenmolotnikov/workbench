@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
+import { getCurrentUser } from "@/lib/session";
 
 function LoginForm() {
     const router = useRouter();
@@ -14,6 +15,7 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [checkingAuth, setCheckingAuth] = useState(true);
     
     const [formData, setFormData] = useState({
         email: "",
@@ -23,6 +25,25 @@ function LoginForm() {
 
     // Get redirect URL from query params
     const redirectUrl = searchParams.get('redirect') || '/workbench';
+
+    // Check if user is already logged in
+    useEffect(() => {
+        async function checkAuth() {
+            try {
+                const user = await getCurrentUser();
+                if (user) {
+                    // User is already logged in, redirect
+                    router.push(redirectUrl);
+                }
+            } catch (error) {
+                console.error("Auth check error:", error);
+            } finally {
+                setCheckingAuth(false);
+            }
+        }
+        
+        checkAuth();
+    }, [router, redirectUrl]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
@@ -74,6 +95,17 @@ function LoginForm() {
         setError("");
         setFormData({ email: "", password: "", name: "" });
     };
+
+    // Show loading state while checking auth
+    if (checkingAuth) {
+        return (
+            <Card>
+                <CardContent className="p-6">
+                    <div className="text-center">Loading...</div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>

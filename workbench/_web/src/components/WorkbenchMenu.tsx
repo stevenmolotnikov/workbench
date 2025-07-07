@@ -21,6 +21,7 @@ import {
 import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { TutorialsToggle } from "./TutorialsToggle";
+import { WorkspaceSettingsPopover } from "./WorkspaceSettingsPopover";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
@@ -29,6 +30,7 @@ interface WorkbenchModeProps {
     toggleTutorials: () => void;
     sidebarCollapsed?: boolean;
     toggleSidebar?: () => void;
+    workspaceId?: string;
 }
 
 export function WorkbenchMenu({ 
@@ -37,7 +39,8 @@ export function WorkbenchMenu({
     setWorkbenchMode,
     toggleTutorials, 
     sidebarCollapsed = false, 
-    toggleSidebar 
+    toggleSidebar,
+    workspaceId
 }: WorkbenchModeProps) {
     const { layout, setLayout, clearGridPositions  } = useCharts();
     const router = useRouter();
@@ -81,6 +84,7 @@ export function WorkbenchMenu({
             </div>
             <div className="flex items-center gap-2">
                 <StatusUpdatesDisplay />
+                {workspaceId && <WorkspaceSettingsPopover workspaceId={workspaceId} />}
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <FileText size={16} />
                     Export

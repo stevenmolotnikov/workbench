@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Save, X, ExternalLink } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/useWorkspace";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCharts } from "@/stores/useCharts";
@@ -179,20 +179,6 @@ export function WorkspaceHistory() {
                                         )}
                                     </div>
                                     <div className="flex items-center gap-1 ml-auto">
-                                        {!isCurrentWorkspace && (
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="opacity-0 transition-opacity duration-200 group-hover:opacity-100 h-auto p-1"
-                                                onClick={(e: React.MouseEvent) => {
-                                                    e.stopPropagation();
-                                                    handleOpenWorkspace(workspace.id || "");
-                                                }}
-                                                title="Open workspace"
-                                            >
-                                                <ExternalLink className="h-3 w-3" />
-                                            </Button>
-                                        )}
                                         <ConfirmationPopover
                                             onConfirm={() => deleteWorkspace(workspace.id || "")}
                                             isCurrentWorkspace={isCurrentWorkspace}

@@ -89,8 +89,15 @@ export function requireAuth(request: NextRequest): SessionPayload | null {
 
 // Middleware helper to check if a route requires authentication
 export function isProtectedRoute(pathname: string): boolean {
+  // Don't protect specific workspace routes as they might be public
+  // The API will handle permission checks
+  if (pathname.match(/^\/workbench\/[a-zA-Z0-9-]+/)) {
+    return false;
+  }
+  
+  // Protect the workbench list page
   const protectedPaths = ['/workbench'];
-  return protectedPaths.some(path => pathname.startsWith(path));
+  return protectedPaths.some(path => pathname === path);
 }
 
 // Client-side helper to get current user session
