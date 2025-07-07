@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Save, X } from "lucide-react";
-import { useWorkspaceStore, type Workspace } from "@/stores/useWorkspace";
-import { Input } from "@/components/ui/input";
+import { useWorkspaceStore } from "@/stores/useWorkspace";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCharts } from "@/stores/useCharts";
 import { useAnnotations } from "@/stores/useAnnotations";
@@ -12,88 +12,110 @@ import { useLensCollection } from "@/stores/useLensCollection";
 import { useModels } from '@/hooks/useModels';
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { 
+    createLensCollection, 
+    createPatchingCollection, 
+    updateLensCollection, 
+    updatePatchingCollection,
+    getWorkspaceById,
+    type Workspace as ApiWorkspace,
+    type LensCollection,
+    type PatchingCollection,
+    type Chart
+} from "@/lib/api";
+import type { LogitLensWorkspace } from "@/types/lens";
 
 export function WorkspaceHistory() {
-    const { workspaces, isLoading, deleteWorkspace, createWorkspace } =
+    const params = useParams();
+    const currentWorkspaceId = params?.workspace_id as string;
+    
+    const { workspaces, isLoading, deleteWorkspace, createWorkspace, initialize } =
         useWorkspaceStore();
     const { isLoading: isModelsLoading } = useModels();
 
-    const [pendingWorkspace, setPendingWorkspace] = useState<Workspace | null>(null);
+
+    const [currentWorkspace, setCurrentWorkspace] = useState<(ApiWorkspace & { lensCollections: LensCollection[], patchingCollections: PatchingCollection[], charts: Chart[] }) | null>(null);
 
     const { annotations, setAnnotations, groups, setGroups } = useAnnotations();
     const { setGridPositions, gridPositions } = useCharts();
 
-    const loadWorkspace = (workspace: Workspace) => {
-        if (isModelsLoading) return;
-        
-        if ("completions" in workspace) {
-            const { setActiveCompletions } = useLensCollection.getState();
-            setActiveCompletions(workspace.completions);
-            setGridPositions(workspace.graphData);
-            setAnnotations(workspace.annotations);
-            if (workspace.groups) {
-                setGroups(workspace.groups);
-            }
+    // Initialize workspace store when component mounts
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
+
+    // Load current workspace data when workspace ID changes
+    useEffect(() => {
+        if (currentWorkspaceId) {
+            loadCurrentWorkspace();
+        }
+    }, [currentWorkspaceId]);
+
+    const loadCurrentWorkspace = async () => {
+        if (!currentWorkspaceId) return;
+        try {
+            const workspace = await getWorkspaceById(currentWorkspaceId);
+            setCurrentWorkspace(workspace);
+        } catch (error) {
+            console.error("Failed to load current workspace:", error);
         }
     };
 
-    const exportWorkspace = () => {
+    const loadWorkspace = (workspaceData: ApiWorkspace) => {
+        if (isModelsLoading) return;
+        
+        // For now, we'll need to load the actual workspace data from collections
+        // This is a placeholder until we implement proper workspace loading
+        console.log("Loading workspace:", workspaceData);
+    };
+
+    const getCurrentWorkspaceData = () => {
         const { activeCompletions } = useLensCollection.getState();
-        const workspace = {
-            name: "",
+        return {
             completions: activeCompletions,
             graphData: gridPositions,
             annotations: annotations,
             groups: groups,
         };
-        return workspace;
     };
 
-    const addPendingWorkspace = (workspace: Workspace) => {
-        if (workspaces.length >= 5) {
+    const handleSaveWorkspace = async () => {
+        if (!currentWorkspaceId || !currentWorkspace) {
+            console.error("No current workspace to save to");
             return;
         }
-
-        setPendingWorkspace(workspace);
-    };
-
-    const onPendingWorkspaceNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!pendingWorkspace) return;
-        setPendingWorkspace({ ...pendingWorkspace, name: e.target.value });
-    };
-
-    const handleCreateWorkspace = () => {
-        if (!pendingWorkspace) return;
         
-        // Only handle LogitLens workspaces for now
-        if ("completions" in pendingWorkspace) {
-            const workspaceData = {
-                completions: pendingWorkspace.completions,
-                graphData: pendingWorkspace.graphData,
-                annotations: pendingWorkspace.annotations,
-                groups: pendingWorkspace.groups,
-            };
-            createWorkspace(pendingWorkspace.name, "logit_lens", false, workspaceData);
+        try {
+            // Get current workspace data
+            const workspaceData = getCurrentWorkspaceData();
+            
+            // Update lens collection with current state
+            if (currentWorkspace.lensCollections.length > 0) {
+                await updateLensCollection(currentWorkspace.lensCollections[0].id, workspaceData);
+            } else {
+                // Create lens collection if it doesn't exist
+                await createLensCollection(currentWorkspaceId, workspaceData);
+            }
+            
+            // Update patching collection with empty data for now
+            if (currentWorkspace.patchingCollections.length > 0) {
+                await updatePatchingCollection(currentWorkspace.patchingCollections[0].id, {});
+            } else {
+                // Create patching collection if it doesn't exist
+                await createPatchingCollection(currentWorkspaceId, {});
+            }
+            
+            console.log("Workspace saved successfully");
+        } catch (error) {
+            console.error("Failed to save workspace:", error);
         }
-        setPendingWorkspace(null);
     };
 
-    const getWorkspaceStats = (workspace: Workspace) => {
-        let charts = 0;
-        let completions = 0;
-        const annotations = workspace.annotations?.length || 0;
-
-        if ("completions" in workspace) {
-            // LogitLensWorkspace
-            charts = workspace.graphData?.length || 0;
-            completions = workspace.completions?.length || 0;
-        } else {
-            // ActivationPatchingWorkspace
-            charts = workspace.graphData ? 1 : 0;
-            completions = 2; // source and destination
-        }
-
-        return `${charts} charts • ${completions} completions • ${annotations} annotations`;
+    const getWorkspaceStats = (workspace: ApiWorkspace) => {
+        // Since we're working with basic workspace records now,
+        // we'll need to fetch the actual data to show stats
+        // For now, show basic info
+        return "Workspace data";
     };
 
     return (
@@ -107,50 +129,18 @@ export function WorkspaceHistory() {
                     size="icon"
                     variant="outline"
                     className="h-8 w-8"
-                    onClick={() => addPendingWorkspace(exportWorkspace())}
-                    disabled={isLoading}
-                    tooltip="Create a new workspace"
+                    onClick={handleSaveWorkspace}
+                    disabled={isLoading || !currentWorkspaceId}
+                    tooltip="Save current workspace"
                 >
                     <Save size={6} />
                 </TooltipButton>
             </div>
             <div className="flex-1 overflow-auto">
                 <div className="p-4 space-y-2">
-                    {pendingWorkspace && (
-                        <div className="p-4 border bg-card rounded-lg space-y-3">
-                            <div className="text-xs text-muted-foreground">
-                                Create a new workspace
-                            </div>
-                            <Input
-                                type="text"
-                                value={pendingWorkspace.name}
-                                placeholder="Enter workspace name..."
-                                onChange={onPendingWorkspaceNameChange}
-                                autoFocus
-                            />
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="flex-1"
-                                    onClick={() => setPendingWorkspace(null)}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    className="flex-1"
-                                    onClick={handleCreateWorkspace}
-                                    disabled={!pendingWorkspace.name.trim()}
-                                >
-                                    Create
-                                </Button>
-                            </div>
-                        </div>
-                    )}
                     {workspaces.map((workspace, index) => (
                         <div
-                            key={index}
+                            key={workspace.id || index}
                             className={cn(
                                 "p-4 border bg-card rounded-lg group",
                                 isModelsLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"

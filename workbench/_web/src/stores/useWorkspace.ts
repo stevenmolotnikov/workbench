@@ -81,6 +81,3 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         }
     },
 }));
-
-// Initialize when this module is imported
-useWorkspaceStore.getState().initialize();
