@@ -15,12 +15,20 @@ export const workspaces = pgTable("workspaces", {
     public: boolean("public").default(false),
 });
 
-export const chartTypes = ["patching", "logit_lens"] as const;
+export const collectionTypes = ["lens", "patching"] as const;
+
+export const collections = pgTable("collections", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id),
+    type: varchar("type", { enum: collectionTypes, length: 32 }),
+    data: jsonb("data"),
+});
+
+export const chartTypes = ["heatmap", "line"] as const;
 
 export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id),
-    name: varchar("name", { length: 128 }),
+    collectionId: uuid("collection_id").references(() => collections.id),
     type: varchar("type", { enum: chartTypes, length: 32 }),
     data: jsonb("data"),
 });
@@ -37,31 +45,3 @@ export const annotationGroups = pgTable("annotation_groups", {
     chartId: uuid("chart_id").references(() => charts.id),
     name: varchar("name", { length: 256 }),
 });
-
-
-/*
-##############
-# LOGIT LENS #
-##############
-*/
-
-
-export const lensCollections = pgTable("lens_collections", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id),
-    data: jsonb("data"),
-});
-
-
-/*
-#######################
-# ACTIVATION PATCHING #
-#######################
-*/
-
-export const patchingCollections = pgTable("patching_collections", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id),
-    data: jsonb("data"),
-});
-

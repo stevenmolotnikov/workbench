@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Save, X } from "lucide-react";
+import { Save, X, ExternalLink } from "lucide-react";
 import { useWorkspaceStore } from "@/stores/useWorkspace";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCharts } from "@/stores/useCharts";
@@ -13,28 +13,29 @@ import { useModels } from '@/hooks/useModels';
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { 
-    createLensCollection, 
-    createPatchingCollection, 
-    updateLensCollection, 
-    updatePatchingCollection,
+    createCollection, 
+    updateCollection,
     getWorkspaceById,
     type Workspace as ApiWorkspace,
-    type LensCollection,
-    type PatchingCollection,
+    type Collection,
     type Chart
 } from "@/lib/api";
-import type { LogitLensWorkspace } from "@/types/lens";
+
+type WorkspaceWithCollections = ApiWorkspace & { 
+    collections: Collection[]; 
+    charts: Chart[] 
+};
 
 export function WorkspaceHistory() {
     const params = useParams();
+    const router = useRouter();
     const currentWorkspaceId = params?.workspace_id as string;
     
     const { workspaces, isLoading, deleteWorkspace, createWorkspace, initialize } =
         useWorkspaceStore();
     const { isLoading: isModelsLoading } = useModels();
 
-
-    const [currentWorkspace, setCurrentWorkspace] = useState<(ApiWorkspace & { lensCollections: LensCollection[], patchingCollections: PatchingCollection[], charts: Chart[] }) | null>(null);
+    const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithCollections | null>(null);
 
     const { annotations, setAnnotations, groups, setGroups } = useAnnotations();
     const { setGridPositions, gridPositions } = useCharts();
@@ -69,6 +70,11 @@ export function WorkspaceHistory() {
         console.log("Loading workspace:", workspaceData);
     };
 
+    const handleOpenWorkspace = (workspaceId: string) => {
+        if (workspaceId === currentWorkspaceId) return; // Don't navigate to current workspace
+        router.push(`/workbench/${workspaceId}`);
+    };
+
     const getCurrentWorkspaceData = () => {
         const { activeCompletions } = useLensCollection.getState();
         return {
@@ -89,23 +95,27 @@ export function WorkspaceHistory() {
             // Get current workspace data
             const workspaceData = getCurrentWorkspaceData();
             
-            // Update lens collection with current state
-            if (currentWorkspace.lensCollections.length > 0) {
-                await updateLensCollection(currentWorkspace.lensCollections[0].id, workspaceData);
+            // Find or create lens collection
+            const lensCollection = currentWorkspace.collections.find(c => c.type === "lens");
+            if (lensCollection) {
+                await updateCollection(lensCollection.id, workspaceData);
             } else {
                 // Create lens collection if it doesn't exist
-                await createLensCollection(currentWorkspaceId, workspaceData);
+                await createCollection(currentWorkspaceId, "lens", workspaceData);
             }
             
-            // Update patching collection with empty data for now
-            if (currentWorkspace.patchingCollections.length > 0) {
-                await updatePatchingCollection(currentWorkspace.patchingCollections[0].id, {});
+            // Find or create patching collection
+            const patchingCollection = currentWorkspace.collections.find(c => c.type === "patching");
+            if (patchingCollection) {
+                await updateCollection(patchingCollection.id, {});
             } else {
                 // Create patching collection if it doesn't exist
-                await createPatchingCollection(currentWorkspaceId, {});
+                await createCollection(currentWorkspaceId, "patching", {});
             }
             
             console.log("Workspace saved successfully");
+            // Reload current workspace to get updated data
+            await loadCurrentWorkspace();
         } catch (error) {
             console.error("Failed to save workspace:", error);
         }
@@ -117,6 +127,13 @@ export function WorkspaceHistory() {
         // For now, show basic info
         return "Workspace data";
     };
+
+    // Sort workspaces to put current workspace first
+    const sortedWorkspaces = [...workspaces].sort((a, b) => {
+        if (a.id === currentWorkspaceId) return -1;
+        if (b.id === currentWorkspaceId) return 1;
+        return 0;
+    });
 
     return (
         <div className="h-full flex flex-col">
@@ -138,24 +155,54 @@ export function WorkspaceHistory() {
             </div>
             <div className="flex-1 overflow-auto">
                 <div className="p-4 space-y-2">
-                    {workspaces.map((workspace, index) => (
-                        <div
-                            key={workspace.id || index}
-                            className={cn(
-                                "p-4 border bg-card rounded-lg group",
-                                isModelsLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                            )}
-                            onClick={() => loadWorkspace(workspace)}
-                        >
-                            <div className="flex items-center gap-2 relative">
-                                <div className="text-sm font-medium">{workspace.name}</div>
-                                <ConfirmationPopover
-                                    onConfirm={() => deleteWorkspace(workspace.id || "")}
-                                />
+                    {sortedWorkspaces.map((workspace, index) => {
+                        const isCurrentWorkspace = workspace.id === currentWorkspaceId;
+                        
+                        return (
+                            <div
+                                key={workspace.id || index}
+                                className={cn(
+                                    "p-4 border bg-card rounded-lg group relative",
+                                    isCurrentWorkspace ? "border-primary" : "",
+                                    isModelsLoading ? "opacity-50 cursor-not-allowed" : 
+                                    isCurrentWorkspace ? "cursor-default" : "cursor-pointer hover:bg-accent"
+                                )}
+                                onClick={() => !isCurrentWorkspace && handleOpenWorkspace(workspace.id || "")}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <div className="text-sm font-medium">
+                                        {workspace.name}
+                                        {isCurrentWorkspace && (
+                                            <span className="text-xs text-muted-foreground ml-2">
+                                                (current)
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1 ml-auto">
+                                        {!isCurrentWorkspace && (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="opacity-0 transition-opacity duration-200 group-hover:opacity-100 h-auto p-1"
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.stopPropagation();
+                                                    handleOpenWorkspace(workspace.id || "");
+                                                }}
+                                                title="Open workspace"
+                                            >
+                                                <ExternalLink className="h-3 w-3" />
+                                            </Button>
+                                        )}
+                                        <ConfirmationPopover
+                                            onConfirm={() => deleteWorkspace(workspace.id || "")}
+                                            isCurrentWorkspace={isCurrentWorkspace}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="text-xs mt-1">{getWorkspaceStats(workspace)}</div>
                             </div>
-                            <div className="text-xs mt-1">{getWorkspaceStats(workspace)}</div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>
@@ -164,28 +211,35 @@ export function WorkspaceHistory() {
 
 interface ConfirmationPopoverProps {
     onConfirm: () => void;
+    isCurrentWorkspace?: boolean;
 }
 
-const ConfirmationPopover = ({ onConfirm }: ConfirmationPopoverProps) => {
+const ConfirmationPopover = ({ onConfirm, isCurrentWorkspace = false }: ConfirmationPopoverProps) => {
     return (
         <Popover>
             <PopoverTrigger asChild>
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="opacity-0 transition-opacity duration-200 group-hover:opacity-100 absolute p-1 h-auto -right-1 -top-1"
+                    className="opacity-0 transition-opacity duration-200 group-hover:opacity-100 p-1 h-auto"
+                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent side="right" className="w-auto p-3">
                 <div className="space-y-2">
-                    <p className="text-sm">Are you sure?</p>
+                    <p className="text-sm">
+                        {isCurrentWorkspace 
+                            ? "Delete current workspace? You'll be redirected to the workspace list."
+                            : "Are you sure you want to delete this workspace?"
+                        }
+                    </p>
                     <Button
                         variant="destructive"
                         size="sm"
                         className="w-full"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             onConfirm();
                         }}

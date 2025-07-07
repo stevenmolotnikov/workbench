@@ -4,6 +4,12 @@ import type { Annotation as WorkspaceAnnotation } from "@/stores/useAnnotations"
 import type { GridPosition } from "@/stores/useCharts";
 import { ChartArea, Grid3X3 } from "lucide-react";
 
+
+export interface LensCollection { 
+    id: string;
+    
+}
+
 // Request Schema
 
 export interface TokenCompletion {

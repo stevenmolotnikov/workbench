@@ -25,46 +25,51 @@ export default async function WorkbenchPage() {
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {workspaces.map((workspace) => (
-                        <Link
-                            key={workspace.id}
-                            href={`/workbench/${workspace.id}`}
-                            className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-semibold text-lg">{workspace.name}</h3>
-                                    <div className="flex gap-2 mt-1">
-                                        {workspace.lensCollections.length > 0 && (
-                                            <span className="inline-block px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                                                {workspace.lensCollections.length} Logit Lens
+                    {workspaces.map((workspace) => {
+                        const lensCollections = workspace.collections.filter(c => c.type === "lens");
+                        const patchingCollections = workspace.collections.filter(c => c.type === "patching");
+                        
+                        return (
+                            <Link
+                                key={workspace.id}
+                                href={`/workbench/${workspace.id}`}
+                                className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-semibold text-lg">{workspace.name}</h3>
+                                        <div className="flex gap-2 mt-1">
+                                            {lensCollections.length > 0 && (
+                                                <span className="inline-block px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                                                    {lensCollections.length} Logit Lens
+                                                </span>
+                                            )}
+                                            {patchingCollections.length > 0 && (
+                                                <span className="inline-block px-2 py-1 bg-secondary/10 text-secondary-foreground text-xs rounded-full">
+                                                    {patchingCollections.length} Patching
+                                                </span>
+                                            )}
+                                            {workspace.charts.length > 0 && (
+                                                <span className="inline-block px-2 py-1 bg-accent/10 text-accent-foreground text-xs rounded-full">
+                                                    {workspace.charts.length} Charts
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        {workspace.public && (
+                                            <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mb-1">
+                                                Public
                                             </span>
                                         )}
-                                        {workspace.patchingCollections.length > 0 && (
-                                            <span className="inline-block px-2 py-1 bg-secondary/10 text-secondary-foreground text-xs rounded-full">
-                                                {workspace.patchingCollections.length} Patching
-                                            </span>
-                                        )}
-                                        {workspace.charts.length > 0 && (
-                                            <span className="inline-block px-2 py-1 bg-accent/10 text-accent-foreground text-xs rounded-full">
-                                                {workspace.charts.length} Charts
-                                            </span>
-                                        )}
+                                        <p className="text-xs text-muted-foreground">
+                                            {workspace.id}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    {workspace.public && (
-                                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mb-1">
-                                            Public
-                                        </span>
-                                    )}
-                                    <p className="text-xs text-muted-foreground">
-                                        {workspace.id}
-                                    </p>
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -1,5 +1,5 @@
 {
-  "id": "ceb11835-18a8-48ed-ac76-c8a9957a0297",
+  "id": "6d6fec9e-74d1-4dcf-9231-087246b843f0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -126,15 +126,9 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "workspace_id": {
-          "name": "workspace_id",
+        "collection_id": {
+          "name": "collection_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(128)",
           "primaryKey": false,
           "notNull": false
         },
@@ -153,12 +147,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "charts_workspace_id_workspaces_id_fk": {
-          "name": "charts_workspace_id_workspaces_id_fk",
+        "charts_collection_id_collections_id_fk": {
+          "name": "charts_collection_id_collections_id_fk",
           "tableFrom": "charts",
-          "tableTo": "workspaces",
+          "tableTo": "collections",
           "columnsFrom": [
-            "workspace_id"
+            "collection_id"
           ],
           "columnsTo": [
             "id"
@@ -173,8 +167,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.lens_collections": {
-      "name": "lens_collections",
+    "public.collections": {
+      "name": "collections",
       "schema": "",
       "columns": {
         "id": {
@@ -190,49 +184,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "data": {
-          "name": "data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "lens_collections_workspace_id_workspaces_id_fk": {
-          "name": "lens_collections_workspace_id_workspaces_id_fk",
-          "tableFrom": "lens_collections",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.patching_collections": {
-      "name": "patching_collections",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
+        "type": {
+          "name": "type",
+          "type": "varchar(32)",
           "primaryKey": false,
           "notNull": false
         },
@@ -245,9 +199,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "patching_collections_workspace_id_workspaces_id_fk": {
-          "name": "patching_collections_workspace_id_workspaces_id_fk",
-          "tableFrom": "patching_collections",
+        "collections_workspace_id_workspaces_id_fk": {
+          "name": "collections_workspace_id_workspaces_id_fk",
+          "tableFrom": "collections",
           "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
