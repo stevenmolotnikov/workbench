@@ -1,12 +1,15 @@
 import { getWorkspaces } from "@/lib/api";
 import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
+import { ModelsDisplay } from "@/components/ModelsDisplay";
 
 export default async function WorkbenchPage() {
     const workspaces = await getWorkspaces();
 
     return (
         <div className="p-6">
+            <ModelsDisplay />
+            
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Workspaces</h1>
                 <CreateWorkspaceDialog />

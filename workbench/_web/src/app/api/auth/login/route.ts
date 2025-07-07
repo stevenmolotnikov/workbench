@@ -4,7 +4,6 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
