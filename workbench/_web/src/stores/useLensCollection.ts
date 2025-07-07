@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import type { LensCompletion } from '@/types/lens';
 
-interface LensCompletionsState {
+interface LensCollectionState {
+    // Lens Collection Settings
     tokenizeOnEnter: boolean;
     graphOnTokenize: boolean;
     setTokenizeOnEnter: (tokenizeOnEnter: boolean) => void;
     setGraphOnTokenize: (graphOnTokenize: boolean) => void;
 
+    // Lens Completions State
     activeCompletions: LensCompletion[];
     emphasizedCompletions: number[];
     setActiveCompletions: (completions: LensCompletion[]) => void;
@@ -23,7 +25,7 @@ const generateUniqueId = (): string => {
 };
 
 // Generate a unique name in the format "Untitled n"
-const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
+const generateCompletionCardName = (existingCompletions: LensCompletion[]): string => {
     const existingNames = existingCompletions.map(completion => completion.name);
     let counter = 1;
     let name = `Untitled ${counter}`;
@@ -36,24 +38,23 @@ const generateUniqueName = (existingCompletions: LensCompletion[]): string => {
     return name;
 };
 
-export const useLensCompletions = create<LensCompletionsState>((set) => ({
+export const useLensCollection = create<LensCollectionState>((set) => ({
     tokenizeOnEnter: true,
     graphOnTokenize: true,
-
-    activeCompletions: [],
-    emphasizedCompletions: [],
 
     setTokenizeOnEnter: (tokenizeOnEnter) => set({ tokenizeOnEnter }),
     setGraphOnTokenize: (graphOnTokenize) => set({ graphOnTokenize }),
 
-    setActiveCompletions: (completions) => set({ activeCompletions: completions }),
+    activeCompletions: [],
+    emphasizedCompletions: [],
 
+    setActiveCompletions: (completions) => set({ activeCompletions: completions }),
     setEmphasizedCompletions: (indices) => set({ emphasizedCompletions: indices }),
 
     handleNewCompletion: (model) => {
         set((state) => {
             const newCompletion: LensCompletion = {
-                name: generateUniqueName(state.activeCompletions),
+                name: generateCompletionCardName(state.activeCompletions),
                 id: generateUniqueId(),
                 prompt: "",
                 model: model,

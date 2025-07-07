@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { LineGraph } from "@/components/charts/base/LineGraph";
 import { useCharts } from "@/stores/useCharts";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 import { ChartCard } from "../ChartCard";
 import { useAnnotations } from "@/stores/useAnnotations";
 import type { Annotation } from "@/stores/useAnnotations";
@@ -55,7 +55,7 @@ export function LensLineGraph({ index }: { index: number }) {
         startStatusUpdates(jobId);
 
         try {
-            const {activeCompletions} = useLensCompletions.getState();
+            const {activeCompletions} = useLensCollection.getState();
 
             const filteredCompletions = activeCompletions.filter((compl) => hasTargetToken(compl));
 

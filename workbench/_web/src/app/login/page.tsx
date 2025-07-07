@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLogin, setIsLogin] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -19,6 +20,9 @@ export default function LoginPage() {
         password: "",
         name: "",
     });
+
+    // Get redirect URL from query params
+    const redirectUrl = searchParams.get('redirect') || '/workbench';
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
@@ -46,14 +50,14 @@ export default function LoginPage() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify(body),
+                credentials: 'include', // Include cookies in the request
             });
 
             const data = await response.json();
 
             if (data.success) {
-                // Store user data in localStorage for simple session management
-                localStorage.setItem("user", JSON.stringify(data.user));
-                router.push("/home");
+                // Session is now handled by secure cookies, redirect to intended page
+                router.push(redirectUrl);
             } else {
                 setError(data.message || "An error occurred");
             }

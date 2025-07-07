@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Heatmap } from "@/components/charts/base/Heatmap";
 import { useCharts } from "@/stores/useCharts";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 import { ChartCard } from "../ChartCard";
 import { useMemo } from "react";
 
@@ -64,7 +64,7 @@ export function LensHeatmap({ index }: { index: number }) {
         startStatusUpdates(jobId);
 
         try {
-            const { activeCompletions } = useLensCompletions.getState();
+            const { activeCompletions } = useLensCollection.getState();
 
             const filteredCompletions = activeCompletions.filter((compl) => hasPrompt(compl));
 
@@ -103,7 +103,7 @@ export function LensHeatmap({ index }: { index: number }) {
 
     const handleEmphasizeCompletion = (index: number) => {
         console.log("Emphasizing completion", index);
-        const { emphasizedCompletions, setEmphasizedCompletions } = useLensCompletions.getState();
+        const { emphasizedCompletions, setEmphasizedCompletions } = useLensCollection.getState();
         if (index === -1) {
             setEmphasizedCompletions([]);
         } else {
@@ -125,7 +125,7 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     }, [completionIds]);
 
-    const activeCompletionsLength = useLensCompletions((state) => state.activeCompletions.length);
+    const activeCompletionsLength = useLensCollection((state) => state.activeCompletions.length);
     const memoizedCompletionItems = useMemo(() => {
         return activeCompletionsLength >= 1 ? (
             Array.from({ length: activeCompletionsLength }, (_, i) => (

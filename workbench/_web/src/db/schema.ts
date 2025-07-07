@@ -8,13 +8,10 @@ export const users = pgTable("users", {
     name: varchar("name", { length: 256 }),
 });
 
-export const workspaceTypes = ["patching", "logit_lens"] as const;
-
 export const workspaces = pgTable("workspaces", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id),
     name: varchar("name", { length: 256 }),
-    type: varchar("type", { enum: workspaceTypes, length: 32 }),
     public: boolean("public").default(false),
 });
 
@@ -49,7 +46,7 @@ export const annotationGroups = pgTable("annotation_groups", {
 */
 
 
-export const lensWorkspace = pgTable("lens_workspace", {
+export const lensCollections = pgTable("lens_collections", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id),
     data: jsonb("data"),
@@ -62,7 +59,7 @@ export const lensWorkspace = pgTable("lens_workspace", {
 #######################
 */
 
-export const patchingWorkspaces = pgTable("patching_workspaces", {
+export const patchingCollections = pgTable("patching_collections", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id),
     data: jsonb("data"),

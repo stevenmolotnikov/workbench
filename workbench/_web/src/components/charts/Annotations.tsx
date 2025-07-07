@@ -45,7 +45,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useCharts } from "@/stores/useCharts";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 
 const AnnotationTitle = {
     lineGraph: "Point",
@@ -239,7 +239,7 @@ function DroppableGroup({
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
     
     const { clearGridPositions, setGridPositions } = useCharts();
-    const { setActiveCompletions } = useLensCompletions();
+    const { setActiveCompletions } = useLensCollection();
 
     const { setNodeRef, isOver } = useDroppable({
         id: `group-${group.id}`,
@@ -448,7 +448,7 @@ export function Annotations() {
     } = useAnnotations();
 
     const { gridPositions } = useCharts();
-    const { activeCompletions } = useLensCompletions();
+    const { activeCompletions } = useLensCollection();
 
     const [text, setText] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);

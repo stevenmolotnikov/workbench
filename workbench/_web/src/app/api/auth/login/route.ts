@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { createSessionResponse } from "@/lib/session";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -47,20 +48,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create a simple session response
-    // In a real app, you'd want to use JWT tokens or proper session management
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Login successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        },
-      },
-      { status: 200 }
-    );
+    // Create session with JWT token and secure cookies
+    const userSession = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    };
+    
+    return createSessionResponse(userSession);
     
   } catch (error: unknown) {
     console.error("Login error:", error);

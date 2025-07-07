@@ -1,5 +1,5 @@
 {
-  "id": "379e667e-3110-488a-9a2d-3296b6eaf215",
+  "id": "ceb11835-18a8-48ed-ac76-c8a9957a0297",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -173,8 +173,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.lens_workspace": {
-      "name": "lens_workspace",
+    "public.lens_collections": {
+      "name": "lens_collections",
       "schema": "",
       "columns": {
         "id": {
@@ -199,9 +199,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "lens_workspace_workspace_id_workspaces_id_fk": {
-          "name": "lens_workspace_workspace_id_workspaces_id_fk",
-          "tableFrom": "lens_workspace",
+        "lens_collections_workspace_id_workspaces_id_fk": {
+          "name": "lens_collections_workspace_id_workspaces_id_fk",
+          "tableFrom": "lens_collections",
           "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
@@ -219,8 +219,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.patching_workspaces": {
-      "name": "patching_workspaces",
+    "public.patching_collections": {
+      "name": "patching_collections",
       "schema": "",
       "columns": {
         "id": {
@@ -245,9 +245,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "patching_workspaces_workspace_id_workspaces_id_fk": {
-          "name": "patching_workspaces_workspace_id_workspaces_id_fk",
-          "tableFrom": "patching_workspaces",
+        "patching_collections_workspace_id_workspaces_id_fk": {
+          "name": "patching_collections_workspace_id_workspaces_id_fk",
+          "tableFrom": "patching_collections",
           "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"
@@ -331,12 +331,6 @@
         "name": {
           "name": "name",
           "type": "varchar(256)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "varchar(32)",
           "primaryKey": false,
           "notNull": false
         },

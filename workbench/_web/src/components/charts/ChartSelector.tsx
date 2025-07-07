@@ -3,7 +3,7 @@ import { useCharts } from "@/stores/useCharts";
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 
 import { SelectionMenu } from "./SelectionMenu";
 
@@ -22,7 +22,7 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
         completionIndex,
     } = useCharts();
 
-    const { activeCompletions } = useLensCompletions.getState();
+    const { activeCompletions } = useLensCollection.getState();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerHeight, setContainerHeight] = useState(0);

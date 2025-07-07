@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useCharts } from "@/stores/useCharts";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,7 +35,7 @@ export default function ExportPage() {
     const router = useRouter();
     const { annotations, groups } = useAnnotations();
     const { gridPositions } = useCharts();
-    const { activeCompletions } = useLensCompletions();
+    const { activeCompletions } = useLensCollection();
     
     const [searchQuery, setSearchQuery] = useState("");
     const [filterBy, setFilterBy] = useState<FilterBy>("all");

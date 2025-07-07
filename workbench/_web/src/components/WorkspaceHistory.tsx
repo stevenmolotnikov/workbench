@@ -8,13 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCharts } from "@/stores/useCharts";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useLensCompletions } from "@/stores/useLensCompletions";
+import { useLensCollection } from "@/stores/useLensCollection";
 import { useModels } from '@/hooks/useModels';
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
 export function WorkspaceHistory() {
-    const { workspaces, session, isLoading, deleteWorkspace, createWorkspace } =
+    const { workspaces, isLoading, deleteWorkspace, createWorkspace } =
         useWorkspaceStore();
     const { isLoading: isModelsLoading } = useModels();
 
@@ -27,7 +27,7 @@ export function WorkspaceHistory() {
         if (isModelsLoading) return;
         
         if ("completions" in workspace) {
-            const { setActiveCompletions } = useLensCompletions.getState();
+            const { setActiveCompletions } = useLensCollection.getState();
             setActiveCompletions(workspace.completions);
             setGridPositions(workspace.graphData);
             setAnnotations(workspace.annotations);
@@ -38,7 +38,7 @@ export function WorkspaceHistory() {
     };
 
     const exportWorkspace = () => {
-        const { activeCompletions } = useLensCompletions.getState();
+        const { activeCompletions } = useLensCollection.getState();
         const workspace = {
             name: "",
             completions: activeCompletions,
@@ -64,7 +64,17 @@ export function WorkspaceHistory() {
 
     const handleCreateWorkspace = () => {
         if (!pendingWorkspace) return;
-        createWorkspace(pendingWorkspace);
+        
+        // Only handle LogitLens workspaces for now
+        if ("completions" in pendingWorkspace) {
+            const workspaceData = {
+                completions: pendingWorkspace.completions,
+                graphData: pendingWorkspace.graphData,
+                annotations: pendingWorkspace.annotations,
+                groups: pendingWorkspace.groups,
+            };
+            createWorkspace(pendingWorkspace.name, "logit_lens", false, workspaceData);
+        }
         setPendingWorkspace(null);
     };
 
@@ -98,7 +108,7 @@ export function WorkspaceHistory() {
                     variant="outline"
                     className="h-8 w-8"
                     onClick={() => addPendingWorkspace(exportWorkspace())}
-                    disabled={isLoading || !session}
+                    disabled={isLoading}
                     tooltip="Create a new workspace"
                 >
                     <Save size={6} />

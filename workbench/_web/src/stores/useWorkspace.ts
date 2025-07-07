@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { LogitLensWorkspace } from "@/types/lens";
 import type { ActivationPatchingWorkspace } from "@/types/patching";
-import { getWorkspaces, createWorkspace as apiCreateWorkspace, deleteWorkspace as apiDeleteWorkspace, type Workspace as ApiWorkspace } from "@/lib/api";
+import { getWorkspacesWithCollections, createWorkspace as apiCreateWorkspace, deleteWorkspace as apiDeleteWorkspace, type Workspace as ApiWorkspace } from "@/lib/api";
 
 export type Workspace = LogitLensWorkspace | ActivationPatchingWorkspace;
 
@@ -11,12 +11,12 @@ interface WorkspaceState {
     error: Error | null;
 
     // Workspace state  
-    workspaces: any[]; // Using any[] to match the API return type
+    workspaces: ApiWorkspace[];
 
     // Methods
     initialize: () => Promise<void>;
-    createWorkspace: (name: string, type: "logit_lens" | "patching", isPublic?: boolean, initialData?: Record<string, unknown>) => Promise<any>;
-    fetchWorkspaces: () => Promise<any[]>;
+    createWorkspace: (name: string, isPublic?: boolean) => Promise<ApiWorkspace>;
+    fetchWorkspaces: () => Promise<ApiWorkspace[]>;
     deleteWorkspace: (id: string) => Promise<void>;
 }
 
@@ -42,9 +42,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         }
     },
 
-    createWorkspace: async (name: string, type: "logit_lens" | "patching", isPublic = false, initialData?: Record<string, unknown>) => {
+    createWorkspace: async (name: string, isPublic = false) => {
         try {
-            const newWorkspace = await apiCreateWorkspace(name, type, isPublic, initialData);
+            const newWorkspace = await apiCreateWorkspace(name, isPublic);
             
             // Refresh workspaces list
             const workspaces = await get().fetchWorkspaces();
@@ -59,7 +59,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     fetchWorkspaces: async () => {
         try {
-            const workspaces = await getWorkspaces();
+            const workspaces = await getWorkspacesWithCollections();
             return workspaces;
         } catch (error) {
             set({ error: error as Error });

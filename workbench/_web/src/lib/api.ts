@@ -1,17 +1,17 @@
 "use server";
 
 import { db } from "../db/client";
-import { workspaces, lensWorkspace, patchingWorkspaces, workspaceTypes, users } from "../db/schema";
+import { workspaces, lensCollections, patchingCollections, charts, users } from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 
 // Type exports
-export type WorkspaceType = typeof workspaceTypes[number];
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
-export type LensWorkspaceData = typeof lensWorkspace.$inferSelect;
-export type PatchingWorkspaceData = typeof patchingWorkspaces.$inferSelect;
+export type LensCollection = typeof lensCollections.$inferSelect;
+export type PatchingCollection = typeof patchingCollections.$inferSelect;
+export type Chart = typeof charts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
@@ -118,30 +118,33 @@ export async function getWorkspaceById(id: string) {
     throw new Error("Workspace not found or access denied");
   }
   
-  // Get associated data based on workspace type
-  let data = null;
-  if (workspace.type === "logit_lens") {
-    const [lensData] = await db
-      .select()
-      .from(lensWorkspace)
-      .where(eq(lensWorkspace.workspaceId, id));
-    data = lensData;
-  } else if (workspace.type === "patching") {
-    const [patchingData] = await db
-      .select()
-      .from(patchingWorkspaces)
-      .where(eq(patchingWorkspaces.workspaceId, id));
-    data = patchingData;
-  }
+  // Get associated collections
+  const lensCollectionsData = await db
+    .select()
+    .from(lensCollections)
+    .where(eq(lensCollections.workspaceId, id));
+    
+  const patchingCollectionsData = await db
+    .select()
+    .from(patchingCollections)
+    .where(eq(patchingCollections.workspaceId, id));
+    
+  const chartsData = await db
+    .select()
+    .from(charts)
+    .where(eq(charts.workspaceId, id));
   
-  return { ...workspace, data };
+  return { 
+    ...workspace, 
+    lensCollections: lensCollectionsData,
+    patchingCollections: patchingCollectionsData,
+    charts: chartsData
+  };
 }
 
 export async function createWorkspace(
   name: string,
-  type: typeof workspaceTypes[number],
-  isPublic = false,
-  initialData?: Record<string, unknown>
+  isPublic = false
 ) {
   const user = await getAuthenticatedUser();
   
@@ -150,28 +153,10 @@ export async function createWorkspace(
     .insert(workspaces)
     .values({
       name,
-      type,
       public: isPublic,
       userId: user.id,
     })
     .returning();
-  
-  // Create associated data table entry
-  if (type === "logit_lens") {
-    await db
-      .insert(lensWorkspace)
-      .values({
-        workspaceId: newWorkspace.id,
-        data: initialData || {},
-      });
-  } else if (type === "patching") {
-    await db
-      .insert(patchingWorkspaces)
-      .values({
-        workspaceId: newWorkspace.id,
-        data: initialData || {},
-      });
-  }
   
   revalidatePath("/workbench");
   return newWorkspace;
@@ -211,13 +196,14 @@ export async function updateWorkspace(
   return updated;
 }
 
-export async function updateWorkspaceData(
+// Collection operations
+export async function createLensCollection(
   workspaceId: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown> = {}
 ) {
   const user = await getAuthenticatedUser();
   
-  // Verify ownership and get workspace type
+  // Verify workspace ownership
   const [workspace] = await db
     .select()
     .from(workspaces)
@@ -232,20 +218,116 @@ export async function updateWorkspaceData(
     throw new Error("Workspace not found or access denied");
   }
   
-  // Update the appropriate data table
-  if (workspace.type === "logit_lens") {
-    await db
-      .update(lensWorkspace)
-      .set({ data })
-      .where(eq(lensWorkspace.workspaceId, workspaceId));
-  } else if (workspace.type === "patching") {
-    await db
-      .update(patchingWorkspaces)
-      .set({ data })
-      .where(eq(patchingWorkspaces.workspaceId, workspaceId));
-  }
+  const [newCollection] = await db
+    .insert(lensCollections)
+    .values({
+      workspaceId,
+      data,
+    })
+    .returning();
   
   revalidatePath(`/workbench/${workspaceId}`);
+  return newCollection;
+}
+
+export async function createPatchingCollection(
+  workspaceId: string,
+  data: Record<string, unknown> = {}
+) {
+  const user = await getAuthenticatedUser();
+  
+  // Verify workspace ownership
+  const [workspace] = await db
+    .select()
+    .from(workspaces)
+    .where(
+      and(
+        eq(workspaces.id, workspaceId),
+        eq(workspaces.userId, user.id)
+      )
+    );
+  
+  if (!workspace) {
+    throw new Error("Workspace not found or access denied");
+  }
+  
+  const [newCollection] = await db
+    .insert(patchingCollections)
+    .values({
+      workspaceId,
+      data,
+    })
+    .returning();
+  
+  revalidatePath(`/workbench/${workspaceId}`);
+  return newCollection;
+}
+
+export async function updateLensCollection(
+  collectionId: string,
+  data: Record<string, unknown>
+) {
+  const user = await getAuthenticatedUser();
+  
+  // Verify ownership through workspace
+  const [collection] = await db
+    .select({
+      collection: lensCollections,
+      workspace: workspaces,
+    })
+    .from(lensCollections)
+    .innerJoin(workspaces, eq(lensCollections.workspaceId, workspaces.id))
+    .where(
+      and(
+        eq(lensCollections.id, collectionId),
+        eq(workspaces.userId, user.id)
+      )
+    );
+  
+  if (!collection) {
+    throw new Error("Collection not found or access denied");
+  }
+  
+  await db
+    .update(lensCollections)
+    .set({ data })
+    .where(eq(lensCollections.id, collectionId));
+  
+  revalidatePath(`/workbench/${collection.workspace.id}`);
+  return { success: true };
+}
+
+export async function updatePatchingCollection(
+  collectionId: string,
+  data: Record<string, unknown>
+) {
+  const user = await getAuthenticatedUser();
+  
+  // Verify ownership through workspace
+  const [collection] = await db
+    .select({
+      collection: patchingCollections,
+      workspace: workspaces,
+    })
+    .from(patchingCollections)
+    .innerJoin(workspaces, eq(patchingCollections.workspaceId, workspaces.id))
+    .where(
+      and(
+        eq(patchingCollections.id, collectionId),
+        eq(workspaces.userId, user.id)
+      )
+    );
+  
+  if (!collection) {
+    throw new Error("Collection not found or access denied");
+  }
+  
+  await db
+    .update(patchingCollections)
+    .set({ data })
+    .where(eq(patchingCollections.id, collectionId));
+  
+  revalidatePath(`/workbench/${collection.workspace.id}`);
   return { success: true };
 }
 
@@ -267,16 +349,18 @@ export async function deleteWorkspace(id: string) {
     throw new Error("Workspace not found or access denied");
   }
   
-  // Delete associated data first
-  if (workspace.type === "logit_lens") {
-    await db
-      .delete(lensWorkspace)
-      .where(eq(lensWorkspace.workspaceId, id));
-  } else if (workspace.type === "patching") {
-    await db
-      .delete(patchingWorkspaces)
-      .where(eq(patchingWorkspaces.workspaceId, id));
-  }
+  // Delete associated collections and charts
+  await db
+    .delete(lensCollections)
+    .where(eq(lensCollections.workspaceId, id));
+    
+  await db
+    .delete(patchingCollections)
+    .where(eq(patchingCollections.workspaceId, id));
+    
+  await db
+    .delete(charts)
+    .where(eq(charts.workspaceId, id));
   
   // Delete the workspace
   await db
@@ -287,22 +371,48 @@ export async function deleteWorkspace(id: string) {
   return { success: true };
 }
 
-// Get user's workspaces by type
-export async function getWorkspacesByType(type: typeof workspaceTypes[number]) {
+// Get workspaces with their collections
+export async function getWorkspacesWithCollections(includePublic = true) {
   const user = await getAuthenticatedUser();
   
   const userWorkspaces = await db
     .select()
     .from(workspaces)
     .where(
-      and(
-        eq(workspaces.type, type),
-        or(
-          eq(workspaces.userId, user.id),
-          eq(workspaces.public, true)
-        )
-      )
+      includePublic
+        ? or(
+            eq(workspaces.userId, user.id),
+            eq(workspaces.public, true)
+          )
+        : eq(workspaces.userId, user.id)
     );
   
-  return userWorkspaces;
+  // For each workspace, get its collections
+  const workspacesWithCollections = await Promise.all(
+    userWorkspaces.map(async (workspace) => {
+      const lensCollectionsData = await db
+        .select()
+        .from(lensCollections)
+        .where(eq(lensCollections.workspaceId, workspace.id));
+        
+      const patchingCollectionsData = await db
+        .select()
+        .from(patchingCollections)
+        .where(eq(patchingCollections.workspaceId, workspace.id));
+        
+      const chartsData = await db
+        .select()
+        .from(charts)
+        .where(eq(charts.workspaceId, workspace.id));
+      
+      return {
+        ...workspace,
+        lensCollections: lensCollectionsData,
+        patchingCollections: patchingCollectionsData,
+        charts: chartsData,
+      };
+    })
+  );
+  
+  return workspacesWithCollections;
 }

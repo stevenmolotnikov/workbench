@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { SquarePen, FileText } from "lucide-react";
+import { SquarePen, FileText, PanelLeft } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,17 +24,27 @@ import { TutorialsToggle } from "./TutorialsToggle";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
+    workbenchMode: "lens" | "patch";
+    setWorkbenchMode: (mode: "lens" | "patch") => void;
     toggleTutorials: () => void;
+    sidebarCollapsed?: boolean;
+    toggleSidebar?: () => void;
 }
 
-export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeProps) {
+export function WorkbenchMenu({ 
+    tutorialsOpen, 
+    workbenchMode,
+    setWorkbenchMode,
+    toggleTutorials, 
+    sidebarCollapsed = false, 
+    toggleSidebar 
+}: WorkbenchModeProps) {
     const { layout, setLayout, clearGridPositions  } = useCharts();
     const router = useRouter();
-    const pathname = usePathname();
 
-    const handleValueChange = (value: string) => {
+    const handleValueChange = (value: "lens" | "patch") => {
         clearGridPositions();
-        router.push(`/workbench/${value}`);
+        setWorkbenchMode(value);
     };
 
     const toggleAnnotations = () => {
@@ -48,15 +58,27 @@ export function WorkbenchMenu({ tutorialsOpen, toggleTutorials }: WorkbenchModeP
 
     return (
         <div className="p-4 border-b flex items-center justify-between">
-            <Select value={pathname.split("/").pop()} onValueChange={handleValueChange}>
-                <SelectTrigger className="max-w-48 h-8">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="lens">Lens</SelectItem>
-                    <SelectItem value="patch">Patch</SelectItem>
-                </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+                { toggleSidebar && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleSidebar}
+                        className="h-8 w-8"
+                    >
+                        <PanelLeft className="h-4 w-4" />
+                    </Button>
+                )}
+                <Select value={workbenchMode} onValueChange={handleValueChange}>
+                    <SelectTrigger className="w-24 h-8">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="lens">Lens</SelectItem>
+                        <SelectItem value="patch">Patch</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
             <div className="flex items-center gap-2">
                 <StatusUpdatesDisplay />
                 <Button variant="outline" size="sm" onClick={handleExport}>

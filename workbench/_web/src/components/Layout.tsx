@@ -26,7 +26,7 @@ export function ResizableLayout({ workbench, charts }: ResizableLayoutProps) {
                 </ScrollArea>
             </ResizablePanel>
             <ResizableHandle />
-            <ResizablePanel defaultSize={50} minSize={35} maxSize={65}>
+            <ResizablePanel defaultSize={50} minSize={40} maxSize={65}>
                 {charts}
             </ResizablePanel>
             {annotationsOpen && (
