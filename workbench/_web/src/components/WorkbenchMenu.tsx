@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { SquarePen, FileText, PanelLeft } from "lucide-react";
+import { SquarePen, FileText, PanelLeft, LogOut, User } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,6 +22,7 @@ import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { TutorialsToggle } from "./TutorialsToggle";
 import { WorkspaceSettingsPopover } from "./WorkspaceSettingsPopover";
+import { getCurrentUser, logout } from "@/lib/session";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
@@ -44,6 +45,21 @@ export function WorkbenchMenu({
 }: WorkbenchModeProps) {
     const { layout, setLayout, clearGridPositions  } = useCharts();
     const router = useRouter();
+    const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+    useEffect(() => {
+        async function fetchCurrentUser() {
+            try {
+                const user = await getCurrentUser();
+                setCurrentUser(user);
+            } catch (error) {
+                console.error("Failed to get current user:", error);
+            }
+        }
+        
+        fetchCurrentUser();
+    }, []);
 
     const handleValueChange = (value: "lens" | "patch") => {
         clearGridPositions();
@@ -57,6 +73,23 @@ export function WorkbenchMenu({
 
     const handleExport = () => {
         router.push('/workbench/summaries');
+    };
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        try {
+            const success = await logout();
+            if (success) {
+                // Redirect to login page
+                router.push('/login');
+            } else {
+                console.error("Logout failed");
+            }
+        } catch (error) {
+            console.error("Logout error:", error);
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     return (
@@ -107,6 +140,25 @@ export function WorkbenchMenu({
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
+                
+                {/* User info and logout */}
+                <div className="flex items-center gap-2 ml-4 pl-4 border-l">
+                    {currentUser && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User size={14} />
+                            <span>{currentUser.name || currentUser.email}</span>
+                        </div>
+                    )}
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleLogout}
+                        disabled={isLoggingOut}
+                    >
+                        <LogOut size={16} />
+                        {isLoggingOut ? "Logging out..." : "Logout"}
+                    </Button>
+                </div>
             </div>
         </div>
     );

@@ -2,6 +2,7 @@ import { getWorkspacesWithCollections } from "@/lib/api";
 import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { ModelsDisplay } from "@/components/ModelsDisplay";
+import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 
 // Force dynamic rendering to avoid build-time database queries
 export const dynamic = 'force-dynamic';
@@ -13,8 +14,9 @@ export default async function WorkbenchPage() {
         <div className="p-6">
             <ModelsDisplay />
             
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Workspaces</h1>
+            <WorkspaceHeader />
+            
+            <div className="flex justify-end mb-6">
                 <CreateWorkspaceDialog />
             </div>
             

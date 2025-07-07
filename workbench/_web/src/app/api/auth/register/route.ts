@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAccount } from "@/lib/api";
+import { createSessionResponse } from "@/lib/session";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -22,14 +23,15 @@ export async function POST(request: NextRequest) {
       validatedData.name
     );
     
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Account created successfully",
-        user: result.user,
-      },
-      { status: 201 }
-    );
+    // Create session with JWT token and secure cookies (same as login)
+    const userSession = {
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+    };
+    
+    return createSessionResponse(userSession);
+    
   } catch (error: unknown) {
     console.error("Registration error:", error);
     
