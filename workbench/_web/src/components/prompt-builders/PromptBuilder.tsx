@@ -8,9 +8,11 @@ import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useState } from "react";
 
 import * as React from "react";
 
+import { CompletionSection } from "@/components/prompt-builders/CompletionSection";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -52,15 +54,8 @@ export function DropdownMenuCheckboxes() {
 }
 
 export function PromptBuilder() {
-    const { handleNewCompletion, completions } = useLensWorkspace();
     const { isLoading } = useModels();
-    const { handleClick } = useTutorialManager();
-    const { modelName } = useSelectedModel();
-
-    function createNewCompletion() {
-        handleNewCompletion(modelName);
-        handleClick("#new-completion");
-    }
+    const [sectionCount, setSectionCount] = useState<number>(0);
 
     return (
         <div className="h-full flex flex-col">
@@ -73,25 +68,24 @@ export function PromptBuilder() {
 
                         <TooltipButton
                             size="icon"
-                            // className="w-8 h-8"
-                            onClick={createNewCompletion}
-                            id="new-completion"
-                            disabled={isLoading || completions.length >= 5}
-                            tooltip="Create a new completion"
+                            onClick={() => setSectionCount(sectionCount + 1)}
+                            id="new-section"
+                            disabled={isLoading || sectionCount >= 5}
+                            tooltip="Create a new section"
                         >
-                            <Plus size={16} />
+                            <Plus size={16} />  
                         </TooltipButton>
 
                         <DropdownMenuCheckboxes />
                     </div>
                 </div>
             </div>
-            <div className="flex-1 p-4 overflow-y-auto space-y-4">
-                {completions.map((compl, index) => (
-                    <CompletionCard key={compl.id} compl={compl} index={index} />
+            <div className="flex-1 overflow-y-auto">
+                {Array.from({ length: sectionCount }).map((_, index) => (
+                    <CompletionSection key={index} sectionIdx={index} />
                 ))}
-                {completions.length === 0 && (
-                    <p className="text-center py-4">No active completions.</p>
+                {sectionCount === 0 && (
+                    <p className="text-center py-4">No active sections. Click + to create a section.</p>
                 )}
             </div>
         </div>

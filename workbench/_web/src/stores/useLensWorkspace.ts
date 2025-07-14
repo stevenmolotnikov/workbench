@@ -13,7 +13,8 @@ interface LensWorkspaceState {
     emphasizedCompletions: number[];
     setActiveCompletions: (completions: LensCompletion[]) => void;
     setEmphasizedCompletions: (indices: number[]) => void;
-    handleNewCompletion: (model: string) => void;
+    handleNewCompletion: (model: string, sectionIdx: number) => void;
+    getCompletionsBySection: (sectionIdx: number) => LensCompletion[];
     handleLoadCompletion: (completionToLoad: LensCompletion) => void;
     handleDeleteCompletion: (id: string) => void;
     handleUpdateCompletion: (id: string, updates: Partial<LensCompletion>) => void;
@@ -51,7 +52,7 @@ export const useLensWorkspace = create<LensWorkspaceState>((set) => ({
     setActiveCompletions: (completions) => set({ completions: completions }),
     setEmphasizedCompletions: (indices) => set({ emphasizedCompletions: indices }),
 
-    handleNewCompletion: (model) => {
+    handleNewCompletion: (model, sectionIdx) => {
         set((state) => {
             const newCompletion: LensCompletion = {
                 name: generateCompletionCardName(state.completions),
@@ -59,11 +60,18 @@ export const useLensWorkspace = create<LensWorkspaceState>((set) => ({
                 prompt: "",
                 model: model,
                 tokens: [],
+                sectionIdx: sectionIdx,
+                chartMode: undefined,
             };
             return {
                 completions: [...state.completions, newCompletion]
             };
         });
+    },
+
+    getCompletionsBySection: (sectionIdx) => {
+        const state = useLensWorkspace.getState();
+        return state.completions.filter(c => c.sectionIdx === sectionIdx);
     },
 
     handleLoadCompletion: (completionToLoad) => {

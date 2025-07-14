@@ -11,4 +11,6 @@ export interface LensCompletion extends Completion {
     model: string;
     prompt: string;
     tokens: TokenCompletion[];
+    sectionIdx: number;
+    chartMode?: number; // 0 = line chart, 1 = grid/heatmap, undefined = no chart
 }

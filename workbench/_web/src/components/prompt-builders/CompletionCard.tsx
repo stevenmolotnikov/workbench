@@ -1,4 +1,4 @@
-import { Keyboard, ALargeSmall, Loader2, X, KeyboardOff, LineChart } from "lucide-react";
+import { Keyboard, ALargeSmall, Loader2, X, KeyboardOff, LineChart, Grid3x3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,6 @@ import type { Token } from "@/types/tokenizer";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { useCharts } from "@/stores/useCharts";
 
 interface CompletionCardProps {
     index: number;
@@ -103,51 +102,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                 }
             }
 
-            // Auto-add and run heatmap chart on first tokenization if setting is enabled
+            // Auto-add chart on first tokenization if setting is enabled
             if (isFirstTimeTokenizing) {
                 const { graphOnTokenize } = useLensWorkspace.getState();
-
-                if (graphOnTokenize) {
-                    const { gridPositions, setChartMode, setChartData, pushCompletionId } =
-                        useCharts.getState();
-                    const chartIndex = gridPositions.length;
-
-                    // Add heatmap chart (index 1 in LogitLensModes)
-                    // Index 0 = "Target Token" (LineGraph), Index 1 = "Prediction Grid" (Heatmap)
-                    setChartMode(chartIndex, 1);
-
-                    // Auto-run the heatmap chart
-                    // try {
-                    //     const { startStatusUpdates, stopStatusUpdates } =
-                    //         useStatusUpdates.getState();
-                    //     const jobId = compl.id;
-
-                    //     startStatusUpdates(jobId);
-
-                    //     const response = await fetch("/api/lens-grid", {
-                    //         method: "POST",
-                    //         headers: {
-                    //             "Content-Type": "application/json",
-                    //         },
-                    //         body: JSON.stringify({
-                    //             completion: compl,
-                    //             job_id: jobId,
-                    //         }),
-                    //     });
-
-                    //     if (response.ok) {
-                    //         const data = await response.json();
-                    //         setChartData(chartIndex, { type: "heatmap", data });
-                    //     }
-
-                    //     stopStatusUpdates();
-                    // } catch (chartError) {
-                    //     console.error("Error auto-running heatmap chart:", chartError);
-                    //     const { stopStatusUpdates } = useStatusUpdates.getState();
-                    //     stopStatusUpdates();
-                    // } finally {
-                    //     pushCompletionId(chartIndex, compl.id);
-                    // }
+                if (graphOnTokenize && compl.chartMode === undefined) {
+                    // Auto-enable grid/heatmap chart
+                    handleUpdateCompletion(compl.id, { chartMode: 1 });
                 }
             }
         } catch (err) {
@@ -263,17 +223,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         }
     };
 
-    const handlePredictions = async () => {
-        if (showPredictions) {
-            setShowPredictions(false);
-        } else {
-            setLoadingPredictions(true);
-            await runPredictions();
-            setLoadingPredictions(false);
-            handleClick("#view-predictions");
-        }
-    };
-
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         handleContentUpdate({ prompt: e.target.value });
         handleTextInput(e.target.value);
@@ -287,26 +236,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             }
         }
     };
-
-    const handleAddChart = (index: number) => {
-        const { gridPositions, setConfiguringPosition, setSelectionPhase, setCompletionIndex } =
-            useCharts.getState();
-        const nextPosition = gridPositions.length;
-        setConfiguringPosition(nextPosition);
-        setCompletionIndex(index);
-        setSelectionPhase("type");
-    };
-
-    // Auto-tokenize and show predictions on component mount if there are target completions
-    useEffect(() => {
-        const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
-
-        if (hasTargetCompletions && compl.prompt && !tokenData) {
-            handleTokenize().then(() => {
-                handlePredictions();
-            });
-        }
-    }, [compl.tokens, compl.prompt]);
 
     const emphasizedCompletions = useLensWorkspace((state) => state.emphasizedCompletions);
 
@@ -342,7 +271,9 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                             onChange={(e) => handleContentUpdate({ name: e.target.value })}
                             className="border-none shadow-none rounded h-fit px-0 py-0 font-bold"
                         />
-                        <span className="text-xs w-full">{compl.model}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs">{compl.model}</span>
+                        </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -355,31 +286,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                             tooltip={textHasChanged ? "Re-tokenize" : "Tokenize"}
                         >
                             <ALargeSmall size={16} className="w-8 h-8" />
-                        </TooltipButton>
-                        {/* <TooltipButton
-                            size="icon"
-                            variant="outline"
-                            onClick={handlePredictions}
-                            disabled={loadingPredictions || highlightedTokens.length === 0}
-                            id="view-predictions"
-                            tooltip="View predictions"
-                        >
-                            {loadingPredictions ? (
-                                <Loader2 className="w-8 h-8 animate-spin" />
-                            ) : showPredictions ? (
-                                <KeyboardOff size={16} className="w-8 h-8" />
-                            ) : (
-                                <Keyboard size={16} className="w-8 h-8" />
-                            )}
-                        </TooltipButton> */}
-                        <TooltipButton
-                            variant="outline"
-                            size="icon"
-                            id="add-chart-button"
-                            onClick={() => handleAddChart(index)}
-                            tooltip="Add Chart"
-                        >
-                            <LineChart size={16} className="w-8 h-8" />
                         </TooltipButton>
                     </div>
                 </div>
@@ -412,23 +318,6 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                             />
                         </div>
                     )}
-                    {/* {(tokenData || tokenizerLoading) && !isRevising && !showPredictions && (
-                        <div
-                            className={cn(
-                                "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded",
-                                loadingPredictions && "pointer-events-none"
-                            )}
-                            id="token-area"
-                        >
-                            <TokenArea
-                                compl={compl}
-                                showPredictions={showPredictions}
-                                setSelectedIdx={setSelectedIdx}
-                                tokenData={tokenData}
-                                tokenSelection={tokenSelection}
-                            />
-                        </div>
-                    )} */}
                 </div>
             </div>
             {showPredictions && (
