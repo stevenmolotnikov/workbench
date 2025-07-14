@@ -16,20 +16,13 @@ export const workspaces = pgTable("workspaces", {
 });
 
 export const collectionTypes = ["lens", "patching"] as const;
-
-export const collections = pgTable("collections", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id),
-    type: varchar("type", { enum: collectionTypes, length: 32 }),
-    data: jsonb("data"),
-});
-
-export const chartTypes = ["heatmap", "line"] as const;
+export const chartTypes = ["line", "heatmap"] as const;
 
 export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
-    collectionId: uuid("collection_id").references(() => collections.id),
-    type: varchar("type", { enum: chartTypes, length: 32 }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id),
+    workspaceType: varchar("workspace", { enum: collectionTypes, length: 32 }),
+    chartType: varchar("chart", { enum: chartTypes, length: 32 }),
     data: jsonb("data"),
 });
 

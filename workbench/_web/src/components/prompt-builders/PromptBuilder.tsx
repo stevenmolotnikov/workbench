@@ -3,7 +3,7 @@
 import { Plus, Settings2 } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
-import { useLensCollection } from "@/stores/useLensCollection";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function DropdownMenuCheckboxes() {
-    const { tokenizeOnEnter, graphOnTokenize, setTokenizeOnEnter, setGraphOnTokenize } = useLensCollection();
+    const { tokenizeOnEnter, graphOnTokenize, setTokenizeOnEnter, setGraphOnTokenize } = useLensWorkspace();
 
     return (
         <DropdownMenu>
@@ -52,7 +52,7 @@ export function DropdownMenuCheckboxes() {
 }
 
 export function PromptBuilder() {
-    const { handleNewCompletion, activeCompletions } = useLensCollection();
+    const { handleNewCompletion, activeCompletions } = useLensWorkspace();
     const { isLoading } = useModels();
     const { handleClick } = useTutorialManager();
     const { modelName } = useSelectedModel();

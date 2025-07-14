@@ -1,5 +1,5 @@
 {
-  "id": "6d6fec9e-74d1-4dcf-9231-087246b843f0",
+  "id": "865edab1-a8f8-4f1c-b597-927218f17fbf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -126,66 +126,20 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "collection_id": {
-          "name": "collection_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "type": {
-          "name": "type",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "data": {
-          "name": "data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "charts_collection_id_collections_id_fk": {
-          "name": "charts_collection_id_collections_id_fk",
-          "tableFrom": "charts",
-          "tableTo": "collections",
-          "columnsFrom": [
-            "collection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.collections": {
-      "name": "collections",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
         "workspace_id": {
           "name": "workspace_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "type": {
-          "name": "type",
+        "workspace": {
+          "name": "workspace",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chart": {
+          "name": "chart",
           "type": "varchar(32)",
           "primaryKey": false,
           "notNull": false
@@ -199,9 +153,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "collections_workspace_id_workspaces_id_fk": {
-          "name": "collections_workspace_id_workspaces_id_fk",
-          "tableFrom": "collections",
+        "charts_workspace_id_workspaces_id_fk": {
+          "name": "charts_workspace_id_workspaces_id_fk",
+          "tableFrom": "charts",
           "tableTo": "workspaces",
           "columnsFrom": [
             "workspace_id"

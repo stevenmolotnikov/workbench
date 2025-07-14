@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { LogitLensWorkspace } from "@/types/lens";
 import type { ActivationPatchingWorkspace } from "@/types/patching";
-import { getWorkspacesWithCollections, createWorkspace as apiCreateWorkspace, deleteWorkspace as apiDeleteWorkspace, type Workspace as ApiWorkspace } from "@/lib/api";
+import { getWorkspacesWithCharts, createWorkspace as apiCreateWorkspace, deleteWorkspace as apiDeleteWorkspace, type Workspace as ApiWorkspace } from "@/lib/api";
 
 export type Workspace = LogitLensWorkspace | ActivationPatchingWorkspace;
 
@@ -59,7 +59,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
     fetchWorkspaces: async () => {
         try {
-            const workspaces = await getWorkspacesWithCollections();
+            const workspaces = await getWorkspacesWithCharts();
             return workspaces;
         } catch (error) {
             set({ error: error as Error });

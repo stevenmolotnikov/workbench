@@ -7,7 +7,7 @@ import type { TokenPredictions } from "@/types/workspace";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import config from "@/lib/config";
-import { useLensCollection } from "@/stores/useLensCollection";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
@@ -38,7 +38,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
     const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } =
-        useLensCollection();
+        useLensWorkspace();
 
     // Helper functions
     const handleDeleteCompletionWithCleanup = (id: string) => {
@@ -78,7 +78,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
             // Auto-add and run heatmap chart on first tokenization if setting is enabled
             if (isFirstTimeTokenizing) {
-                const { graphOnTokenize } = useLensCollection.getState();
+                const { graphOnTokenize } = useLensWorkspace.getState();
 
                 if (graphOnTokenize) {
                     const { gridPositions, setChartMode, setChartData, pushCompletionId } =
@@ -157,7 +157,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         });
 
         // Return the updated completion
-        const { activeCompletions } = useLensCollection.getState();
+        const { activeCompletions } = useLensWorkspace.getState();
         const updatedCompl = activeCompletions.find((c: LensCompletion) => c.id === compl.id);
 
         return updatedCompl;
@@ -245,7 +245,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         }
     }, [compl.tokens, compl.prompt]);
 
-    const emphasizedCompletions = useLensCollection((state) => state.emphasizedCompletions);
+    const emphasizedCompletions = useLensWorkspace((state) => state.emphasizedCompletions);
 
     return (
         <div key={compl.id} className="group relative">

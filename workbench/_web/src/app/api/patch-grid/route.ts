@@ -1,7 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
-import type { ActivationPatchingRequest, ActivationPatchingResponse } from "@/types/patching";
+import type { ActivationPatchingRequest } from "@/types/patching";
 import type { HeatmapData } from "@/types/charts";
+
+export interface ActivationPatchingResponse {
+    results: number[][];
+    rowLabels?: string[];
+    colLabels?: string[];
+}
+
 
 function processHeatmapData(data: ActivationPatchingResponse): HeatmapData {
     const { results, rowLabels, colLabels } = data;

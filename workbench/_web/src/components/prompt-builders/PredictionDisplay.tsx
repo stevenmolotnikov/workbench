@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { tokenizeText, decodeTokenIds } from "@/actions/tokenize";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
-import { useLensCollection } from "@/stores/useLensCollection";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 interface TokenBadge {
     text: string;
@@ -237,7 +237,7 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
     const updateToken = (idx: number, targetId: number, targetText: string) => {
-        const { handleUpdateCompletion } = useLensCollection.getState();
+        const { handleUpdateCompletion } = useLensWorkspace.getState();
 
         const currentTokens = compl.tokens || [];
         handleUpdateCompletion(compl.id, {
@@ -248,7 +248,7 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
     };
 
     const clearToken = (tokenIdx: number) => {
-        const { handleUpdateCompletion } = useLensCollection.getState();
+        const { handleUpdateCompletion } = useLensWorkspace.getState();
         const currentTokens = compl.tokens || [];
         handleUpdateCompletion(compl.id, {
             tokens: currentTokens.map((t) =>

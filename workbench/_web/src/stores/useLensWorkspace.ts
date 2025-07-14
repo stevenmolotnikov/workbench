@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import type { LensCompletion } from '@/types/lens';
 
-interface LensCollectionState {
-    // Lens Collection Settings
+interface LensWorkspaceState {
+    // Lens Workspace Settings
     tokenizeOnEnter: boolean;
     graphOnTokenize: boolean;
     setTokenizeOnEnter: (tokenizeOnEnter: boolean) => void;
@@ -38,7 +38,7 @@ const generateCompletionCardName = (existingCompletions: LensCompletion[]): stri
     return name;
 };
 
-export const useLensCollection = create<LensCollectionState>((set) => ({
+export const useLensWorkspace = create<LensWorkspaceState>((set) => ({
     tokenizeOnEnter: true,
     graphOnTokenize: true,
 

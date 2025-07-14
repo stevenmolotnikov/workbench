@@ -8,7 +8,7 @@ export type ChartData =
 
 export interface GridPosition {
     chartMode: number | undefined; // Index into the modes array
-    chartData: ChartData | null;
+    chartData: ChartData[] | null;
     completion_ids: string[];
 }
 

@@ -1,18 +1,19 @@
 "use server";
 
 import { db } from "../db/client";
-import { workspaces, collections, charts, users } from "../db/schema";
+import { workspaces, charts, users } from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { verifyToken, type SessionPayload } from "./session";
+import type { Workspace as WorkspaceType } from "../types/workspace";
+import type { LensCompletion } from "../types/lens";
+import type { PatchingCompletion } from "../types/patching";
 
 // Type exports
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
-export type Collection = typeof collections.$inferSelect;
-export type NewCollection = typeof collections.$inferInsert;
 export type Chart = typeof charts.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -143,24 +144,14 @@ export async function getWorkspaceById(id: string) {
     throw new Error("Workspace not found or access denied");
   }
   
-  // Get associated collections
-  const collectionsData = await db
-    .select()
-    .from(collections)
-    .where(eq(collections.workspaceId, id));
-    
-  // Get charts associated with this workspace's collections
-  const collectionIds = collectionsData.map(c => c.id);
-  const chartsData = collectionIds.length > 0 ? await db
+  // Get charts associated with this workspace
+  const chartsData = await db
     .select()
     .from(charts)
-    .where(
-      or(...collectionIds.map(id => eq(charts.collectionId, id)))
-    ) : [];
+    .where(eq(charts.workspaceId, id));
   
   return { 
     ...workspace, 
-    collections: collectionsData,
     charts: chartsData
   };
 }
@@ -227,10 +218,13 @@ export async function updateWorkspace(
   return updated;
 }
 
-// Collection operations
-export async function createCollection(
+// Chart operations
+
+// Chart operations
+export async function createChart(
   workspaceId: string,
-  type: "lens" | "patching",
+  chartType: "heatmap" | "line",
+  workspaceType: "lens" | "patching",
   data: Record<string, unknown> = {}
 ) {
   const user = await getAuthenticatedUser();
@@ -254,98 +248,17 @@ export async function createCollection(
     throw new Error("Workspace not found or access denied");
   }
   
-  const [newCollection] = await db
-    .insert(collections)
+  const [newChart] = await db
+    .insert(charts)
     .values({
       workspaceId,
-      type,
+      chartType,
+      workspaceType,
       data,
     })
     .returning();
   
   revalidatePath(`/workbench/${workspaceId}`);
-  return newCollection;
-}
-
-export async function updateCollection(
-  collectionId: string,
-  data: Record<string, unknown>
-) {
-  const user = await getAuthenticatedUser();
-  
-  if (!user) {
-    throw new Error("Authentication required");
-  }
-  
-  // Verify ownership through workspace
-  const [collection] = await db
-    .select({
-      collection: collections,
-      workspace: workspaces,
-    })
-    .from(collections)
-    .innerJoin(workspaces, eq(collections.workspaceId, workspaces.id))
-    .where(
-      and(
-        eq(collections.id, collectionId),
-        eq(workspaces.userId, user.id)
-      )
-    );
-  
-  if (!collection) {
-    throw new Error("Collection not found or access denied");
-  }
-  
-  await db
-    .update(collections)
-    .set({ data })
-    .where(eq(collections.id, collectionId));
-  
-  revalidatePath(`/workbench/${collection.workspace.id}`);
-  return { success: true };
-}
-
-// Chart operations
-export async function createChart(
-  collectionId: string,
-  type: "heatmap" | "line",
-  data: Record<string, unknown> = {}
-) {
-  const user = await getAuthenticatedUser();
-  
-  if (!user) {
-    throw new Error("Authentication required");
-  }
-  
-  // Verify collection ownership through workspace
-  const [collection] = await db
-    .select({
-      collection: collections,
-      workspace: workspaces,
-    })
-    .from(collections)
-    .innerJoin(workspaces, eq(collections.workspaceId, workspaces.id))
-    .where(
-      and(
-        eq(collections.id, collectionId),
-        eq(workspaces.userId, user.id)
-      )
-    );
-  
-  if (!collection) {
-    throw new Error("Collection not found or access denied");
-  }
-  
-  const [newChart] = await db
-    .insert(charts)
-    .values({
-      collectionId,
-      type,
-      data,
-    })
-    .returning();
-  
-  revalidatePath(`/workbench/${collection.workspace.id}`);
   return newChart;
 }
 
@@ -359,16 +272,14 @@ export async function updateChart(
     throw new Error("Authentication required");
   }
   
-  // Verify ownership through collection and workspace
+  // Verify ownership through workspace
   const [chart] = await db
     .select({
       chart: charts,
-      collection: collections,
       workspace: workspaces,
     })
     .from(charts)
-    .innerJoin(collections, eq(charts.collectionId, collections.id))
-    .innerJoin(workspaces, eq(collections.workspaceId, workspaces.id))
+    .innerJoin(workspaces, eq(charts.workspaceId, workspaces.id))
     .where(
       and(
         eq(charts.id, chartId),
@@ -389,7 +300,7 @@ export async function updateChart(
   return { success: true };
 }
 
-export async function deleteCollection(collectionId: string) {
+export async function deleteChart(chartId: string) {
   const user = await getAuthenticatedUser();
   
   if (!user) {
@@ -397,35 +308,30 @@ export async function deleteCollection(collectionId: string) {
   }
   
   // Verify ownership through workspace
-  const [collection] = await db
+  const [chart] = await db
     .select({
-      collection: collections,
+      chart: charts,
       workspace: workspaces,
     })
-    .from(collections)
-    .innerJoin(workspaces, eq(collections.workspaceId, workspaces.id))
+    .from(charts)
+    .innerJoin(workspaces, eq(charts.workspaceId, workspaces.id))
     .where(
       and(
-        eq(collections.id, collectionId),
+        eq(charts.id, chartId),
         eq(workspaces.userId, user.id)
       )
     );
   
-  if (!collection) {
-    throw new Error("Collection not found or access denied");
+  if (!chart) {
+    throw new Error("Chart not found or access denied");
   }
   
-  // Delete associated charts first
+  // Delete the chart
   await db
     .delete(charts)
-    .where(eq(charts.collectionId, collectionId));
+    .where(eq(charts.id, chartId));
   
-  // Delete the collection
-  await db
-    .delete(collections)
-    .where(eq(collections.id, collectionId));
-  
-  revalidatePath(`/workbench/${collection.workspace.id}`);
+  revalidatePath(`/workbench/${chart.workspace.id}`);
   return { success: true };
 }
 
@@ -451,23 +357,10 @@ export async function deleteWorkspace(id: string) {
     throw new Error("Workspace not found or access denied");
   }
   
-  // Get all collections for this workspace
-  const workspaceCollections = await db
-    .select()
-    .from(collections)
-    .where(eq(collections.workspaceId, id));
-  
-  // Delete charts associated with all collections
-  for (const collection of workspaceCollections) {
-    await db
-      .delete(charts)
-      .where(eq(charts.collectionId, collection.id));
-  }
-  
-  // Delete all collections
+  // Delete all charts for this workspace
   await db
-    .delete(collections)
-    .where(eq(collections.workspaceId, id));
+    .delete(charts)
+    .where(eq(charts.workspaceId, id));
   
   // Delete the workspace
   await db
@@ -478,8 +371,8 @@ export async function deleteWorkspace(id: string) {
   return { success: true };
 }
 
-// Get workspaces with their collections
-export async function getWorkspacesWithCollections(includePublic = true) {
+// Get workspaces with their charts
+export async function getWorkspacesWithCharts(includePublic = true) {
   const user = await getAuthenticatedUser();
   
   // If no user and we're not including public workspaces, return empty array
@@ -501,30 +394,314 @@ export async function getWorkspacesWithCollections(includePublic = true) {
     .from(workspaces)
     .where(whereClause);
   
-  // For each workspace, get its collections and charts
-  const workspacesWithCollections = await Promise.all(
+  // For each workspace, get its charts
+  const workspacesWithCharts = await Promise.all(
     userWorkspaces.map(async (workspace) => {
-      const collectionsData = await db
-        .select()
-        .from(collections)
-        .where(eq(collections.workspaceId, workspace.id));
-        
-      // Get charts for all collections in this workspace
-      const collectionIds = collectionsData.map(c => c.id);
-      const chartsData = collectionIds.length > 0 ? await db
+      const chartsData = await db
         .select()
         .from(charts)
-        .where(
-          or(...collectionIds.map(id => eq(charts.collectionId, id)))
-        ) : [];
+        .where(eq(charts.workspaceId, workspace.id));
       
       return {
         ...workspace,
-        collections: collectionsData,
         charts: chartsData,
       };
     })
   );
   
-  return workspacesWithCollections;
+  return workspacesWithCharts;
+}
+
+// Lens workspace operations
+export async function getLensWorkspace(workspaceId: string): Promise<WorkspaceType | null> {
+  const workspace = await getWorkspaceById(workspaceId);
+  
+  if (!workspace) {
+    return null;
+  }
+  
+  // Find the lens chart for this workspace
+  const lensChart = workspace.charts.find(chart => chart.workspaceType === "lens");
+  
+  if (!lensChart) {
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      charts: []
+    };
+  }
+  
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    charts: [lensChart.data as any] // Cast to Chart type from types/charts.ts
+  };
+}
+
+export async function setLensWorkspace(workspaceId: string, lensData: WorkspaceType): Promise<void> {
+  const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
+  // Verify workspace ownership
+  const [workspace] = await db
+    .select()
+    .from(workspaces)
+    .where(
+      and(
+        eq(workspaces.id, workspaceId),
+        eq(workspaces.userId, user.id)
+      )
+    );
+  
+  if (!workspace) {
+    throw new Error("Workspace not found or access denied");
+  }
+  
+  // Find existing lens chart
+  const [existingChart] = await db
+    .select()
+    .from(charts)
+    .where(
+      and(
+        eq(charts.workspaceId, workspaceId),
+        eq(charts.workspaceType, "lens")
+      )
+    );
+  
+  if (existingChart) {
+    // Update existing chart
+    await db
+      .update(charts)
+      .set({ data: lensData })
+      .where(eq(charts.id, existingChart.id));
+  } else {
+    // Create new lens chart
+    await db
+      .insert(charts)
+      .values({
+        workspaceId,
+        workspaceType: "lens",
+        chartType: "line",
+        data: lensData
+      });
+  }
+  
+  revalidatePath(`/workbench/${workspaceId}`);
+}
+
+export async function getLensCompletion(workspaceId: string): Promise<LensCompletion | null> {
+  const workspace = await getWorkspaceById(workspaceId);
+  
+  if (!workspace) {
+    return null;
+  }
+  
+  // Find the lens chart for this workspace
+  const lensChart = workspace.charts.find(chart => chart.workspaceType === "lens");
+  
+  if (!lensChart || !lensChart.data) {
+    return null;
+  }
+  
+  // Extract lens completion from chart data
+  return (lensChart.data as any)?.config as LensCompletion;
+}
+
+export async function setLensCompletion(workspaceId: string, completion: LensCompletion): Promise<void> {
+  const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
+  // Get existing lens chart
+  const [existingChart] = await db
+    .select()
+    .from(charts)
+    .where(
+      and(
+        eq(charts.workspaceId, workspaceId),
+        eq(charts.workspaceType, "lens")
+      )
+    );
+  
+  if (existingChart) {
+    // Update the config within the chart data
+    const currentData = existingChart.data as any;
+    const updatedData = {
+      ...currentData,
+      config: completion
+    };
+    
+    await db
+      .update(charts)
+      .set({ data: updatedData })
+      .where(eq(charts.id, existingChart.id));
+  } else {
+    // Create new lens chart with completion config
+    await db
+      .insert(charts)
+      .values({
+        workspaceId,
+        workspaceType: "lens",
+        chartType: "line",
+        data: {
+          config: completion,
+          data: null,
+          annotations: []
+        }
+      });
+  }
+  
+  revalidatePath(`/workbench/${workspaceId}`);
+}
+
+// Patching workspace operations
+export async function getPatchingWorkspace(workspaceId: string): Promise<WorkspaceType | null> {
+  const workspace = await getWorkspaceById(workspaceId);
+  
+  if (!workspace) {
+    return null;
+  }
+  
+  // Find the patching chart for this workspace
+  const patchingChart = workspace.charts.find(chart => chart.workspaceType === "patching");
+  
+  if (!patchingChart) {
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      charts: []
+    };
+  }
+  
+  return {
+    id: workspace.id,
+    name: workspace.name,
+    charts: [patchingChart.data as any] // Cast to Chart type from types/charts.ts
+  };
+}
+
+export async function setPatchingWorkspace(workspaceId: string, patchingData: WorkspaceType): Promise<void> {
+  const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
+  // Verify workspace ownership
+  const [workspace] = await db
+    .select()
+    .from(workspaces)
+    .where(
+      and(
+        eq(workspaces.id, workspaceId),
+        eq(workspaces.userId, user.id)
+      )
+    );
+  
+  if (!workspace) {
+    throw new Error("Workspace not found or access denied");
+  }
+  
+  // Find existing patching chart
+  const [existingChart] = await db
+    .select()
+    .from(charts)
+    .where(
+      and(
+        eq(charts.workspaceId, workspaceId),
+        eq(charts.workspaceType, "patching")
+      )
+    );
+  
+  if (existingChart) {
+    // Update existing chart
+    await db
+      .update(charts)
+      .set({ data: patchingData })
+      .where(eq(charts.id, existingChart.id));
+  } else {
+    // Create new patching chart
+    await db
+      .insert(charts)
+      .values({
+        workspaceId,
+        workspaceType: "patching",
+        chartType: "heatmap",
+        data: patchingData
+      });
+  }
+  
+  revalidatePath(`/workbench/${workspaceId}`);
+}
+
+export async function getPatchingCompletion(workspaceId: string): Promise<PatchingCompletion | null> {
+  const workspace = await getWorkspaceById(workspaceId);
+  
+  if (!workspace) {
+    return null;
+  }
+  
+  // Find the patching chart for this workspace
+  const patchingChart = workspace.charts.find(chart => chart.workspaceType === "patching");
+  
+  if (!patchingChart || !patchingChart.data) {
+    return null;
+  }
+  
+  // Extract patching completion from chart data
+  return (patchingChart.data as any)?.config as PatchingCompletion;
+}
+
+export async function setPatchingCompletion(workspaceId: string, completion: PatchingCompletion): Promise<void> {
+  const user = await getAuthenticatedUser();
+  
+  if (!user) {
+    throw new Error("Authentication required");
+  }
+  
+  // Get existing patching chart
+  const [existingChart] = await db
+    .select()
+    .from(charts)
+    .where(
+      and(
+        eq(charts.workspaceId, workspaceId),
+        eq(charts.workspaceType, "patching")
+      )
+    );
+  
+  if (existingChart) {
+    // Update the config within the chart data
+    const currentData = existingChart.data as any;
+    const updatedData = {
+      ...currentData,
+      config: completion
+    };
+    
+    await db
+      .update(charts)
+      .set({ data: updatedData })
+      .where(eq(charts.id, existingChart.id));
+  } else {
+    // Create new patching chart with completion config
+    await db
+      .insert(charts)
+      .values({
+        workspaceId,
+        workspaceType: "patching",
+        chartType: "heatmap",
+        data: {
+          config: completion,
+          data: null,
+          annotations: []
+        }
+      });
+  }
+  
+  revalidatePath(`/workbench/${workspaceId}`);
 }

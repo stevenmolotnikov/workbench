@@ -16,3 +16,13 @@ export type TokenizerOutput =
     | number[]
     | number[][]
     | BatchEncoding;
+
+
+interface TokenPrediction {
+    ids: number[];
+    values: number[];
+}
+
+export interface TokenPredictions {
+    [token_index: number]: TokenPrediction;
+}

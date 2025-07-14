@@ -1,7 +1,7 @@
-import { Heatmap } from "@/components/charts/base/Heatmap";
+import { Heatmap } from "@/components/charts/primatives/Heatmap";
 import { ChartCard } from "../ChartCard";
 
-import type {HeatmapProps} from "@/components/charts/base/Heatmap";
+import type {HeatmapProps} from "@/components/charts/primatives/Heatmap";
 
 export function PatchingHeatmap({ isLoading, data }: { isLoading: boolean, data: HeatmapProps | null }) {
     return (

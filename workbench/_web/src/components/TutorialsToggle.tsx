@@ -10,7 +10,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useModels } from "@/hooks/useModels";
-import { useLensCollection } from "@/stores/useLensCollection";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useCharts } from "@/stores/useCharts";
 import { useAnnotations } from "@/stores/useAnnotations";
 
@@ -21,7 +21,7 @@ interface TutorialsToggleProps {
 
 export function TutorialsToggle({ tutorialsOpen, toggleTutorials }: TutorialsToggleProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const { activeCompletions } = useLensCollection();
+    const { activeCompletions } = useLensWorkspace();
     const { isLoading: isModelsLoading } = useModels();
     const { clearGridPositions } = useCharts();
     const { setAnnotations } = useAnnotations();
@@ -29,7 +29,7 @@ export function TutorialsToggle({ tutorialsOpen, toggleTutorials }: TutorialsTog
     const clearWorkspace = () => {
         if (isModelsLoading) return;
 
-        const { setActiveCompletions } = useLensCollection.getState();
+        const { setActiveCompletions } = useLensWorkspace.getState();
         setActiveCompletions([]);
         clearGridPositions();
         setAnnotations([]);

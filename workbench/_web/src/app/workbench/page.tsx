@@ -1,4 +1,4 @@
-import { getWorkspacesWithCollections } from "@/lib/api";
+import { getWorkspacesWithCharts } from "@/lib/api";
 import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { ModelsDisplay } from "@/components/ModelsDisplay";
@@ -8,7 +8,7 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 export const dynamic = 'force-dynamic';
 
 export default async function WorkbenchPage() {
-    const workspaces = await getWorkspacesWithCollections();
+    const workspaces = await getWorkspacesWithCharts();
 
     return (
         <div className="p-6">
@@ -28,8 +28,8 @@ export default async function WorkbenchPage() {
             ) : (
                 <div className="grid gap-4">
                     {workspaces.map((workspace) => {
-                        const lensCollections = workspace.collections.filter(c => c.type === "lens");
-                        const patchingCollections = workspace.collections.filter(c => c.type === "patching");
+                        const lensCharts = workspace.charts.filter(c => c.workspaceType === "lens");
+                        const patchingCharts = workspace.charts.filter(c => c.workspaceType === "patching");
                         
                         return (
                             <Link
@@ -41,14 +41,14 @@ export default async function WorkbenchPage() {
                                     <div>
                                         <h3 className="font-semibold text-lg">{workspace.name}</h3>
                                         <div className="flex gap-2 mt-1">
-                                            {lensCollections.length > 0 && (
+                                            {lensCharts.length > 0 && (
                                                 <span className="inline-block px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                                                    {lensCollections.length} Logit Lens
+                                                    {lensCharts.length} Logit Lens
                                                 </span>
                                             )}
-                                            {patchingCollections.length > 0 && (
+                                            {patchingCharts.length > 0 && (
                                                 <span className="inline-block px-2 py-1 bg-secondary/10 text-secondary-foreground text-xs rounded-full">
-                                                    {patchingCollections.length} Patching
+                                                    {patchingCharts.length} Patching
                                                 </span>
                                             )}
                                             {workspace.charts.length > 0 && (

@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
-import { LogitLensModes } from "@/types/lens";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
-
-import { ChartSelector } from "@/components/charts/ChartSelector";
 
 import { ResizableLayout } from "@/components/Layout";
 import { WorkspaceHistory } from "@/components/WorkspaceHistory";
@@ -14,7 +10,7 @@ import { useTour } from "@reactour/tour";
 
 import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
-import { HeatmapProps } from "@/components/charts/base/Heatmap";
+import { HeatmapProps } from "@/components/charts/primatives/Heatmap";
 
 import { getWorkspaceById } from "@/lib/api";
 import { getCurrentUser } from "@/lib/session";
@@ -49,7 +45,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
                 setIsLoading(false);
             }
         }
-        
+
         checkAccess();
     }, [params.workspace_id, router]);
 
@@ -69,7 +65,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
     const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
         setHeatmapData(data);
     }, []);
-    
+
     const handleSetPatchingLoading = useCallback((loading: boolean) => {
         setPatchingLoading(loading);
     }, []);
@@ -127,23 +123,16 @@ export default function Workbench({ params }: { params: { workspace_id: string }
                     workspaceId={params.workspace_id}
                 />
 
-                {workbenchMode === "lens" ? (
-                    <ResizableLayout
-                        workbench={<PromptBuilder />}
-                        charts={<ChartSelector modes={LogitLensModes} />}
-                    />
-                ) : (
-                    <ResizableLayout
-                        workbench={<PatchingWorkbench setHeatmapData={handleSetHeatmapData} setPatchingLoading={handleSetPatchingLoading} />}
-                        charts={
-                            <div className="h-full w-full bg-card p-4">
-                                <div className="relative h-full w-full">
-                                    <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
-                                </div>
+                <ResizableLayout
+                    workbench={<PatchingWorkbench setHeatmapData={handleSetHeatmapData} setPatchingLoading={handleSetPatchingLoading} />}
+                    charts={
+                        <div className="h-full w-full bg-card p-4">
+                            <div className="relative h-full w-full">
+                                <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
                             </div>
-                        }
-                    />
-                )}
+                        </div>
+                    }
+                />
 
 
             </div>

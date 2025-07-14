@@ -8,21 +8,19 @@ import { useWorkspaceStore } from "@/stores/useWorkspace";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCharts } from "@/stores/useCharts";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useLensCollection } from "@/stores/useLensCollection";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useModels } from '@/hooks/useModels';
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { 
-    createCollection, 
-    updateCollection,
+    createChart, 
+    updateChart,
     getWorkspaceById,
     type Workspace as ApiWorkspace,
-    type Collection,
     type Chart
 } from "@/lib/api";
 
-type WorkspaceWithCollections = ApiWorkspace & { 
-    collections: Collection[]; 
+type WorkspaceWithCharts = ApiWorkspace & { 
     charts: Chart[] 
 };
 
@@ -35,7 +33,7 @@ export function WorkspaceHistory() {
         useWorkspaceStore();
     const { isLoading: isModelsLoading } = useModels();
 
-    const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithCollections | null>(null);
+    const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithCharts | null>(null);
 
     const { annotations, setAnnotations, groups, setGroups } = useAnnotations();
     const { setGridPositions, gridPositions } = useCharts();
@@ -65,7 +63,7 @@ export function WorkspaceHistory() {
     const loadWorkspace = (workspaceData: ApiWorkspace) => {
         if (isModelsLoading) return;
         
-        // For now, we'll need to load the actual workspace data from collections
+        // For now, we'll need to load the actual workspace data from charts
         // This is a placeholder until we implement proper workspace loading
         console.log("Loading workspace:", workspaceData);
     };
@@ -76,7 +74,7 @@ export function WorkspaceHistory() {
     };
 
     const getCurrentWorkspaceData = () => {
-        const { activeCompletions } = useLensCollection.getState();
+        const { activeCompletions } = useLensWorkspace.getState();
         return {
             completions: activeCompletions,
             graphData: gridPositions,
@@ -95,22 +93,22 @@ export function WorkspaceHistory() {
             // Get current workspace data
             const workspaceData = getCurrentWorkspaceData();
             
-            // Find or create lens collection
-            const lensCollection = currentWorkspace.collections.find(c => c.type === "lens");
-            if (lensCollection) {
-                await updateCollection(lensCollection.id, workspaceData);
+            // Find or create lens chart
+            const lensChart = currentWorkspace.charts.find(c => c.workspaceType === "lens");
+            if (lensChart) {
+                await updateChart(lensChart.id, workspaceData);
             } else {
-                // Create lens collection if it doesn't exist
-                await createCollection(currentWorkspaceId, "lens", workspaceData);
+                // Create lens chart if it doesn't exist
+                await createChart(currentWorkspaceId, "line", "lens", workspaceData);
             }
             
-            // Find or create patching collection
-            const patchingCollection = currentWorkspace.collections.find(c => c.type === "patching");
-            if (patchingCollection) {
-                await updateCollection(patchingCollection.id, {});
+            // Find or create patching chart
+            const patchingChart = currentWorkspace.charts.find(c => c.workspaceType === "patching");
+            if (patchingChart) {
+                await updateChart(patchingChart.id, {});
             } else {
-                // Create patching collection if it doesn't exist
-                await createCollection(currentWorkspaceId, "patching", {});
+                // Create patching chart if it doesn't exist
+                await createChart(currentWorkspaceId, "heatmap", "patching", {});
             }
             
             console.log("Workspace saved successfully");

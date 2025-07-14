@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
-import type { LensLineResponse } from "@/types/lens";
 import type { LineGraphData, LineData } from "@/types/charts";
 
 const defaultColors = [
@@ -10,6 +9,23 @@ const defaultColors = [
     "hsl(var(--chart-4))",
     "hsl(var(--chart-5))",
 ];
+
+interface Point {
+    name: string;
+    prob: number;
+}
+
+interface Layer {
+    layer: number;
+    points: Point[];
+}
+
+export interface LensLineResponse {
+    data: Layer[];
+    metadata: {
+        maxLayer: number;
+    };
+}
 
 function processChartData(data: LensLineResponse) {
     if (!data?.data?.length) return { chartData: [], chartConfig: {}, maxLayer: 0, lineData: {} };

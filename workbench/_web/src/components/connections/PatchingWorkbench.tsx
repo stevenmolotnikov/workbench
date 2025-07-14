@@ -21,7 +21,7 @@ import { usePatchingTokens } from "@/stores/usePatchingTokens";
 import { useConnections } from "@/stores/useConnections";
 import { batchTokenizeText } from "@/actions/tokenize";
 import type { ActivationPatchingRequest } from "@/types/patching";
-import type { HeatmapProps } from "@/components/charts/base/Heatmap";
+import type { HeatmapProps } from "@/components/charts/primatives/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
 import { cn } from "@/lib/utils";
 import { PatchingSettings } from "./PatchingSettingsDropdown";
