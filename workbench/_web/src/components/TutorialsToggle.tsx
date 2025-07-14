@@ -21,7 +21,7 @@ interface TutorialsToggleProps {
 
 export function TutorialsToggle({ tutorialsOpen, toggleTutorials }: TutorialsToggleProps) {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const { activeCompletions } = useLensWorkspace();
+    const { completions } = useLensWorkspace();
     const { isLoading: isModelsLoading } = useModels();
     const { clearGridPositions } = useCharts();
     const { setAnnotations } = useAnnotations();
@@ -36,14 +36,14 @@ export function TutorialsToggle({ tutorialsOpen, toggleTutorials }: TutorialsTog
     };
 
     const handleTutorialToggle = () => {
-        console.log("activeCompletions", activeCompletions.length);
+        console.log("completions", completions.length);
 
         if (tutorialsOpen) {
             toggleTutorials();
             return;
         }
 
-        if (activeCompletions.length > 0) {
+        if (completions.length > 0) {
             setIsDialogOpen(true);
         } else {
             toggleTutorials();

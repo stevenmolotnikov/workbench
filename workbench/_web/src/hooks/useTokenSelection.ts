@@ -124,6 +124,7 @@ export function useTokenSelection({ compl, removeToken }: UseTokenSelectionProps
 
     return {
         highlightedTokens,
+        setHighlightedTokens,
         getGroupInformation,
         handleMouseDown,
         handleMouseUp,

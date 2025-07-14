@@ -448,7 +448,7 @@ export function Annotations() {
     } = useAnnotations();
 
     const { gridPositions } = useCharts();
-    const { activeCompletions } = useLensWorkspace();
+    const { completions } = useLensWorkspace();
 
     const [text, setText] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -509,7 +509,7 @@ export function Annotations() {
             const groupName = `Group ${groups.length + 1}`;
             const workspaceSnapshot = {
                 gridPositions: [...gridPositions],
-                completions: [...activeCompletions],
+                completions: [...completions],
             };
             createGroupWithSnapshot(groupName, [annotation1, annotation2], workspaceSnapshot);
         }

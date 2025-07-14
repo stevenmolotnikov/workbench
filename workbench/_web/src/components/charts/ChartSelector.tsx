@@ -22,7 +22,7 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
         completionIndex,
     } = useCharts();
 
-    const { activeCompletions } = useLensWorkspace.getState();
+    const { completions } = useLensWorkspace.getState();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -104,7 +104,7 @@ export function ChartSelector({ modes }: { modes: ChartMode[] }) {
         setConfiguringPosition(null);
         setSelectionPhase(null);
         setSelectedChartType(null);
-        pushCompletionId(chartIndex, activeCompletions[completionIndex!].id);
+        pushCompletionId(chartIndex, completions[completionIndex!].id);
         console.log(`Selected existing chart at index: ${chartIndex}`);
     };
 

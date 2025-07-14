@@ -1,11 +1,11 @@
-import { Keyboard, ALargeSmall, Loader2, X, Pencil, KeyboardOff, LineChart, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Keyboard, ALargeSmall, Loader2, X, KeyboardOff, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { LensCompletion, Prompt } from "@/types/lens";
+import type { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
-import type { TokenPredictions, ChartMode } from "@/types/workspace";
+import type { TokenPredictions } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import config from "@/lib/config";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
@@ -16,126 +16,145 @@ import type { Token } from "@/types/tokenizer";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogitLensModes } from "@/app/workbench/[workspace_id]/lens/page";
+import { useCharts } from "@/stores/useCharts";
 
 interface CompletionCardProps {
     index: number;
     compl: LensCompletion;
 }
 
-interface TokenizedPromptData {
-    tokens: Token[] | null;
-    lastTokenizedText: string | null;
-    isLoading: boolean;
-}
-
 export function CompletionCard({ index, compl }: CompletionCardProps) {
-    // Multi-prompt tokenization state
-    const [tokenizedData, setTokenizedData] = useState<Record<string, TokenizedPromptData>>({});
-    
     // Prediction state
-    const [predictions, setPredictions] = useState<Record<string, TokenPredictions>>({});
+    const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
     const [loadingPredictions, setLoadingPredictions] = useState<boolean>(false);
     const [selectedIdx, setSelectedIdx] = useState<number>(-1);
-    
-    // Chart state
-    const [isChartLoading, setIsChartLoading] = useState<boolean>(false);
+
+    // Tokenization state
+    const [tokenData, setTokenData] = useState<Token[] | null>(null);
+    const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
+    const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
+    const [isRevising, setIsRevising] = useState<boolean>(false);
 
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
-    const { 
-        handleUpdateCompletion, 
-        handleDeleteCompletion, 
-        tokenizeOnEnter,
-        addPrompt,
-        removePrompt,
-        updatePrompt,
-        selectPrompt,
-        setCompletionChartMode,
-        setCompletionChartData,
-        graphOnTokenize
-    } = useLensWorkspace();
-
-    const selectedPrompt = compl.prompts?.find(p => p.id === compl.selectedPromptId) || compl.prompts?.[0];
-    const selectedChartMode = compl.chartMode !== undefined ? LogitLensModes[compl.chartMode] : null;
-
-    // Handle case where there are no prompts (legacy completion)
-    if (!selectedPrompt) {
-        return null;
-    }
-
-    // Get tokenized data for current prompt
-    const currentTokenData = tokenizedData[selectedPrompt.id];
-    const tokenData = currentTokenData?.tokens || null;
-    const lastTokenizedText = currentTokenData?.lastTokenizedText || null;
-    const tokenizerLoading = currentTokenData?.isLoading || false;
+    const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } =
+        useLensWorkspace();
 
     // Helper functions
     const handleDeleteCompletionWithCleanup = (id: string) => {
         handleDeleteCompletion(id);
     };
 
-    const textHasChanged = selectedPrompt.text !== lastTokenizedText;
-    const shouldEnableTokenize = selectedPrompt.text && (!tokenData || textHasChanged);
+    const textHasChanged = compl.prompt !== lastTokenizedText;
+    const shouldEnableTokenize = compl.prompt && (!tokenData || textHasChanged);
 
     const removeToken = (idxs: number[]) => {
-        const updatedTokens = (selectedPrompt.tokens || []).filter((t) => !idxs.includes(t.idx));
-        updatePrompt(compl.id, selectedPrompt.id, { tokens: updatedTokens });
+        handleUpdateCompletion(compl.id, {
+            tokens: compl.tokens.filter((t) => !idxs.includes(t.idx)),
+        });
     };
 
-    // Create a legacy completion object for compatibility
-    const legacyCompletion = useMemo(() => ({
-        ...compl,
-        prompt: selectedPrompt.text,
-        tokens: selectedPrompt.tokens || []
-    }), [compl, selectedPrompt]);
+    const tokenSelection = useTokenSelection({ compl, removeToken });
 
-    const tokenSelection = useTokenSelection({ compl: legacyCompletion, removeToken });
+    const handleTokenize = async () => {
+        if (!compl.prompt) {
+            setTokenData(null);
+            setLastTokenizedText(null);
+            return;
+        }
 
-    const handleTokenize = async (promptId?: string) => {
-        const targetPromptId = promptId || selectedPrompt.id;
-        const targetPrompt = compl.prompts.find(p => p.id === targetPromptId);
-        if (!targetPrompt || !targetPrompt.text) return;
+        if (showPredictions) {
+            setShowPredictions(false);
+        }
 
-        setTokenizedData(prev => ({
-            ...prev,
-            [targetPromptId]: { ...prev[targetPromptId], isLoading: true }
-        }));
+        // Check if this is the first time tokenizing (no existing token data)
+        const isFirstTimeTokenizing = !tokenData;
 
         try {
-            const tokens = await tokenizeText(targetPrompt.text, compl.model);
-            
-            setTokenizedData(prev => ({
-                ...prev,
-                [targetPromptId]: {
-                    tokens,
-                    lastTokenizedText: targetPrompt.text,
-                    isLoading: false
-                }
-            }));
+            setTokenizerLoading(true);
+            const tokens = await tokenizeText(compl.prompt, compl.model);
+            setTokenData(tokens);
+            setLastTokenizedText(compl.prompt);
 
-            // Auto-run heatmap on first tokenization if enabled
-            const isFirstTime = !currentTokenData?.tokens;
-            if (isFirstTime && graphOnTokenize && compl.chartMode === undefined) {
-                setCompletionChartMode(compl.id, 1); // Set to heatmap
-                // Chart will auto-run via effect in chart component
+            // Auto-select last token and run predictions
+            if (tokens && tokens.length > 0) {
+                const lastTokenIdx = tokens.length - 1;
+                setSelectedIdx(lastTokenIdx);
+
+                console.log('HERE');
+                
+                // Update highlighted tokens in token selection
+                tokenSelection.setHighlightedTokens([lastTokenIdx]);
+                handleUpdateCompletion(compl.id, {
+                    tokens: [{ idx: lastTokenIdx, target_id: -1, target_text: "" }],
+                });
+
+                // Get the updated completion from the store to see the new tokens
+                const { completions } = useLensWorkspace.getState();
+                const updatedCompl = completions.find((c) => c.id === compl.id);
+                console.log(updatedCompl?.tokens);
+                
+                // Auto-run predictions for the last token using the updated completion
+                if (updatedCompl) {
+                    setLoadingPredictions(true);
+                    await runPredictionsWithCompletion(updatedCompl);
+                    setLoadingPredictions(false);
+                }
+            }
+
+            // Auto-add and run heatmap chart on first tokenization if setting is enabled
+            if (isFirstTimeTokenizing) {
+                const { graphOnTokenize } = useLensWorkspace.getState();
+
+                if (graphOnTokenize) {
+                    const { gridPositions, setChartMode, setChartData, pushCompletionId } =
+                        useCharts.getState();
+                    const chartIndex = gridPositions.length;
+
+                    // Add heatmap chart (index 1 in LogitLensModes)
+                    // Index 0 = "Target Token" (LineGraph), Index 1 = "Prediction Grid" (Heatmap)
+                    setChartMode(chartIndex, 1);
+
+                    // Auto-run the heatmap chart
+                    // try {
+                    //     const { startStatusUpdates, stopStatusUpdates } =
+                    //         useStatusUpdates.getState();
+                    //     const jobId = compl.id;
+
+                    //     startStatusUpdates(jobId);
+
+                    //     const response = await fetch("/api/lens-grid", {
+                    //         method: "POST",
+                    //         headers: {
+                    //             "Content-Type": "application/json",
+                    //         },
+                    //         body: JSON.stringify({
+                    //             completion: compl,
+                    //             job_id: jobId,
+                    //         }),
+                    //     });
+
+                    //     if (response.ok) {
+                    //         const data = await response.json();
+                    //         setChartData(chartIndex, { type: "heatmap", data });
+                    //     }
+
+                    //     stopStatusUpdates();
+                    // } catch (chartError) {
+                    //     console.error("Error auto-running heatmap chart:", chartError);
+                    //     const { stopStatusUpdates } = useStatusUpdates.getState();
+                    //     stopStatusUpdates();
+                    // } finally {
+                    //     pushCompletionId(chartIndex, compl.id);
+                    // }
+                }
             }
         } catch (err) {
             console.error("Error tokenizing text:", err);
-            setTokenizedData(prev => ({
-                ...prev,
-                [targetPromptId]: { ...prev[targetPromptId], isLoading: false }
-            }));
         } finally {
             handleClick("#tokenize-button");
+            setTokenizerLoading(false);
         }
     };
 
@@ -143,41 +162,12 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         handleUpdateCompletion(compl.id, updates);
     };
 
-    const handlePromptChange = (promptId: string, text: string) => {
-        updatePrompt(compl.id, promptId, { text });
-        handleTextInput(text);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, promptId: string) => {
-        if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            const prompt = compl.prompts.find(p => p.id === promptId);
-            if (prompt && prompt.text && shouldEnableTokenize) {
-                handleTokenize(promptId);
-            }
-        }
-    };
-
-    const handleAddPrompt = () => {
-        if (compl.prompts.length < 5) { // Limit to 5 prompts
-            addPrompt(compl.id);
-        }
-    };
-
-    const handleRemovePrompt = (promptId: string) => {
-        if (compl.prompts.length > 1) {
-            removePrompt(compl.id, promptId);
-        }
-    };
-
-    const handleChartModeChange = (modeIndex: number) => {
-        setCompletionChartMode(compl.id, modeIndex);
-    };
-
     const highlightedTokens = tokenSelection.highlightedTokens;
 
     const updateTokens = () => {
-        const existingIndices = new Set((selectedPrompt.tokens || []).map((t) => t.idx));
+        const existingIndices = new Set(compl.tokens.map((t) => t.idx));
+
+        console.log(existingIndices);
 
         // Create new tokens only for indices that don't already exist
         const newTokens = highlightedTokens
@@ -189,24 +179,23 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             }));
 
         // Combine existing tokens with new ones
-        const updatedTokens = [...(selectedPrompt.tokens || []), ...newTokens];
+        const updatedTokens = [...compl.tokens, ...newTokens];
 
-        updatePrompt(compl.id, selectedPrompt.id, { tokens: updatedTokens });
+        handleUpdateCompletion(compl.id, {
+            tokens: updatedTokens,
+        });
 
-        // Return the updated prompt
-        return compl.prompts.find(p => p.id === selectedPrompt.id);
+        // Return the updated completion
+        const { completions } = useLensWorkspace.getState();
+        const updatedCompl = completions.find((c: LensCompletion) => c.id === compl.id);
+
+        return updatedCompl;
     };
 
-    const runPredictions = async () => {
+    const runPredictionsWithCompletion = async (completionToUse: LensCompletion) => {
         const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
 
-        const updatedPrompt = updateTokens();
-        if (!updatedPrompt) {
-            console.error("Prompt not found");
-            return;
-        }
-
-        const jobId = `${compl.id}-${selectedPrompt.id}`;
+        const jobId = completionToUse.id;
         startStatusUpdates(jobId);
 
         try {
@@ -216,19 +205,56 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: {
-                        ...compl,
-                        prompt: updatedPrompt.text,
-                        tokens: updatedPrompt.tokens || []
-                    },
-                    model: compl.model,
-                    tokens: updatedPrompt.tokens || [],
+                    completion: completionToUse,
+                    model: completionToUse.model,
+                    tokens: completionToUse.tokens,
                     job_id: jobId,
                 }),
             });
+
+            console.log(completionToUse);
             const data: TokenPredictions = await response.json();
 
-            setPredictions(prev => ({ ...prev, [selectedPrompt.id]: data }));
+            setPredictions(data);
+            setShowPredictions(true);
+        } catch (error) {
+            console.error("Error sending request:", error);
+        } finally {
+            stopStatusUpdates();
+        }
+    };
+
+    const runPredictions = async () => {
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+
+        const updatedCompl = updateTokens();
+
+        if (!updatedCompl) {
+            console.error("Completion not found");
+            return;
+        }
+
+        const jobId = updatedCompl.id;
+        startStatusUpdates(jobId);
+
+        try {
+            const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    completion: updatedCompl,
+                    model: updatedCompl.model,
+                    tokens: updatedCompl.tokens,
+                    job_id: jobId,
+                }),
+            });
+
+            console.log(updatedCompl);
+            const data: TokenPredictions = await response.json();
+
+            setPredictions(data);
             setShowPredictions(true);
         } catch (error) {
             console.error("Error sending request:", error);
@@ -248,119 +274,41 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
         }
     };
 
-    const handleRunChart = async () => {
-        if (compl.chartMode === undefined) return;
-        
-        setIsChartLoading(true);
-        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
-        const jobId = `chart-${compl.id}-${Date.now()}`;
-        
-        startStatusUpdates(jobId);
+    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        handleContentUpdate({ prompt: e.target.value });
+        handleTextInput(e.target.value);
+    };
 
-        try {
-            const chartMode = LogitLensModes[compl.chartMode];
-            
-            if (chartMode.name === "Target Token") {
-                // Line graph - uses all prompts with target tokens
-                const promptsWithTargets = compl.prompts.filter(p => 
-                    p.tokens && p.tokens.some(t => t.target_id >= 0)
-                );
-
-                const completions = promptsWithTargets.map(prompt => ({
-                    ...compl,
-                    prompt: prompt.text,
-                    tokens: prompt.tokens || [],
-                    name: prompt.name || `Prompt ${compl.prompts.indexOf(prompt) + 1}`
-                }));
-
-                const response = await fetch("/api/lens-line", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ completions, job_id: jobId }),
-                });
-
-                if (!response.ok) throw new Error(response.statusText);
-                const data = await response.json();
-                setCompletionChartData(compl.id, { type: "lineGraph", data });
-                
-            } else if (chartMode.name === "Prediction Grid") {
-                // Heatmap - uses selected prompt only
-                const response = await fetch("/api/lens-grid", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        completion: {
-                            ...compl,
-                            prompt: selectedPrompt.text,
-                            tokens: selectedPrompt.tokens || []
-                        },
-                        job_id: jobId,
-                    }),
-                });
-
-                if (!response.ok) throw new Error(response.statusText);
-                const data = await response.json();
-                setCompletionChartData(compl.id, { type: "heatmap", data });
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (shouldEnableTokenize) {
+                handleTokenize();
             }
-        } catch (error) {
-            console.error("Error running chart:", error);
-            setCompletionChartData(compl.id, undefined);
-        } finally {
-            setIsChartLoading(false);
-            stopStatusUpdates();
         }
     };
 
-    // Auto-run chart when it's first set or when prompts change
+    const handleAddChart = (index: number) => {
+        const { gridPositions, setConfiguringPosition, setSelectionPhase, setCompletionIndex } =
+            useCharts.getState();
+        const nextPosition = gridPositions.length;
+        setConfiguringPosition(nextPosition);
+        setCompletionIndex(index);
+        setSelectionPhase("type");
+    };
+
+    // Auto-tokenize and show predictions on component mount if there are target completions
     useEffect(() => {
-        if (compl.chartMode !== undefined && !compl.chartData && !isChartLoading) {
-            handleRunChart();
-        }
-    }, [compl.chartMode, compl.prompts]);
+        const hasTargetCompletions = compl.tokens.some((token) => token.target_id >= 0);
 
-    // Render chart based on mode
-    const renderChart = () => {
-        if (compl.chartMode === undefined) {
-            return (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p className="text-sm">Select a chart type to visualize</p>
-                </div>
-            );
+        if (hasTargetCompletions && compl.prompt && !tokenData) {
+            handleTokenize().then(() => {
+                handlePredictions();
+            });
         }
+    }, [compl.tokens, compl.prompt]);
 
-        if (!compl.chartData) {
-            return (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p className="text-sm">Run the chart to see results</p>
-                </div>
-            );
-        }
-
-        // Render chart directly based on type
-        if (compl.chartData.type === "lineGraph") {
-            const LineGraph = require("@/components/charts/primatives/LineGraph").LineGraph;
-            return (
-                <div className="p-4 h-full">
-                    <div className="text-lg font-bold mb-2">Target Token Prediction</div>
-                    <div className="h-[calc(100%-3rem)]">
-                        <LineGraph chartIndex={0} data={compl.chartData.data} />
-                    </div>
-                </div>
-            );
-        } else if (compl.chartData.type === "heatmap") {
-            const Heatmap = require("@/components/charts/primatives/Heatmap").Heatmap;
-            return (
-                <div className="p-4 h-full">
-                    <div className="text-lg font-bold mb-2">Prediction Grid</div>
-                    <div className="h-[calc(100%-3rem)]">
-                        <Heatmap chartIndex={0} {...compl.chartData.data} />
-                    </div>
-                </div>
-            );
-        }
-
-        return null;
-    };
+    const emphasizedCompletions = useLensWorkspace((state) => state.emphasizedCompletions);
 
     return (
         <div key={compl.id} className="group relative">
@@ -370,210 +318,144 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                 title="Delete completion"
                 size="icon"
                 onClick={() => handleDeleteCompletionWithCleanup(compl.id)}
-                className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm z-10"
+                className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
             >
-                <X size={14} className="w-4 h-4" />
+                <X
+                    size={14}
+                    className="w-4 h-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                />
             </Button>
 
-            <div className="border bg-card rounded-lg overflow-hidden">
+            <div
+                className={cn(
+                    "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out w-full min-w-0 max-w-full",
+                    showPredictions ? "rounded-t-lg" : "rounded-lg",
+                    emphasizedCompletions.includes(index) && "border-primary"
+                )}
+            >
                 {/* Header */}
-                <div className="border-b px-4 py-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Input
-                                value={compl.name}
-                                placeholder="Untitled"
-                                onChange={(e) => handleContentUpdate({ name: e.target.value })}
-                                className="border-none shadow-none rounded h-fit px-0 py-0 font-bold text-base w-48"
-                            />
-                            <span className="text-xs text-muted-foreground">{compl.model}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        {selectedChartMode ? (
-                                            <>
-                                                <selectedChartMode.icon className="w-4 h-4 mr-2" />
-                                                {selectedChartMode.name}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <LineChart className="w-4 h-4 mr-2" />
-                                                Select Chart
-                                            </>
-                                        )}
-                                        <ChevronDown className="w-4 h-4 ml-2" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    {LogitLensModes.map((mode, idx) => (
-                                        <DropdownMenuItem
-                                            key={idx}
-                                            onClick={() => handleChartModeChange(idx)}
-                                        >
-                                            <mode.icon className="w-4 h-4 mr-2" />
-                                            {mode.name}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            
-                            {compl.chartMode !== undefined && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleRunChart}
-                                    disabled={isChartLoading}
-                                >
-                                    {isChartLoading ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        "Run Chart"
-                                    )}
-                                </Button>
+                <div className="flex items-center my-4 justify-between">
+                    <div className="flex px-0.5 flex-col">
+                        <Input
+                            value={compl.name}
+                            placeholder="Untitled"
+                            onChange={(e) => handleContentUpdate({ name: e.target.value })}
+                            className="border-none shadow-none rounded h-fit px-0 py-0 font-bold"
+                        />
+                        <span className="text-xs w-full">{compl.model}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <TooltipButton
+                            variant="outline"
+                            size="icon"
+                            id="tokenize-button"
+                            onClick={handleTokenize}
+                            disabled={!shouldEnableTokenize}
+                            tooltip={textHasChanged ? "Re-tokenize" : "Tokenize"}
+                        >
+                            <ALargeSmall size={16} className="w-8 h-8" />
+                        </TooltipButton>
+                        {/* <TooltipButton
+                            size="icon"
+                            variant="outline"
+                            onClick={handlePredictions}
+                            disabled={loadingPredictions || highlightedTokens.length === 0}
+                            id="view-predictions"
+                            tooltip="View predictions"
+                        >
+                            {loadingPredictions ? (
+                                <Loader2 className="w-8 h-8 animate-spin" />
+                            ) : showPredictions ? (
+                                <KeyboardOff size={16} className="w-8 h-8" />
+                            ) : (
+                                <Keyboard size={16} className="w-8 h-8" />
                             )}
-                        </div>
+                        </TooltipButton> */}
+                        <TooltipButton
+                            variant="outline"
+                            size="icon"
+                            id="add-chart-button"
+                            onClick={() => handleAddChart(index)}
+                            tooltip="Add Chart"
+                        >
+                            <LineChart size={16} className="w-8 h-8" />
+                        </TooltipButton>
                     </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row">
-                    {/* Left side - Prompts */}
-                    <div className="flex-1 border-r">
-                        {/* Prompts section */}
-                        <div className="p-4 space-y-4">
-                            {compl.prompts.map((prompt, promptIndex) => (
-                                <div key={prompt.id} className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Input
-                                            value={prompt.name || `Prompt ${promptIndex + 1}`}
-                                            onChange={(e) => updatePrompt(compl.id, prompt.id, { name: e.target.value })}
-                                            className="text-sm font-medium w-32"
-                                        />
-                                        <div className="flex gap-2">
-                                            <TooltipButton
-                                                variant="outline"
-                                                size="icon"
-                                                onClick={() => handleTokenize(prompt.id)}
-                                                disabled={!prompt.text || tokenizedData[prompt.id]?.isLoading}
-                                                tooltip="Tokenize"
-                                            >
-                                                <ALargeSmall size={16} />
-                                            </TooltipButton>
-                                            {compl.prompts.length > 1 && (
-                                                <TooltipButton
-                                                    variant="outline"
-                                                    size="icon"
-                                                    onClick={() => handleRemovePrompt(prompt.id)}
-                                                    tooltip="Remove prompt"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </TooltipButton>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <Textarea
-                                        value={prompt.text}
-                                        onChange={(e) => handlePromptChange(prompt.id, e.target.value)}
-                                        onKeyDown={(e) => handleKeyDown(e, prompt.id)}
-                                        className="h-24"
-                                        placeholder="Enter your prompt here."
-                                    />
-                                </div>
-                            ))}
-                            
-                            {compl.prompts.length < 5 && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleAddPrompt}
-                                    className="w-full"
-                                >
-                                    <Plus size={16} className="mr-2" />
-                                    Add Prompt
-                                </Button>
+                {/* Content */}
+                <div className="flex flex-col h-full gap-4">
+                    {!isRevising ? (
+                        <Textarea
+                            value={compl.prompt}
+                            onChange={handlePromptChange}
+                            onKeyDown={handleKeyDown}
+                            className="h-24"
+                            placeholder="Enter your prompt here."
+                            id="completion-text"
+                        />
+                    ) : (
+                        <div
+                            className={cn(
+                                "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded h-24 overflow-y-auto",
+                                loadingPredictions && "pointer-events-none"
                             )}
+                            id="token-area"
+                        >
+                            <TokenArea
+                                compl={compl}
+                                showPredictions={false}
+                                setSelectedIdx={setSelectedIdx}
+                                tokenData={tokenData}
+                                tokenSelection={tokenSelection}
+                            />
                         </div>
-
-                        {/* Bottom tabs section */}
-                        {compl.prompts.length > 0 && (
-                            <div className="border-t">
-                                <Tabs
-                                    value={compl.selectedPromptId || compl.prompts[0].id}
-                                    onValueChange={(value) => selectPrompt(compl.id, value)}
-                                    className="w-full"
-                                >
-                                    <TabsList className="w-full justify-start rounded-none border-b h-auto p-0">
-                                        {compl.prompts.map((prompt, idx) => (
-                                            <TabsTrigger
-                                                key={prompt.id}
-                                                value={prompt.id}
-                                                className="rounded-none border-r last:border-r-0 data-[state=active]:bg-muted"
-                                            >
-                                                {prompt.name || `Prompt ${idx + 1}`}
-                                            </TabsTrigger>
-                                        ))}
-                                    </TabsList>
-                                    
-                                    {compl.prompts.map((prompt) => (
-                                        <TabsContent key={prompt.id} value={prompt.id} className="p-4 space-y-4">
-                                            {tokenizedData[prompt.id]?.tokens && (
-                                                <>
-                                                    <div className="space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-sm font-medium">Tokens</span>
-                                                            <TooltipButton
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={handlePredictions}
-                                                                disabled={loadingPredictions || highlightedTokens.length === 0}
-                                                                tooltip="View predictions"
-                                                            >
-                                                                {loadingPredictions ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : showPredictions ? (
-                                                                    <KeyboardOff size={16} />
-                                                                ) : (
-                                                                    <Keyboard size={16} />
-                                                                )}
-                                                            </TooltipButton>
-                                                        </div>
-                                                        <div className="border rounded p-3">
-                                                            <TokenArea
-                                                                compl={legacyCompletion}
-                                                                showPredictions={showPredictions}
-                                                                setSelectedIdx={setSelectedIdx}
-                                                                tokenData={tokenData}
-                                                                tokenSelection={tokenSelection}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {showPredictions && predictions[prompt.id] && (
-                                                        <div className="border rounded p-3 bg-muted/50">
-                                                            <PredictionDisplay
-                                                                predictions={predictions[prompt.id]}
-                                                                compl={legacyCompletion}
-                                                                selectedIdx={selectedIdx}
-                                                            />
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
-                                        </TabsContent>
-                                    ))}
-                                </Tabs>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right side - Chart */}
-                    <div className="flex-1 min-h-[400px]">
-                        {renderChart()}
-                    </div>
+                    )}
+                    {/* {(tokenData || tokenizerLoading) && !isRevising && !showPredictions && (
+                        <div
+                            className={cn(
+                                "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded",
+                                loadingPredictions && "pointer-events-none"
+                            )}
+                            id="token-area"
+                        >
+                            <TokenArea
+                                compl={compl}
+                                showPredictions={showPredictions}
+                                setSelectedIdx={setSelectedIdx}
+                                tokenData={tokenData}
+                                tokenSelection={tokenSelection}
+                            />
+                        </div>
+                    )} */}
                 </div>
             </div>
+            {showPredictions && (
+                <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
+                    <PredictionDisplay
+                        predictions={predictions || {}}
+                        compl={compl}
+                        selectedIdx={selectedIdx}
+                        onRevise={() => setIsRevising(true)}
+                        onClear={() => {
+                            setShowPredictions(false);
+                            setIsRevising(false);
+                            setPredictions(null);
+                            tokenSelection.setHighlightedTokens([]);
+                            setSelectedIdx(-1);
+                        }}
+                        onRunPredictions={async () => {
+                            setLoadingPredictions(true);
+                            await runPredictions();
+                            setLoadingPredictions(false);
+                        }}
+                        loadingPredictions={loadingPredictions}
+                        highlightedTokensCount={tokenSelection.highlightedTokens.length}
+                        setIsRevising={setIsRevising}
+                    />
+                </div>
+            )}
         </div>
     );
 }

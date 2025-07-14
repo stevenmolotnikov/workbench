@@ -35,7 +35,7 @@ export default function ExportPage() {
     const router = useRouter();
     const { annotations, groups } = useAnnotations();
     const { gridPositions } = useCharts();
-    const { activeCompletions } = useLensWorkspace();
+    const { completions } = useLensWorkspace();
     
     const [searchQuery, setSearchQuery] = useState("");
     const [filterBy, setFilterBy] = useState<FilterBy>("all");

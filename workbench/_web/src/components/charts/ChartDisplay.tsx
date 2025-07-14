@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { ChartMode } from "@/types/workspace";
 import { LogitLensModes } from "@/app/workbench/[workspace_id]/lens/page";
 import { cn } from "@/lib/utils";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
+import { Loader2 } from "lucide-react";
+import type { ChartData } from "@/stores/useCharts";
 
 export function ChartDisplay() {
-    const { activeCompletions } = useLensWorkspace();
+    const { completions } = useLensWorkspace();
     const { layout, setLayout } = useCharts();
     
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerHeight, setContainerHeight] = useState(0);
+    const [chartData, setChartData] = useState<Record<string, ChartData>>({});
+    const [loadingCharts, setLoadingCharts] = useState<Set<string>>(new Set());
 
     // Filter completions that have a chart mode set
-    const completionsWithCharts = activeCompletions.filter(c => c.chartMode !== undefined);
+    const completionsWithCharts = completions.filter(c => c.chartMode !== undefined);
 
     useEffect(() => {
         const updateHeight = () => {
@@ -54,22 +59,107 @@ export function ChartDisplay() {
         };
     };
 
+    const fetchChartData = async (completion: any) => {
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = `chart-${completion.id}-${Date.now()}`;
+        
+        setLoadingCharts(prev => new Set(prev).add(completion.id));
+        startStatusUpdates(jobId);
+
+        try {
+            const chartMode = LogitLensModes[completion.chartMode];
+            
+            if (chartMode.name === "Target Token") {
+                // Line graph - uses all prompts with target tokens
+                const promptsWithTargets = completion.prompts.filter(p => 
+                    p.tokens && p.tokens.some(t => t.target_id >= 0)
+                );
+
+                const completions = promptsWithTargets.map(prompt => ({
+                    ...completion,
+                    prompt: prompt.text,
+                    tokens: prompt.tokens || [],
+                    name: prompt.name || `Prompt ${completion.prompts.indexOf(prompt) + 1}`
+                }));
+
+                const response = await fetch("/api/lens-line", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ completions, job_id: jobId }),
+                });
+
+                if (!response.ok) throw new Error(response.statusText);
+                const data = await response.json();
+                setChartData(prev => ({ ...prev, [completion.id]: { type: "lineGraph", data } }));
+                
+            } else if (chartMode.name === "Prediction Grid") {
+                // Heatmap - uses first prompt with text
+                const selectedPrompt = completion.prompts.find(p => p.text) || completion.prompts[0];
+                
+                const response = await fetch("/api/lens-grid", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        completion: {
+                            ...completion,
+                            prompt: selectedPrompt.text,
+                            tokens: selectedPrompt.tokens || []
+                        },
+                        job_id: jobId,
+                    }),
+                });
+
+                if (!response.ok) throw new Error(response.statusText);
+                const data = await response.json();
+                setChartData(prev => ({ ...prev, [completion.id]: { type: "heatmap", data } }));
+            }
+        } catch (error) {
+            console.error("Error fetching chart data:", error);
+            setChartData(prev => {
+                const newData = { ...prev };
+                delete newData[completion.id];
+                return newData;
+            });
+        } finally {
+            setLoadingCharts(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(completion.id);
+                return newSet;
+            });
+            stopStatusUpdates();
+        }
+    };
+
+    // Auto-fetch chart data when completions change
+    useEffect(() => {
+        completionsWithCharts.forEach(completion => {
+            if (!chartData[completion.id] && !loadingCharts.has(completion.id)) {
+                fetchChartData(completion);
+            }
+        });
+    }, [completionsWithCharts]);
+
     const renderChart = (completion: any) => {
-        if (!completion.chartData) {
+        const data = chartData[completion.id];
+        
+        if (!data || loadingCharts.has(completion.id)) {
             return (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                    <p className="text-sm">Loading chart data...</p>
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <p className="text-sm">Loading chart data...</p>
+                    </div>
                 </div>
             );
         }
 
         // Render chart directly based on type
-        if (completion.chartData.type === "lineGraph") {
+        if (data.type === "lineGraph") {
             const LineGraph = require("@/components/charts/primatives/LineGraph").LineGraph;
-            return <LineGraph chartIndex={0} data={completion.chartData.data} />;
-        } else if (completion.chartData.type === "heatmap") {
+            return <LineGraph chartIndex={0} data={data.data} />;
+        } else if (data.type === "heatmap") {
             const Heatmap = require("@/components/charts/primatives/Heatmap").Heatmap;
-            return <Heatmap chartIndex={0} {...completion.chartData.data} />;
+            return <Heatmap chartIndex={0} {...data.data} />;
         }
 
         return null;
@@ -77,39 +167,6 @@ export function ChartDisplay() {
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
-            {/* Layout controls */}
-            <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium">Charts</h3>
-                    <div className="flex gap-1">
-                        <Button
-                            variant={layout === 1 ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setLayout(1)}
-                            className="h-7 px-2"
-                        >
-                            1
-                        </Button>
-                        <Button
-                            variant={layout === 2 ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setLayout(2)}
-                            className="h-7 px-2"
-                        >
-                            2
-                        </Button>
-                        <Button
-                            variant={layout === 3 ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setLayout(3)}
-                            className="h-7 px-2"
-                        >
-                            3
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
             {/* Charts container */}
             <div ref={containerRef} className="flex-1 p-4 overflow-auto custom-scrollbar">
                 {completionsWithCharts.length === 0 ? (

@@ -74,9 +74,9 @@ export function WorkspaceHistory() {
     };
 
     const getCurrentWorkspaceData = () => {
-        const { activeCompletions } = useLensWorkspace.getState();
+        const { completions } = useLensWorkspace.getState();
         return {
-            completions: activeCompletions,
+            completions: completions,
             graphData: gridPositions,
             annotations: annotations,
             groups: groups,

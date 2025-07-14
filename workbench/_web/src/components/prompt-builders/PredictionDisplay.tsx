@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import type { TokenPredictions } from "@/types/workspace";
+import type { TokenPredictions } from "@/types/tokenizer";
 import type { LensCompletion } from "@/types/lens";
 import { Input } from "@/components/ui/input";
 import { tokenizeText, decodeTokenIds } from "@/actions/tokenize";
 import { Button } from "../ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Edit2, X, Keyboard, Loader2 } from "lucide-react";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
+import { toast } from "sonner"
 
 interface TokenBadge {
     text: string;
@@ -28,10 +29,9 @@ const TokenDisplay = ({
     tempTokenText,
     compl,
 }: TokenDisplayProps) => {
-    const [targetToken, setTargetToken] = useState<string>("");
+    const [targetToken, setTargetToken] = useState<string | null>(null);
     const [decodedTokens, setDecodedTokens] = useState<string[]>([]);
     const [tokenBadges, setTokenBadges] = useState<TokenBadge[]>([]);
-    const [notificationMessage, setNotificationMessage] = useState<string>("");
     const [selectedPredictionId, setSelectedPredictionId] = useState<number | null>(null);
 
     // Decode token IDs when predictions change
@@ -62,8 +62,10 @@ const TokenDisplay = ({
     };
 
     const handleKeyPress = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter" && targetToken) {
+        if (e.key === "Enter" && targetToken !== null && targetToken !== "") {
             await handleTokenSubmit(targetToken);
+        } else if (e.key === "Escape") {
+            setTargetToken(null);
         }
     };
 
@@ -98,18 +100,13 @@ const TokenDisplay = ({
                     setSelectedPredictionId(tokenId);
                 }
 
-                setNotificationMessage("");
-
                 // Update the token in the completion
                 handleTargetTokenUpdate(text);
-                setTargetToken("");
+                setTargetToken(null);
             } else {
                 // Show notification for multi-token input
-                setNotificationMessage(
-                    `Input "${text}" tokenizes to ${tokens.length} tokens. Please enter a single token.`
-                );
-                setTimeout(() => setNotificationMessage(""), 3000);
-                setTargetToken(""); // Clear the input field
+                toast.error(`Input "${text}" tokenizes to ${tokens.length} tokens. Please enter a single token.`);
+                setTargetToken(null); // Clear the input field
             }
         } catch (error) {
             console.error("Error tokenizing text:", error);
@@ -156,13 +153,6 @@ const TokenDisplay = ({
 
     return (
         <div className="space-y-3" id="predictions-display">
-            {/* Notification message */}
-            {notificationMessage && (
-                <div className="text-xs border bg-destructive/50 text-destructive-foreground border-destructive-foreground/50 h-8 px-3 flex items-center rounded">
-                    {notificationMessage}
-                </div>
-            )}
-
             {/* All badges displayed inline */}
             <div className="flex flex-wrap gap-2 items-center">
                 {allBadges.map((badge, index) => {
@@ -172,11 +162,10 @@ const TokenDisplay = ({
                     return (
                         <div
                             key={`${badge.id}-${badge.isPrediction ? "pred" : "user"}`}
-                            className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors ${
-                                shouldHighlight
-                                    ? "border border-primary"
-                                    : "border border-transparent"
-                            }`}
+                            className={`inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors ${shouldHighlight
+                                ? "border border-primary"
+                                : "border border-transparent"
+                                }`}
                             onClick={
                                 badge.isPrediction
                                     ? () => togglePredictionSelection(badge.id, badge.text)
@@ -197,6 +186,34 @@ const TokenDisplay = ({
                         </div>
                     );
                 })}
+                {/* Add token badge */}
+                <div className="inline-flex">
+                    {targetToken !== null ? (
+                        <input
+                            type="text"
+                            className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs border border-primary outline-none"
+                            placeholder="Enter token"
+                            value={targetToken}
+                            onChange={(e) => setTargetToken(e.target.value)}
+                            onKeyDown={handleKeyPress}
+                            onBlur={() => {
+                                if (targetToken) {
+                                    handleTokenSubmit(targetToken);
+                                } else {
+                                    setTargetToken(null);
+                                }
+                            }}
+                            autoFocus
+                        />
+                    ) : (
+                        <div
+                            className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs cursor-pointer hover:bg-muted/80 transition-colors border border-transparent"
+                            onClick={() => setTargetToken("")}
+                        >
+                            +
+                        </div>
+                    )}
+                </div>
                 {tempTokenText.length > 1 && (
                     <div className="text-xs text-red-500 bg-red-500/10 border border-red-200 px-2 py-1 rounded">
                         Multi-token input: {tempTokenText.join(" + ")} ({tempTokenText.length}{" "}
@@ -205,24 +222,7 @@ const TokenDisplay = ({
                 )}
             </div>
 
-            {/* Input field */}
-            <div className="border-t flex items-center gap-2 pt-3">
-                <Input
-                    className="h-8"
-                    placeholder="Enter a target token and press Enter"
-                    value={targetToken}
-                    onChange={(e) => setTargetToken(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                />
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleTokenSubmit(targetToken)}
-                >
-                    <Plus size={16} className="w-8 h-8" />
-                </Button>
-            </div>
+
         </div>
     );
 };
@@ -231,9 +231,25 @@ interface PredictionDisplayProps {
     predictions: TokenPredictions;
     compl: LensCompletion;
     selectedIdx: number;
+    onRevise?: () => void;
+    onClear?: () => void;
+    onRunPredictions?: () => Promise<void>;
+    loadingPredictions?: boolean;
+    highlightedTokensCount?: number;
+    setIsRevising?: (value: boolean) => void;
 }
 
-export const PredictionDisplay = ({ predictions, compl, selectedIdx }: PredictionDisplayProps) => {
+export const PredictionDisplay = ({ 
+    predictions, 
+    compl, 
+    selectedIdx, 
+    onRevise, 
+    onClear, 
+    onRunPredictions,
+    loadingPredictions = false,
+    highlightedTokensCount = 0,
+    setIsRevising
+}: PredictionDisplayProps) => {
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
     const updateToken = (idx: number, targetId: number, targetText: string) => {
@@ -276,19 +292,67 @@ export const PredictionDisplay = ({ predictions, compl, selectedIdx }: Predictio
         }
     };
 
+    const handleRunPredictions = async () => {
+        if (setIsRevising) {
+            setIsRevising(false);
+        }
+        if (onRunPredictions && highlightedTokensCount > 0) {
+            await onRunPredictions();
+        }
+    };
+
     return (
-        <>
-            {predictions && predictions[selectedIdx] ? (
-                <TokenDisplay
-                    predictions={predictions}
-                    selectedIdx={selectedIdx}
-                    handleTargetTokenUpdate={handleTargetTokenUpdate}
-                    tempTokenText={tempTokenText}
-                    compl={compl}
-                />
-            ) : (
-                <div className="text-sm text-muted-foreground">No token selected</div>
-            )}
-        </>
+        <div className="space-y-3">
+            <div className="flex justify-between items-center">
+                {predictions && predictions[selectedIdx] ? (
+                    <TokenDisplay
+                        predictions={predictions}
+                        selectedIdx={selectedIdx}
+                        handleTargetTokenUpdate={handleTargetTokenUpdate}
+                        tempTokenText={tempTokenText}
+                        compl={compl}
+                    />
+                ) : (
+                    <div className="text-sm text-muted-foreground">No token selected</div>
+                )}
+                <div className="flex gap-2 ml-4 ">
+                    {onRunPredictions && (
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={handleRunPredictions}
+                            disabled={loadingPredictions || highlightedTokensCount === 0}
+                            className="text-xs h-7"
+                        >
+                            {loadingPredictions ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <Keyboard className="w-3 h-3" />
+                            )}
+                        </Button>
+                    )}
+                    {onRevise && (
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={onRevise}
+                            className="text-xs h-7 w-7"
+                        >
+                            <Edit2 className="w-3 h-3" />
+                        </Button>
+                    )}
+                    {onClear && (
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={onClear}
+                            className="text-xs h-7 w-7"
+                        >
+                            <X className="w-3 h-3" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 };

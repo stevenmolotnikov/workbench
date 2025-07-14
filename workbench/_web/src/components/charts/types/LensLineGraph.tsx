@@ -55,11 +55,11 @@ export function LensLineGraph({ index }: { index: number }) {
         startStatusUpdates(jobId);
 
         try {
-            const {activeCompletions} = useLensWorkspace.getState();
+            const {completions} = useLensWorkspace.getState();
 
-            const filteredCompletions = activeCompletions.filter((compl) => hasTargetToken(compl));
+            const filteredCompletions = completions.filter((compl) => hasTargetToken(compl));
 
-            // console.log(JSON.stringify(activeCompletions, null, 2))
+            // console.log(JSON.stringify(completions, null, 2))
             const response = await fetch("/api/lens-line", {
                 method: "POST",
                 headers: {

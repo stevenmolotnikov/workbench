@@ -137,8 +137,6 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
                     workbench={<PromptBuilder />}
                     charts={<ChartDisplay />}
                 />
-
-
             </div>
         </div>
     );

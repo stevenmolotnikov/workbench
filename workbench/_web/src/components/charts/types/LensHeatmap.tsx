@@ -64,9 +64,9 @@ export function LensHeatmap({ index }: { index: number }) {
         startStatusUpdates(jobId);
 
         try {
-            const { activeCompletions } = useLensWorkspace.getState();
+            const { completions } = useLensWorkspace.getState();
 
-            const filteredCompletions = activeCompletions.filter((compl) => hasPrompt(compl));
+            const filteredCompletions = completions.filter((compl) => hasPrompt(compl));
 
             if (filteredCompletions.length === 0) {
                 throw new Error("No completions with prompts found");
@@ -101,21 +101,6 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     };
 
-    const handleEmphasizeCompletion = (index: number) => {
-        console.log("Emphasizing completion", index);
-        const { emphasizedCompletions, setEmphasizedCompletions } = useLensWorkspace.getState();
-        if (index === -1) {
-            setEmphasizedCompletions([]);
-        } else {
-            setEmphasizedCompletions([...emphasizedCompletions, index]);
-        }
-    };
-
-    useEffect(() => {
-        return () => {
-            handleEmphasizeCompletion(-1);
-        };
-    }, [completionIds]);
 
     useEffect(() => {
         console.log("rerunning", completionIds);
@@ -125,7 +110,7 @@ export function LensHeatmap({ index }: { index: number }) {
         }
     }, [completionIds]);
 
-    const activeCompletionsLength = useLensWorkspace((state) => state.activeCompletions.length);
+    const activeCompletionsLength = useLensWorkspace((state) => state.completions.length);
     const memoizedCompletionItems = useMemo(() => {
         return activeCompletionsLength >= 1 ? (
             Array.from({ length: activeCompletionsLength }, (_, i) => (
@@ -140,8 +125,6 @@ export function LensHeatmap({ index }: { index: number }) {
 
     return (
         <div
-            onMouseEnter={() => handleEmphasizeCompletion(Number.parseInt(completionIds[0]))}
-            onMouseLeave={() => handleEmphasizeCompletion(-1)}
             className="h-full w-full"
         >
             <ChartCard
