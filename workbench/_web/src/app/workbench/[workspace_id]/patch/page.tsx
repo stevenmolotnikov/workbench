@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, use } from "react";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
 
 import { ResizableLayout } from "@/components/Layout";
@@ -16,7 +16,8 @@ import { getWorkspaceById } from "@/lib/api";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 
-export default function Workbench({ params }: { params: { workspace_id: string } }) {
+export default function Workbench({ params }: { params: Promise<{ workspace_id: string }> }) {
+    const resolvedParams = use(params);
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -28,7 +29,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
         async function checkAccess() {
             try {
                 // Try to get the workspace
-                const workspace = await getWorkspaceById(params.workspace_id);
+                const workspace = await getWorkspaceById(resolvedParams.workspace_id);
                 setHasAccess(true);
             } catch (error) {
                 console.error("Access check failed:", error);
@@ -36,7 +37,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
                 const user = await getCurrentUser();
                 if (!user) {
                     // Redirect to login with this workspace as the redirect target
-                    router.push(`/login?redirect=/workbench/${params.workspace_id}`);
+                    router.push(`/login?redirect=/workbench/${resolvedParams.workspace_id}`);
                 } else {
                     // User is logged in but doesn't have access
                     setHasAccess(false);
@@ -47,7 +48,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
         }
 
         checkAccess();
-    }, [params.workspace_id, router]);
+    }, [resolvedParams.workspace_id, router]);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -120,7 +121,7 @@ export default function Workbench({ params }: { params: { workspace_id: string }
                     toggleTutorials={toggleTutorials}
                     sidebarCollapsed={sidebarCollapsed}
                     toggleSidebar={toggleSidebar}
-                    workspaceId={params.workspace_id}
+                    workspaceId={resolvedParams.workspace_id}
                 />
 
                 <ResizableLayout

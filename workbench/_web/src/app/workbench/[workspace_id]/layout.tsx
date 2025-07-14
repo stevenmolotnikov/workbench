@@ -28,7 +28,6 @@ export default function WorkbenchLayout({
 
                 <nav className="flex gap-2 items-center">
                     <WorkbenchStatus />
-                    {/* <TerminalStatusLine message="Request sent..." typewriter={true} /> */}
                     <ModeToggle /> 
                 </nav>
             </header>
