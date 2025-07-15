@@ -85,9 +85,6 @@ export const getExecuteSelected = async (request: ExecuteSelectedRequest): Promi
 
         if (!response.ok) throw new Error("Failed to start computation");
         
-        const jobInfo = await response.json();
-        console.log('Job started:', jobInfo);
-        
         // Listen for results
         const result = await listenToSSE<TokenPredictions>(
             config.endpoints.listenExecuteSelected + `/${jobId}`
@@ -113,9 +110,6 @@ export const getExecutePair = async (request: ExecutePairRequest): Promise<PairP
         });
 
         if (!response.ok) throw new Error("Failed to start pair computation");
-        
-        const jobInfo = await response.json();
-        console.log('Pair job started:', jobInfo);
         
         // Listen for results
         const result = await listenToSSE<PairPredictions>(

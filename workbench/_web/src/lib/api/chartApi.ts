@@ -66,8 +66,6 @@ const getLensLine = async (lensRequest: { completions: LensCompletion[]; chartId
 
         if (!response.ok) throw new Error("Failed to start lens computation");
         
-        const jobInfo = await response.json();
-        
         // Listen for results
         const result = await listenToSSE<{ data: LensLineResponse }>(config.endpoints.listenLensLine + `/${jobId}`);
 
@@ -87,13 +85,17 @@ export const useLensLine = () => {
             const response = await getLensLine(lensRequest);
             const result = processChartData(response.data);
 
-            // Update your database with the response
+            // Update the database with the chart data after receiving results
             await setChartData(lensRequest.chartId, result);
 
             return result;
         },
         onSuccess: (data, variables) => {
             console.log("Successfully fetched logit lens data");
+            // Invalidate queries to refresh the UI with updated data
+            queryClient.invalidateQueries({ 
+                queryKey: ["lensCharts"] 
+            });
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
@@ -119,9 +121,6 @@ const getLensGrid = async (lensRequest: { completions: LensCompletion[]; chartId
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
         
-        const jobInfo = await response.json();
-        console.log('Grid job started:', jobInfo);
-        
         // Listen for results
         const result = await listenToSSE<{ data: LensGridResponse }>(config.endpoints.listenLensGrid + `/${jobId}`);
         return result.data;
@@ -140,13 +139,17 @@ export const useLensGrid = () => {
             const response = await getLensGrid(lensRequest);
             const result = processHeatmapData(response);
 
-            // Update your database with the response
+            // Update the database with the chart data after receiving results
             await setChartData(lensRequest.chartId, result);
 
             return result;
         },
         onSuccess: (data, variables) => {
             console.log("Successfully fetched logit lens data");
+            // Invalidate queries to refresh the UI with updated data
+            queryClient.invalidateQueries({ 
+                queryKey: ["lensCharts"] 
+            });
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
@@ -186,7 +189,7 @@ export const useCreateChart = () => {
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ 
-                queryKey: ["lensCharts", variables.workspaceId] 
+                queryKey: ["lensCharts"] 
             });
             console.log("Successfully created chart:", data.id);
         },

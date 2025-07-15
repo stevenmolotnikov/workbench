@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createWorkspace } from "@/lib/api";
-import { setWorkspaceData } from "@/lib/queries/chartQueries";
+import { setWorkspaceData, setChartData } from "@/lib/queries/chartQueries";
 import { WorkspaceData } from "@/types/workspace";
+import { ChartData } from "@/types/charts";
 
 interface CreateWorkspaceParams {
     name: string;

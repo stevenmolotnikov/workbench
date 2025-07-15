@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
-import { useCharts } from "@/stores/useCharts";
-import { Button } from "@/components/ui/button";
-import { ChartMode } from "@/types/workspace";
-import { LogitLensModes } from "@/app/workbench/[workspaceId]/lens/page";
+import { useWorkspace } from "@/stores/useWorkspace";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import type { ChartData } from "@/stores/useCharts";
+import { LineChartWrapper } from "./types/LineChartWrapper";
+import { HeatmapChartWrapper } from "./types/HeatmapChartWrapper";
+import { getLensCharts } from "@/lib/queries/chartQueries";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
+import { ChartCard } from "./ChartCard";
 
 export function ChartDisplay() {
-    // const { completions } = useLensWorkspace();
-    const { layout, setLayout } = useCharts();
+    const { layout } = useWorkspace();
     
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerHeight, setContainerHeight] = useState(0);
 
-    // Filter completions that have a chart mode set
-    const completionsWithCharts = [].filter(c => c.chartMode !== undefined);
+    const { workspaceId } = useParams();
+
+    const { data: charts, isLoading } = useQuery({
+        queryKey: ["lensCharts", workspaceId],
+        queryFn: () => getLensCharts(workspaceId as string),
+    });
 
     useEffect(() => {
         const updateHeight = () => {
@@ -56,55 +60,45 @@ export function ChartDisplay() {
         };
     };
 
-
-    const renderChart = (completion: any) => {
-        // TODO: Implement chart rendering based on stored chart data
-        // For now, show a placeholder
+    if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p className="text-sm">Chart visualization will appear here</p>
+            <div className="flex-1 flex h-full items-center justify-center bg-muted">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         );
-    };
+    }
+
+    // Sort charts by position
+    const sortedCharts = charts?.sort((a, b) => a.position - b.position) || [];
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
             {/* Charts container */}
+            {/* {JSON.stringify(sortedCharts)}
+            {sortedCharts.length} */}
             <div ref={containerRef} className="flex-1 p-4 overflow-auto custom-scrollbar">
-                {completionsWithCharts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[300px] text-muted-foreground border border-dashed rounded-lg">
-                        <p className="text-sm">No charts to display.</p>
-                        <p className="text-xs mt-1">
-                            Select a chart type in a completion card to visualize data.
-                        </p>
+                {sortedCharts.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No charts to display</p>
                     </div>
                 ) : (
-                    <div style={getGridStyle()} className="custom-scrollbar">
-                        {completionsWithCharts.map((completion) => {
-                            const chartMode = LogitLensModes[completion.chartMode!];
-                            
-                            return (
-                                <div
-                                    key={completion.id}
-                                    className="bg-card border rounded-lg overflow-hidden"
-                                >
-                                    <div className="border-b px-4 py-2 bg-muted/50">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <chartMode.icon className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-sm font-medium">{completion.name}</span>
-                                            </div>
-                                            <span className="text-xs text-muted-foreground">
-                                                {chartMode.name}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="h-[calc(100%-2.5rem)] p-4">
-                                        {renderChart(completion)}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div style={getGridStyle()}>
+                        {sortedCharts.map((chart) => (
+                            <ChartCard 
+                                key={chart.id} 
+                                isLoading={false}
+                                chartId={chart.id}
+                                chart={
+                                    <div>hello</div>
+                                    // chart.chartType === "line" ? (
+                                    //     <LineChartWrapper chart={chart} />
+                                    // ) : (
+                                    //     <HeatmapChartWrapper chart={chart} />
+                                    // )
+                                    // <HeatmapChartWrapper chart={chart} />
+                                }
+                            />
+                        ))}
                     </div>
                 )}
             </div>

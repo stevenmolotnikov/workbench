@@ -58,6 +58,7 @@ export const getCharts = await withAuth(
         return chartsData.map((chart) => {
             return {
                 id: chart.id,
+                chartType: chart.chartType,
                 chartData: chart.chartData || null,
                 annotations: annotationData
                     .filter((annotation) => annotation.chartId === chart.id)
@@ -90,6 +91,7 @@ export const getLensCharts = await withAuth(
         return chartsData.map((chart) => {
             return {
                 id: chart.id,
+                chartType: chart.chartType,
                 chartData: chart.chartData || null,
                 annotations: annotationData
                     .filter((annotation) => annotation.chartId === chart.id)
@@ -126,6 +128,7 @@ export const getLensChartByPosition = await withAuth(
 
         return {
             id: chart.id,
+            chartType: chart.chartType,
             chartData: chart.chartData || null,
             annotations: annotationData
                 .filter((annotation) => annotation.chartId === chart.id)

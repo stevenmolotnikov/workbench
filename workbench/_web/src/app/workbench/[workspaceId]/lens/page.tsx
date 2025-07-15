@@ -21,21 +21,6 @@ import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export const LogitLensModes: ChartMode[] = [
-    {
-        name: "Target Token",
-        description: "Probability of the target token per layer.",
-        icon: ChartArea,
-        component: LensLineGraph,
-    },
-    {
-        name: "Prediction Grid",
-        description: "Grid of the most probable token per layer.",
-        icon: Grid3X3,
-        component: LensHeatmap,
-    },
-]
-
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);

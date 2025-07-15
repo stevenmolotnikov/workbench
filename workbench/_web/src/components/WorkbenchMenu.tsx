@@ -10,7 +10,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LayoutGrid, Minus, Plus } from "lucide-react";
-import { useCharts } from "@/stores/useCharts";
+import { useWorkspace } from "@/stores/useWorkspace";
 import {
     Select,
     SelectContent,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { TutorialsToggle } from "./TutorialsToggle";
+// import { TutorialsToggle } from "./TutorialsToggle";
 import { WorkspaceSettingsPopover } from "./WorkspaceSettingsPopover";
 import { getCurrentUser, logout } from "@/lib/session";
 
@@ -39,7 +39,7 @@ export function WorkbenchMenu({
     toggleTutorials, 
     workspaceId
 }: WorkbenchModeProps) {
-    const { layout, setLayout, clearGridPositions  } = useCharts();
+    const { layout, setLayout } = useWorkspace();
     const router = useRouter();
     const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -58,7 +58,6 @@ export function WorkbenchMenu({
     }, []);
 
     const handleValueChange = (value: "lens" | "patch") => {
-        clearGridPositions();
         setWorkbenchMode(value);
     };
 
@@ -125,7 +124,7 @@ export function WorkbenchMenu({
                         <DropdownMenuItem onClick={() => setLayout(3)}>3 per row</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} />
+                {/* <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} /> */}
                 
                 {/* User info and logout */}
                 <div className="flex items-center gap-2 ml-4 pl-4 border-l">

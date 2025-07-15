@@ -39,6 +39,7 @@ export type ChartData = {
 
 export interface Chart {
     id: string;
+    chartType: "line" | "heatmap";
     chartData: ChartData[keyof ChartData] | null;
     annotations: Annotation[];
     workspaceData: WorkspaceData[keyof WorkspaceData] | null;

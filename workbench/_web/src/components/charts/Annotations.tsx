@@ -44,7 +44,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { useCharts } from "@/stores/useCharts";
+// import { useCharts } from "@/stores/useCharts";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 const AnnotationTitle = {
@@ -238,7 +238,7 @@ function DroppableGroup({
     const [editName, setEditName] = useState(group.name);
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
     
-    const { clearGridPositions, setGridPositions } = useCharts();
+    // const { clearGridPositions, setGridPositions } = useCharts();
     const { setActiveCompletions } = useLensWorkspace();
 
     const { setNodeRef, isOver } = useDroppable({

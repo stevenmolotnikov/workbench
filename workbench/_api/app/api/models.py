@@ -78,18 +78,9 @@ async def process_execute_selected_background(
             }
         )
 
-        try:
-            values, indices = await asyncio.to_thread(
-                _execute_selected, state, execute_request
-            )
-        except ConnectionError:
-            await send_stream.send(
-                {
-                    "type": "error",
-                    "message": "NDIF connection error",
-                }
-            )
-            return
+        values, indices = await asyncio.to_thread(
+            _execute_selected, state, execute_request
+        )
 
         idxs = [token.idx for token in execute_request.tokens]
         results = {}
@@ -136,18 +127,9 @@ async def process_execute_pair_background(
             }
         )
 
-        try:
-            raw_values, raw_indices = await asyncio.to_thread(
-                _execute_pair, state, execute_request
-            )
-        except ConnectionError:
-            await send_stream.send(
-                {
-                    "type": "error",
-                    "message": "NDIF connection error",
-                }
-            )
-            return
+        raw_values, raw_indices = await asyncio.to_thread(
+            _execute_pair, state, execute_request
+        )
 
         def round_results(values, indices):
             # Round values to 2 decimal places
@@ -192,14 +174,6 @@ async def get_execute_selected(
             execute_request, request.app.state.m, send_stream
         )
     )
-
-    # Return immediately with job info
-    return {
-        "job_id": execute_request.job_id,
-        "status": "started",
-        "message": "Computation started",
-    }
-
 
 @router.get("/listen-execute-selected/{job_id}")
 async def listen_execute_selected(job_id: str, request: Request):
@@ -274,13 +248,6 @@ async def get_execute_pair(
             execute_request, request.app.state.m, send_stream
         )
     )
-
-    # Return immediately with job info
-    return {
-        "job_id": execute_request.job_id,
-        "status": "started",
-        "message": "Pair computation started",
-    }
 
 
 @router.get("/listen-execute-pair/{job_id}")

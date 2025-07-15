@@ -72,7 +72,7 @@ class GridLensResponse(BaseModel):
 router = APIRouter()
 
 
-def logit_lens_grid(model, prompt, send_stream: MemoryObjectSendStream):
+def logit_lens_grid(model, prompt):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
@@ -359,16 +359,12 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     # Store the receive stream for later retrieval
     job_data[lens_request.job_id] = receive_stream
 
-    print("starting grid lens")
-
     # Start background task without waiting
     asyncio.create_task(
         process_grid_lens_background(
             lens_request, request.app.state.m, send_stream
         )
     )
-
-    print("grid lens started")
 
 @router.get("/listen-grid/{job_id}")
 async def listen_grid_lens(job_id: str, request: Request):
