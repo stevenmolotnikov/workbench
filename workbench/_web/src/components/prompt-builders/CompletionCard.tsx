@@ -17,6 +17,8 @@ import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 
+import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
+
 export function CompletionCard({ index }: { index: number }) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
@@ -36,6 +38,8 @@ export function CompletionCard({ index }: { index: number }) {
     const { handleClick, handleTextInput } = useTutorialManager();
     const { tokenizeOnEnter } =
         useLensWorkspace();
+
+    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
 
     const [completion, setCompletion] = useState<LensCompletion>({
         id: "",
@@ -89,7 +93,7 @@ export function CompletionCard({ index }: { index: number }) {
                 });
 
                 setLoadingPredictions(true);
-                await runPredictionsWithCompletion(completion);
+                await runPredictions();
                 setLoadingPredictions(false);
             }
 
@@ -105,9 +109,7 @@ export function CompletionCard({ index }: { index: number }) {
     const highlightedTokens = tokenSelection.highlightedTokens;
 
     const updateTokens = () => {
-        const existingIndices = new Set(compl.tokens.map((t) => t.idx));
-
-        console.log(existingIndices);
+        const existingIndices = new Set(completion.tokens.map((t) => t.idx));
 
         // Create new tokens only for indices that don't already exist
         const newTokens = highlightedTokens
@@ -118,22 +120,14 @@ export function CompletionCard({ index }: { index: number }) {
                 target_text: "",
             }));
 
-        // Combine existing tokens with new ones
-        const updatedTokens = [...compl.tokens, ...newTokens];
-
-        handleUpdateCompletion(compl.id, {
-            tokens: updatedTokens,
+        setCompletion({
+            ...completion,
+            tokens: [...completion.tokens, ...newTokens],
         });
-
-        // Return the updated completion
-        const { completions } = useLensWorkspace.getState();
-        const updatedCompl = completions.find((c: LensCompletion) => c.id === compl.id);
-
-        return updatedCompl;
     };
 
     const runPredictions = async () => {
-        const updatedCompl = updateTokens();
+        updateTokens();
 
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
@@ -142,13 +136,12 @@ export function CompletionCard({ index }: { index: number }) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: updatedCompl,
-                    model: updatedCompl.model,
-                    tokens: updatedCompl.tokens,
+                    completion: completion,
+                    model: completion.model,
+                    tokens: completion.tokens,
                 }),
             });
 
-            console.log(updatedCompl);
             const data: TokenPredictions = await response.json();
 
             setPredictions(data);
@@ -266,6 +259,7 @@ export function CompletionCard({ index }: { index: number }) {
                         compl={completion}
                         selectedIdx={selectedIdx}
                         onRevise={() => setIsRevising(true)}
+                        setCompletion={setCompletion}
                         onClear={() => {
                             setShowPredictions(false);
                             setIsRevising(false);

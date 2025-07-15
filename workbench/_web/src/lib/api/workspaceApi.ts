@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createWorkspace } from "@/lib/api";
+import { setWorkspaceData } from "@/lib/queries/chartQueries";
+import { WorkspaceData } from "@/types/workspace";
 
 /*************
  * Mutations *
@@ -25,6 +27,23 @@ export const useCreateWorkspace = () => {
         },
         onError: (error) => {
             console.error("Error creating workspace:", error);
+        },
+    });
+};
+
+export const useUpdateChartWorkspaceData = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ chartId, data }: { chartId: string; data: WorkspaceData[keyof WorkspaceData] }) => {
+            await setWorkspaceData(chartId, data);
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+            console.log("Successfully updated workspace");
+        },
+        onError: (error) => {
+            console.error("Error updating workspace:", error);
         },
     });
 };

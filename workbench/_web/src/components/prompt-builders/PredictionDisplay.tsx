@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { tokenizeText, decodeTokenIds } from "@/actions/tokenize";
 import { Button } from "../ui/button";
 import { Plus, Edit2, X, Keyboard, Loader2 } from "lucide-react";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { toast } from "sonner"
 
 interface TokenBadge {
@@ -231,6 +230,7 @@ interface PredictionDisplayProps {
     predictions: TokenPredictions;
     compl: LensCompletion;
     selectedIdx: number;
+    setCompletion: (completion: LensCompletion) => void;
     onRevise?: () => void;
     onClear?: () => void;
     onRunPredictions?: () => Promise<void>;
@@ -242,7 +242,8 @@ interface PredictionDisplayProps {
 export const PredictionDisplay = ({ 
     predictions, 
     compl, 
-    selectedIdx, 
+    selectedIdx,    
+    setCompletion,
     onRevise, 
     onClear, 
     onRunPredictions,
@@ -253,20 +254,21 @@ export const PredictionDisplay = ({
     const [tempTokenText, setTempTokenText] = useState<string[]>([]);
 
     const updateToken = (idx: number, targetId: number, targetText: string) => {
-        const { handleUpdateCompletion } = useLensWorkspace.getState();
+
 
         const currentTokens = compl.tokens || [];
-        handleUpdateCompletion(compl.id, {
+        setCompletion({
+            ...compl,
             tokens: currentTokens.map((t) =>
                 t.idx === idx ? { ...t, target_id: targetId, target_text: targetText } : t
-            ),
+            )
         });
     };
 
     const clearToken = (tokenIdx: number) => {
-        const { handleUpdateCompletion } = useLensWorkspace.getState();
         const currentTokens = compl.tokens || [];
-        handleUpdateCompletion(compl.id, {
+        setCompletion({
+            ...compl,
             tokens: currentTokens.map((t) =>
                 t.idx === tokenIdx ? { ...t, target_id: -1, target_text: "" } : t
             ),
