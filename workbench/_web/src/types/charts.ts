@@ -1,6 +1,5 @@
 import type { WorkspaceAnnotation } from "@/types/annotations";
-import type { LensCompletion } from "./lens";
-import type { PatchingCompletion } from "./patching";
+import type { WorkspaceData } from "@/types/workspace";
 
 export interface HeatmapData {
     data: number[][];
@@ -33,8 +32,13 @@ export interface LineGraphData {
     lineData: LineData;
 }
 
+export type ChartData = {
+    line: LineGraphData;
+    heatmap: HeatmapData;
+}
+
 export interface Chart {
-    data: LineGraphData | HeatmapData;
+    chartData: ChartData[keyof ChartData];
     annotations: WorkspaceAnnotation[];
-    config: LensCompletion | PatchingCompletion;
+    workspaceData: WorkspaceData[keyof WorkspaceData];
 }

@@ -1,57 +1,76 @@
 from collections import defaultdict
 import asyncio
+from typing import Dict
+import anyio
 
 from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 import torch as t
-import nnsight as ns
+# import nnsight as ns
 from pydantic import BaseModel
 
-from ..utils import send_update
+from ..utils import use_send_stream, format_sse_event, stream_from_memory_object
 from ..data_models import Completion, NDIFRequest, Token
 
 
+# Global storage for job streams and tasks
+job_data: Dict[str, tuple[anyio.abc.Task, anyio.MemoryObjectSendStream]] = {}
+
 ##### TARGETED LENS REQUEST SCHEMA #####
+
 
 class TargetedLensCompletion(Completion):
     name: str
     tokens: list[Token]
     model: str
 
+
 class TargetedLensRequest(NDIFRequest):
     completions: list[TargetedLensCompletion]
 
+
 ##### TARGETED LENS RESPONSE SCHEMA #####
+
 
 class Point(BaseModel):
     name: str
     prob: float
 
+
 class LayerResults(BaseModel):
     layer: int
     points: list[Point]
 
+
 class LensMetadata(BaseModel):
     maxLayer: int
+
 
 class LensResponse(BaseModel):
     data: list[LayerResults]
     metadata: LensMetadata
 
+
 ##### GRID LENS REQUEST SCHEMA #####
+
 
 class GridLensCompletion(Completion):
     model: str
 
+
 class GridLensRequest(NDIFRequest):
     completion: GridLensCompletion
 
+
 ##### GRID LENS RESPONSE SCHEMA #####
+
 
 class GridLensResponse(BaseModel):
     id: str
     input_strs: list[str]
     probs: list[list[float]]
     pred_strs: list[list[str]]
+
 
 router = APIRouter()
 
@@ -181,7 +200,8 @@ def postprocess(results):
         for idx, prob, id_str in zip(target_idxs, target_probs, target_id_strs):
             processed_results[layer_idx].append(
                 {
-                    "name": result["name"] + f" - (\"{prompt_id_strs[idx]}\" → \"{id_str}\")",
+                    "name": result["name"]
+                    + f' - ("{prompt_id_strs[idx]}" → "{id_str}")',
                     "prob": round(prob, 2),
                 }
             )
@@ -194,62 +214,198 @@ def postprocess(results):
     return layer_results
 
 
-@router.post("/targeted-lens")
-async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
-    state = request.app.state.m
+async def process_targeted_lens_background(
+    lens_request: TargetedLensRequest,
+    state,
+    send_stream: anyio.MemoryObjectSendStream,
+):
+    """Background task to process targeted lens computation"""
+    async with use_send_stream(send_stream):
+        # Send status update
+        await send_stream.send(
+            {
+                "type": "status",
+                "message": "Starting lens computation...",
+            }
+        )
 
-    grouped_requests = preprocess(lens_request)
+        grouped_requests = preprocess(lens_request)
 
-    # Compute logit lens for each model
-    results = []
-    for model_name, model_requests in grouped_requests.items():
-        model = state.get_model(model_name)
+        # Process each model
+        all_results = []
+        for model_name, model_requests in grouped_requests.items():
+            model = state.get_model(model_name)
 
-        try:
-            # Run blocking operation in thread pool
+            # Run computation in thread pool
             model_results = await asyncio.to_thread(
                 logit_lens_targeted, model, model_requests, lens_request.job_id
             )
+            all_results.extend(model_results)
 
-        except ConnectionError:
-            await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
-            return LensResponse(
-                **{"data": [], "metadata": {"maxLayer": 0}}
-            )
+        # Process results
+        results = postprocess(all_results)
 
-        results.extend(model_results)
+        # Send final result
+        await send_stream.send(
+            {
+                "type": "result",
+                "data": results,
+                "metadata": {"maxLayer": len(results) - 1},
+            }
+        )
 
-    results = postprocess(results)
-
-    return LensResponse(
-        **{"data": results, "metadata": {"maxLayer": len(results) - 1}}
-    )
+        job_data.pop(lens_request.job_id, None)
 
 
-@router.post("/grid-lens")
-async def grid_lens(lens_request: GridLensRequest, request: Request):
-    state = request.app.state.m
+async def process_grid_lens_background(
+    lens_request: GridLensRequest,
+    state,
+    send_stream: anyio.MemoryObjectSendStream,
+):
+    """Background task to process grid lens computation"""
+    async with use_send_stream(send_stream):
+        # Send status update
+        await send_stream.send(
+            {
+                "type": "status",
+                "message": "Starting grid lens computation...",
+            }
+        )
 
-    model = state.get_model(lens_request.completion.model)
-    tok = model.tokenizer
-    prompt = lens_request.completion.prompt
+        model = state.get_model(lens_request.completion.model)
+        tok = model.tokenizer
+        prompt = lens_request.completion.prompt
 
-    try:
-        # Run blocking operation in thread pool
+        # Run computation in thread pool
         pred_ids, probs, input_strs = await asyncio.to_thread(
             logit_lens_grid, model, prompt, lens_request.job_id
         )
-    except ConnectionError:
-        await send_update(lens_request.callback_url, {"status": "error", "message": "NDIF connection error"})
-        return GridLensResponse(
-            **{"data": [], "metadata": {"maxLayer": 0}}
+
+        pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
+
+        # Send final result
+        await send_stream.send(
+            {
+                "type": "result",
+                "data": {
+                    "id": lens_request.completion.id,
+                    "input_strs": input_strs,
+                    "probs": probs,
+                    "pred_strs": pred_strs,
+                },
+            }
         )
 
-    pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
+        job_data.pop(lens_request.job_id, None)
 
-    return GridLensResponse(
-        id=lens_request.completion.id,
-        input_strs=input_strs,
-        probs=probs,
-        pred_strs=pred_strs,
+
+@router.post("/get-line")
+async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
+    """Start targeted lens computation as background task"""
+    # Create memory object stream
+    send_stream, receive_stream = anyio.create_memory_object_stream()
+
+    # Start background task with send stream
+    task = anyio.create_task(
+        process_targeted_lens_background(
+            lens_request, request.app.state.m, send_stream
+        )
+    )
+    job_data[lens_request.job_id] = (task, receive_stream)
+
+    # Return immediately with job info
+    return {
+        "job_id": lens_request.job_id,
+        "status": "started",
+        "message": "Lens computation started",
+    }
+
+
+@router.get("/listen-line/{job_id}")
+async def listen_targeted_lens(job_id: str, request: Request):
+    """Listen for targeted lens results via SSE using MemoryObjectStream"""
+    _, receive_stream = job_data.get(job_id)
+
+    if not receive_stream:
+        # Return error if job not found
+        async def error_stream():
+            yield format_sse_event(
+                {"type": "error", "message": "Job not found"}, "error"
+            )
+
+        return StreamingResponse(
+            error_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+            },
+        )
+
+    return StreamingResponse(
+        stream_from_memory_object(receive_stream),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control",
+        },
+    )
+
+
+@router.post("/get-grid")
+async def grid_lens(lens_request: GridLensRequest, request: Request):
+    """Start grid lens computation as background task"""
+    # Create memory object stream
+    send_stream, receive_stream = anyio.create_memory_object_stream()
+
+    # Start background task with send stream
+    task = anyio.create_task(
+        process_grid_lens_background(
+            lens_request, request.app.state.m, send_stream
+        )
+    )
+    job_data[lens_request.job_id] = (task, receive_stream)
+
+    # Return immediately with job info
+    return {
+        "job_id": lens_request.job_id,
+        "status": "started",
+        "message": "Grid lens computation started",
+    }
+
+
+@router.get("/listen-grid/{job_id}")
+async def listen_grid_lens(job_id: str, request: Request):
+    """Listen for grid lens results via SSE using MemoryObjectStream"""
+    _, receive_stream = job_data.get(job_id)
+
+    if not receive_stream:
+        # Return error if job not found
+        async def error_stream():
+            yield format_sse_event(
+                {"type": "error", "message": "Job not found"}, "error"
+            )
+
+        return StreamingResponse(
+            error_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "Access-Control-Allow-Origin": "*",
+            },
+        )
+
+    return StreamingResponse(
+        stream_from_memory_object(receive_stream),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control",
+        },
     )

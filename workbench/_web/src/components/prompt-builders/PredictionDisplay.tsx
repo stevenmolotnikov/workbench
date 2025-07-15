@@ -322,7 +322,7 @@ export const PredictionDisplay = ({
                             size="icon"
                             onClick={handleRunPredictions}
                             disabled={loadingPredictions || highlightedTokensCount === 0}
-                            className="text-xs h-7"
+                            className="text-xs"
                         >
                             {loadingPredictions ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -336,7 +336,7 @@ export const PredictionDisplay = ({
                             variant="outline"
                             size="icon"
                             onClick={onRevise}
-                            className="text-xs h-7 w-7"
+                            className="text-xs"
                         >
                             <Edit2 className="w-3 h-3" />
                         </Button>
@@ -346,7 +346,7 @@ export const PredictionDisplay = ({
                             variant="outline"
                             size="icon"
                             onClick={onClear}
-                            className="text-xs h-7 w-7"
+                            className="text-xs"
                         >
                             <X className="w-3 h-3" />
                         </Button>

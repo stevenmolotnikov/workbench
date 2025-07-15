@@ -8,6 +8,8 @@ import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
+import { useStatusUpdates } from "@/hooks/useStatusUpdates";
+import type { LensCompletion } from "@/types/lens";
 
 import * as React from "react";
 
@@ -25,12 +27,78 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
         handleClick("#new-completion");
     }
 
-    function addChartToAllCompletions(chartMode: number) {
-        sectionCompletions.forEach(compl => {
-            if (compl.chartMode === undefined) {
-                handleUpdateCompletion(compl.id, { chartMode });
-            }
-        });
+    async function createLineChart(completion: LensCompletion) {
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = `chart-${completion.id}-${Date.now()}`;
+        
+        startStatusUpdates(jobId);
+
+        try {
+            const response = await fetch("/api/lens-line", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    completions: [completion],
+                    job_id: jobId 
+                }),
+            });
+
+            if (!response.ok) throw new Error(response.statusText);
+            const data = await response.json();
+            
+            // Update completion with chart mode
+            handleUpdateCompletion(completion.id, { chartMode: 0 });
+            
+            return data;
+        } catch (error) {
+            console.error("Error creating line chart:", error);
+            throw error;
+        } finally {
+            stopStatusUpdates();
+        }
+    }
+
+    async function createHeatmap(completion: LensCompletion) {
+        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
+        const jobId = `chart-${completion.id}-${Date.now()}`;
+        
+        startStatusUpdates(jobId);
+
+        try {
+            const response = await fetch("/api/lens-grid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    completion: completion,
+                    job_id: jobId,
+                }),
+            });
+
+            if (!response.ok) throw new Error(response.statusText);
+            const data = await response.json();
+            
+            // Update completion with chart mode
+            handleUpdateCompletion(completion.id, { chartMode: 1 });
+            
+            return data;
+        } catch (error) {
+            console.error("Error creating heatmap:", error);
+            throw error;
+        } finally {
+            stopStatusUpdates();
+        }
+    }
+
+    async function addChartToAllCompletions(chartMode: number) {
+        const chartFunction = chartMode === 0 ? createLineChart : createHeatmap;
+        
+        // Process completions that don't already have a chart
+        const completionsToProcess = sectionCompletions.filter(compl => compl.chartMode === undefined);
+        
+        // Create charts for all completions in parallel
+        await Promise.all(
+            completionsToProcess.map(compl => chartFunction(compl))
+        );
     }
 
     return (
@@ -41,7 +109,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
                 <div className="flex items-center gap-2">
                     <TooltipButton
                         size="icon"
-                        onClick={() => addChartToAllCompletions(0)}
+                        onClick={async () => await addChartToAllCompletions(0)}
                         disabled={sectionCompletions.length === 0}
                         tooltip="Add line charts to all completions"
                     >
@@ -50,7 +118,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
 
                     <TooltipButton
                         size="icon"
-                        onClick={() => addChartToAllCompletions(1)}
+                        onClick={async () => await addChartToAllCompletions(1)}
                         disabled={sectionCompletions.length === 0}
                         tooltip="Add grid charts to all completions"
                     >

@@ -1,4 +1,6 @@
 import { Chart } from "./charts";
+import { LensWorkspace } from "./lens";
+import { PatchingWorkspace } from "./patching";
 
 export type Layout = 0 | 1 | 2 | 3;
 
@@ -24,6 +26,11 @@ export interface ChartMode {
     icon: React.ElementType;
     component: React.ComponentType<{ index: number }>;
 }
+
+export type WorkspaceData = {
+    lens: LensWorkspace;
+    patching: PatchingWorkspace;
+};
 
 export interface Workspace {
     id?: string;

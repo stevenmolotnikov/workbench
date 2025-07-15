@@ -8,8 +8,12 @@ const config = {
     
     // API endpoints
     endpoints: {
-        targetedLens: '/api/targeted-lens',
-        gridLens: '/api/grid-lens',
+        getLensLine: '/api/lens/get-line',
+        listenLensLine: '/api/lens/listen-line',
+
+        getLensGrid: '/api/lens/get-grid',
+        listenLensGrid: '/api/lens/listen-grid',
+
         models: '/models',
         patch: '/api/patch',
         execute: '/api/execute',

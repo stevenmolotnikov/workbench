@@ -1,5 +1,6 @@
-import { boolean, integer, jsonb, pgTable, serial, text, varchar, uuid } from "drizzle-orm/pg-core";
-
+import { boolean, jsonb, pgTable, text, varchar, uuid } from "drizzle-orm/pg-core";
+import type { ChartData } from "@/types/charts";
+import type { WorkspaceData } from "@/types/workspace";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -21,9 +22,14 @@ export const chartTypes = ["line", "heatmap"] as const;
 export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id),
-    workspaceType: varchar("workspace", { enum: collectionTypes, length: 32 }),
-    chartType: varchar("chart", { enum: chartTypes, length: 32 }),
-    data: jsonb("data"),
+
+    // Data used to generate the chart
+    workspaceType: varchar("workspace_type", { enum: collectionTypes, length: 32 }),
+    workspaceData: jsonb("workspaceData").$type<WorkspaceData[keyof WorkspaceData]>(),
+
+    // Data used to display the chart
+    chartType: varchar("chart_type", { enum: chartTypes, length: 32 }),
+    chartData: jsonb("chartData").$type<ChartData[keyof ChartData]>(),
 });
 
 export const annotations = pgTable("annotations", {

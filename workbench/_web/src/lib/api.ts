@@ -5,8 +5,7 @@ import { workspaces, charts, users } from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import { verifyToken, type SessionPayload } from "./session";
+import { getAuthenticatedUser, withAuth, type User } from "./auth-wrapper";
 import type { Workspace as WorkspaceType } from "../types/workspace";
 import type { LensCompletion } from "../types/lens";
 import type { PatchingCompletion } from "../types/patching";
@@ -15,39 +14,7 @@ import type { PatchingCompletion } from "../types/patching";
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 export type Chart = typeof charts.$inferSelect;
-export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
-// Helper to get authenticated user
-async function getAuthenticatedUser(): Promise<User | null> {
-  try {
-    // Get the session token from cookies
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session-token')?.value;
-    
-    if (!sessionToken) {
-      return null;
-    }
-    
-    // Verify the token
-    const session = verifyToken(sessionToken);
-    if (!session) {
-      return null;
-    }
-    
-    // Get the user from the database
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.id))
-      .limit(1);
-    
-    return user || null;
-  } catch (error) {
-    console.error("Error getting authenticated user:", error);
-    return null;
-  }
-}
 
 // Account creation function
 export async function createAccount(

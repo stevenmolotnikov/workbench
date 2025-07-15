@@ -35,6 +35,8 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
     const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
     const [isRevising, setIsRevising] = useState<boolean>(false);
 
+    const [showTokenArea, setShowTokenArea] = useState<boolean>(false);
+
     // Hooks
     const { handleClick, handleTextInput } = useTutorialManager();
     const { handleUpdateCompletion, handleDeleteCompletion, tokenizeOnEnter } =
@@ -176,6 +178,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
             const data: TokenPredictions = await response.json();
 
             setPredictions(data);
+            setShowTokenArea(true);
             setShowPredictions(true);
         } catch (error) {
             console.error("Error sending request:", error);
@@ -216,6 +219,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
             setPredictions(data);
             setShowPredictions(true);
+            setShowTokenArea(true);
         } catch (error) {
             console.error("Error sending request:", error);
         } finally {
@@ -292,7 +296,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
 
                 {/* Content */}
                 <div className="flex flex-col h-full gap-4">
-                    {!isRevising ? (
+                    {!showTokenArea ? (
                         <Textarea
                             value={compl.prompt}
                             onChange={handlePromptChange}
@@ -311,7 +315,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                         >
                             <TokenArea
                                 compl={compl}
-                                showPredictions={false}
+                                showPredictions={!isRevising}
                                 setSelectedIdx={setSelectedIdx}
                                 tokenData={tokenData}
                                 tokenSelection={tokenSelection}
@@ -333,6 +337,7 @@ export function CompletionCard({ index, compl }: CompletionCardProps) {
                             setPredictions(null);
                             tokenSelection.setHighlightedTokens([]);
                             setSelectedIdx(-1);
+                            setShowTokenArea(false);
                         }}
                         onRunPredictions={async () => {
                             setLoadingPredictions(true);

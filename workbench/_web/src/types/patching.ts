@@ -14,7 +14,7 @@ export interface Connection {
 
 type Edit = Connection;
 
-export interface PatchingCompletion { 
+export interface PatchingWorkspace { 
     edits: Edit[];
     model: string;
     source: Completion;
