@@ -22,6 +22,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getLensCharts } from "@/lib/queries/chartQueries";
+import { useCreateChart } from "@/lib/api/chartApi";
+
 
 export function DropdownMenuCheckboxes() {
     const { tokenizeOnEnter, graphOnTokenize, setTokenizeOnEnter, setGraphOnTokenize } = useLensWorkspace();
@@ -55,7 +60,24 @@ export function DropdownMenuCheckboxes() {
 
 export function PromptBuilder() {
     const { isLoading } = useModels();
-    const [sectionCount, setSectionCount] = useState<number>(0);
+
+    const { workspaceId } = useParams();
+    const createChartMutation = useCreateChart();
+
+    const { data: charts } = useQuery({
+        queryKey: ["lensCharts", workspaceId],
+        queryFn: () => getLensCharts(workspaceId as string),
+    });
+
+    const handleCreateChart = (position: number) => {
+
+        createChartMutation.mutate({
+            workspaceId: workspaceId as string,
+            position: position,
+            chartType: "line",
+            workspaceType: "lens",
+        });
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -68,12 +90,16 @@ export function PromptBuilder() {
 
                         <TooltipButton
                             size="icon"
-                            onClick={() => setSectionCount(sectionCount + 1)}
+                            onClick={() => handleCreateChart(charts?.length || 0)}
                             id="new-section"
-                            disabled={isLoading || sectionCount >= 5}
+                            disabled={isLoading || createChartMutation.isPending}
                             tooltip="Create a new section"
                         >
-                            <Plus size={16} />  
+                            {createChartMutation.isPending ? (
+                                <div className="animate-spin h-4 w-4 border border-current border-t-transparent rounded-full" />
+                            ) : (
+                                <Plus size={16} />
+                            )}
                         </TooltipButton>
 
                         <DropdownMenuCheckboxes />
@@ -81,10 +107,10 @@ export function PromptBuilder() {
                 </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-                {Array.from({ length: sectionCount }).map((_, index) => (
-                    <CompletionSection key={index} sectionIdx={index} />
+                {charts?.map((chart) => (
+                    <CompletionSection key={chart.id} sectionIdx={chart.position} />
                 ))}
-                {sectionCount === 0 && (
+                {charts?.length === 0 && (
                     <p className="text-center py-4">No active sections. Click + to create a section.</p>
                 )}
             </div>

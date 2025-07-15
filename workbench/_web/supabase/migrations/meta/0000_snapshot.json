@@ -1,5 +1,5 @@
 {
-  "id": "865edab1-a8f8-4f1c-b597-927218f17fbf",
+  "id": "f5dcbe4e-19ef-449e-b261-b52e7307d1eb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -65,7 +65,7 @@
           "name": "chart_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "group_id": {
           "name": "group_id",
@@ -73,11 +73,17 @@
           "primaryKey": false,
           "notNull": false
         },
-        "text": {
-          "name": "text",
-          "type": "text",
+        "type": {
+          "name": "type",
+          "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -132,23 +138,35 @@
           "primaryKey": false,
           "notNull": false
         },
-        "workspace": {
-          "name": "workspace",
+        "workspace_type": {
+          "name": "workspace_type",
           "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "chart": {
-          "name": "chart",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "data": {
-          "name": "data",
+        "workspaceData": {
+          "name": "workspaceData",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "chart_type": {
+          "name": "chart_type",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chartData": {
+          "name": "chartData",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -240,13 +258,13 @@
           "name": "name",
           "type": "varchar(256)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "public": {
           "name": "public",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": false
         }
       },

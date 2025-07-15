@@ -11,7 +11,6 @@ export interface LensCompletion extends Completion {
     model: string;
     prompt: string;
     tokens: TokenCompletion[];
-    sectionIdx: number;
 }
 
 export interface LensWorkspace {

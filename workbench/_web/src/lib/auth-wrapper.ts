@@ -40,7 +40,7 @@ export async function getAuthenticatedUser(): Promise<User | null> {
 
 type AuthenticatedFunction<T extends unknown[], R> = (user: User, ...args: T) => Promise<R>;
 
-export function withAuth<T extends unknown[], R>(
+export async function withAuth<T extends unknown[], R>(
   fn: AuthenticatedFunction<T, R>
 ) {
   return async (...args: T): Promise<R> => {
@@ -53,7 +53,7 @@ export function withAuth<T extends unknown[], R>(
 }
 
 // Convenience wrapper for API routes
-export function withApiAuth<T extends unknown[], R>(
+export async function withApiAuth<T extends unknown[], R>(
   fn: AuthenticatedFunction<T, R>
 ) {
   return withAuth(fn);

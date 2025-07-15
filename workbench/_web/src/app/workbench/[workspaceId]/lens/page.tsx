@@ -1,20 +1,40 @@
 "use client";
 
 import { useState, useCallback, useEffect, use } from "react";
+import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
 
+import { ChartDisplay } from "@/components/charts/ChartDisplay";
+
 import { ResizableLayout } from "@/components/Layout";
-import { WorkspaceHistory } from "@/components/WorkspaceHistory";
+// import { WorkspaceHistory } from "@/components/WorkspaceHistory";
 import { TutorialsSidebar } from "@/components/TutorialsSidebar";
 import { useTour } from "@reactour/tour";
 
-import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
-import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
-import { HeatmapProps } from "@/components/charts/primatives/Heatmap";
+import { ChartMode } from "@/types/workspace";
+import { ChartArea, Grid3X3 } from "lucide-react";
+import { LensLineGraph } from "@/components/charts/types";
+import { LensHeatmap } from "@/components/charts/types";
 
 import { getWorkspaceById } from "@/lib/api";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
+
+export const LogitLensModes: ChartMode[] = [
+    {
+        name: "Target Token",
+        description: "Probability of the target token per layer.",
+        icon: ChartArea,
+        component: LensLineGraph,
+    },
+    {
+        name: "Prediction Grid",
+        description: "Grid of the most probable token per layer.",
+        icon: Grid3X3,
+        component: LensHeatmap,
+    },
+]
+
 
 export default function Workbench({ params }: { params: Promise<{ workspace_id: string }> }) {
     const resolvedParams = use(params);
@@ -29,7 +49,7 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
         async function checkAccess() {
             try {
                 // Try to get the workspace
-                const workspace = await getWorkspaceById(resolvedParams.workspace_id);
+                const workspace = await getWorkspaceById(resolvedParams.workspaceId);
                 setHasAccess(true);
             } catch (error) {
                 console.error("Access check failed:", error);
@@ -37,7 +57,7 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
                 const user = await getCurrentUser();
                 if (!user) {
                     // Redirect to login with this workspace as the redirect target
-                    router.push(`/login?redirect=/workbench/${resolvedParams.workspace_id}`);
+                    router.push(`/login?redirect=/workbench/${resolvedParams.workspaceId}`);
                 } else {
                     // User is logged in but doesn't have access
                     setHasAccess(false);
@@ -48,7 +68,7 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
         }
 
         checkAccess();
-    }, [resolvedParams.workspace_id, router]);
+    }, [resolvedParams.workspaceId, router]);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -62,17 +82,6 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
     const toggleSidebar = useCallback(() => {
         setSidebarCollapsed(!sidebarCollapsed);
     }, [sidebarCollapsed]);
-
-    const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
-        setHeatmapData(data);
-    }, []);
-
-    const handleSetPatchingLoading = useCallback((loading: boolean) => {
-        setPatchingLoading(loading);
-    }, []);
-
-    const [heatmapData, setHeatmapData] = useState<HeatmapProps | null>(null);
-    const [patchingLoading, setPatchingLoading] = useState(false);
 
     const [workbenchMode, setWorkbenchMode] = useState<"lens" | "patch">("lens");
 
@@ -107,7 +116,10 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
                 {tutorialsOpen ? (
                     <TutorialsSidebar onClose={closeTutorials} />
                 ) : sidebarCollapsed ? null : (
-                    <WorkspaceHistory />
+                    // <WorkspaceHistory />
+                    <div>
+                        <h1>Workspace History</h1>
+                    </div>
                 )}
             </div>
 
@@ -121,21 +133,13 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
                     toggleTutorials={toggleTutorials}
                     sidebarCollapsed={sidebarCollapsed}
                     toggleSidebar={toggleSidebar}
-                    workspaceId={resolvedParams.workspace_id}
+                    workspaceId={resolvedParams.workspaceId}
                 />
 
                 <ResizableLayout
-                    workbench={<PatchingWorkbench setHeatmapData={handleSetHeatmapData} setPatchingLoading={handleSetPatchingLoading} />}
-                    charts={
-                        <div className="h-full w-full bg-card p-4">
-                            <div className="relative h-full w-full">
-                                <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
-                            </div>
-                        </div>
-                    }
+                    workbench={<PromptBuilder />}
+                    charts={<ChartDisplay />}
                 />
-
-
             </div>
         </div>
     );

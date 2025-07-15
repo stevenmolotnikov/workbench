@@ -13,30 +13,30 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createWorkspace } from "@/lib/api";
+import { useCreateWorkspace } from "@/lib/api/workspaceApi";
 import { useRouter } from "next/navigation";
 
 export function CreateWorkspaceDialog() {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const createWorkspaceMutation = useCreateWorkspace();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim()) return;
 
-        setIsLoading(true);
         try {
-            const newWorkspace = await createWorkspace(name.trim(), false);
+            const newWorkspace = await createWorkspaceMutation.mutateAsync({
+                name: name.trim(),
+                public: false
+            });
             setOpen(false);
             setName("");
             router.push(`/workbench/${newWorkspace.id}`);
         } catch (error) {
             console.error("Failed to create workspace:", error);
             // You might want to show a toast notification here
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -61,33 +61,34 @@ export function CreateWorkspaceDialog() {
                         Create a new workspace to start exploring your model's behavior. You can add Logit Lens and Activation Patching collections after creation.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Workspace Name</Label>
-                            <Input
-                                id="name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="Enter workspace name..."
-                                required
-                            />
-                        </div>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">Workspace Name</Label>
+                        <Input
+                            id="name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter workspace name..."
+                            required
+                        />
                     </div>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                            disabled={isLoading}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={!name.trim() || isLoading}>
-                            {isLoading ? "Creating..." : "Create Workspace"}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </div>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        disabled={createWorkspaceMutation.isPending}
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleSubmit}
+                        disabled={!name.trim() || createWorkspaceMutation.isPending}
+                    >
+                        {createWorkspaceMutation.isPending ? "Creating..." : "Create Workspace"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

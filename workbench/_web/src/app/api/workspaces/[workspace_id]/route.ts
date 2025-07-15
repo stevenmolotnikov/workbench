@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const workspace = await getWorkspaceById(resolvedParams.workspace_id);
+    const workspace = await getWorkspaceById(resolvedParams.workspaceId);
     return NextResponse.json({ success: true, workspace });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to get workspace";
@@ -40,7 +40,7 @@ export async function PATCH(
     if (name !== undefined) updates.name = name;
     if (isPublic !== undefined) updates.public = isPublic;
 
-    const updatedWorkspace = await updateWorkspace(resolvedParams.workspace_id, updates);
+    const updatedWorkspace = await updateWorkspace(resolvedParams.workspaceId, updates);
     
     return NextResponse.json({ 
       success: true, 

@@ -3,7 +3,7 @@ import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useCharts } from "@/stores/useCharts";
 import { Button } from "@/components/ui/button";
 import { ChartMode } from "@/types/workspace";
-import { LogitLensModes } from "@/app/workbench/[workspace_id]/lens/page";
+import { LogitLensModes } from "@/app/workbench/[workspaceId]/lens/page";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import type { ChartData } from "@/stores/useCharts";

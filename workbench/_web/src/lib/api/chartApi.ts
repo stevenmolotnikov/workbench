@@ -1,9 +1,12 @@
 import config from "@/lib/config";
-import type { LineGraphData, LineData } from "@/types/charts";
+import type { LineGraphData, LineData, ChartData } from "@/types/charts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LensCompletion } from "@/types/lens";
-import { setChartData, setWorkspaceData, getWorkspaceData } from "@/lib/queries/chartQueries";
-import sseService from "@/app/api/sseProvider";
+import { LensCompletion, LensWorkspace } from "@/types/lens";
+import { setChartData, createChart } from "@/lib/queries/chartQueries";
+import sseService from "@/lib/sseProvider";
+import type { WorkspaceData } from "@/types/workspace";
+import { v4 as uuid } from "uuid";
+
 
 /*************
  * Mutations *
@@ -140,6 +143,48 @@ export const useLensGrid = () => {
     });
 }
 
+export const useCreateChart = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ 
+            workspaceId, 
+            position, 
+            chartType,
+            workspaceType,
+        }: { 
+            workspaceId: string; 
+            position: number; 
+            chartType: "line" | "heatmap";
+            workspaceType: "lens" | "patching";
+        }) => {
+            const newChart = {
+                id: uuid(),
+                chartData: null,
+                annotations: [],
+                workspaceData: null,
+                position
+            }
+            await createChart(
+                workspaceId,
+                newChart,
+                chartType,
+                workspaceType
+            );
+            return newChart;
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ 
+                queryKey: ["lensCharts", variables.workspaceId] 
+            });
+            console.log("Successfully created chart:", data.id);
+        },
+        onError: (error) => {
+            console.error("Error creating chart:", error);
+        },
+    });
+}
+
 /***********
  * Helpers *
  ***********/
@@ -234,48 +279,4 @@ function processHeatmapData(data: LensGridResponse) {
         xAxisLabel: "Tokens",
         xTickLabels: input_strs
     };
-}
-
-/***************************
- * Completion Generation *
- ***************************/
-
-export const useCreateCompletion = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({ prompt, model, chartId, sectionIdx }: { 
-            prompt: string; 
-            model: string; 
-            chartId: string;
-            sectionIdx: number;
-        }) => {
-            // Generate a new completion
-            const newCompletion: LensCompletion = {
-                id: `completion-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
-                name: `New Completion`,
-                model: model,
-                prompt: prompt || "",
-                tokens: [],
-                sectionIdx: sectionIdx
-            };
-
-            // Get current workspace data
-            const workspaceData = await getWorkspaceData(chartId) as { completions: LensCompletion[] };
-
-            // Add new completion
-            const updatedCompletions = [...(workspaceData?.completions || []), newCompletion];
-            await setWorkspaceData(chartId, { completions: updatedCompletions });
-
-            return newCompletion;
-        },
-        onSuccess: (data, variables) => {
-            // Invalidate queries to refresh data
-            queryClient.invalidateQueries({ queryKey: ['lensCharts'] });
-            console.log("Successfully created new completion");
-        },
-        onError: (error) => {
-            console.error("Error generating completion:", error);
-        },
-    });
 }

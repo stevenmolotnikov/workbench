@@ -13,8 +13,8 @@ export const users = pgTable("users", {
 export const workspaces = pgTable("workspaces", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id),
-    name: varchar("name", { length: 256 }),
-    public: boolean("public").default(false),
+    name: varchar("name", { length: 256 }).notNull(),
+    public: boolean("public").default(false).notNull(),
 });
 
 export const collectionTypes = ["lens", "patching"] as const;
@@ -26,11 +26,11 @@ export const charts = pgTable("charts", {
 
     // Data used to generate the chart
     workspaceType: varchar("workspace_type", { enum: collectionTypes, length: 32 }).notNull(),
-    workspaceData: jsonb("workspaceData").$type<WorkspaceData[keyof WorkspaceData]>().notNull(),
+    workspaceData: jsonb("workspaceData").$type<WorkspaceData[keyof WorkspaceData]>(),
 
     // Data used to display the chart
     chartType: varchar("chart_type", { enum: chartTypes, length: 32 }).notNull(),
-    chartData: jsonb("chartData").$type<ChartData[keyof ChartData]>().notNull(),
+    chartData: jsonb("chartData").$type<ChartData[keyof ChartData]>(),
     
     // Layout position in the grid
     position: integer("position").notNull(),

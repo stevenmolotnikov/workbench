@@ -1,14 +1,21 @@
+"use client";
+
 import { getWorkspacesWithCharts } from "@/lib/api";
 import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { ModelsDisplay } from "@/components/ModelsDisplay";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { useQuery } from "@tanstack/react-query";
 
 // Force dynamic rendering to avoid build-time database queries
 export const dynamic = 'force-dynamic';
 
-export default async function WorkbenchPage() {
-    const workspaces = await getWorkspacesWithCharts();
+export default function WorkbenchPage() {
+
+    const { data: workspaces } = useQuery({
+        queryKey: ["workspaces"],
+        queryFn: () => getWorkspacesWithCharts()
+    });
 
     return (
         <div className="p-6">
@@ -20,7 +27,7 @@ export default async function WorkbenchPage() {
                 <CreateWorkspaceDialog />
             </div>
             
-            {workspaces.length === 0 ? (
+            {!workspaces || workspaces.length === 0 ? (
                 <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No workspaces found</p>
                     <p className="text-sm text-muted-foreground/70">Create a new workspace to get started</p>
@@ -28,9 +35,6 @@ export default async function WorkbenchPage() {
             ) : (
                 <div className="grid gap-4">
                     {workspaces.map((workspace) => {
-                        const lensCharts = workspace.charts.filter(c => c.workspaceType === "lens");
-                        const patchingCharts = workspace.charts.filter(c => c.workspaceType === "patching");
-                        
                         return (
                             <Link
                                 key={workspace.id}
@@ -40,23 +44,6 @@ export default async function WorkbenchPage() {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <h3 className="font-semibold text-lg">{workspace.name}</h3>
-                                        <div className="flex gap-2 mt-1">
-                                            {lensCharts.length > 0 && (
-                                                <span className="inline-block px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
-                                                    {lensCharts.length} Logit Lens
-                                                </span>
-                                            )}
-                                            {patchingCharts.length > 0 && (
-                                                <span className="inline-block px-2 py-1 bg-secondary/10 text-secondary-foreground text-xs rounded-full">
-                                                    {patchingCharts.length} Patching
-                                                </span>
-                                            )}
-                                            {workspace.charts.length > 0 && (
-                                                <span className="inline-block px-2 py-1 bg-accent/10 text-accent-foreground text-xs rounded-full">
-                                                    {workspace.charts.length} Charts
-                                                </span>
-                                            )}
-                                        </div>
                                     </div>
                                     <div className="text-right">
                                         {workspace.public && (

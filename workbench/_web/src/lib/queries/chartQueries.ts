@@ -1,13 +1,14 @@
-import { Chart, ChartData } from "@/types/charts";
+"use server";
+
+import { Chart, ChartData, LineGraphData } from "@/types/charts";
 import { WorkspaceData } from "@/types/workspace";
 import { Annotation } from "@/types/annotations";
 import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
 import { charts, workspaces, annotations } from "@/db/schema";
-import { eq, inArray, and, SQL } from "drizzle-orm";
-import { chartTypes } from "@/db/schema";
+import { eq, inArray, and } from "drizzle-orm";
 
-const setWorkspaceData = withAuth(
+export const setWorkspaceData = await withAuth(
     async (
         user: User,
         chartId: string,
@@ -17,50 +18,143 @@ const setWorkspaceData = withAuth(
     }
 );
 
-const getWorkspaceData = withAuth(
-    async (user: User, chartId: string): Promise<WorkspaceData[keyof WorkspaceData]> => {
+export const getWorkspaceData = await withAuth(
+    async (user: User, chartId: string): Promise<WorkspaceData[keyof WorkspaceData] | null> => {
         const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
-        return chart?.workspaceData as WorkspaceData[keyof WorkspaceData];
+        return chart?.workspaceData as WorkspaceData[keyof WorkspaceData] | null;
     }
 );
 
-const setChartData = withAuth(
+export const setChartData = await withAuth(
     async (user: User, chartId: string, chartData: ChartData[keyof ChartData]): Promise<void> => {
         await db.update(charts).set({ chartData }).where(eq(charts.id, chartId));
     }
 );
 
-const getChartData = withAuth(
-    async (user: User, chartId: string): Promise<ChartData[keyof ChartData]> => {
+export const getChartData = await withAuth(
+    async (user: User, chartId: string): Promise<ChartData[keyof ChartData] | null> => {
         const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
-        return chart?.chartData as ChartData[keyof ChartData];
+        return chart?.chartData as ChartData[keyof ChartData] | null;
     }
 );
 
-const getCharts = withAuth(async (user: User, workspaceId: string, _clause?: SQL): Promise<Chart[]> => {
-    const chartsData = await db
-        .select().from(charts)
-        .where(
-            and(
-                eq(charts.workspaceId, workspaceId),
-                _clause
-            )
-        )
+export const getCharts = await withAuth(
+    async (user: User, workspaceId: string): Promise<Chart[]> => {
+        const chartsData = await db
+            .select()
+            .from(charts)
+            .where(eq(charts.workspaceId, workspaceId));
 
-    const annotationData = await db.select().from(annotations).where(inArray(annotations.chartId, chartsData.map(chart => chart.id)));
-    
-    return chartsData.map((chart) => {
+        const annotationData = await db
+            .select()
+            .from(annotations)
+            .where(
+                inArray(
+                    annotations.chartId,
+                    chartsData.map((chart) => chart.id)
+                )
+            );
+
+        return chartsData.map((chart) => {
+            return {
+                id: chart.id,
+                chartData: chart.chartData || null,
+                annotations: annotationData
+                    .filter((annotation) => annotation.chartId === chart.id)
+                    .map((annotation) => annotation.data as Annotation),
+                workspaceData: chart.workspaceData || null,
+                position: chart.position,
+            };
+        });
+    }
+);
+
+export const getLensCharts = await withAuth(
+    async (user: User, workspaceId: string): Promise<Chart[]> => {
+
+        const chartsData = await db
+            .select()
+            .from(charts)
+            .where(and(eq(charts.workspaceId, workspaceId), eq(charts.workspaceType, "lens")));
+
+        const annotationData = await db
+            .select()
+            .from(annotations)
+            .where(
+                inArray(
+                    annotations.chartId,
+                    chartsData.map((chart) => chart.id)
+                )
+            );
+
+        return chartsData.map((chart) => {
+            return {
+                id: chart.id,
+                chartData: chart.chartData || null,
+                annotations: annotationData
+                    .filter((annotation) => annotation.chartId === chart.id)
+                    .map((annotation) => annotation.data as Annotation),
+                workspaceData: chart.workspaceData || null,
+                position: chart.position,
+            };
+        });
+    }
+);
+
+export const getLensChartByPosition = await withAuth(
+    async (user: User, workspaceId: string, position: number): Promise<Chart> => {
+        const chartsData = await db
+            .select()
+            .from(charts)
+            .where(and(eq(charts.workspaceId, workspaceId), eq(charts.position, position)));
+
+        const annotationData = await db
+            .select()
+            .from(annotations)
+            .where(
+                inArray(
+                    annotations.chartId,
+                    chartsData.map((chart) => chart.id)
+                )
+            );
+
+        if (chartsData.length !== 1) {
+            throw new Error("Expected 1 chart, got " + chartsData.length);
+        }
+
+        const chart = chartsData[0];
+
         return {
-            chartData: chart.chartData,
+            id: chart.id,
+            chartData: chart.chartData || null,
             annotations: annotationData
-                .filter(annotation => annotation.chartId === chart.id)
-                .map(annotation => annotation.data as Annotation),
-            workspaceData: chart.workspaceData,
+                .filter((annotation) => annotation.chartId === chart.id)
+                .map((annotation) => annotation.data as Annotation),
+            workspaceData: chart.workspaceData || null,
             position: chart.position,
         };
-    });
-});
+    }
+);
 
+export const createChart = await withAuth(
+    async (
+        user: User,
+        workspaceId: string,
+        chart: Chart,
+        chartType: "line" | "heatmap",
+        workspaceType: "lens" | "patching"
+    ): Promise<void> => {
 
-
-export { setWorkspaceData, getWorkspaceData, setChartData, getChartData, getCharts };
+        await db
+            .insert(charts)
+            .values({
+                id: chart.id,
+                workspaceId,
+                workspaceType,
+                workspaceData: chart.workspaceData,
+                chartType,
+                chartData: chart.chartData,
+                position: chart.position,
+            });
+    }
+);

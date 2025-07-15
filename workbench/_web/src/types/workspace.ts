@@ -33,7 +33,8 @@ export type WorkspaceData = {
 };
 
 export interface Workspace {
-    id?: string;
+    id: string;
     name: string;
+    public: boolean;
     charts: Chart[];
 }

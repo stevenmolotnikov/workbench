@@ -39,8 +39,8 @@ export type ChartData = {
 
 export interface Chart {
     id: string;
-    chartData: ChartData[keyof ChartData];
+    chartData: ChartData[keyof ChartData] | null;
     annotations: Annotation[];
-    workspaceData: WorkspaceData[keyof WorkspaceData];
+    workspaceData: WorkspaceData[keyof WorkspaceData] | null;
     position: number;
 }

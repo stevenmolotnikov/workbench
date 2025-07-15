@@ -1,6 +1,7 @@
 import json
 import anyio
 import httpx
+from anyio.streams.memory import MemoryObjectSendStream, MemoryObjectReceiveStream
 from contextlib import asynccontextmanager
 
 async def send_update(callback_url: str, response_body: dict):
@@ -16,7 +17,7 @@ def format_sse_event(data: dict, event_type: str = "data") -> str:
 
 
 async def stream_from_memory_object(
-    receive_stream: anyio.MemoryObjectReceiveStream,
+    receive_stream: MemoryObjectReceiveStream,
 ):
     """Convert MemoryObjectStream to SSE format"""
     try:
@@ -34,7 +35,7 @@ async def stream_from_memory_object(
 
 
 @asynccontextmanager
-async def use_send_stream(send_stream: anyio.MemoryObjectSendStream):
+async def use_send_stream(send_stream: MemoryObjectSendStream):
     async with send_stream:
         try:
             yield send_stream

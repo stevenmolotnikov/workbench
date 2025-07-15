@@ -1,7 +1,9 @@
 from collections import defaultdict
 import asyncio
-from typing import Dict
+from typing import Dict, Any
 import anyio
+from anyio.streams.memory import MemoryObjectSendStream
+
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
@@ -14,7 +16,7 @@ from ..data_models import Completion, NDIFRequest, Token
 
 
 # Global storage for job streams and tasks
-job_data: Dict[str, tuple[anyio.abc.Task, anyio.MemoryObjectSendStream]] = {}
+job_data: Dict[str, tuple[Any, MemoryObjectSendStream]] = {}
 
 ##### TARGETED LENS REQUEST SCHEMA #####
 
@@ -217,7 +219,7 @@ def postprocess(results):
 async def process_targeted_lens_background(
     lens_request: TargetedLensRequest,
     state,
-    send_stream: anyio.MemoryObjectSendStream,
+    send_stream: MemoryObjectSendStream,
 ):
     """Background task to process targeted lens computation"""
     async with use_send_stream(send_stream):
@@ -260,7 +262,7 @@ async def process_targeted_lens_background(
 async def process_grid_lens_background(
     lens_request: GridLensRequest,
     state,
-    send_stream: anyio.MemoryObjectSendStream,
+    send_stream: MemoryObjectSendStream,
 ):
     """Background task to process grid lens computation"""
     async with use_send_stream(send_stream):
