@@ -17,9 +17,14 @@ import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 
-import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
+interface CompletionCardProps {
+    completion: LensCompletion;
+    chartId: string;
+    onCompletionUpdate: (completion: LensCompletion) => void;
+    index: number;
+}
 
-export function CompletionCard({ index }: { index: number }) {
+export function CompletionCard({ completion: initialCompletion, chartId, onCompletionUpdate, index }: CompletionCardProps) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(false);
@@ -39,15 +44,7 @@ export function CompletionCard({ index }: { index: number }) {
     const { tokenizeOnEnter } =
         useLensWorkspace();
 
-    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
-
-    const [completion, setCompletion] = useState<LensCompletion>({
-        id: "",
-        name: "",
-        model: "",
-        prompt: "",
-        tokens: [],
-    });
+    const [completion, setCompletion] = useState<LensCompletion>(initialCompletion);
 
     const textHasChanged = completion.prompt !== lastTokenizedText;
     const shouldEnableTokenize = completion.prompt && (!tokenData || textHasChanged);
@@ -87,13 +84,8 @@ export function CompletionCard({ index }: { index: number }) {
 
                 // Update highlighted tokens in token selection
                 tokenSelection.setHighlightedTokens([lastTokenIdx]);
-                setCompletion({
-                    ...completion,
-                    tokens: [{ idx: lastTokenIdx, target_id: -1, target_text: "" }],
-                });
-
                 setLoadingPredictions(true);
-                await runPredictions();
+                await runPredictions(true);
                 setLoadingPredictions(false);
             }
 
@@ -120,25 +112,31 @@ export function CompletionCard({ index }: { index: number }) {
                 target_text: "",
             }));
 
-        setCompletion({
+        return {
             ...completion,
             tokens: [...completion.tokens, ...newTokens],
-        });
+        }
     };
 
-    const runPredictions = async () => {
-        updateTokens();
+    const runPredictions = async (highlightLast: boolean) => {
+        const updatedCompletion = updateTokens();
+
+        if (highlightLast) {
+            updatedCompletion.tokens = [...updatedCompletion.tokens, { idx: updatedCompletion.tokens.length - 1, target_id: -1, target_text: "" }];
+        }
+
 
         try {
+            console.log(updatedCompletion);
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    completion: completion,
-                    model: completion.model,
-                    tokens: completion.tokens,
+                    completion: updatedCompletion,
+                    model: updatedCompletion.model,
+                    tokens: updatedCompletion.tokens,
                 }),
             });
 
@@ -147,6 +145,11 @@ export function CompletionCard({ index }: { index: number }) {
             setPredictions(data);
             setShowPredictions(true);
             setShowTokenArea(true);
+
+            setCompletion(updatedCompletion);
+
+            // Update the database after successful prediction
+            onCompletionUpdate(updatedCompletion);
         } catch (error) {
             console.error("Error sending request:", error);
         }
@@ -270,7 +273,7 @@ export function CompletionCard({ index }: { index: number }) {
                         }}
                         onRunPredictions={async () => {
                             setLoadingPredictions(true);
-                            await runPredictions();
+                            await runPredictions(false);
                             setLoadingPredictions(false);
                         }}
                         loadingPredictions={loadingPredictions}

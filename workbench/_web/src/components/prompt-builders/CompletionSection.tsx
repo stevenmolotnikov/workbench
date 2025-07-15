@@ -7,10 +7,11 @@ import { TooltipButton } from "@/components/ui/tooltip-button";
 import type { LensCompletion } from "@/types/lens";
 import { useLensLine, useLensGrid, useCreateChart } from "@/lib/api/chartApi";
 import { useCreateCompletion } from "@/lib/api/lensApi";
+import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
 
 import {useEffect} from "react";
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getLensChartByPosition } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
 
@@ -20,6 +21,8 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
     const lensGridMutation = useLensGrid();
     const createCompletionMutation = useCreateCompletion(); 
     const createChartMutation = useCreateChart();
+    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
+    const queryClient = useQueryClient();
     const { modelName } = useSelectedModel();
     const { workspaceId } = useParams();
 
@@ -127,7 +130,35 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
 
             <div className="flex-1 space-y-4">
                 {completions?.map((compl, index) => (
-                    <CompletionCard key={compl.id} index={index} />
+                    <CompletionCard 
+                        key={compl.id} 
+                        completion={compl}
+                        chartId={chart?.id || ""}
+                        index={index}
+                        onCompletionUpdate={async (updatedCompletion) => {
+                            if (!chart?.id) return;
+                            
+                            // Update local state optimistically
+                            const newCompletions = completions.map(c => 
+                                c.id === updatedCompletion.id ? updatedCompletion : c
+                            );
+                            
+                            // Update cache optimistically
+                            queryClient.setQueryData(
+                                ["lensCharts", workspaceId, sectionIdx],
+                                (oldData: any) => ({
+                                    ...oldData,
+                                    workspaceData: { completions: newCompletions }
+                                })
+                            );
+                            
+                            // Persist to database
+                            await updateChartWorkspaceDataMutation.mutateAsync({
+                                chartId: chart.id,
+                                data: { completions: newCompletions }
+                            });
+                        }}
+                    />
                 ))}
                 {(!completions || completions.length === 0) && (
                     <div className="border rounded border-dashed hover:border-primary transition-all duration-300 cursor-pointer" onClick={createCompletion}>

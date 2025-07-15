@@ -9,14 +9,14 @@ import { Loader2 } from "lucide-react";
 import type { ChartData } from "@/stores/useCharts";
 
 export function ChartDisplay() {
-    const { completions } = useLensWorkspace();
+    // const { completions } = useLensWorkspace();
     const { layout, setLayout } = useCharts();
     
     const containerRef = useRef<HTMLDivElement>(null);
     const [containerHeight, setContainerHeight] = useState(0);
 
     // Filter completions that have a chart mode set
-    const completionsWithCharts = completions.filter(c => c.chartMode !== undefined);
+    const completionsWithCharts = [].filter(c => c.chartMode !== undefined);
 
     useEffect(() => {
         const updateHeight = () => {
