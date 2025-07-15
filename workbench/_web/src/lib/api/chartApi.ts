@@ -8,10 +8,6 @@ import type { WorkspaceData } from "@/types/workspace";
 import { v4 as uuid } from "uuid";
 
 
-/*************
- * Mutations *
- *************/
-
 const generateJobId = () => {
     return `job-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 };
@@ -184,10 +180,6 @@ export const useCreateChart = () => {
         },
     });
 }
-
-/***********
- * Helpers *
- ***********/
 
 const defaultColors = [
     "hsl(var(--chart-1))",

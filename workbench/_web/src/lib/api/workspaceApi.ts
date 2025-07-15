@@ -3,10 +3,6 @@ import { createWorkspace } from "@/lib/api";
 import { setWorkspaceData } from "@/lib/queries/chartQueries";
 import { WorkspaceData } from "@/types/workspace";
 
-/*************
- * Mutations *
- *************/
-
 interface CreateWorkspaceParams {
     name: string;
     public?: boolean;

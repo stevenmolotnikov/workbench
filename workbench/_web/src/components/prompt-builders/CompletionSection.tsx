@@ -6,12 +6,9 @@ import { useSelectedModel } from "@/stores/useSelectedModel";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import type { LensCompletion } from "@/types/lens";
 import { useLensLine, useLensGrid, useCreateChart } from "@/lib/api/chartApi";
-import { useCreateCompletion } from "@/lib/api/lensApi";
-import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
+import { useCreateLensCompletion } from "@/lib/api/lensApi";
 
-import {useEffect} from "react";
-import * as React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getLensChartByPosition } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
 
@@ -19,10 +16,8 @@ import { useParams } from "next/navigation";
 export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
     const lensLineMutation = useLensLine();
     const lensGridMutation = useLensGrid();
-    const createCompletionMutation = useCreateCompletion(); 
+    const createLensCompletionMutation = useCreateLensCompletion(); 
     const createChartMutation = useCreateChart();
-    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
-    const queryClient = useQueryClient();
     const { modelName } = useSelectedModel();
     const { workspaceId } = useParams();
 
@@ -78,7 +73,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
         }
         
         try {
-            await createCompletionMutation.mutateAsync({
+            await createLensCompletionMutation.mutateAsync({
                 prompt: "",
                 model: modelName,
                 chartId: chart.id,
@@ -116,10 +111,10 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
                         size="icon"
                         onClick={createCompletion}
                         id="new-completion"
-                        disabled={completions.length >= 5 || createCompletionMutation.isPending}
+                        disabled={completions.length >= 5 || createLensCompletionMutation.isPending}
                         tooltip="Create a new completion"
                     >
-                        {createCompletionMutation.isPending ? (
+                        {createLensCompletionMutation.isPending ? (
                             <div className="animate-spin h-4 w-4 border border-current border-t-transparent rounded-full" />
                         ) : (
                             <Plus size={16} />
@@ -129,35 +124,11 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             </div>
 
             <div className="flex-1 space-y-4">
-                {completions?.map((compl, index) => (
+                {completions?.map((compl,) => (
                     <CompletionCard 
                         key={compl.id} 
                         completion={compl}
                         chartId={chart?.id || ""}
-                        index={index}
-                        onCompletionUpdate={async (updatedCompletion) => {
-                            if (!chart?.id) return;
-                            
-                            // Update local state optimistically
-                            const newCompletions = completions.map(c => 
-                                c.id === updatedCompletion.id ? updatedCompletion : c
-                            );
-                            
-                            // Update cache optimistically
-                            queryClient.setQueryData(
-                                ["lensCharts", workspaceId, sectionIdx],
-                                (oldData: any) => ({
-                                    ...oldData,
-                                    workspaceData: { completions: newCompletions }
-                                })
-                            );
-                            
-                            // Persist to database
-                            await updateChartWorkspaceDataMutation.mutateAsync({
-                                chartId: chart.id,
-                                data: { completions: newCompletions }
-                            });
-                        }}
                     />
                 ))}
                 {(!completions || completions.length === 0) && (

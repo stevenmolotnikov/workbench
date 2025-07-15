@@ -5,49 +5,59 @@ import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import type { TokenPredictions } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import config from "@/lib/config";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
-import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { tokenizeText } from "@/actions/tokenize";
 import type { Token } from "@/types/tokenizer";
-import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
+import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
+import { useDeleteLensCompletion } from "@/lib/api/lensApi";
+import { toast } from "sonner";
 
 interface CompletionCardProps {
     completion: LensCompletion;
     chartId: string;
-    onCompletionUpdate: (completion: LensCompletion) => void;
-    index: number;
 }
 
-export function CompletionCard({ completion: initialCompletion, chartId, onCompletionUpdate, index }: CompletionCardProps) {
+export function CompletionCard({ completion: initialCompletion, chartId }: CompletionCardProps) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
-    const [showPredictions, setShowPredictions] = useState<boolean>(false);
+    const [showPredictions, setShowPredictions] = useState<boolean>(
+        initialCompletion.tokens.length > 0
+    );
     const [loadingPredictions, setLoadingPredictions] = useState<boolean>(false);
-    const [selectedIdx, setSelectedIdx] = useState<number>(-1);
+    const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
     // Tokenization state
     const [tokenData, setTokenData] = useState<Token[] | null>(null);
     const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
-    const [tokenizerLoading, setTokenizerLoading] = useState<boolean>(false);
     const [isRevising, setIsRevising] = useState<boolean>(false);
+    const { tokenizeOnEnter } = useLensWorkspace();
 
-    const [showTokenArea, setShowTokenArea] = useState<boolean>(false);
-
-    // Hooks
-    const { handleClick, handleTextInput } = useTutorialManager();
-    const { tokenizeOnEnter } =
-        useLensWorkspace();
-
+    // Completion state
     const [completion, setCompletion] = useState<LensCompletion>(initialCompletion);
+
+    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
+    const deleteLensCompletionMutation = useDeleteLensCompletion();
 
     const textHasChanged = completion.prompt !== lastTokenizedText;
     const shouldEnableTokenize = completion.prompt && (!tokenData || textHasChanged);
+
+    useEffect(() => {
+        if (showPredictions && !tokenData) {
+            handleTokenize();
+        }
+    }, [showPredictions, tokenData]);
+
+    useEffect(() => {
+        if (showPredictions && !predictions && completion.tokens.length > 0) {
+            runPredictions();
+        }
+    }, [showPredictions, predictions]);
 
     const removeToken = (idxs: number[]) => {
         setCompletion({
@@ -55,6 +65,13 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
             tokens: completion.tokens.filter((t) => !idxs.includes(t.idx)),
         });
     };
+
+    const handleDeleteCompletion = async () => {
+        await deleteLensCompletionMutation.mutateAsync({
+            chartId: chartId,
+            completionId: completion.id,
+        });
+    }
 
     const tokenSelection = useTokenSelection({ compl: completion, removeToken });
 
@@ -65,69 +82,52 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
             return;
         }
 
-        if (showPredictions) {
-            setShowPredictions(false);
-        }
-
         try {
-            setTokenizerLoading(true);
             const tokens = await tokenizeText(completion.prompt, completion.model);
             setTokenData(tokens);
             setLastTokenizedText(completion.prompt);
 
-            // Auto-select last token and run predictions
-            if (tokens && tokens.length > 0) {
+            // Auto select and run for last token if first time tokenizing
+            if (tokens && !showPredictions) {
                 const lastTokenIdx = tokens.length - 1;
                 setSelectedIdx(lastTokenIdx);
-
-                console.log('HERE');
-
-                // Update highlighted tokens in token selection
                 tokenSelection.setHighlightedTokens([lastTokenIdx]);
-                setLoadingPredictions(true);
-                await runPredictions(true);
-                setLoadingPredictions(false);
+                await runPredictions(lastTokenIdx);
             }
 
         } catch (err) {
-            console.error("Error tokenizing text:", err);
-        } finally {
-            handleClick("#tokenize-button");
-            setTokenizerLoading(false);
+            toast.error("Error tokenizing text");
         }
     };
 
-
-    const highlightedTokens = tokenSelection.highlightedTokens;
-
-    const updateTokens = () => {
+    const updateCompletionTokens = (lastTokenIndex?: number) => {
         const existingIndices = new Set(completion.tokens.map((t) => t.idx));
 
         // Create new tokens only for indices that don't already exist
-        const newTokens = highlightedTokens
+        const newTokens = tokenSelection.highlightedTokens
             .filter((idx) => !existingIndices.has(idx))
             .map((idx) => ({
                 idx,
-                target_id: -1,
-                target_text: "",
             }));
 
-        return {
+        const updatedCompletion = {
             ...completion,
             tokens: [...completion.tokens, ...newTokens],
         }
-    };
 
-    const runPredictions = async (highlightLast: boolean) => {
-        const updatedCompletion = updateTokens();
-
-        if (highlightLast) {
-            updatedCompletion.tokens = [...updatedCompletion.tokens, { idx: updatedCompletion.tokens.length - 1, target_id: -1, target_text: "" }];
+        if (lastTokenIndex) {
+            updatedCompletion.tokens = [...updatedCompletion.tokens, { idx: lastTokenIndex }];
         }
 
+        return updatedCompletion;
+    }
+
+    const runPredictions = async (lastTokenIndex?: number) => {
+        setLoadingPredictions(true);
+
+        const updatedCompletion = updateCompletionTokens(lastTokenIndex);
 
         try {
-            console.log(updatedCompletion);
             const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
                 method: "POST",
                 headers: {
@@ -137,6 +137,7 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
                     completion: updatedCompletion,
                     model: updatedCompletion.model,
                     tokens: updatedCompletion.tokens,
+                    job_id: "LOCAL",
                 }),
             });
 
@@ -144,14 +145,16 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
 
             setPredictions(data);
             setShowPredictions(true);
-            setShowTokenArea(true);
-
             setCompletion(updatedCompletion);
 
-            // Update the database after successful prediction
-            onCompletionUpdate(updatedCompletion);
+            await updateChartWorkspaceDataMutation.mutateAsync({
+                chartId: chartId,
+                data: { completions: [updatedCompletion] }
+            });
         } catch (error) {
             console.error("Error sending request:", error);
+        } finally {
+            setLoadingPredictions(false);
         }
     };
 
@@ -160,7 +163,6 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
             ...completion,
             prompt: e.target.value,
         });
-        handleTextInput(e.target.value);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -172,6 +174,24 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
         }
     };
 
+    const handleClear = async () => {
+        setShowPredictions(false);
+        setIsRevising(false);
+        setPredictions(null);
+        tokenSelection.setHighlightedTokens([]);
+        setSelectedIdx(null);
+
+        const updatedCompletion = {
+            ...completion,
+            tokens: [],
+        }
+
+        await updateChartWorkspaceDataMutation.mutateAsync({
+            chartId: chartId,
+            data: { completions: [updatedCompletion] }
+        });
+    }
+
     return (
         <div className="group relative">
             {/* Delete button */}
@@ -179,7 +199,7 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
                 variant="ghost"
                 title="Delete completion"
                 size="icon"
-                onClick={() => { }} // HANDLE DELETE
+                onClick={handleDeleteCompletion}
                 className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
             >
                 <X
@@ -227,7 +247,7 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
 
                 {/* Content */}
                 <div className="flex flex-col h-full gap-4">
-                    {!showTokenArea ? (
+                    {!showPredictions ? (
                         <Textarea
                             value={completion.prompt}
                             onChange={handlePromptChange}
@@ -263,25 +283,14 @@ export function CompletionCard({ completion: initialCompletion, chartId, onCompl
                         selectedIdx={selectedIdx}
                         onRevise={() => setIsRevising(true)}
                         setCompletion={setCompletion}
-                        onClear={() => {
-                            setShowPredictions(false);
-                            setIsRevising(false);
-                            setPredictions(null);
-                            tokenSelection.setHighlightedTokens([]);
-                            setSelectedIdx(-1);
-                            setShowTokenArea(false);
-                        }}
-                        onRunPredictions={async () => {
-                            setLoadingPredictions(true);
-                            await runPredictions(false);
-                            setLoadingPredictions(false);
-                        }}
+                        onClear={handleClear}
+                        onRunPredictions={runPredictions}
                         loadingPredictions={loadingPredictions}
                         highlightedTokensCount={tokenSelection.highlightedTokens.length}
                         setIsRevising={setIsRevising}
                     />
                 </div>
             )}
-        </div>
+        </div>  
     );
 }

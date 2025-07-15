@@ -15,4 +15,4 @@ class NDIFRequest(BaseModel):
 
 class Token(BaseModel):
     idx: int
-    target_id: int
+    target_id: int = -1

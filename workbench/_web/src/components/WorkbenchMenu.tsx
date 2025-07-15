@@ -29,8 +29,6 @@ interface WorkbenchModeProps {
     workbenchMode: "lens" | "patch";
     setWorkbenchMode: (mode: "lens" | "patch") => void;
     toggleTutorials: () => void;
-    sidebarCollapsed?: boolean;
-    toggleSidebar?: () => void;
     workspaceId?: string;
 }
 
@@ -39,8 +37,6 @@ export function WorkbenchMenu({
     workbenchMode,
     setWorkbenchMode,
     toggleTutorials, 
-    sidebarCollapsed = false, 
-    toggleSidebar,
     workspaceId
 }: WorkbenchModeProps) {
     const { layout, setLayout, clearGridPositions  } = useCharts();
@@ -95,16 +91,6 @@ export function WorkbenchMenu({
     return (
         <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
-                { toggleSidebar && (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={toggleSidebar}
-                        className="h-8 w-8"
-                    >
-                        <PanelLeft className="h-4 w-4" />
-                    </Button>
-                )}
                 <Select value={workbenchMode} onValueChange={handleValueChange}>
                     <SelectTrigger className="w-24 h-8">
                         <SelectValue />

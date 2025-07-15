@@ -2,8 +2,8 @@ import type { Completion } from "@/types/workspace"
 
 export interface TokenCompletion {
     idx: number;
-    target_id: number;
-    target_text: string;
+    target_id?: number;
+    target_text?: string;
 }
 
 export interface LensCompletion extends Completion { 

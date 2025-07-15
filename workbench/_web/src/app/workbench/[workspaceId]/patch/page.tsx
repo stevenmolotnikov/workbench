@@ -15,11 +15,11 @@ import { HeatmapProps } from "@/components/charts/primatives/Heatmap";
 import { getWorkspaceById } from "@/lib/api";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
-export default function Workbench({ params }: { params: Promise<{ workspace_id: string }> }) {
+export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
     const { setIsOpen } = useTour();
@@ -59,10 +59,6 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
         setTutorialsOpen(false);
     }, [setIsOpen]);
 
-    const toggleSidebar = useCallback(() => {
-        setSidebarCollapsed(!sidebarCollapsed);
-    }, [sidebarCollapsed]);
-
     const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
         setHeatmapData(data);
     }, []);
@@ -101,17 +97,14 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
             <div
-                className={`border-r relative ${tutorialsOpen ? "w-[25vw]" : sidebarCollapsed ? "w-0" : "w-64"
-                    } transition-all duration-300 overflow-hidden`}
-            >
-                {tutorialsOpen ? (
-                    <TutorialsSidebar onClose={closeTutorials} />
-                ) : sidebarCollapsed ? null : (
-                    // <WorkspaceHistory />
-                    <div>
-                        <h1>Workspace History</h1>
-                    </div>
+                className={cn(
+                    "border-r relative transition-all duration-300 overflow-hidden",
+                    tutorialsOpen ? "w-[25vw]" : "w-0"
                 )}
+            >
+                {tutorialsOpen &&
+                    <TutorialsSidebar onClose={closeTutorials} />
+                }
             </div>
 
             {/* Main content */}
@@ -122,8 +115,6 @@ export default function Workbench({ params }: { params: Promise<{ workspace_id: 
                     setWorkbenchMode={setWorkbenchMode}
                     workbenchMode={workbenchMode}
                     toggleTutorials={toggleTutorials}
-                    sidebarCollapsed={sidebarCollapsed}
-                    toggleSidebar={toggleSidebar}
                     workspaceId={resolvedParams.workspaceId}
                 />
 

@@ -2,11 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LensCompletion } from "@/types/lens";
 import { setWorkspaceData, getWorkspaceData } from "@/lib/queries/chartQueries";
 
-/***************************
- * Completion Generation *
- ***************************/
-
-export const useCreateCompletion = () => {
+export const useCreateLensCompletion = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
@@ -40,6 +36,28 @@ export const useCreateCompletion = () => {
         },
         onError: (error) => {
             console.error("Error generating completion:", error);
+        },
+    });
+}
+
+export const useDeleteLensCompletion = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ chartId, completionId }: { chartId: string; completionId: string }) => {
+            const workspaceData = await getWorkspaceData(chartId) as { completions: LensCompletion[] };
+
+            const updatedCompletions = workspaceData.completions.filter(completion => completion.id !== completionId);
+            await setWorkspaceData(chartId, { completions: updatedCompletions });
+
+            return updatedCompletions;
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['lensCharts'] });
+            console.log("Successfully deleted completion");
+        },
+        onError: (error) => {
+            console.error("Error deleting completion:", error);
         },
     });
 }

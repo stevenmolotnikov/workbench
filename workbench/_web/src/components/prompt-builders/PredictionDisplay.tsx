@@ -229,7 +229,7 @@ const TokenDisplay = ({
 interface PredictionDisplayProps {
     predictions: TokenPredictions;
     compl: LensCompletion;
-    selectedIdx: number;
+    selectedIdx: number | null;
     setCompletion: (completion: LensCompletion) => void;
     onRevise?: () => void;
     onClear?: () => void;
@@ -282,12 +282,16 @@ export const PredictionDisplay = ({
 
             // Only update if there's a single token
             if (tokens.length === 1) {
-                updateToken(selectedIdx, tokens[0].id, tokens[0].text);
+                if (selectedIdx) {
+                    updateToken(selectedIdx, tokens[0].id, tokens[0].text);
+                }
                 setTempTokenText([]);
             } else {
                 // Else, set temp token text and clear tokens
                 setTempTokenText(tokens.map((t) => t.text));
-                clearToken(selectedIdx);
+                if (selectedIdx) {
+                    clearToken(selectedIdx);
+                }
             }
         } catch (error) {
             console.error("Error tokenizing text:", error);
@@ -306,7 +310,7 @@ export const PredictionDisplay = ({
     return (
         <div className="space-y-3">
             <div className="flex justify-between items-center">
-                {predictions && predictions[selectedIdx] ? (
+                {predictions && selectedIdx !== null && predictions[selectedIdx] ? (
                     <TokenDisplay
                         predictions={predictions}
                         selectedIdx={selectedIdx}
@@ -314,7 +318,7 @@ export const PredictionDisplay = ({
                         tempTokenText={tempTokenText}
                         compl={compl}
                     />
-                ) : (
+                ) :  (
                     <div className="text-sm text-muted-foreground">No token selected</div>
                 )}
                 <div className="flex gap-2 ml-4 ">

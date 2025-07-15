@@ -38,7 +38,7 @@ export default function WorkbenchPage() {
                         return (
                             <Link
                                 key={workspace.id}
-                                href={`/workbench/${workspace.id}`}
+                                href={`/workbench/${workspace.id}/lens`}
                                 className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                             >
                                 <div className="flex justify-between items-start">
