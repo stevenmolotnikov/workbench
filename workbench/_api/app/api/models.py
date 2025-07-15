@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 import torch as t
 import asyncio
+from anyio.streams.memory import MemoryObjectSendStream
 
 from pydantic import BaseModel
 
@@ -28,14 +29,14 @@ class ExecutePairResponse(NDIFRequest):
     destination: CompletionResponse
 
 
-def _execute_selected(state, execute_request):
+def _execute_selected(state, execute_request, send_stream: MemoryObjectSendStream):
 
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
 
     prompt = execute_request.completion.prompt
 
-    with model.wrapped_trace(prompt, job_id=execute_request.job_id):
+    with model.wrapped_trace(prompt, send_stream=send_stream):
         logits = model.lm_head.output
 
         logits = logits[0,idxs,:].softmax(dim=-1)
@@ -51,7 +52,7 @@ def _execute_selected(state, execute_request):
 async def execute_selected(execute_request: ExecuteSelectedRequest, request: Request):
     state = request.app.state.m
     try:
-        values, indices = await asyncio.to_thread(_execute_selected, state, execute_request)
+        values, indices = await asyncio.to_thread(_execute_selected, state, execute_request, send_stream)
     except ConnectionError:
         await send_update(execute_request.callback_url, {"status": "error", "message": "NDIF connection error"})
         return {

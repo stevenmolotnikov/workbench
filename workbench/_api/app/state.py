@@ -59,7 +59,6 @@ class AppState:
             config = ModelsConfig(**tomllib.load(f))
 
         remote = config.remote
-        callback_url = config.callback_url
 
         for _, cfg in config.models.items():
             model = LanguageModel(
@@ -70,12 +69,12 @@ class AppState:
             )
 
             wrapped_trace_fn = partial(
-                wrapped_trace, remote=remote, callback_base_url=callback_url
+                wrapped_trace, remote=remote
             )
             model.wrapped_trace = types.MethodType(wrapped_trace_fn, model)
 
             wrapped_session_fn = partial(
-                wrapped_session, remote=remote, callback_base_url=callback_url
+                wrapped_session, remote=remote
             )
             model.wrapped_session = types.MethodType(wrapped_session_fn, model)
 

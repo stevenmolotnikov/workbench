@@ -9,11 +9,12 @@ from nnsight.schema.result import RESULT, ResultModel
 from nnsight.tracing.graph import Graph
 from nnsight.util import NNsightError
 from nnsight.intervention.backends.remote import RemoteBackend
+from anyio.streams.memory import MemoryObjectSendStream
 
 class CallbackBackend(RemoteBackend):
 
-    def __init__(self, callback_url: str, *args, **kwargs):
-        self.callback_url = callback_url
+    def __init__(self, send_stream: MemoryObjectSendStream, *args, **kwargs):
+        self.send_stream = send_stream
         super().__init__(*args, **kwargs)
 
     def handle_response(
@@ -38,7 +39,7 @@ class CallbackBackend(RemoteBackend):
         
         # Send update to callback url.
         try:
-            httpx.post(self.callback_url, json={"status": str(response.status)})
+            self.send_stream.send({"type": "status", "message": str(response.status)})
         except Exception as e:
             print(f"Failed to send update: {e}")
         
@@ -94,15 +95,13 @@ class CallbackBackend(RemoteBackend):
             else:
                 print(f"\n{response.data['traceback']}")
                 raise SystemExit("Remote exception.")
-            
-def wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: bool, **kwargs):
+    
+def wrapped_trace(self, *args, send_stream: MemoryObjectSendStream, remote: bool, **kwargs):
     backend = None
-
-    callback_url = f"{callback_base_url}?job_id={job_id}"
 
     if remote:
         backend = CallbackBackend(
-            callback_url, self.to_model_key(), blocking=True
+            send_stream, self.to_model_key(), blocking=True
         )
 
     # Fix bc ndif remote has caching true so block output kv states
@@ -111,14 +110,12 @@ def wrapped_trace(self, *args, job_id: str, callback_base_url: str, remote: bool
     return self.trace(*args, backend=backend, output_attentions=output_attentions, **kwargs)
 
 
-def wrapped_session(self, *args, job_id: str, callback_base_url: str, remote: bool, **kwargs):
+def wrapped_session(self, *args, send_stream: MemoryObjectSendStream, remote: bool, **kwargs):
     backend = None
-
-    callback_url = f"{callback_base_url}?job_id={job_id}"
 
     if remote:
         backend = CallbackBackend(
-            callback_url, self.to_model_key(), blocking=True
+            send_stream, self.to_model_key(), blocking=True
         )
 
     return self.session(*args, backend=backend, **kwargs)

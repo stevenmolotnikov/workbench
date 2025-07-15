@@ -48,15 +48,9 @@ class LayerResults(BaseModel):
     layer: int
     points: list[Point]
 
-
-class LensMetadata(BaseModel):
-    maxLayer: int
-
-
 class LensResponse(BaseModel):
-    data: list[LayerResults]
-    metadata: LensMetadata
-
+    layerResults: list[LayerResults]
+    maxLayer: int
 
 ##### GRID LENS REQUEST SCHEMA #####
 
@@ -82,13 +76,13 @@ class GridLensResponse(BaseModel):
 router = APIRouter()
 
 
-def logit_lens_grid(model, prompt, job_id):
+def logit_lens_grid(model, prompt, send_stream: MemoryObjectSendStream):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     pred_ids = []
     probs = []
-    with model.wrapped_trace(prompt, job_id=job_id):
+    with model.wrapped_trace(prompt, send_stream=send_stream):
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             x = layer.output[0]
@@ -116,14 +110,14 @@ def logit_lens_grid(model, prompt, job_id):
     return pred_ids, probs, input_strs
 
 
-def logit_lens_targeted(model, model_requests, job_id):
+def logit_lens_targeted(model, model_requests, send_stream: MemoryObjectSendStream):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     tok = model.tokenizer
 
     all_results = []
-    with model.wrapped_trace(job_id=job_id) as tracer:
+    with model.wrapped_trace(send_stream=send_stream) as tracer:
         for request in model_requests:
             # Get user queried indices
             idxs = request["idxs"]
@@ -245,7 +239,7 @@ async def process_targeted_lens_background(
 
             # Run computation in thread pool
             model_results = await asyncio.to_thread(
-                logit_lens_targeted, model, model_requests, lens_request.job_id
+                logit_lens_targeted, model, model_requests, send_stream
             )
             all_results.extend(model_results)
 
@@ -256,8 +250,10 @@ async def process_targeted_lens_background(
         await send_stream.send(
             {
                 "type": "result",
-                "data": results,
-                "metadata": {"maxLayer": len(results) - 1},
+                "data": {
+                    "layerResults": results,
+                    "maxLayer": len(results) - 1,
+                },
             }
         )
 
@@ -285,19 +281,10 @@ async def process_grid_lens_background(
 
         # Run computation in thread pool
         pred_ids, probs, input_strs = await asyncio.to_thread(
-            logit_lens_grid, model, prompt, lens_request.job_id
+            logit_lens_grid, model, prompt, send_stream
         )
 
         pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
-
-        print(
-            {
-                "id": lens_request.completion.id,
-                "input_strs": input_strs,
-                "probs": probs,
-                "pred_strs": pred_strs,
-            }
-        )
 
         # Send final result
         await send_stream.send(
@@ -330,13 +317,6 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
             lens_request, request.app.state.m, send_stream
         )
     )
-
-    # Return immediately with job info
-    return {
-        "job_id": lens_request.job_id,
-        "status": "started",
-        "message": "Lens computation started",
-    }
 
 
 @router.get("/listen-line/{job_id}")
@@ -393,14 +373,6 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
     )
 
     print("grid lens started")
-
-    # Return immediately with job info
-    return {
-        "job_id": lens_request.job_id,
-        "status": "started",
-        "message": "Grid lens computation started",
-    }
-
 
 @router.get("/listen-grid/{job_id}")
 async def listen_grid_lens(job_id: str, request: Request):
