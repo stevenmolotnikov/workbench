@@ -19,9 +19,11 @@ const listenToSSE = <T>(url: string): Promise<T> => {
         const { onCancel } = sseService.createEventSource(
             url,
             (data: any) => {
+                console.log('Received data:', data);
                 if (data.type === 'status') {
                     console.log('Status update:', data.message);
                 } else if (data.type === 'result') {
+                    console.log('Received result:', data);
                     result = data;
                 } else if (data.type === 'error') {
                     reject(new Error(data.message));
@@ -53,10 +55,11 @@ const getLensLine = async (lensRequest: { completions: LensCompletion[]; chartId
         if (!response.ok) throw new Error("Failed to start lens computation");
         
         const jobInfo = await response.json();
-        console.log('Job started:', jobInfo);
         
         // Listen for results
         const result = await listenToSSE<{ data: any; metadata: any }>(config.endpoints.listenLensLine + `/${jobId}`);
+
+        console.log(result)
         return result;
     } catch (error) {
         console.error("Error fetching logit lens data:", error);

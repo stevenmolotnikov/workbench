@@ -25,7 +25,7 @@ def fastapi_app():
         max_age=3600,
     )
 
-    app.include_router(lens, prefix="/api")
+    app.include_router(lens, prefix="/lens")
     app.include_router(patch, prefix="/api")
     app.include_router(models, prefix="/api")
 

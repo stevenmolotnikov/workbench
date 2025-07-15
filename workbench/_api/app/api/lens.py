@@ -2,12 +2,14 @@ from collections import defaultdict
 import asyncio
 from typing import Dict, Any
 import anyio
+from anyio import create_task_group
 from anyio.streams.memory import MemoryObjectSendStream
 
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 import torch as t
+
 # import nnsight as ns
 from pydantic import BaseModel
 
@@ -15,8 +17,11 @@ from ..utils import use_send_stream, format_sse_event, stream_from_memory_object
 from ..data_models import Completion, NDIFRequest, Token
 
 
-# Global storage for job streams and tasks
-job_data: Dict[str, tuple[Any, MemoryObjectSendStream]] = {}
+# Global storage for job streams
+job_data: Dict[str, MemoryObjectSendStream] = {}
+
+# Global task group for background tasks
+background_tasks = None
 
 ##### TARGETED LENS REQUEST SCHEMA #####
 
@@ -285,6 +290,15 @@ async def process_grid_lens_background(
 
         pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
 
+        print(
+            {
+                "id": lens_request.completion.id,
+                "input_strs": input_strs,
+                "probs": probs,
+                "pred_strs": pred_strs,
+            }
+        )
+
         # Send final result
         await send_stream.send(
             {
@@ -307,13 +321,15 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
     # Create memory object stream
     send_stream, receive_stream = anyio.create_memory_object_stream()
 
-    # Start background task with send stream
-    task = anyio.create_task(
+    # Store the receive stream for later retrieval
+    job_data[lens_request.job_id] = receive_stream
+
+    # Start background task without waiting
+    asyncio.create_task(
         process_targeted_lens_background(
             lens_request, request.app.state.m, send_stream
         )
     )
-    job_data[lens_request.job_id] = (task, receive_stream)
 
     # Return immediately with job info
     return {
@@ -326,13 +342,13 @@ async def targeted_lens(lens_request: TargetedLensRequest, request: Request):
 @router.get("/listen-line/{job_id}")
 async def listen_targeted_lens(job_id: str, request: Request):
     """Listen for targeted lens results via SSE using MemoryObjectStream"""
-    _, receive_stream = job_data.get(job_id)
+    receive_stream = job_data.get(job_id)
 
     if not receive_stream:
         # Return error if job not found
         async def error_stream():
             yield format_sse_event(
-                {"type": "error", "message": "Job not found"}, "error"
+                {"type": "error", "message": "Job not found"}
             )
 
         return StreamingResponse(
@@ -361,15 +377,22 @@ async def listen_targeted_lens(job_id: str, request: Request):
 async def grid_lens(lens_request: GridLensRequest, request: Request):
     """Start grid lens computation as background task"""
     # Create memory object stream
+
     send_stream, receive_stream = anyio.create_memory_object_stream()
 
-    # Start background task with send stream
-    task = anyio.create_task(
+    # Store the receive stream for later retrieval
+    job_data[lens_request.job_id] = receive_stream
+
+    print("starting grid lens")
+
+    # Start background task without waiting
+    asyncio.create_task(
         process_grid_lens_background(
             lens_request, request.app.state.m, send_stream
         )
     )
-    job_data[lens_request.job_id] = (task, receive_stream)
+
+    print("grid lens started")
 
     # Return immediately with job info
     return {
@@ -382,13 +405,13 @@ async def grid_lens(lens_request: GridLensRequest, request: Request):
 @router.get("/listen-grid/{job_id}")
 async def listen_grid_lens(job_id: str, request: Request):
     """Listen for grid lens results via SSE using MemoryObjectStream"""
-    _, receive_stream = job_data.get(job_id)
+    receive_stream = job_data.get(job_id)
 
     if not receive_stream:
         # Return error if job not found
         async def error_stream():
             yield format_sse_event(
-                {"type": "error", "message": "Job not found"}, "error"
+                {"type": "error", "message": "Job not found"}
             )
 
         return StreamingResponse(

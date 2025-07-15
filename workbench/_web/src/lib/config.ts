@@ -8,11 +8,11 @@ const config = {
     
     // API endpoints
     endpoints: {
-        getLensLine: '/api/lens/get-line',
-        listenLensLine: '/api/lens/listen-line',
+        getLensLine: '/lens/get-line',
+        listenLensLine: '/lens/listen-line',
 
-        getLensGrid: '/api/lens/get-grid',
-        listenLensGrid: '/api/lens/listen-grid',
+        getLensGrid: '/lens/get-grid',
+        listenLensGrid: '/lens/listen-grid',
 
         models: '/models',
         patch: '/api/patch',

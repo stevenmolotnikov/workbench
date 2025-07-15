@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Grid3x3, Plus } from "lucide-react";
 import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { TooltipButton } from "@/components/ui/tooltip-button";
@@ -96,16 +96,16 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
                         tooltip="Add line charts to all completions"
                     >
                         <LineChart size={16} />
-                    </TooltipButton>
+                    </TooltipButton> */}
 
                     <TooltipButton
                         size="icon"
-                        onClick={async () => await addChartToAllCompletions(1)}
-                        disabled={sectionCompletions.length === 0}
+                        onClick={async () => await createHeatmap(completions[0])}
+                        disabled={completions.length === 0}
                         tooltip="Add grid charts to all completions"
                     >
                         <Grid3x3 size={16} />
-                    </TooltipButton> */}
+                    </TooltipButton>
 
                     <TooltipButton
                         size="icon"
