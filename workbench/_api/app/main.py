@@ -27,7 +27,7 @@ def fastapi_app():
 
     app.include_router(lens, prefix="/lens")
     app.include_router(patch, prefix="/api")
-    app.include_router(models, prefix="/api")
+    app.include_router(models, prefix="/models")
 
     app.state.m = AppState()
 

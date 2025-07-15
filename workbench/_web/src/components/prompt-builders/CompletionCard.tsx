@@ -6,7 +6,6 @@ import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import type { TokenPredictions } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import config from "@/lib/config";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
 import { useDeleteLensCompletion } from "@/lib/api/lensApi";
+import { getExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
 
 interface CompletionCardProps {
@@ -128,20 +128,11 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
         const updatedCompletion = updateCompletionTokens(lastTokenIndex);
 
         try {
-            const response = await fetch(config.getApiUrl(config.endpoints.executeSelected), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    completion: updatedCompletion,
-                    model: updatedCompletion.model,
-                    tokens: updatedCompletion.tokens,
-                    job_id: "LOCAL",
-                }),
+            const data = await getExecuteSelected({
+                completion: updatedCompletion,
+                model: updatedCompletion.model,
+                tokens: updatedCompletion.tokens,
             });
-
-            const data: TokenPredictions = await response.json();
 
             setPredictions(data);
             setShowPredictions(true);

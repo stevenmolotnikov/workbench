@@ -14,6 +14,12 @@ const config = {
         getLensGrid: '/lens/get-grid',
         listenLensGrid: '/lens/listen-grid',
 
+        getExecuteSelected: '/models/get-execute-selected',
+        listenExecuteSelected: '/models/listen-execute-selected',
+        
+        getExecutePair: '/models/get-execute-pair',
+        listenExecutePair: '/models/listen-execute-pair',
+
         models: '/models',
         patch: '/api/patch',
         execute: '/api/execute',

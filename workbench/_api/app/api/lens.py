@@ -1,8 +1,7 @@
 from collections import defaultdict
 import asyncio
-from typing import Dict, Any
+from typing import Dict
 import anyio
-from anyio import create_task_group
 from anyio.streams.memory import MemoryObjectSendStream
 
 
@@ -19,9 +18,6 @@ from ..data_models import Completion, NDIFRequest, Token
 
 # Global storage for job streams
 job_data: Dict[str, MemoryObjectSendStream] = {}
-
-# Global task group for background tasks
-background_tasks = None
 
 ##### TARGETED LENS REQUEST SCHEMA #####
 
@@ -82,7 +78,7 @@ def logit_lens_grid(model, prompt, send_stream: MemoryObjectSendStream):
 
     pred_ids = []
     probs = []
-    with model.wrapped_trace(prompt, send_stream=send_stream):
+    with model.wrapped_trace(prompt):
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             x = layer.output[0]
@@ -110,14 +106,14 @@ def logit_lens_grid(model, prompt, send_stream: MemoryObjectSendStream):
     return pred_ids, probs, input_strs
 
 
-def logit_lens_targeted(model, model_requests, send_stream: MemoryObjectSendStream):
+def logit_lens_targeted(model, model_requests):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     tok = model.tokenizer
 
     all_results = []
-    with model.wrapped_trace(send_stream=send_stream) as tracer:
+    with model.wrapped_trace() as tracer:
         for request in model_requests:
             # Get user queried indices
             idxs = request["idxs"]
@@ -239,7 +235,7 @@ async def process_targeted_lens_background(
 
             # Run computation in thread pool
             model_results = await asyncio.to_thread(
-                logit_lens_targeted, model, model_requests, send_stream
+                logit_lens_targeted, model, model_requests
             )
             all_results.extend(model_results)
 
@@ -281,7 +277,7 @@ async def process_grid_lens_background(
 
         # Run computation in thread pool
         pred_ids, probs, input_strs = await asyncio.to_thread(
-            logit_lens_grid, model, prompt, send_stream
+            logit_lens_grid, model, prompt
         )
 
         pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]

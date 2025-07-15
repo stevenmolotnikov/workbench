@@ -6,7 +6,7 @@ from functools import partial
 from nnsight import LanguageModel, CONFIG
 from pydantic import BaseModel
 
-from ..ns_utils import wrapped_trace, wrapped_session
+# from ..ns_utils import wrapped_trace, wrapped_session
 from .. import ENV, ROOT_DIR
 
 class ModelConfig(BaseModel):
@@ -68,15 +68,13 @@ class AppState:
                 dispatch=not remote,
             )
 
-            wrapped_trace_fn = partial(
-                wrapped_trace, remote=remote
-            )
-            model.wrapped_trace = types.MethodType(wrapped_trace_fn, model)
+            def wrapped_trace(self, *args, **kwargs):
+                return self.trace(*args, remote=remote, **kwargs)
+            model.wrapped_trace = types.MethodType(wrapped_trace, model)
 
-            wrapped_session_fn = partial(
-                wrapped_session, remote=remote
-            )
-            model.wrapped_session = types.MethodType(wrapped_session_fn, model)
+            def wrapped_session(self, *args, **kwargs):
+                return self.session(*args, remote=remote, **kwargs)
+            model.wrapped_session = types.MethodType(wrapped_session, model)
 
             model.config.update(cfg.config)
 
