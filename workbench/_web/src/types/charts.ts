@@ -1,4 +1,4 @@
-import type { WorkspaceAnnotation } from "@/types/annotations";
+import type { Annotation } from "@/types/annotations";
 import type { WorkspaceData } from "@/types/workspace";
 
 export interface HeatmapData {
@@ -38,7 +38,9 @@ export type ChartData = {
 }
 
 export interface Chart {
+    id: string;
     chartData: ChartData[keyof ChartData];
-    annotations: WorkspaceAnnotation[];
+    annotations: Annotation[];
     workspaceData: WorkspaceData[keyof WorkspaceData];
+    position: number;
 }

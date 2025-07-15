@@ -1,4 +1,4 @@
-export interface Annotation {
+export interface AnnotationBase {
     id: string;
     text: string;
     isOrphaned?: boolean;
@@ -6,13 +6,13 @@ export interface Annotation {
     groupId?: string;
 }
 
-export interface LineGraphAnnotation extends Annotation { 
+export interface LineGraphAnnotation extends AnnotationBase { 
     lineId: string;
     layer: number;
     chartIndex: number;
 }
 
-export interface LineGraphRangeAnnotation extends Annotation { 
+export interface LineGraphRangeAnnotation extends AnnotationBase { 
     lineId: string;
     start: number;
     end: number;
@@ -24,13 +24,14 @@ export interface CellPosition {
     col: number;
 }
 
-export interface HeatmapAnnotation extends Annotation { 
+export interface HeatmapAnnotation extends AnnotationBase { 
     positions: CellPosition[];
     chartIndex: number;
 }
 
-export type WorkspaceAnnotation =
-    | { type: "lineGraph"; data: LineGraphAnnotation }
-    | { type: "lineGraphRange"; data: LineGraphRangeAnnotation }
-    | { type: "heatmap"; data: HeatmapAnnotation }
-    | { type: "token"; data: Annotation };
+export type Annotation = {
+    point: LineGraphAnnotation;
+    heatmap: HeatmapAnnotation;
+    token: AnnotationBase;
+    range: LineGraphRangeAnnotation;
+}

@@ -10,95 +10,80 @@ import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import type { LensCompletion } from "@/types/lens";
+import { useLensLine, useLensGrid, useCreateCompletion } from "@/app/api/lensApi";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getCharts } from "@/lib/queries/chartQueries";
+import { eq , and} from "drizzle-orm";
+import { charts } from "@/db/schema";
 
 
-export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
-    const { handleNewCompletion, getCompletionsBySection, handleUpdateCompletion } = useLensWorkspace();
-    const { isLoading } = useModels();
+export function CompletionSection({ sectionIdx, workspaceId }: { sectionIdx: number; workspaceId: string }) {
+    const lensLineMutation = useLensLine();
+    const lensGridMutation = useLensGrid();
+    const createCompletionMutation = useCreateCompletion();
     const { handleClick } = useTutorialManager();
     const { modelName } = useSelectedModel();
 
-    const sectionCompletions = getCompletionsBySection(sectionIdx);
+    // Query to get charts for this section
+    const { data: chartsData } = useQuery({
+        queryKey: ["lensCharts", workspaceId, sectionIdx],
+        queryFn: () => getCharts(workspaceId, and(eq(charts.position, sectionIdx), eq(charts.workspaceType, "lens")))
+    });
 
-    function createNewCompletion() {
-        handleNewCompletion(modelName, sectionIdx);
-        handleClick("#new-completion");
-    }
+    const chart = chartsData?.[0];
+    const completions = (chart?.workspaceData as { completions: LensCompletion[] })?.completions || [];
 
     async function createLineChart(completion: LensCompletion) {
-        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
-        const jobId = `chart-${completion.id}-${Date.now()}`;
+        const chartId = chart?.id || `chart-${Date.now()}`;
         
-        startStatusUpdates(jobId);
-
         try {
-            const response = await fetch("/api/lens-line", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    completions: [completion],
-                    job_id: jobId 
-                }),
+            const data = await lensLineMutation.mutateAsync({
+                completions: [completion],
+                chartId: chartId
             });
-
-            if (!response.ok) throw new Error(response.statusText);
-            const data = await response.json();
-            
-            // Update completion with chart mode
-            handleUpdateCompletion(completion.id, { chartMode: 0 });
             
             return data;
         } catch (error) {
             console.error("Error creating line chart:", error);
             throw error;
-        } finally {
-            stopStatusUpdates();
         }
     }
 
     async function createHeatmap(completion: LensCompletion) {
-        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
-        const jobId = `chart-${completion.id}-${Date.now()}`;
+        const chartId = chart?.id || `chart-${Date.now()}`;
         
-        startStatusUpdates(jobId);
-
         try {
-            const response = await fetch("/api/lens-grid", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    completion: completion,
-                    job_id: jobId,
-                }),
+            const data = await lensGridMutation.mutateAsync({
+                completions: [completion],
+                chartId: chartId
             });
-
-            if (!response.ok) throw new Error(response.statusText);
-            const data = await response.json();
-            
-            // Update completion with chart mode
-            handleUpdateCompletion(completion.id, { chartMode: 1 });
             
             return data;
         } catch (error) {
             console.error("Error creating heatmap:", error);
             throw error;
-        } finally {
-            stopStatusUpdates();
         }
     }
 
-    async function addChartToAllCompletions(chartMode: number) {
-        const chartFunction = chartMode === 0 ? createLineChart : createHeatmap;
+    async function createNewCompletion() {
+        if (!chart?.id || !modelName) {
+            console.error("Missing chart ID or model name");
+            return;
+        }
         
-        // Process completions that don't already have a chart
-        const completionsToProcess = sectionCompletions.filter(compl => compl.chartMode === undefined);
-        
-        // Create charts for all completions in parallel
-        await Promise.all(
-            completionsToProcess.map(compl => chartFunction(compl))
-        );
+        try {
+            await createCompletionMutation.mutateAsync({
+                prompt: "",
+                model: modelName,
+                chartId: chart.id,
+                sectionIdx: sectionIdx
+            });
+            handleClick("#new-completion");
+        } catch (error) {
+            console.error("Failed to create completion:", error);
+        }
     }
 
     return (
@@ -107,7 +92,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             <div className="flex items-center pb-4 justify-end">
 
                 <div className="flex items-center gap-2">
-                    <TooltipButton
+                    {/* <TooltipButton
                         size="icon"
                         onClick={async () => await addChartToAllCompletions(0)}
                         disabled={sectionCompletions.length === 0}
@@ -123,13 +108,13 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
                         tooltip="Add grid charts to all completions"
                     >
                         <Grid3x3 size={16} />
-                    </TooltipButton>
+                    </TooltipButton> */}
 
                     <TooltipButton
                         size="icon"
                         onClick={createNewCompletion}
                         id="new-completion"
-                        disabled={isLoading || sectionCompletions.length >= 5}
+                        disabled={completions.length >= 5}
                         tooltip="Create a new completion"
                     >
                         <Plus size={16} />
@@ -138,10 +123,10 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             </div>
 
             <div className="flex-1 space-y-4">
-                {sectionCompletions.map((compl, index) => (
+                {completions?.map((compl, index) => (
                     <CompletionCard key={compl.id} compl={compl} index={index} />
                 ))}
-                {sectionCompletions.length === 0 && (
+                {(!completions || completions.length === 0) && (
                     <div className="border rounded border-dashed hover:border-primary transition-all duration-300 cursor-pointer" onClick={createNewCompletion}>
                         <p className="text-center text-sm py-4">Add a completion</p>
                     </div>

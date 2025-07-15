@@ -1,6 +1,7 @@
-import { boolean, jsonb, pgTable, text, varchar, uuid } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, varchar, uuid, integer } from "drizzle-orm/pg-core";
 import type { ChartData } from "@/types/charts";
 import type { WorkspaceData } from "@/types/workspace";
+import type { Annotation } from "@/types/annotations";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -24,19 +25,26 @@ export const charts = pgTable("charts", {
     workspaceId: uuid("workspace_id").references(() => workspaces.id),
 
     // Data used to generate the chart
-    workspaceType: varchar("workspace_type", { enum: collectionTypes, length: 32 }),
-    workspaceData: jsonb("workspaceData").$type<WorkspaceData[keyof WorkspaceData]>(),
+    workspaceType: varchar("workspace_type", { enum: collectionTypes, length: 32 }).notNull(),
+    workspaceData: jsonb("workspaceData").$type<WorkspaceData[keyof WorkspaceData]>().notNull(),
 
     // Data used to display the chart
-    chartType: varchar("chart_type", { enum: chartTypes, length: 32 }),
-    chartData: jsonb("chartData").$type<ChartData[keyof ChartData]>(),
+    chartType: varchar("chart_type", { enum: chartTypes, length: 32 }).notNull(),
+    chartData: jsonb("chartData").$type<ChartData[keyof ChartData]>().notNull(),
+    
+    // Layout position in the grid
+    position: integer("position").notNull(),
 });
+
+export const annotationTypes = ["point", "heatmap", "token", "range"] as const;
 
 export const annotations = pgTable("annotations", {
     id: uuid("id").primaryKey().defaultRandom(),
-    chartId: uuid("chart_id").references(() => charts.id),
+    chartId: uuid("chart_id").references(() => charts.id).notNull(),
     groupId: uuid("group_id").references(() => annotationGroups.id),
-    text: text("text"),
+    
+    type: varchar("type", { enum: annotationTypes, length: 32 }).notNull(),
+    data: jsonb("data").$type<Annotation>().notNull(),
 });
 
 export const annotationGroups = pgTable("annotation_groups", {
