@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +21,7 @@ export function WorkspaceSettingsPopover({ workspaceId }: WorkspaceSettingsPopov
   const [isPublic, setIsPublic] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     async function fetchWorkspaceSettings() {
@@ -30,10 +32,8 @@ export function WorkspaceSettingsPopover({ workspaceId }: WorkspaceSettingsPopov
           setIsPublic(data.workspace.public || false);
           
           // Check if current user is the owner
-          const userResponse = await fetch('/api/auth/me');
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            setIsOwner(data.workspace.userId === userData.user?.id);
+          if (session?.user?.id) {
+            setIsOwner(data.workspace.userId === session.user.id);
           }
         }
       } catch (error) {
@@ -42,7 +42,7 @@ export function WorkspaceSettingsPopover({ workspaceId }: WorkspaceSettingsPopov
     }
     
     fetchWorkspaceSettings();
-  }, [workspaceId]);
+  }, [workspaceId, session]);
 
   const handleTogglePublic = async () => {
     if (!isOwner) return;

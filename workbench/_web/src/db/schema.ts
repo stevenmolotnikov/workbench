@@ -2,17 +2,14 @@ import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique } from "
 import type { ChartConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfig } from "@/types/lens";
+import { users } from "./authSchema";
 
-export const users = pgTable("users", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    email: varchar("email", { length: 256 }).notNull().unique(),
-    password: varchar("password", { length: 256 }).notNull(),
-    name: varchar("name", { length: 256 }),
-});
+// Re-export auth tables from authSchema
+export { users, accounts, sessions, verificationTokens, authenticators } from "./authSchema";
 
 export const workspaces = pgTable("workspaces", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 256 }).references(() => users.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 256 }).notNull(),
     public: boolean("public").default(false).notNull(),
 });

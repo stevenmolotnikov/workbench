@@ -31,9 +31,6 @@ export const useCreateLensCompletion = () => {
 
             await setChartConfig(chartId, { data: { completions: updatedCompletions } as LensConfig });
 
-            console.log("updatedCompletions", updatedCompletions);
-            console.log("chartid", chartId);
-
             return newCompletion;
         },
         onSuccess: (data, variables) => {

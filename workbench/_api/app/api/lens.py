@@ -1,16 +1,13 @@
-from collections import defaultdict
 import asyncio
+from collections import defaultdict
 from typing import Dict
+
 import anyio
 from anyio.streams.memory import MemoryObjectSendStream
-
-
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-import torch as t
-
-# import nnsight as ns
 from pydantic import BaseModel
+import torch as t
 
 from ..utils import use_send_stream, format_sse_event, stream_from_memory_object
 from ..data_models import Completion, NDIFRequest, Token
@@ -287,7 +284,6 @@ async def process_grid_lens_background(
             {
                 "type": "result",
                 "data": {
-                    "id": lens_request.completion.id,
                     "input_strs": input_strs,
                     "probs": probs,
                     "pred_strs": pred_strs,

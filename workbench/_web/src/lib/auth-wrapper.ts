@@ -1,30 +1,27 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { verifyToken } from "./session";
-import { getUserById } from "./queries/userQueries";
+import { auth } from "@/auth";
 import { users } from "../db/schema";
 
 export type User = typeof users.$inferSelect;
 
 export async function getAuthenticatedUser(): Promise<User | null> {
   try {
-    // Get the session token from cookies
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session-token')?.value;
+    const session = await auth();
     
-    if (!sessionToken) {
+    if (!session?.user?.id) {
       return null;
     }
     
-    // Verify the token
-    const session = verifyToken(sessionToken);
-    if (!session) {
-      return null;
-    }
-    
-    // Get the user from the database
-    const user = await getUserById(session.id);
+    // Auth.js already provides the user info from the session
+    // We can construct a User object from the session data
+    const user: User = {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name,
+      emailVerified: null,
+      image: session.user.image,
+    };
     
     return user;
   } catch (error) {
@@ -52,4 +49,4 @@ export async function withApiAuth<T extends unknown[], R>(
   fn: AuthenticatedFunction<T, R>
 ) {
   return withAuth(fn);
-} 
+}

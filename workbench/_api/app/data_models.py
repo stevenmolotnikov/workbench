@@ -7,7 +7,6 @@ class Message(BaseModel):
     content: str
 
 class Completion(BaseModel):
-    id: str
     prompt: str
 
 class NDIFRequest(BaseModel):

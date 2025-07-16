@@ -1,33 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromRequest, isProtectedRoute } from '@/lib/session';
+import { auth } from "@/auth"
+import { NextResponse } from "next/server"
+import { isProtectedRoute } from "@/lib/session"
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const session = getSessionFromRequest(request);
+export default auth((req) => {
+  const { pathname } = req.nextUrl
+  const isAuthenticated = !!req.auth
 
   // If user is authenticated and tries to access login page, redirect to workbench
-  if (pathname === '/login' && session) {
-    const workbenchUrl = new URL('/workbench', request.url);
-    return NextResponse.redirect(workbenchUrl);
+  if (pathname === '/login' && isAuthenticated) {
+    const workbenchUrl = new URL('/workbench', req.url)
+    return NextResponse.redirect(workbenchUrl)
   }
 
   // Check if this is a protected route
   if (isProtectedRoute(pathname)) {
-    if (!session) {
+    if (!isAuthenticated) {
       // User is not authenticated, redirect to login
-      const loginUrl = new URL('/login', request.url);
+      const loginUrl = new URL('/login', req.url)
       // Add the attempted URL as a query parameter for redirect after login
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
     }
-    
-    // User is authenticated, allow the request to continue
-    return NextResponse.next();
   }
 
-  // For non-protected routes, just continue
-  return NextResponse.next();
-}
+  // Allow the request to continue
+  return NextResponse.next()
+})
 
 export const config = {
   matcher: [

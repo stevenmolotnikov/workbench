@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateWorkspace, getWorkspaceById } from "@/lib/queries/workspaceQueries";
-import { getSessionFromRequest } from "@/lib/session";
+import { auth } from "@/auth";
 
 export async function GET(
   request: NextRequest,
@@ -24,8 +24,8 @@ export async function PATCH(
   { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
-    const session = getSessionFromRequest(request);
-    if (!session) {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, message: "Authentication required" },
         { status: 401 }
@@ -40,7 +40,7 @@ export async function PATCH(
     if (name !== undefined) updates.name = name;
     if (isPublic !== undefined) updates.public = isPublic;
 
-    const updatedWorkspace = await updateWorkspace(resolvedParams.workspaceId, updates, session.id);
+    const updatedWorkspace = await updateWorkspace(resolvedParams.workspaceId, updates, session.user.id);
     
     return NextResponse.json({ 
       success: true, 
