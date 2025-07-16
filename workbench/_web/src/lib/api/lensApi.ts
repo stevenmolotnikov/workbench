@@ -89,9 +89,13 @@ export const useDeleteLensCompletion = () => {
         mutationFn: async ({
             chartId,
             completionIndex,
+            workspaceId,
+            sectionIdx,
         }: {
             chartId: string;
             completionIndex: number;
+            workspaceId: string;
+            sectionIdx: number;
         }) => {
             const chartConfig = await getLensChartConfig(chartId);
 
@@ -107,7 +111,10 @@ export const useDeleteLensCompletion = () => {
             return updatedCompletions;
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            // Invalidate the specific chart config query
+            queryClient.invalidateQueries({ 
+                queryKey: ["lensChartConfig", variables.workspaceId, variables.sectionIdx] 
+            });
             console.log("Successfully deleted completion");
         },
         onError: (error) => {

@@ -22,9 +22,11 @@ interface CompletionCardProps {
     completion: LensCompletion;
     chartId: string;
     completionIdx: number;
+    workspaceId: string;
+    sectionIdx: number;
 }
 
-export function CompletionCard({ completion: initialCompletion, chartId, completionIdx }: CompletionCardProps) {
+export function CompletionCard({ completion: initialCompletion, chartId, completionIdx, workspaceId, sectionIdx }: CompletionCardProps) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(
@@ -68,6 +70,8 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
         await deleteLensCompletionMutation.mutateAsync({
             chartId: chartId,
             completionIndex: completionIdx,
+            workspaceId: workspaceId,
+            sectionIdx: sectionIdx,
         });
     }
 
@@ -183,13 +187,14 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
     }
 
     return (
-        <div className="group relative">
+        <div className={cn("group relative", deleteLensCompletionMutation.isPending && "opacity-50 pointer-events-none")}>
             {/* Delete button */}
             <Button
                 variant="ghost"
                 title="Delete completion"
                 size="icon"
                 onClick={handleDeleteCompletion}
+                disabled={deleteLensCompletionMutation.isPending}
                 className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
             >
                 <X

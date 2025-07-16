@@ -138,6 +138,8 @@ export function CompletionSection({ chartId, sectionIdx }: { chartId: string, se
                         completion={completion}
                         chartId={chartConfig?.chartId || ""}
                         completionIdx={index}
+                        workspaceId={workspaceId as string}
+                        sectionIdx={sectionIdx}
                     />
                 ))}
                 {(!completions || completions.length === 0) && (
