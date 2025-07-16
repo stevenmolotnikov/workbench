@@ -174,17 +174,48 @@ export const useCreateLensChart = () => {
                 position,
                 type,
             }
-            await createChart(newChart);
-            return newChart;
+            const createdChart = await createChart(newChart);
+            return createdChart;
         },
-        onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ 
-                queryKey: ["lensCharts"] 
+        onMutate: async ({ workspaceId, position, type }) => {
+            // Cancel any outgoing refetches
+            await queryClient.cancelQueries({ queryKey: ["lensCharts", workspaceId] });
+
+            // Snapshot the previous value
+            const previousCharts = queryClient.getQueryData(["lensCharts", workspaceId]);
+
+            // Optimistically update to the new value
+            queryClient.setQueryData(["lensCharts", workspaceId], (old: any) => {
+                if (!old) return old;
+                // Create a temporary chart with a temporary ID
+                const tempChart = {
+                    id: `temp-${Date.now()}`,
+                    workspaceId,
+                    position,
+                    type,
+                    data: null
+                };
+                return [...old, tempChart];
             });
-            console.log("Successfully created chart");
+
+            // Return a context with the previous charts and the workspaceId
+            return { previousCharts, workspaceId };
         },
-        onError: (error) => {
+        onError: (error, variables, context) => {
+            // If the mutation fails, use the context to roll back
+            if (context?.previousCharts) {
+                queryClient.setQueryData(
+                    ["lensCharts", context.workspaceId],
+                    context.previousCharts
+                );
+            }
             console.error("Error creating chart:", error);
+        },
+        onSettled: (data, error, variables) => {
+            // Always refetch after error or success
+            queryClient.invalidateQueries({ 
+                queryKey: ["lensCharts", variables.workspaceId] 
+            });
         },
     });
 }

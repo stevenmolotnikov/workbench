@@ -83,6 +83,8 @@ export function CompletionSection({ chartId, sectionIdx }: { chartId: string, se
                 prompt: "",
                 model: modelName,
                 chartId: chartId,
+                workspaceId: workspaceId as string,
+                sectionIdx: sectionIdx,
             });
         } catch (error) {
             console.error("Failed to create completion:", error);
