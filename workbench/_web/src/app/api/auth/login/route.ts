@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db/client";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getUserByEmail } from "@/lib/queries/userQueries";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { createSessionResponse } from "@/lib/session";
@@ -19,11 +17,7 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(body);
     
     // Find user by email
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, validatedData.email))
-      .limit(1);
+    const user = await getUserByEmail(validatedData.email);
     
     if (!user) {
       return NextResponse.json(

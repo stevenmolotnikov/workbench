@@ -9,7 +9,8 @@ export const useCreateWorkspace = () => {
     return useMutation({
         mutationFn: async ({ name }: { name: string }) => {
             // This calls the server action which handles authentication
-            await createWorkspace(name);
+            const newWorkspace = await createWorkspace(name);
+            return newWorkspace;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["workspaces"] });

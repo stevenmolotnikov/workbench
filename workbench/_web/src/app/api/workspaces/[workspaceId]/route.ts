@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateWorkspace, getWorkspaceById } from "@/lib/api";
+import { updateWorkspace, getWorkspaceById } from "@/lib/queries/workspaceQueries";
 import { getSessionFromRequest } from "@/lib/session";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ workspace_id: string }> }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const resolvedParams = await params;
@@ -21,7 +21,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ workspace_id: string }> }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     const session = getSessionFromRequest(request);
@@ -40,7 +40,7 @@ export async function PATCH(
     if (name !== undefined) updates.name = name;
     if (isPublic !== undefined) updates.public = isPublic;
 
-    const updatedWorkspace = await updateWorkspace(resolvedParams.workspaceId, updates);
+    const updatedWorkspace = await updateWorkspace(resolvedParams.workspaceId, updates, session.id);
     
     return NextResponse.json({ 
       success: true, 

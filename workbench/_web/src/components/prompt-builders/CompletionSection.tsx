@@ -9,11 +9,11 @@ import { useLensLine, useLensGrid, useCreateLensChart } from "@/lib/api/chartApi
 import { useCreateLensCompletion } from "@/lib/api/lensApi";
 
 import { useQuery } from "@tanstack/react-query";
-import { getLensChartByPosition, getLensChartConfigByPosition } from "@/lib/queries/chartQueries";
+import { getLensChartConfigByPosition, getLensCharts } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
+import { LensConfig } from "@/types/lens";
 
-
-export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
+export function CompletionSection({ chartId, sectionIdx }: { chartId: string, sectionIdx: number }) {
     const lensLineMutation = useLensLine();
     const lensGridMutation = useLensGrid();
     const createLensCompletionMutation = useCreateLensCompletion(); 
@@ -27,7 +27,13 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
         queryFn: () => getLensChartConfigByPosition(workspaceId as string, sectionIdx),
     });
 
-    const completions: LensCompletion[] = chartConfig?.data?.completions || [];
+    const { data: charts } = useQuery({
+        queryKey: ["lensCharts", workspaceId],
+        queryFn: () => getLensCharts(workspaceId as string),
+    });
+
+    const chartConfigData = chartConfig?.data as LensConfig;
+    const completions: LensCompletion[] = chartConfigData?.completions || [];
 
     async function createLineChart() {
         if (!chartConfig?.chartId) {
@@ -67,9 +73,8 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
     }
 
     async function createCompletion() {
-        if (!chartConfig?.chartId || !modelName) {
-            console.log(chartConfig, modelName);
-            console.error("Missing chart ID or model name");
+        if (!modelName) {
+            console.error("Missing model name");
             return;
         }
         
@@ -77,7 +82,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             await createLensCompletionMutation.mutateAsync({
                 prompt: "",
                 model: modelName,
-                chartId: chartConfig.chartId,
+                chartId: chartId,
             });
         } catch (error) {
             console.error("Failed to create completion:", error);

@@ -1,6 +1,7 @@
 import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique } from "drizzle-orm/pg-core";
 import type { ChartConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
+import type { LensConfig } from "@/types/lens";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -42,8 +43,8 @@ export const chartConfigs = pgTable("chart_configs", {
 });
 
 // Index on chart config and chart ids
-export const chartsWorkspaceIdIdx = index("charts_workspace_id_idx").on(charts.workspaceId);
-export const chartConfigsChartIdIdx = index("chart_configs_chart_id_idx").on(chartConfigs.chartId);
+// export const chartsWorkspaceIdIdx = index("charts_workspace_id_idx").on(charts.workspaceId);
+// export const chartConfigsChartIdIdx = index("chart_configs_chart_id_idx").on(chartConfigs.chartId);
 
 // Constraint on workspace id and position
 export const chartsWorkspacePositionUnique = unique("charts_workspace_position_unique").on(charts.workspaceId, charts.position);
@@ -86,3 +87,8 @@ export type NewAnnotationGroup = typeof annotationGroups.$inferInsert;
 
 // Full annotation type (matches the interface in @/types/annotations)
 export type Annotation = AnnotationRow;
+
+// Specific chart config types
+export type LensChartConfig = Omit<ChartConfig, 'data'> & {
+    data: LensConfig;
+};

@@ -2,9 +2,8 @@
 
 import { cookies } from "next/headers";
 import { verifyToken } from "./session";
-import { db } from "../db/client";
+import { getUserById } from "./queries/userQueries";
 import { users } from "../db/schema";
-import { eq } from "drizzle-orm";
 
 export type User = typeof users.$inferSelect;
 
@@ -25,13 +24,9 @@ export async function getAuthenticatedUser(): Promise<User | null> {
     }
     
     // Get the user from the database
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.id))
-      .limit(1);
+    const user = await getUserById(session.id);
     
-    return user || null;
+    return user;
   } catch (error) {
     console.error("Error getting authenticated user:", error);
     return null;

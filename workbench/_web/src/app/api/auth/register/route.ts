@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAccount } from "@/lib/api";
-import { createSessionResponse } from "@/lib/session";
+import { getUserByEmail, createUser } from "@/lib/queries/userQueries";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { createSessionResponse } from "@/lib/session";
 
 const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -16,18 +17,33 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = registerSchema.parse(body);
     
-    // Create account
-    const result = await createAccount(
+    // Check if user already exists
+    const existingUser = await getUserByEmail(validatedData.email);
+    if (existingUser) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "User already exists with this email",
+        },
+        { status: 409 }
+      );
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+    
+    // Create user
+    const newUser = await createUser(
       validatedData.email,
-      validatedData.password,
+      hashedPassword,
       validatedData.name
     );
     
-    // Create session with JWT token and secure cookies (same as login)
+    // Create session with JWT token and secure cookies
     const userSession = {
-      id: result.user.id,
-      email: result.user.email,
-      name: result.user.name,
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
     };
     
     return createSessionResponse(userSession);
@@ -46,26 +62,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (error instanceof Error) {
-      if (error.message.includes("already exists")) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "User already exists with this email",
-          },
-          { status: 409 }
-        );
-      }
-      
-      return NextResponse.json(
-        {
-          success: false,
-          message: error.message,
-        },
-        { status: 500 }
-      );
-    }
-    
     return NextResponse.json(
       {
         success: false,
@@ -74,4 +70,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

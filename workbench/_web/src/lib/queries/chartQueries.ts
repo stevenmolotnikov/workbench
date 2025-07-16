@@ -1,26 +1,28 @@
 "use server";
 
-import { ChartData, ChartConfig } from "@/types/charts";
+import { ChartData } from "@/types/charts";
 import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
-import { charts, chartConfigs, NewChart, Chart, ChartConfig } from "@/db/schema";
+import { charts, chartConfigs, NewChart, NewChartConfig, Chart, ChartConfig, LensChartConfig } from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { LensConfig } from "@/types/lens";
 
 export const setChartConfig = await withAuth(
-    async (
-        user: User,
-        chartId: string,
-        config: ChartConfig
-    ): Promise<void> => {
-        await db.update(chartConfigs).set({ data: config }).where(eq(chartConfigs.chartId, chartId));
+    async (user: User, chartId: string, config: NewChartConfig): Promise<void> => {
+        await db
+            .update(chartConfigs)
+            .set(config)
+            .where(eq(chartConfigs.chartId, chartId));
     }
 );
 
 export const getChartConfig = await withAuth(
-    async (user: User, chartId: string): Promise<ChartConfig | null> => {
-        const [chartConfig] = await db.select().from(chartConfigs).where(eq(chartConfigs.chartId, chartId));
-        return chartConfig?.data as ChartConfig | null;
+    async (user: User, chartId: string): Promise<ChartConfig> => {
+        const [chartConfig] = await db
+            .select()
+            .from(chartConfigs)
+            .where(eq(chartConfigs.chartId, chartId));
+        return chartConfig;
     }
 );
 
@@ -48,23 +50,38 @@ export const getCharts = await withAuth(
     }
 );
 
-const LENS_CHART_TYPES = or(
-    eq(charts.type, "lensLine"),
-    eq(charts.type, "lensHeatmap")
-);
+const LENS_CHART_TYPES = or(eq(charts.type, "lensLine"), eq(charts.type, "lensHeatmap"));
 
 export const getLensCharts = await withAuth(
     async (user: User, workspaceId: string): Promise<Chart[]> => {
         const chartsData = await db
             .select()
             .from(charts)
-            .where(
-                and(
-                    eq(charts.workspaceId, workspaceId),
-                    LENS_CHART_TYPES
-                ));
+            .where(and(eq(charts.workspaceId, workspaceId), LENS_CHART_TYPES));
 
         return chartsData;
+    }
+);
+
+export const getLensChartConfig = await withAuth(
+    async (user: User, chartId: string): Promise<LensChartConfig | null> => {
+        const chartConfigsData = await db
+            .select()
+            .from(chartConfigs)
+            .innerJoin(charts, eq(chartConfigs.chartId, charts.id))
+            .where(
+                and(
+                    eq(chartConfigs.chartId, chartId),
+                    LENS_CHART_TYPES
+                )
+            );
+
+        if (chartConfigsData.length !== 1) {
+            console.error("Expected 1 chart config, got " + chartConfigsData.length);
+            return null;
+        }
+
+        return chartConfigsData[0].chart_configs as LensChartConfig;
     }
 );
 
@@ -75,7 +92,7 @@ export const getLensChartByPosition = await withAuth(
             .from(charts)
             .where(
                 and(
-                    eq(charts.workspaceId, workspaceId), 
+                    eq(charts.workspaceId, workspaceId),
                     eq(charts.position, position),
                     LENS_CHART_TYPES
                 )
@@ -90,11 +107,9 @@ export const getLensChartByPosition = await withAuth(
 );
 
 export const getLensChartConfigByPosition = await withAuth(
-    async (user: User, workspaceId: string, position: number): Promise<ChartConfig> => {
+    async (user: User, workspaceId: string, position: number): Promise<LensChartConfig | null> => {
         const chartConfigsData = await db
-            .select({
-                data: chartConfigs.data
-            })
+            .select()
             .from(chartConfigs)
             .innerJoin(charts, eq(chartConfigs.chartId, charts.id))
             .where(
@@ -106,24 +121,37 @@ export const getLensChartConfigByPosition = await withAuth(
             );
 
         if (chartConfigsData.length !== 1) {
-            throw new Error("Expected 1 chart config, got " + chartConfigsData.length);
+            return null;
         }
 
-        return chartConfigsData[0];
+        return chartConfigsData[0].chart_configs as LensChartConfig;
     }
 );
 
-export const createChart = await withAuth(
-    async (
-        user: User,
-        chart: NewChart,
-    ): Promise<void> => {
-        if (!chart.workspaceId) {
-            throw new Error("workspaceId is required");
-        }
-
-        await db
-            .insert(charts)
-            .values(chart);
+const getInitialChartConfig = (chartType: string): NewChartConfig => {
+    switch (chartType) {
+        case "lensLine":
+        case "lensHeatmap":
+            return { data: { completions: [] } } as NewChartConfig;
+        default:
+            return {} as NewChartConfig;
     }
-);
+}
+
+export const createChart = await withAuth(async (user: User, chart: NewChart): Promise<void> => {
+    if (!chart.workspaceId) {
+        throw new Error("workspaceId is required");
+    }
+
+    // Insert the chart
+    const [newChart] = await db.insert(charts).values(chart).returning();
+    
+    // Create initial chart config based on chart type
+    const newChartConfig: NewChartConfig = getInitialChartConfig(chart.type);
+    
+    // Insert the chart config
+    await db.insert(chartConfigs).values({
+        chartId: newChart.id,
+        data: newChartConfig.data
+    });
+});

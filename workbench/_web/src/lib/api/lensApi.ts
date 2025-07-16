@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LensCompletion, LensConfig } from "@/types/lens";
-import { setChartConfig, getChartConfig } from "@/lib/queries/chartQueries";
+import { getChartConfig, getLensChartConfig, setChartConfig } from "@/lib/queries/chartQueries";
 
 export const useCreateLensCompletion = () => {
     const queryClient = useQueryClient();
@@ -24,17 +24,22 @@ export const useCreateLensCompletion = () => {
             };
 
             // Get current workspace data
-            const chartConfig = await getChartConfig(chartId);
+            const chartConfig = await getLensChartConfig(chartId);
 
-            // Add new completion
-            const updatedCompletions = [...(chartConfig?.data?.completions || []), newCompletion];
-            await setChartConfig(chartId, { completions: updatedCompletions });
+            const existingCompletions = chartConfig?.data?.completions || [];
+            const updatedCompletions = [...existingCompletions, newCompletion];
+
+            await setChartConfig(chartId, { data: { completions: updatedCompletions } as LensConfig });
+
+            console.log("updatedCompletions", updatedCompletions);
+            console.log("chartid", chartId);
 
             return newCompletion;
         },
         onSuccess: (data, variables) => {
             // Invalidate queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["lensChartConfig"] });
             console.log("Successfully created new completion");
         },
         onError: (error) => {
@@ -59,7 +64,7 @@ export const useDeleteLensCompletion = () => {
             const updatedCompletions = chartConfig?.data?.completions.filter(
                 (completion: LensCompletion, index: number) => index !== completionIndex
             );
-            await setChartConfig(chartId, { completions: updatedCompletions });
+            await setChartConfig(chartId, { data: { completions: updatedCompletions } as LensConfig });
 
             return updatedCompletions;
         },

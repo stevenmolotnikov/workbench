@@ -29,11 +29,10 @@ export function CreateWorkspaceDialog() {
         try {
             const newWorkspace = await createWorkspaceMutation.mutateAsync({
                 name: name.trim(),
-                public: false
             });
             setOpen(false);
             setName("");
-            router.push(`/workbench/${newWorkspace.id}`);
+            router.push(`/workbench/${newWorkspace.id}/lens`);
         } catch (error) {
             console.error("Failed to create workspace:", error);
             // You might want to show a toast notification here

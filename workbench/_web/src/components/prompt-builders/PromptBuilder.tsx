@@ -107,7 +107,7 @@ export function PromptBuilder() {
             </div>
             <div className="flex-1 overflow-y-auto">
                 {charts?.map((chart) => (
-                    <CompletionSection key={chart.id} sectionIdx={chart.position} />
+                    <CompletionSection key={chart.id} chartId={chart.id} sectionIdx={chart.position} />
                 ))}
                 {charts?.length === 0 && (
                     <p className="text-center py-4">No active sections. Click + to create a section.</p>
