@@ -5,7 +5,6 @@ import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
 import { charts, chartConfigs, NewChart, NewChartConfig, Chart, ChartConfig, LensChartConfig } from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { LensConfig } from "@/types/lens";
 
 export const setChartConfig = await withAuth(
     async (user: User, chartId: string, config: NewChartConfig): Promise<void> => {

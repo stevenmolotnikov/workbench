@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LensCompletion } from "@/types/lens";
 import { setChartData, createChart } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
-import { v4 as uuid } from "uuid";
 import { useWorkspace } from "@/stores/useWorkspace";
 
 

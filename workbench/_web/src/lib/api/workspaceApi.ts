@@ -27,7 +27,7 @@ export const useUpdateChartConfig = () => {
 
     return useMutation({
         mutationFn: async ({ chartId, config }: { chartId: string; config: ChartConfigData }) => {
-            await setChartConfig(chartId, config);
+            await setChartConfig(chartId, { data: config });
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
