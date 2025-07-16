@@ -13,6 +13,6 @@ export interface LensCompletion extends Completion {
     tokens: TokenCompletion[];
 }
 
-export interface LensWorkspace {
+export interface LensConfig {
     completions: LensCompletion[];
 }

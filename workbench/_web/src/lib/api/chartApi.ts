@@ -157,41 +157,32 @@ export const useLensGrid = () => {
     });
 }
 
-export const useCreateChart = () => {
+export const useCreateLensChart = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
         mutationFn: async ({ 
             workspaceId, 
             position, 
-            chartType,
-            workspaceType,
+            type,
         }: { 
             workspaceId: string; 
             position: number; 
-            chartType: "line" | "heatmap";
-            workspaceType: "lens" | "patching";
+            type: "lensLine" | "lensHeatmap";
         }) => {
             const newChart = {
-                id: uuid(),
-                chartData: null,
-                annotations: [],
-                workspaceData: null,
-                position
-            }
-            await createChart(
                 workspaceId,
-                newChart,
-                chartType,
-                workspaceType
-            );
+                position,
+                type,
+            }
+            await createChart(newChart);
             return newChart;
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 
             });
-            console.log("Successfully created chart:", data.id);
+            console.log("Successfully created chart");
         },
         onError: (error) => {
             console.error("Error creating chart:", error);

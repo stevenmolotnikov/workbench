@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { Layout } from '@/types/workspace';
+
+type Layout = 0 | 1 | 2 | 3;
 
 interface WorkspaceState {
     jobStatus: string;

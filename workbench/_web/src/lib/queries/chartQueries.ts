@@ -1,40 +1,39 @@
 "use server";
 
-import { Chart, ChartData, LineGraphData } from "@/types/charts";
-import { WorkspaceData } from "@/types/workspace";
-import { Annotation } from "@/types/annotations";
+import { ChartData, ChartConfig } from "@/types/charts";
 import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
-import { charts, workspaces, annotations } from "@/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { charts, chartConfigs, NewChart, Chart, ChartConfig } from "@/db/schema";
+import { eq, and, or } from "drizzle-orm";
+import { LensConfig } from "@/types/lens";
 
-export const setWorkspaceData = await withAuth(
+export const setChartConfig = await withAuth(
     async (
         user: User,
         chartId: string,
-        completions: WorkspaceData[keyof WorkspaceData]
+        config: ChartConfig
     ): Promise<void> => {
-        await db.update(charts).set({ workspaceData: completions }).where(eq(charts.id, chartId));
+        await db.update(chartConfigs).set({ data: config }).where(eq(chartConfigs.chartId, chartId));
     }
 );
 
-export const getWorkspaceData = await withAuth(
-    async (user: User, chartId: string): Promise<WorkspaceData[keyof WorkspaceData] | null> => {
-        const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
-        return chart?.workspaceData as WorkspaceData[keyof WorkspaceData] | null;
+export const getChartConfig = await withAuth(
+    async (user: User, chartId: string): Promise<ChartConfig | null> => {
+        const [chartConfig] = await db.select().from(chartConfigs).where(eq(chartConfigs.chartId, chartId));
+        return chartConfig?.data as ChartConfig | null;
     }
 );
 
 export const setChartData = await withAuth(
-    async (user: User, chartId: string, chartData: ChartData[keyof ChartData]): Promise<void> => {
-        await db.update(charts).set({ chartData }).where(eq(charts.id, chartId));
+    async (user: User, chartId: string, chartData: ChartData): Promise<void> => {
+        await db.update(charts).set({ data: chartData }).where(eq(charts.id, chartId));
     }
 );
 
 export const getChartData = await withAuth(
-    async (user: User, chartId: string): Promise<ChartData[keyof ChartData] | null> => {
+    async (user: User, chartId: string): Promise<ChartData | null> => {
         const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
-        return chart?.chartData as ChartData[keyof ChartData] | null;
+        return chart?.data as ChartData | null;
     }
 );
 
@@ -45,61 +44,27 @@ export const getCharts = await withAuth(
             .from(charts)
             .where(eq(charts.workspaceId, workspaceId));
 
-        const annotationData = await db
-            .select()
-            .from(annotations)
-            .where(
-                inArray(
-                    annotations.chartId,
-                    chartsData.map((chart) => chart.id)
-                )
-            );
-
-        return chartsData.map((chart) => {
-            return {
-                id: chart.id,
-                chartType: chart.chartType,
-                chartData: chart.chartData || null,
-                annotations: annotationData
-                    .filter((annotation) => annotation.chartId === chart.id)
-                    .map((annotation) => annotation.data as Annotation),
-                workspaceData: chart.workspaceData || null,
-                position: chart.position,
-            };
-        });
+        return chartsData;
     }
+);
+
+const LENS_CHART_TYPES = or(
+    eq(charts.type, "lensLine"),
+    eq(charts.type, "lensHeatmap")
 );
 
 export const getLensCharts = await withAuth(
     async (user: User, workspaceId: string): Promise<Chart[]> => {
-
         const chartsData = await db
             .select()
             .from(charts)
-            .where(and(eq(charts.workspaceId, workspaceId), eq(charts.workspaceType, "lens")));
-
-        const annotationData = await db
-            .select()
-            .from(annotations)
             .where(
-                inArray(
-                    annotations.chartId,
-                    chartsData.map((chart) => chart.id)
-                )
-            );
+                and(
+                    eq(charts.workspaceId, workspaceId),
+                    LENS_CHART_TYPES
+                ));
 
-        return chartsData.map((chart) => {
-            return {
-                id: chart.id,
-                chartType: chart.chartType,
-                chartData: chart.chartData || null,
-                annotations: annotationData
-                    .filter((annotation) => annotation.chartId === chart.id)
-                    .map((annotation) => annotation.data as Annotation),
-                workspaceData: chart.workspaceData || null,
-                position: chart.position,
-            };
-        });
+        return chartsData;
     }
 );
 
@@ -108,15 +73,11 @@ export const getLensChartByPosition = await withAuth(
         const chartsData = await db
             .select()
             .from(charts)
-            .where(and(eq(charts.workspaceId, workspaceId), eq(charts.position, position)));
-
-        const annotationData = await db
-            .select()
-            .from(annotations)
             .where(
-                inArray(
-                    annotations.chartId,
-                    chartsData.map((chart) => chart.id)
+                and(
+                    eq(charts.workspaceId, workspaceId), 
+                    eq(charts.position, position),
+                    LENS_CHART_TYPES
                 )
             );
 
@@ -124,40 +85,45 @@ export const getLensChartByPosition = await withAuth(
             throw new Error("Expected 1 chart, got " + chartsData.length);
         }
 
-        const chart = chartsData[0];
+        return chartsData[0];
+    }
+);
 
-        return {
-            id: chart.id,
-            chartType: chart.chartType,
-            chartData: chart.chartData || null,
-            annotations: annotationData
-                .filter((annotation) => annotation.chartId === chart.id)
-                .map((annotation) => annotation.data as Annotation),
-            workspaceData: chart.workspaceData || null,
-            position: chart.position,
-        };
+export const getLensChartConfigByPosition = await withAuth(
+    async (user: User, workspaceId: string, position: number): Promise<ChartConfig> => {
+        const chartConfigsData = await db
+            .select({
+                data: chartConfigs.data
+            })
+            .from(chartConfigs)
+            .innerJoin(charts, eq(chartConfigs.chartId, charts.id))
+            .where(
+                and(
+                    eq(charts.workspaceId, workspaceId),
+                    eq(charts.position, position),
+                    LENS_CHART_TYPES
+                )
+            );
+
+        if (chartConfigsData.length !== 1) {
+            throw new Error("Expected 1 chart config, got " + chartConfigsData.length);
+        }
+
+        return chartConfigsData[0];
     }
 );
 
 export const createChart = await withAuth(
     async (
         user: User,
-        workspaceId: string,
-        chart: Chart,
-        chartType: "line" | "heatmap",
-        workspaceType: "lens" | "patching"
+        chart: NewChart,
     ): Promise<void> => {
+        if (!chart.workspaceId) {
+            throw new Error("workspaceId is required");
+        }
 
         await db
             .insert(charts)
-            .values({
-                id: chart.id,
-                workspaceId,
-                workspaceType,
-                workspaceData: chart.workspaceData,
-                chartType,
-                chartData: chart.chartData,
-                position: chart.position,
-            });
+            .values(chart);
     }
 );

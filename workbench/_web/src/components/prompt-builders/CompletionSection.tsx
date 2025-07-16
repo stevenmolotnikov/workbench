@@ -5,11 +5,11 @@ import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useSelectedModel } from "@/stores/useSelectedModel";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import type { LensCompletion } from "@/types/lens";
-import { useLensLine, useLensGrid, useCreateChart } from "@/lib/api/chartApi";
+import { useLensLine, useLensGrid, useCreateLensChart } from "@/lib/api/chartApi";
 import { useCreateLensCompletion } from "@/lib/api/lensApi";
 
 import { useQuery } from "@tanstack/react-query";
-import { getLensChartByPosition } from "@/lib/queries/chartQueries";
+import { getLensChartByPosition, getLensChartConfigByPosition } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
 
 
@@ -17,27 +17,27 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
     const lensLineMutation = useLensLine();
     const lensGridMutation = useLensGrid();
     const createLensCompletionMutation = useCreateLensCompletion(); 
-    const createChartMutation = useCreateChart();
+    const createChartMutation = useCreateLensChart();
     const { modelName } = useSelectedModel();
     const { workspaceId } = useParams();
 
-    const { data: chart } = useQuery({
-        queryKey: ["lensCharts", workspaceId, sectionIdx],
-        queryFn: () => getLensChartByPosition(workspaceId as string, sectionIdx),
+
+    const { data: chartConfig } = useQuery({
+        queryKey: ["lensChartConfig", workspaceId, sectionIdx],
+        queryFn: () => getLensChartConfigByPosition(workspaceId as string, sectionIdx),
     });
 
-    const completions = (chart?.workspaceData as { completions: LensCompletion[] })?.completions || [];
+    const completions: LensCompletion[] = chartConfig?.data?.completions || [];
 
-
-    async function createLineChart(completion: LensCompletion) {
-        if (!chart?.id) {
+    async function createLineChart() {
+        if (!chartConfig?.chartId) {
             console.error("No chart available");
             return;
         }
         try {
             const data = await lensLineMutation.mutateAsync({
-                completions: [completion],
-                chartId: chart.id
+                completions: completions,
+                chartId: chartConfig.chartId
             });
             
             return data;
@@ -47,15 +47,16 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
         }
     }
 
-    async function createHeatmap(completion: LensCompletion) {
-        if (!chart?.id) {
+    async function createHeatmap() {
+        if (!chartConfig?.chartId) {
             console.error("No chart available");
             return;
         }
         try {
+            // This just uses the first one for now...
             const data = await lensGridMutation.mutateAsync({
-                completions: [completion],
-                chartId: chart.id
+                completions: completions,
+                chartId: chartConfig.chartId
             });
             
             return data;
@@ -66,8 +67,8 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
     }
 
     async function createCompletion() {
-        if (!chart?.id || !modelName) {
-            console.log(chart, modelName);
+        if (!chartConfig?.chartId || !modelName) {
+            console.log(chartConfig, modelName);
             console.error("Missing chart ID or model name");
             return;
         }
@@ -76,7 +77,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             await createLensCompletionMutation.mutateAsync({
                 prompt: "",
                 model: modelName,
-                chartId: chart.id,
+                chartId: chartConfig.chartId,
             });
         } catch (error) {
             console.error("Failed to create completion:", error);
@@ -100,7 +101,7 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
 
                     <TooltipButton
                         size="icon"
-                        onClick={async () => await createHeatmap(completions[0])}
+                        onClick={async () => await createHeatmap()}
                         disabled={completions.length === 0}
                         tooltip="Add grid charts to all completions"
                     >
@@ -124,11 +125,12 @@ export function CompletionSection({ sectionIdx }: { sectionIdx: number }) {
             </div>
 
             <div className="flex-1 space-y-4">
-                {completions?.map((compl,) => (
+                {completions?.map((completion, index) => (
                     <CompletionCard 
-                        key={compl.id} 
-                        completion={compl}
-                        chartId={chart?.id || ""}
+                        key={index} 
+                        completion={completion}
+                        chartId={chartConfig?.chartId || ""}
+                        completionIdx={index}
                     />
                 ))}
                 {(!completions || completions.length === 0) && (

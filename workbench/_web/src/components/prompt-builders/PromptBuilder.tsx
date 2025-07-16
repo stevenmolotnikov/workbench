@@ -25,7 +25,7 @@ import {
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getLensCharts } from "@/lib/queries/chartQueries";
-import { useCreateChart } from "@/lib/api/chartApi";
+import { useCreateLensChart } from "@/lib/api/chartApi";
 
 
 export function DropdownMenuCheckboxes() {
@@ -62,7 +62,7 @@ export function PromptBuilder() {
     const { isLoading } = useModels();
 
     const { workspaceId } = useParams();
-    const createChartMutation = useCreateChart();
+    const createChartMutation = useCreateLensChart();
 
     const { data: charts } = useQuery({
         queryKey: ["lensCharts", workspaceId],
@@ -74,8 +74,7 @@ export function PromptBuilder() {
         createChartMutation.mutate({
             workspaceId: workspaceId as string,
             position: position,
-            chartType: "line",
-            workspaceType: "lens",
+            type: "lensLine",
         });
     }
 

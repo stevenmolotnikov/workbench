@@ -1,5 +1,5 @@
-import type { Annotation } from "@/types/annotations";
-import type { WorkspaceData } from "@/types/workspace";
+import { LensConfig } from "./lens";
+import { PatchingConfig } from "./patching";
 
 export interface HeatmapData {
     data: number[][];
@@ -17,7 +17,7 @@ interface ChartDataPoint {
     [key: string]: number | string | null;
 }
 
-interface ChartConfig {
+interface LineChartConfig {
     [key: string]: { label: string; color: string };
 }
 
@@ -27,21 +27,10 @@ export interface LineData {
 
 export interface LineGraphData {
     chartData: ChartDataPoint[];
-    chartConfig: ChartConfig;
+    chartConfig: LineChartConfig;
     maxLayer: number;
     lineData: LineData;
 }
 
-export type ChartData = {
-    line: LineGraphData;
-    heatmap: HeatmapData;
-}
-
-export interface Chart {
-    id: string;
-    chartType: "line" | "heatmap";
-    chartData: ChartData[keyof ChartData] | null;
-    annotations: Annotation[];
-    workspaceData: WorkspaceData[keyof WorkspaceData] | null;
-    position: number;
-}
+export type ChartData = LineGraphData | HeatmapData;
+export type ChartConfigData = LensConfig | PatchingConfig;

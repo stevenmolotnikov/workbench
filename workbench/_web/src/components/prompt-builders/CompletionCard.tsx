@@ -13,7 +13,7 @@ import { tokenizeText } from "@/actions/tokenize";
 import type { Token } from "@/types/tokenizer";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { useUpdateChartWorkspaceData } from "@/lib/api/workspaceApi";
+import { useUpdateChartConfig } from "@/lib/api/workspaceApi";
 import { useDeleteLensCompletion } from "@/lib/api/lensApi";
 import { getExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
@@ -21,9 +21,10 @@ import { toast } from "sonner";
 interface CompletionCardProps {
     completion: LensCompletion;
     chartId: string;
+    completionIdx: number;
 }
 
-export function CompletionCard({ completion: initialCompletion, chartId }: CompletionCardProps) {
+export function CompletionCard({ completion: initialCompletion, chartId, completionIdx }: CompletionCardProps) {
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(
@@ -41,7 +42,7 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
     // Completion state
     const [completion, setCompletion] = useState<LensCompletion>(initialCompletion);
 
-    const updateChartWorkspaceDataMutation = useUpdateChartWorkspaceData();
+    const updateChartConfigMutation = useUpdateChartConfig();
     const deleteLensCompletionMutation = useDeleteLensCompletion();
 
     const textHasChanged = completion.prompt !== lastTokenizedText;
@@ -51,13 +52,10 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
         if (showPredictions && !tokenData) {
             handleTokenize();
         }
-    }, [showPredictions, tokenData]);
-
-    useEffect(() => {
         if (showPredictions && !predictions && completion.tokens.length > 0) {
             runPredictions();
         }
-    }, [showPredictions, predictions]);
+    }, []);
 
     const removeToken = (idxs: number[]) => {
         setCompletion({
@@ -69,7 +67,7 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
     const handleDeleteCompletion = async () => {
         await deleteLensCompletionMutation.mutateAsync({
             chartId: chartId,
-            completionId: completion.id,
+            completionIndex: completionIdx,
         });
     }
 
@@ -89,6 +87,7 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
 
             // Auto select and run for last token if first time tokenizing
             if (tokens && !showPredictions) {
+                console.log("FIRST TIME TOKENIZING");
                 const lastTokenIdx = tokens.length - 1;
                 setSelectedIdx(lastTokenIdx);
                 tokenSelection.setHighlightedTokens([lastTokenIdx]);
@@ -138,9 +137,9 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
             setShowPredictions(true);
             setCompletion(updatedCompletion);
 
-            await updateChartWorkspaceDataMutation.mutateAsync({
+            await updateChartConfigMutation.mutateAsync({
                 chartId: chartId,
-                data: { completions: [updatedCompletion] }
+                config: { completions: [updatedCompletion] }
             });
         } catch (error) {
             console.error("Error sending request:", error);
@@ -177,9 +176,9 @@ export function CompletionCard({ completion: initialCompletion, chartId }: Compl
             tokens: [],
         }
 
-        await updateChartWorkspaceDataMutation.mutateAsync({
+        await updateChartConfigMutation.mutateAsync({
             chartId: chartId,
-            data: { completions: [updatedCompletion] }
+            config: { completions: [updatedCompletion] }
         });
     }
 

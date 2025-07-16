@@ -1,21 +1,27 @@
 "use server";
 
-import { Chart, ChartData } from "@/types/charts";
-import { Workspace, WorkspaceData } from "@/types/workspace";
-import { Annotation } from "@/types/annotations";
 import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
-import { charts, workspaces, annotations } from "@/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
-import { Workspace as WorkspaceType } from "@/types/workspace";
+import { workspaces } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { Workspace } from "@/types/workspace";
 
 const getWorkspaces = await withAuth(async (user: User): Promise<Workspace[]> => {
-    const workspacesData = await db.select().from(workspaces).where(eq(workspaces.userId, user.id));
-    return workspacesData.map((workspace) => {
-        return {
-            ...workspace,
-            charts: []
-        };
-    });
+    return await db.select().from(workspaces).where(eq(workspaces.userId, user.id));
 });
 
+const getWorkspaceById = await withAuth(async (user: User, workspaceId: string): Promise<Workspace | null> => {
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+    return workspace;
+});
+
+const createWorkspace = await withAuth(async (user: User, name: string) => {
+    const workspace = await db.insert(workspaces).values({
+        userId: user.id,
+        name,
+        public: false
+    }).returning();
+    return workspace;
+});
+
+export { getWorkspaces, getWorkspaceById, createWorkspace };

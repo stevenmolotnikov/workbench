@@ -1,26 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspace } from "@/lib/api";
-import { setWorkspaceData, setChartData } from "@/lib/queries/chartQueries";
-import { WorkspaceData } from "@/types/workspace";
-import { ChartData } from "@/types/charts";
-
-interface CreateWorkspaceParams {
-    name: string;
-    public?: boolean;
-}
+import { createWorkspace } from "@/lib/queries/workspaceQueries";
+import { setChartConfig } from "@/lib/queries/chartQueries";
+import { ChartConfigData } from "@/types/charts";
 
 export const useCreateWorkspace = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ name, public: isPublic = false }: CreateWorkspaceParams) => {
+        mutationFn: async ({ name }: { name: string }) => {
             // This calls the server action which handles authentication
-            const workspace = await createWorkspace(name, isPublic);
-            return workspace;
+            await createWorkspace(name);
         },
-        onSuccess: (data) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-            console.log("Successfully created workspace:", data.id);
+            console.log("Successfully created workspace");
         },
         onError: (error) => {
             console.error("Error creating workspace:", error);
@@ -28,16 +21,16 @@ export const useCreateWorkspace = () => {
     });
 };
 
-export const useUpdateChartWorkspaceData = () => {
+export const useUpdateChartConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ chartId, data }: { chartId: string; data: WorkspaceData[keyof WorkspaceData] }) => {
-            await setWorkspaceData(chartId, data);
+        mutationFn: async ({ chartId, config }: { chartId: string; config: ChartConfigData }) => {
+            await setChartConfig(chartId, config);
         },
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
-            console.log("Successfully updated workspace");
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            console.log("Successfully updated chart config");
         },
         onError: (error) => {
             console.error("Error updating workspace:", error);

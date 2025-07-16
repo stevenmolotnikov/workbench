@@ -1,6 +1,6 @@
 "use client";
 
-import { getWorkspacesWithCharts } from "@/lib/api";
+import { getWorkspaces } from "@/lib/queries/workspaceQueries";
 import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { ModelsDisplay } from "@/components/ModelsDisplay";
@@ -14,7 +14,7 @@ export default function WorkbenchPage() {
 
     const { data: workspaces } = useQuery({
         queryKey: ["workspaces"],
-        queryFn: () => getWorkspacesWithCharts()
+        queryFn: () => getWorkspaces()
     });
 
     return (

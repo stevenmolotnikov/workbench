@@ -7,16 +7,11 @@ import { WorkbenchMenu } from "@/components/WorkbenchMenu";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 
 import { ResizableLayout } from "@/components/Layout";
-// import { WorkspaceHistory } from "@/components/WorkspaceHistory";
 import { TutorialsSidebar } from "@/components/TutorialsSidebar";
 import { useTour } from "@reactour/tour";
 
-import { ChartMode } from "@/types/workspace";
-import { ChartArea, Grid3X3 } from "lucide-react";
-import { LensLineGraph } from "@/components/charts/types";
-import { LensHeatmap } from "@/components/charts/types";
 
-import { getWorkspaceById } from "@/lib/api";
+import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
