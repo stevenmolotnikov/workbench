@@ -6,6 +6,7 @@ import { db } from "@/db/client";
 import {
     charts,
     chartConfigs,
+    chartConfigLinks,
     NewChart,
     Chart,
     LensChartConfig,
@@ -19,12 +20,20 @@ export const setChartData = await withAuth(
     }
 );
 
+export const getChartData = await withAuth(
+    async (user: User, chartId: string): Promise<ChartData> => {
+        const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
+        return chart?.data as ChartData;
+    }
+);
+
 export const getLensCharts = await withAuth(
     async (user: User, workspaceId: string): Promise<Chart[]> => {
         const chartsData = await db
             .select()
             .from(charts)
-            .innerJoin(chartConfigs, eq(charts.id, chartConfigs.chartId))
+            .innerJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
+            .innerJoin(chartConfigs, eq(chartConfigLinks.configId, chartConfigs.id))
             .where(and(eq(charts.workspaceId, workspaceId), eq(chartConfigs.type, "lens")));
 
         return chartsData.map(({charts,}) => charts);
@@ -42,6 +51,11 @@ export const getLensChartConfigs = await withAuth(
     }
 );
 
-export const createChart = await withAuth(async (user: User, chart: NewChart): Promise<void> => {
-    await db.insert(charts).values(chart).returning();
+export const createChart = await withAuth(async (user: User, chart: NewChart): Promise<Chart> => {
+    const [createdChart] = await db.insert(charts).values(chart).returning();
+    return createdChart;
+});
+
+export const deleteChart = await withAuth(async (user: User, chartId: string): Promise<void> => {
+    await db.delete(charts).where(eq(charts.id, chartId));
 });

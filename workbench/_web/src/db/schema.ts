@@ -35,11 +35,16 @@ export const configTypes = [
 
 export const chartConfigs = pgTable("chart_configs", {
     id: uuid("id").primaryKey().defaultRandom(),
-    chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
     data: jsonb("data").$type<ChartConfigData>().notNull(),
     type: varchar("type", { enum: configTypes, length: 32 }).notNull(),
+});
+
+export const chartConfigLinks = pgTable("chart_config_links", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull(),
+    configId: uuid("config_id").references(() => chartConfigs.id, { onDelete: "cascade" }).notNull(),
 });
 
 // Index on chart config and chart ids
@@ -75,6 +80,9 @@ export type NewChart = typeof charts.$inferInsert;
 
 export type ChartConfig = typeof chartConfigs.$inferSelect;
 export type NewChartConfig = typeof chartConfigs.$inferInsert;
+
+export type ChartConfigLink = typeof chartConfigLinks.$inferSelect;
+export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
 export type AnnotationRow = typeof annotations.$inferSelect;
 export type NewAnnotation = typeof annotations.$inferInsert;

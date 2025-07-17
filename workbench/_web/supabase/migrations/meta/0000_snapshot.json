@@ -1,5 +1,5 @@
 {
-  "id": "5913a8d2-bc16-4147-b0dc-7d3d316d35e2",
+  "id": "c3ee0923-0c83-46a5-ac16-4c6fef686c48",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -313,8 +313,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.chart_configs": {
-      "name": "chart_configs",
+    "public.chart_config_links": {
+      "name": "chart_config_links",
       "schema": "",
       "columns": {
         "id": {
@@ -328,7 +328,60 @@
           "name": "chart_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "config_id": {
+          "name": "config_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "chart_config_links_chart_id_charts_id_fk": {
+          "name": "chart_config_links_chart_id_charts_id_fk",
+          "tableFrom": "chart_config_links",
+          "tableTo": "charts",
+          "columnsFrom": [
+            "chart_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "chart_config_links_config_id_chart_configs_id_fk": {
+          "name": "chart_config_links_config_id_chart_configs_id_fk",
+          "tableFrom": "chart_config_links",
+          "tableTo": "chart_configs",
+          "columnsFrom": [
+            "config_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chart_configs": {
+      "name": "chart_configs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "workspace_id": {
           "name": "workspace_id",
@@ -351,19 +404,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "chart_configs_chart_id_charts_id_fk": {
-          "name": "chart_configs_chart_id_charts_id_fk",
-          "tableFrom": "chart_configs",
-          "tableTo": "charts",
-          "columnsFrom": [
-            "chart_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "chart_configs_workspace_id_workspaces_id_fk": {
           "name": "chart_configs_workspace_id_workspaces_id_fk",
           "tableFrom": "chart_configs",
@@ -399,19 +439,19 @@
           "name": "workspace_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "data": {
           "name": "data",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "type": {
           "name": "type",
           "type": "varchar(32)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},

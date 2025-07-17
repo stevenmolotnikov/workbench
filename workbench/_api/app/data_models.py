@@ -6,9 +6,6 @@ class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str
 
-class Completion(BaseModel):
-    prompt: str
-
 class NDIFRequest(BaseModel):
     job_id: str
 

@@ -1,11 +1,11 @@
 import config from "@/lib/config";
 import sseService from "@/lib/sseProvider";
 import { useWorkspace } from "@/stores/useWorkspace";
-import type { LensCompletion } from "@/types/lens";
+import type { LensConfig } from "@/types/lens";
 import type { Token } from "@/types/tokenizer";
 
 interface ExecuteSelectedRequest {
-    completion: LensCompletion;
+    completion: LensConfig;
     model: string;
     tokens: Token[];
 }

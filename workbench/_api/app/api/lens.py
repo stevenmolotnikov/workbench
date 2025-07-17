@@ -10,7 +10,7 @@ from pydantic import BaseModel
 import torch as t
 
 from ..utils import use_send_stream, format_sse_event, stream_from_memory_object
-from ..data_models import Completion, NDIFRequest, Token
+from ..data_models import NDIFRequest, Token
 
 
 # Global storage for job streams
@@ -19,10 +19,11 @@ job_data: Dict[str, MemoryObjectSendStream] = {}
 ##### TARGETED LENS REQUEST SCHEMA #####
 
 
-class TargetedLensCompletion(Completion):
+class TargetedLensCompletion(BaseModel):
     name: str
     tokens: list[Token]
     model: str
+    prompt: str
 
 
 class TargetedLensRequest(NDIFRequest):
@@ -47,13 +48,9 @@ class LensResponse(BaseModel):
 
 ##### GRID LENS REQUEST SCHEMA #####
 
-
-class GridLensCompletion(Completion):
-    model: str
-
-
 class GridLensRequest(NDIFRequest):
-    completion: GridLensCompletion
+    model: str
+    prompt: str
 
 
 ##### GRID LENS RESPONSE SCHEMA #####
@@ -169,7 +166,7 @@ def preprocess(lens_request: TargetedLensRequest):
 
         request = {
             "name": completion.name,
-            "prompt": completion.prompt,
+            "prompt": completion,
             "idxs": idxs,
             "target_ids": target_ids,
         }
@@ -268,9 +265,9 @@ async def process_grid_lens_background(
             }
         )
 
-        model = state.get_model(lens_request.completion.model)
+        model = state.get_model(lens_request.model)
         tok = model.tokenizer
-        prompt = lens_request.completion.prompt
+        prompt = lens_request.prompt
 
         # Run computation in thread pool
         pred_ids, probs, input_strs = await asyncio.to_thread(

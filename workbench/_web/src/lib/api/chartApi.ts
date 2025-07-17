@@ -1,11 +1,12 @@
 import config from "@/lib/config";
 import type { LineGraphData, LineData } from "@/types/charts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LensCompletion } from "@/types/lens";
-import { setChartData, createChart } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { useWorkspace } from "@/stores/useWorkspace";
-
+import { LensConfig } from "@/types/lens";
+import { NewChart } from "@/db/schema";
+import { getChartConfigs, addChartConfigLink } from "../queries/configQueries";
 
 interface SSEData {
     type: string;
@@ -51,7 +52,7 @@ const listenToSSE = <T>(url: string): Promise<T> => {
     });
 };
 
-const getLensLine = async (lensRequest: { completions: LensCompletion[]; chartId: string }) => {
+const getLensLine = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {
     try {
         const jobId = generateJobId();
         const requestWithJobId = { ...lensRequest, job_id: jobId };
@@ -80,7 +81,7 @@ export const useLensLine = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: { completions: LensCompletion[]; chartId: string }) => {
+        mutationFn: async (lensRequest: { completions: LensConfig[]; chartId: string }) => {
             const response = await getLensLine(lensRequest);
             const result = processChartData(response.data);
 
@@ -102,12 +103,12 @@ export const useLensLine = () => {
     });
 };
 
-const getLensGrid = async (lensRequest: { completions: LensCompletion[]; chartId: string }) => {    
+const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {    
     try {
         const jobId = generateJobId();
         // Grid endpoint expects a single completion, not an array
         const requestWithJobId = { 
-            completion: lensRequest.completions[0], 
+            ...lensRequest.completions[0], 
             job_id: jobId 
         };
         
@@ -134,7 +135,7 @@ export const useLensGrid = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: { completions: LensCompletion[]; chartId: string }) => {
+        mutationFn: async (lensRequest: {completions: LensConfig[]; chartId: string}) => {
             const response = await getLensGrid(lensRequest);
             const result = processHeatmapData(response);
 
@@ -152,70 +153,6 @@ export const useLensGrid = () => {
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
-        },
-    });
-}
-
-export const useCreateLensChart = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({ 
-            workspaceId, 
-            position, 
-            type,
-        }: { 
-            workspaceId: string; 
-            position: number; 
-            type: "lensLine" | "lensHeatmap";
-        }) => {
-            const newChart = {
-                workspaceId,
-                position,
-                type,
-            }
-            const createdChart = await createChart(newChart);
-            return createdChart;
-        },
-        onMutate: async ({ workspaceId, position, type }) => {
-            // Cancel any outgoing refetches
-            await queryClient.cancelQueries({ queryKey: ["lensCharts", workspaceId] });
-
-            // Snapshot the previous value
-            const previousCharts = queryClient.getQueryData(["lensCharts", workspaceId]);
-
-            // Optimistically update to the new value
-            queryClient.setQueryData(["lensCharts", workspaceId], (old: any) => {
-                if (!old) return old;
-                // Create a temporary chart with a temporary ID
-                const tempChart = {
-                    id: `temp-${Date.now()}`,
-                    workspaceId,
-                    position,
-                    type,
-                    data: null
-                };
-                return [...old, tempChart];
-            });
-
-            // Return a context with the previous charts and the workspaceId
-            return { previousCharts, workspaceId };
-        },
-        onError: (error, variables, context) => {
-            // If the mutation fails, use the context to roll back
-            if (context?.previousCharts) {
-                queryClient.setQueryData(
-                    ["lensCharts", context.workspaceId],
-                    context.previousCharts
-                );
-            }
-            console.error("Error creating chart:", error);
-        },
-        onSettled: (data, error, variables) => {
-            // Always refetch after error or success
-            queryClient.invalidateQueries({ 
-                queryKey: ["lensCharts", variables.workspaceId] 
-            });
         },
     });
 }
@@ -309,3 +246,31 @@ function processHeatmapData(data: LensGridResponse) {
         xTickLabels: input_strs
     };
 }
+
+export const useCreateChart = () => {
+    const queryClient = useQueryClient();
+    const { setActiveTab } = useWorkspace();
+
+    return useMutation({
+        mutationFn: async ({ configId, chart }: { configId: string; chart: NewChart }) => {
+            const newChart = await createChart(chart);
+            await addChartConfigLink(configId, newChart.id);
+            return newChart;
+        },
+        onSuccess: (newChart, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["lensCharts", variables.chart.workspaceId] });
+            setActiveTab(newChart.id);
+        },
+    });
+};
+
+export const useDeleteChart = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (chartId: string) => deleteChart(chartId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+        },
+    });
+};

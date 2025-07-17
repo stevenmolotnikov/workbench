@@ -12,8 +12,6 @@ from transformers import AutoTokenizer
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Optional, Literal
 
-from ..data_models import Completion
-
 
 """
 Dimension key:
@@ -57,8 +55,8 @@ class PatchRequest(BaseModel):
     )
 
     model: str
-    source: Completion
-    destination: Completion
+    source: str
+    destination: str
     edits: List[Connection]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
     patch_tokens: bool = Field(alias="patchTokens")

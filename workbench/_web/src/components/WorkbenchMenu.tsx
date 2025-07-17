@@ -9,7 +9,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { useWorkspace } from "@/stores/useWorkspace";
 import {
     Select,
@@ -39,7 +39,6 @@ export function WorkbenchMenu({
     toggleTutorials, 
     workspaceId
 }: WorkbenchModeProps) {
-    const { layout, setLayout } = useWorkspace();
     const router = useRouter();
     const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -111,19 +110,6 @@ export function WorkbenchMenu({
                     <SquarePen size={16} />
                     Annotate
                 </Button>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline">
-                            <LayoutGrid size={16} />
-                            Charts per row: {layout}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => setLayout(1)}>1 per row</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLayout(2)}>2 per row</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setLayout(3)}>3 per row</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
                 {/* <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} /> */}
                 
                 {/* User info and logout */}

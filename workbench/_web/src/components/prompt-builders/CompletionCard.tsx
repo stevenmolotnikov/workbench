@@ -1,4 +1,4 @@
-import { ALargeSmall, X } from "lucide-react";
+import { ALargeSmall, Grid, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
@@ -15,14 +15,22 @@ import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { getExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
 import { useDeleteChartConfig, useUpdateChartConfig } from "@/lib/api/configApi";
-import { LensChartConfig } from "@/db/schema";
+import { LensChartConfig, NewChart } from "@/db/schema";
 import { LensConfig } from "@/types/lens";
+import { useWorkspace } from "@/stores/useWorkspace";
+import { useCreateChart, useLensGrid } from "@/lib/api/chartApi";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getChartData } from "@/lib/queries/chartQueries";
+import { getChartConfigs } from "@/lib/queries/configQueries";
 
 
 
 export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }) {
 
     const initialCompletion = chartConfig.data;
+
+    const { activeTab, setActiveTab } = useWorkspace();
 
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
@@ -66,24 +74,55 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
     //     }
     // }
 
-    // async function createHeatmap() {
-    //     if (!chartConfig?.chartId) {
-    //         console.error("No chart available");
-    //         return;
-    //     }
-    //     try {
-    //         // This just uses the first one for now...
-    //         const data = await lensGridMutation.mutateAsync({
-    //             completions: completions,
-    //             chartId: chartConfig.chartId
-    //         });
+    const createChartMutation = useCreateChart();
+    const lensGridMutation = useLensGrid();
+    const { workspaceId } = useParams();
 
-    //         return data;
-    //     } catch (error) {
-    //         console.error("Error creating heatmap:", error);
-    //         throw error;
-    //     }
-    // }
+    const { data: activeChartConfigs, refetch: refetchActiveChartConfigs } = useQuery({
+        queryKey: ["activeChartConfigs"],
+        queryFn: () => getChartConfigs(activeTab as string),
+        enabled: !!activeTab,
+    });
+
+    async function createHeatmap(chartId: string) {
+        try {
+            // Ensure we have the latest chart configs
+            const { data: latestChartConfigs } = await refetchActiveChartConfigs();
+            const configs = latestChartConfigs?.map(config => config.data as LensConfig) || [];
+            
+            const data = await lensGridMutation.mutateAsync({
+                completions: [...configs, completion],
+                chartId: chartId
+            });
+
+            return data;
+        } catch (error) {
+            console.error("Error creating heatmap:", error);
+            throw error;
+        }
+    }
+
+    async function handleCreateChart(chartType: "line" | "heatmap") {
+
+        let chartId = activeTab;
+
+        // Create a new chart if in a new tab
+        if (!chartId) {
+            const newChart: NewChart = {
+                workspaceId: workspaceId as string,
+            };
+            const createdChart = await createChartMutation.mutateAsync({ configId: chartConfig.id, chart: newChart });
+            setActiveTab(createdChart.id as string);
+            chartId = createdChart.id as string;
+        }
+
+        if (chartType === "heatmap") {
+            await createHeatmap(chartId);
+        } else {
+            console.error("Not implemented");
+        }
+    }
+
 
     const handleDeleteCompletion = async () => {
         await deleteChartConfigMutation.mutateAsync({
@@ -123,7 +162,6 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
 
             // Auto select and run for last token if first time tokenizing
             if (tokens && !showPredictions) {
-                console.log("FIRST TIME TOKENIZING");
                 const lastTokenIdx = tokens.length - 1;
                 setSelectedIdx(lastTokenIdx);
                 tokenSelection.setHighlightedTokens([lastTokenIdx]);
@@ -164,7 +202,7 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
 
         try {
             const data = await getExecuteSelected({
-                completion: updatedCompletion,
+                prompt: updatedCompletion.prompt,
                 model: updatedCompletion.model,
                 tokens: updatedCompletion.tokens,
             });
@@ -175,7 +213,7 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
 
             await updateChartConfigMutation.mutateAsync({
                 configId: chartConfig.id,
-                config: { 
+                config: {
                     workspaceId: chartConfig.workspaceId,
                     data: updatedCompletion,
                     type: "lens",
@@ -276,6 +314,17 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
                             tooltip={textHasChanged ? "Re-tokenize" : "Tokenize"}
                         >
                             <ALargeSmall size={16} className="w-8 h-8" />
+                        </TooltipButton>
+
+                        <TooltipButton
+                            variant="outline"
+                            size="icon"
+                            id="tokenize-button"
+                            onClick={() => handleCreateChart("heatmap")}
+                            disabled={lensGridMutation.isPending}
+                            tooltip={"Create heatmap"}
+                        >
+                            <Grid size={16} className="w-8 h-8" />
                         </TooltipButton>
                     </div>
                 </div>

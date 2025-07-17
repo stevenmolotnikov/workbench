@@ -13,7 +13,7 @@ from ..utils import (
     format_sse_event,
     stream_from_memory_object,
 )
-from ..data_models import Completion, NDIFRequest, Token
+from ..data_models import NDIFRequest, Token
 
 router = APIRouter()
 
@@ -22,14 +22,14 @@ job_data: Dict[str, MemoryObjectSendStream] = {}
 
 
 class ExecuteSelectedRequest(NDIFRequest):
-    completion: Completion
     tokens: list[Token]
     model: str
+    prompt: str
 
 
 class ExecutePairRequest(NDIFRequest):
-    source: Completion
-    destination: Completion
+    source: str
+    destination: str
     model: str
 
 
@@ -49,7 +49,7 @@ def _execute_selected(
     idxs = [token.idx for token in execute_request.tokens]
     model = state.get_model(execute_request.model)
 
-    prompt = execute_request.completion.prompt
+    prompt = execute_request.prompt
 
     with model.wrapped_trace(prompt):
         logits = model.lm_head.output
