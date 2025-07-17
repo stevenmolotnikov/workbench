@@ -14,7 +14,6 @@ import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
 import { getExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
-import { useLensLine, useLensGrid } from "@/lib/api/chartApi";
 import { useDeleteChartConfig, useUpdateChartConfig } from "@/lib/api/configApi";
 import { LensChartConfig } from "@/db/schema";
 import { LensConfig } from "@/types/lens";

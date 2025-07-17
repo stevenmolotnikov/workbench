@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useWorkspace } from "@/stores/useWorkspace";
-import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import { LineChartWrapper } from "./types/LineChartWrapper";
-import { HeatmapChartWrapper } from "./types/HeatmapChartWrapper";
 import { getLensCharts } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
@@ -68,22 +65,16 @@ export function ChartDisplay() {
         );
     }
 
-    // Sort charts by position
-    const sortedCharts = charts?.sort((a, b) => a.position - b.position) || [];
-
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
-            {/* Charts container */}
-            {/* {JSON.stringify(sortedCharts)}
-            {sortedCharts.length} */}
             <div ref={containerRef} className="flex-1 p-4 overflow-auto custom-scrollbar">
-                {sortedCharts.length === 0 ? (
+                {charts?.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-muted-foreground">No charts to display</p>
                     </div>
                 ) : (
                     <div style={getGridStyle()}>
-                        {sortedCharts.map((chart) => (
+                        {charts?.map((chart) => (
                             <ChartCard 
                                 key={chart.id} 
                                 isLoading={false}

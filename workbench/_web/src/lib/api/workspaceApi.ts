@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createWorkspace } from "@/lib/queries/workspaceQueries";
-import { setChartConfig } from "@/lib/queries/chartQueries";
-import { ChartConfigData } from "@/types/charts";
+import { setChartConfig } from "@/lib/queries/configQueries";
+import { NewChartConfig } from "@/db/schema";
 
 export const useCreateWorkspace = () => {
     const queryClient = useQueryClient();
@@ -26,8 +26,8 @@ export const useUpdateChartConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ chartId, config }: { chartId: string; config: ChartConfigData }) => {
-            await setChartConfig(chartId, { data: config });
+        mutationFn: async ({ configId, config }: { configId: string; config: NewChartConfig }) => {
+            await setChartConfig(configId, config);
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });

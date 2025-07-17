@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addChartConfig, deleteChartConfig, setChartConfig } from "@/lib/queries/chartQueries";
+import { addChartConfig, deleteChartConfig, setChartConfig } from "@/lib/queries/configQueries";
 import { NewChartConfig } from "@/db/schema";
 
 export const useCreateChartConfig = () => {

@@ -21,11 +21,11 @@ export const chartTypes = [
 
 export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
     // Data used to display the chart
-    data: jsonb("data").$type<ChartData>().notNull(),
-    type: varchar("type", { enum: chartTypes, length: 32 }).notNull(),
+    data: jsonb("data").$type<ChartData>(),
+    type: varchar("type", { enum: chartTypes, length: 32 }),
 });
 
 export const configTypes = [
