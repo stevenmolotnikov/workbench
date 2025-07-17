@@ -1,6 +1,5 @@
 import { ALargeSmall, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { LensCompletion } from "@/types/lens";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/prompt-builders/TokenArea";
 import type { TokenPredictions } from "@/types/tokenizer";
@@ -13,20 +12,19 @@ import { tokenizeText } from "@/actions/tokenize";
 import type { Token } from "@/types/tokenizer";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { useUpdateChartConfig } from "@/lib/api/workspaceApi";
-import { useDeleteLensCompletion } from "@/lib/api/lensApi";
 import { getExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
+import { useLensLine, useLensGrid } from "@/lib/api/chartApi";
+import { useDeleteChartConfig, useUpdateChartConfig } from "@/lib/api/configApi";
+import { LensChartConfig } from "@/db/schema";
+import { LensConfig } from "@/types/lens";
 
-interface CompletionCardProps {
-    completion: LensCompletion;
-    chartId: string;
-    completionIdx: number;
-    workspaceId: string;
-    sectionIdx: number;
-}
 
-export function CompletionCard({ completion: initialCompletion, chartId, completionIdx, workspaceId, sectionIdx }: CompletionCardProps) {
+
+export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }) {
+
+    const initialCompletion = chartConfig.data;
+
     // Prediction state
     const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
     const [showPredictions, setShowPredictions] = useState<boolean>(
@@ -42,13 +40,57 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
     const { tokenizeOnEnter } = useLensWorkspace();
 
     // Completion state
-    const [completion, setCompletion] = useState<LensCompletion>(initialCompletion);
+    const [completion, setCompletion] = useState<LensConfig>(initialCompletion);
 
     const updateChartConfigMutation = useUpdateChartConfig();
-    const deleteLensCompletionMutation = useDeleteLensCompletion();
+    const deleteChartConfigMutation = useDeleteChartConfig();
 
     const textHasChanged = completion.prompt !== lastTokenizedText;
     const shouldEnableTokenize = completion.prompt && (!tokenData || textHasChanged);
+
+
+    // async function createLineChart() {
+    //     if (!chartConfig?.chartId) {
+    //         console.error("No chart available");
+    //         return;
+    //     }
+    //     try {
+    //         const data = await lensLineMutation.mutateAsync({
+    //             completions: completions,
+    //             chartId: chartConfig.chartId
+    //         });
+
+    //         return data;
+    //     } catch (error) {
+    //         console.error("Error creating line chart:", error);
+    //         throw error;
+    //     }
+    // }
+
+    // async function createHeatmap() {
+    //     if (!chartConfig?.chartId) {
+    //         console.error("No chart available");
+    //         return;
+    //     }
+    //     try {
+    //         // This just uses the first one for now...
+    //         const data = await lensGridMutation.mutateAsync({
+    //             completions: completions,
+    //             chartId: chartConfig.chartId
+    //         });
+
+    //         return data;
+    //     } catch (error) {
+    //         console.error("Error creating heatmap:", error);
+    //         throw error;
+    //     }
+    // }
+
+    const handleDeleteCompletion = async () => {
+        await deleteChartConfigMutation.mutateAsync({
+            configId: chartConfig.id,
+        });
+    }
 
     useEffect(() => {
         if (showPredictions && !tokenData) {
@@ -65,15 +107,6 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
             tokens: completion.tokens.filter((t) => !idxs.includes(t.idx)),
         });
     };
-
-    const handleDeleteCompletion = async () => {
-        await deleteLensCompletionMutation.mutateAsync({
-            chartId: chartId,
-            completionIndex: completionIdx,
-            workspaceId: workspaceId,
-            sectionIdx: sectionIdx,
-        });
-    }
 
     const tokenSelection = useTokenSelection({ compl: completion, removeToken });
 
@@ -142,8 +175,12 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
             setCompletion(updatedCompletion);
 
             await updateChartConfigMutation.mutateAsync({
-                chartId: chartId,
-                config: { completions: [updatedCompletion] }
+                configId: chartConfig.id,
+                config: { 
+                    workspaceId: chartConfig.workspaceId,
+                    data: updatedCompletion,
+                    type: "lens",
+                }
             });
         } catch (error) {
             console.error("Error sending request:", error);
@@ -181,20 +218,24 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
         }
 
         await updateChartConfigMutation.mutateAsync({
-            chartId: chartId,
-            config: { completions: [updatedCompletion] }
+            configId: chartConfig.id,
+            config: {
+                workspaceId: chartConfig.workspaceId,
+                data: updatedCompletion,
+                type: "lens",
+            }
         });
     }
 
     return (
-        <div className={cn("group relative", deleteLensCompletionMutation.isPending && "opacity-50 pointer-events-none")}>
+        <div className={cn("group relative", deleteChartConfigMutation.isPending && "opacity-50 pointer-events-none")}>
             {/* Delete button */}
             <Button
                 variant="ghost"
                 title="Delete completion"
                 size="icon"
                 onClick={handleDeleteCompletion}
-                disabled={deleteLensCompletionMutation.isPending}
+                disabled={deleteChartConfigMutation.isPending}
                 className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
             >
                 <X
@@ -286,6 +327,6 @@ export function CompletionCard({ completion: initialCompletion, chartId, complet
                     />
                 </div>
             )}
-        </div>  
+        </div>
     );
 }

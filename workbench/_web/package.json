@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "copy-env": "node scripts/copy-env.js",
-    "dev": "npm run copy-env && next dev -H 0.0.0.0 --turbopack",
+    "dev": "npm run copy-env && next dev -H 0.0.0.0 -p 3000 --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "bunx biome lint --write && bunx tsc --noEmit",
-    "format": "bunx biome format --write"
+    "lint": "next lint",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
@@ -65,7 +65,6 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
     "@eslint/eslintrc": "^3.3.1",
     "@types/bun": "latest",
     "@types/node": "^20.17.50",

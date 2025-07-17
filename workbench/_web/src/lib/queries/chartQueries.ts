@@ -3,15 +3,32 @@
 import { ChartData } from "@/types/charts";
 import { withAuth, User } from "@/lib/auth-wrapper";
 import { db } from "@/db/client";
-import { charts, chartConfigs, NewChart, NewChartConfig, Chart, ChartConfig, LensChartConfig } from "@/db/schema";
+import {
+    charts,
+    chartConfigs,
+    NewChart,
+    NewChartConfig,
+    Chart,
+    ChartConfig,
+    LensChartConfig,
+} from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
 
 export const setChartConfig = await withAuth(
-    async (user: User, chartId: string, config: NewChartConfig): Promise<void> => {
-        await db
-            .update(chartConfigs)
-            .set(config)
-            .where(eq(chartConfigs.chartId, chartId));
+    async (user: User, configId: string, config: NewChartConfig): Promise<void> => {
+        await db.update(chartConfigs).set(config).where(eq(chartConfigs.id, configId));
+    }
+);
+
+export const addChartConfig = await withAuth(
+    async (user: User, config: NewChartConfig): Promise<void> => {
+        await db.insert(chartConfigs).values(config);
+    }
+);
+
+export const deleteChartConfig = await withAuth(
+    async (user: User, configId: string): Promise<void> => {
+        await db.delete(chartConfigs).where(eq(chartConfigs.id, configId));
     }
 );
 
@@ -49,8 +66,6 @@ export const getCharts = await withAuth(
     }
 );
 
-const LENS_CHART_TYPES = or(eq(charts.type, "lensLine"), eq(charts.type, "lensHeatmap"));
-
 export const getLensCharts = await withAuth(
     async (user: User, workspaceId: string): Promise<Chart[]> => {
         const chartsData = await db
@@ -68,12 +83,7 @@ export const getLensChartConfig = await withAuth(
             .select()
             .from(chartConfigs)
             .innerJoin(charts, eq(chartConfigs.chartId, charts.id))
-            .where(
-                and(
-                    eq(chartConfigs.chartId, chartId),
-                    LENS_CHART_TYPES
-                )
-            );
+            .where(and(eq(chartConfigs.chartId, chartId), LENS_CHART_TYPES));
 
         if (chartConfigsData.length !== 1) {
             console.error("Expected 1 chart config, got " + chartConfigsData.length);
@@ -84,46 +94,14 @@ export const getLensChartConfig = await withAuth(
     }
 );
 
-export const getLensChartByPosition = await withAuth(
-    async (user: User, workspaceId: string, position: number): Promise<Chart> => {
-        const chartsData = await db
-            .select()
-            .from(charts)
-            .where(
-                and(
-                    eq(charts.workspaceId, workspaceId),
-                    eq(charts.position, position),
-                    LENS_CHART_TYPES
-                )
-            );
-
-        if (chartsData.length !== 1) {
-            throw new Error("Expected 1 chart, got " + chartsData.length);
-        }
-
-        return chartsData[0];
-    }
-);
-
-export const getLensChartConfigByPosition = await withAuth(
-    async (user: User, workspaceId: string, position: number): Promise<LensChartConfig | null> => {
+export const getLensChartConfigs = await withAuth(
+    async (user: User, workspaceId: string): Promise<LensChartConfig[]> => {
         const chartConfigsData = await db
             .select()
             .from(chartConfigs)
-            .innerJoin(charts, eq(chartConfigs.chartId, charts.id))
-            .where(
-                and(
-                    eq(charts.workspaceId, workspaceId),
-                    eq(charts.position, position),
-                    LENS_CHART_TYPES
-                )
-            );
+            .where(and(eq(chartConfigs.workspaceId, workspaceId), eq(chartConfigs.type, "lens")));
 
-        if (chartConfigsData.length !== 1) {
-            return null;
-        }
-
-        return chartConfigsData[0].chart_configs as LensChartConfig;
+        return chartConfigsData as LensChartConfig[];
     }
 );
 
@@ -135,7 +113,7 @@ const getInitialChartConfig = (chartType: string): NewChartConfig => {
         default:
             return {} as NewChartConfig;
     }
-}
+};
 
 export const createChart = await withAuth(async (user: User, chart: NewChart): Promise<void> => {
     if (!chart.workspaceId) {
@@ -144,13 +122,13 @@ export const createChart = await withAuth(async (user: User, chart: NewChart): P
 
     // Insert the chart
     const [newChart] = await db.insert(charts).values(chart).returning();
-    
+
     // Create initial chart config based on chart type
     const newChartConfig: NewChartConfig = getInitialChartConfig(chart.type);
-    
+
     // Insert the chart config
     await db.insert(chartConfigs).values({
         chartId: newChart.id,
-        data: newChartConfig.data
+        data: newChartConfig.data,
     });
 });

@@ -1,5 +1,5 @@
 {
-  "id": "366ea2e0-06cd-4aee-b52e-d660442fbbd4",
+  "id": "5913a8d2-bc16-4147-b0dc-7d3d316d35e2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -330,9 +330,21 @@
           "primaryKey": false,
           "notNull": false
         },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "data": {
           "name": "data",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(32)",
           "primaryKey": false,
           "notNull": true
         }
@@ -345,6 +357,19 @@
           "tableTo": "charts",
           "columnsFrom": [
             "chart_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "chart_configs_workspace_id_workspaces_id_fk": {
+          "name": "chart_configs_workspace_id_workspaces_id_fk",
+          "tableFrom": "chart_configs",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
           ],
           "columnsTo": [
             "id"
@@ -380,17 +405,11 @@
           "name": "data",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "type": {
           "name": "type",
           "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }

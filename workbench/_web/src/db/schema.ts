@@ -15,9 +15,8 @@ export const workspaces = pgTable("workspaces", {
 });
 
 export const chartTypes = [
-    "lensLine",
-    "lensHeatmap",
-    "patchingHeatmap",
+    "line",
+    "heatmap",
 ] as const;
 
 export const charts = pgTable("charts", {
@@ -25,26 +24,27 @@ export const charts = pgTable("charts", {
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
 
     // Data used to display the chart
-    data: jsonb("data").$type<ChartData>(),
+    data: jsonb("data").$type<ChartData>().notNull(),
     type: varchar("type", { enum: chartTypes, length: 32 }).notNull(),
-
-    // Layout position in the grid
-    position: integer("position").notNull(),
 });
+
+export const configTypes = [
+    "lens",
+    "patch",
+] as const;
 
 export const chartConfigs = pgTable("chart_configs", {
     id: uuid("id").primaryKey().defaultRandom(),
     chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
     data: jsonb("data").$type<ChartConfigData>().notNull(),
+    type: varchar("type", { enum: configTypes, length: 32 }).notNull(),
 });
 
 // Index on chart config and chart ids
 // export const chartsWorkspaceIdIdx = index("charts_workspace_id_idx").on(charts.workspaceId);
 // export const chartConfigsChartIdIdx = index("chart_configs_chart_id_idx").on(chartConfigs.chartId);
-
-// Constraint on workspace id and position
-export const chartsWorkspacePositionUnique = unique("charts_workspace_position_unique").on(charts.workspaceId, charts.position);
 
 export const annotationTypes = ["point", "heatmap", "token", "range"] as const;
 

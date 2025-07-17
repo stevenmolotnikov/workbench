@@ -2,17 +2,14 @@
 
 import { Plus, Settings2 } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
-import { CompletionCard } from "@/components/prompt-builders/CompletionCard";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useSelectedModel } from "@/stores/useSelectedModel";
-import { useTutorialManager } from "@/hooks/useTutorialManager";
 import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
-import { useState } from "react";
 
 import * as React from "react";
 
-import { CompletionSection } from "@/components/prompt-builders/CompletionSection";
+import { CompletionCard } from "./CompletionCard";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -24,8 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getLensCharts } from "@/lib/queries/chartQueries";
-import { useCreateLensChart } from "@/lib/api/chartApi";
+import { getLensChartConfigs } from "@/lib/queries/chartQueries";
+import { useCreateChartConfig } from "@/lib/api/configApi";
+import { NewChartConfig, LensChartConfig } from "@/db/schema";
 
 
 export function DropdownMenuCheckboxes() {
@@ -58,24 +56,55 @@ export function DropdownMenuCheckboxes() {
     );
 }
 
+// Generate a unique name in the format "Untitled n"
+const generateCompletionCardName = (existingCompletions: LensChartConfig[]): string => {
+    const existingNames = existingCompletions.map(completion => completion.data.name);
+    let counter = 1;
+    let name = `Untitled ${counter}`;
+    
+    while (existingNames.includes(name)) {
+        counter++;
+        name = `Untitled ${counter}`;
+    }
+    
+    return name;
+};  
+
 export function PromptBuilder() {
     const { isLoading } = useModels();
-
     const { workspaceId } = useParams();
-    const createChartMutation = useCreateLensChart();
+    const { modelName } = useSelectedModel();
 
-    const { data: charts } = useQuery({
-        queryKey: ["lensCharts", workspaceId],
-        queryFn: () => getLensCharts(workspaceId as string),
+    const createChartConfigMutation = useCreateChartConfig();
+
+    const { data: chartConfigs } = useQuery({
+        queryKey: ["lensChartConfig", workspaceId],
+        queryFn: () => getLensChartConfigs(workspaceId as string),
     });
 
-    const handleCreateChart = (position: number) => {
-
-        createChartMutation.mutate({
-            workspaceId: workspaceId as string,
-            position: position,
-            type: "lensLine",
-        });
+    async function createCompletion() {
+        if (!modelName) {
+            console.error("Missing model name");
+            return;
+        }
+        
+        try {
+            const chartConfig: NewChartConfig = {
+                type: "lens",
+                workspaceId: workspaceId as string,
+                data: {
+                    prompt: "",
+                    name: generateCompletionCardName(chartConfigs || []),
+                    model: modelName,
+                    tokens: [],
+                },
+            };
+            await createChartConfigMutation.mutateAsync({
+                chartConfig: chartConfig,
+            });
+        } catch (error) {
+            console.error("Failed to create completion:", error);
+        }
     }
 
     return (
@@ -89,12 +118,11 @@ export function PromptBuilder() {
 
                         <TooltipButton
                             size="icon"
-                            onClick={() => handleCreateChart(charts?.length || 0)}
+                            onClick={() => createCompletion()}
                             id="new-section"
-                            disabled={isLoading || createChartMutation.isPending}
                             tooltip="Create a new section"
                         >
-                            {createChartMutation.isPending ? (
+                            {createChartConfigMutation.isPending ? (
                                 <div className="animate-spin h-4 w-4 border border-current border-t-transparent rounded-full" />
                             ) : (
                                 <Plus size={16} />
@@ -105,13 +133,14 @@ export function PromptBuilder() {
                     </div>
                 </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
-                {charts?.map((chart) => (
-                    <CompletionSection key={chart.id} chartId={chart.id} sectionIdx={chart.position} />
+            <div className="flex-1 p-4 space-y-4">
+                {chartConfigs?.map((chartConfig) => (
+                    <CompletionCard chartConfig={chartConfig} key={chartConfig.id} />
                 ))}
-                {charts?.length === 0 && (
+                
+                {/* {charts?.length === 0 && (
                     <p className="text-center py-4">No active sections. Click + to create a section.</p>
-                )}
+                )} */}
             </div>
         </div>
     );
