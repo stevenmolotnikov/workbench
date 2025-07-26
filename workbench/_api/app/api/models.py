@@ -27,7 +27,7 @@ class ExecuteSelectedRequest(NDIFRequest):
     prompt: str
 
 
-class ExecutePairRequest(NDIFRequest):
+class ExecutePairRequest(BaseModel):
     source: str
     destination: str
     model: str
@@ -215,8 +215,8 @@ def _execute_pair(
     model = state.get_model(execute_request.model)
 
     prompts = [
-        execute_request.source.prompt,
-        execute_request.destination.prompt,
+        execute_request.source,
+        execute_request.destination,
     ]
 
     with model.wrapped_trace(prompts):
@@ -231,54 +231,83 @@ def _execute_pair(
     return raw_values, raw_indices
 
 
-@router.post("/get-execute-pair")
-async def get_execute_pair(
-    execute_request: ExecutePairRequest, request: Request
-):
-    """Start execute pair computation as background task"""
-    # Create memory object stream
-    send_stream, receive_stream = anyio.create_memory_object_stream()
 
-    # Store the receive stream for later retrieval
-    job_data[execute_request.job_id] = receive_stream
+@router.post("/execute_pair")
+async def execute_pair(execute_request: ExecutePairRequest, request: Request):
+    state = request.app.state.m
+    
+    raw_values, raw_indices = await asyncio.to_thread(_execute_pair, state, execute_request)
+    
+    def round_results(values, indices):
+        # Round values to 2 decimal places
+        idx_values = t.round(values * 100) / 100
+        nonzero = idx_values > 0
+        
+        nonzero_values = values[nonzero].tolist()
+        nonzero_indices = indices[nonzero].tolist()
 
-    # Start background task without waiting
-    asyncio.create_task(
-        process_execute_pair_background(
-            execute_request, request.app.state.m, send_stream
-        )
-    )
+        return {
+            "ids": nonzero_indices,
+            "values": nonzero_values
+        }
+    
+    results = {
+        "source": round_results(raw_values[0], raw_indices[0]),
+        "destination": round_results(raw_values[1], raw_indices[1])
+    }
+
+    print("FINISHED")
+
+    return results
+
+# @router.post("/get-execute-pair")
+# async def get_execute_pair(
+#     execute_request: ExecutePairRequest, request: Request
+# ):
+#     """Start execute pair computation as background task"""
+#     # Create memory object stream
+#     send_stream, receive_stream = anyio.create_memory_object_stream()
+
+#     # Store the receive stream for later retrieval
+#     job_data[execute_request.job_id] = receive_stream
+
+#     # Start background task without waiting
+#     asyncio.create_task(
+#         process_execute_pair_background(
+#             execute_request, request.app.state.m, send_stream
+#         )
+#     )
 
 
-@router.get("/listen-execute-pair/{job_id}")
-async def listen_execute_pair(job_id: str, request: Request):
-    """Listen for execute pair results via SSE"""
-    receive_stream = job_data.get(job_id)
+# @router.get("/listen-execute-pair/{job_id}")
+# async def listen_execute_pair(job_id: str, request: Request):
+#     """Listen for execute pair results via SSE"""
+#     receive_stream = job_data.get(job_id)
 
-    if not receive_stream:
-        # Return error if job not found
-        async def error_stream():
-            yield format_sse_event(
-                {"type": "error", "message": "Job not found"}
-            )
+#     if not receive_stream:
+#         # Return error if job not found
+#         async def error_stream():
+#             yield format_sse_event(
+#                 {"type": "error", "message": "Job not found"}
+#             )
 
-        return StreamingResponse(
-            error_stream(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
-            },
-        )
+#         return StreamingResponse(
+#             error_stream(),
+#             media_type="text/event-stream",
+#             headers={
+#                 "Cache-Control": "no-cache",
+#                 "Connection": "keep-alive",
+#                 "Access-Control-Allow-Origin": "*",
+#             },
+#         )
 
-    return StreamingResponse(
-        stream_from_memory_object(receive_stream),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Cache-Control",
-        },
-    )
+#     return StreamingResponse(
+#         stream_from_memory_object(receive_stream),
+#         media_type="text/event-stream",
+#         headers={
+#             "Cache-Control": "no-cache",
+#             "Connection": "keep-alive",
+#             "Access-Control-Allow-Origin": "*",
+#             "Access-Control-Allow-Headers": "Cache-Control",
+#         },
+#     )

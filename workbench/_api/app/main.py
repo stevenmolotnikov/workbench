@@ -26,7 +26,7 @@ def fastapi_app():
     )
 
     app.include_router(lens, prefix="/lens")
-    app.include_router(patch, prefix="/api")
+    app.include_router(patch, prefix="/patch")
     app.include_router(models, prefix="/models")
 
     app.state.m = AppState()
@@ -46,6 +46,8 @@ def fastapi_app():
     @app.post("/tokenize")
     async def tokenize(request: TokenizeRequest):
         tok = app.state.m.get_model(request.model).tokenizer
+
+        print(request)
         
         if request.operation == "decode":
             # Decode token IDs to text

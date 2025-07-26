@@ -21,10 +21,10 @@ const config = {
         listenExecutePair: '/models/listen-execute-pair',
 
         models: '/models',
-        patch: '/api/patch',
+        patch: '/patch/patch-grid',
         execute: '/api/execute',
         executeSelected: '/api/execute_selected',
-        executePair: '/api/execute_pair',
+        executePair: '/models/execute_pair',
         processData: '/process-data',
         tokenize: '/tokenize',
     },

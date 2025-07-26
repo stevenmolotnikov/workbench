@@ -4,10 +4,6 @@ export interface Prediction {
     str_indices: string[];
 }
 
-export interface Completion { 
-    prompt: string;
-}
-
 export interface Model {
     name: string;
     type: "chat" | "base";

@@ -172,12 +172,14 @@ export function JointPredictionDisplay({ notificationMessage, setNotificationMes
 
 
     const handleRunPredictions = async () => {
-        if (!source.prompt.trim() || !destination.prompt.trim()) {
+        console.log(source, destination);
+        if (!source.trim() || !destination.trim()) {
             toast.error("Please enter prompts");
             return;
         }
 
         setPredictionLoading(true);
+
         try {
             const response = await fetch(config.getApiUrl(config.endpoints.executePair), {
                 method: "POST",
@@ -188,7 +190,6 @@ export function JointPredictionDisplay({ notificationMessage, setNotificationMes
                     source: source,
                     destination: destination,
                     model: modelName,
-                    job_id: "prediction_job",
                 }),
             });
 
@@ -289,7 +290,7 @@ export function JointPredictionDisplay({ notificationMessage, setNotificationMes
                 <div className="flex flex-row items-center">
                     {/* <h2 className="text-sm font-medium">Prompts</h2> */}
                     <Select value={metric} onValueChange={handleSelectMetric}>
-                        <SelectTrigger className="w-40 h-8" disabled={source.prompt === "" || destination.prompt === ""}>
+                        <SelectTrigger className="w-40 h-8" disabled={source === "" || destination === ""}>
                             <SelectValue placeholder="Select metric" />
                         </SelectTrigger>
                         <SelectContent>
@@ -320,7 +321,7 @@ export function JointPredictionDisplay({ notificationMessage, setNotificationMes
                 </div>
                 <TooltipButton
                     onClick={handleRunPredictions}
-                    disabled={predictionLoading || !source.prompt.trim() || !destination.prompt.trim() || metric === undefined}
+                    // disabled={predictionLoading || !source.trim() || !destination.trim() || metric === undefined}
                     className="w-8 h-8"
                     size="icon"
                     tooltip="Run predictions"

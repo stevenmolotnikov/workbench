@@ -1,5 +1,3 @@
-import type { Completion } from "@/types/workspace";
-
 interface Point {
     x: number;
     y: number;
@@ -17,8 +15,8 @@ type Edit = Connection;
 export interface PatchingConfig { 
     edits: Edit[];
     model: string;
-    source: Completion;
-    destination: Completion;
+    source: string;
+    destination: string;
     submodule: "attn" | "mlp" | "blocks" | "heads";
     correctId: number;
     incorrectId: number | undefined;

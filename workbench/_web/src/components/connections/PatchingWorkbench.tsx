@@ -20,20 +20,16 @@ import { usePatchingCompletions } from "@/stores/usePatchingCompletions";
 import { usePatchingTokens } from "@/stores/usePatchingTokens";
 import { useConnections } from "@/stores/useConnections";
 import { batchTokenizeText } from "@/actions/tokenize";
-import type { ActivationPatchingRequest } from "@/types/patching";
+import type { Connection, PatchingConfig } from "@/types/patching";
 import type { HeatmapProps } from "@/components/charts/primatives/Heatmap";
 import { JointPredictionDisplay } from "./JointPredictionDisplay";
 import { cn } from "@/lib/utils";
 import { PatchingSettings } from "./PatchingSettingsDropdown";
-import { useStatusUpdates } from "@/hooks/useStatusUpdates";
 import { TooltipButton } from "../ui/tooltip-button";
 import { toast } from "sonner";
 import type { Token } from "@/types/tokenizer";
+import config from "@/lib/config";
 
-// Generate a unique ID for the job
-const generateJobId = (): string => {
-    return Math.random().toString(16).slice(2) + Date.now().toString(16);
-};
 
 export function PatchingWorkbench({ 
     setHeatmapData, 
@@ -88,8 +84,7 @@ export function PatchingWorkbench({
             clear();
             setTokenizerLoading(true);
 
-            const inputTexts = [source.prompt, destination.prompt];
-            const tokenData = await batchTokenizeText(inputTexts, modelName);
+            const tokenData = await batchTokenizeText([source, destination], modelName);
             setSourceTokenData(tokenData[0]);
             setDestinationTokenData(tokenData[1]);
         } catch (err) {
@@ -155,12 +150,8 @@ export function PatchingWorkbench({
         }
 
         setPatchingLoading(true);
-        const { startStatusUpdates, stopStatusUpdates } = useStatusUpdates.getState();
-        const jobId = generateJobId();
-        
-        startStatusUpdates(jobId);
 
-        const request: ActivationPatchingRequest = {
+        const request: PatchingConfig = {
             edits: connections,
             model: modelName,
             source: source,
@@ -169,11 +160,10 @@ export function PatchingWorkbench({
             correctId: correctToken.id,
             patchTokens: patchTokens,
             incorrectId: incorrectToken?.id,
-            jobId: jobId,
         };
 
         try {
-            const response = await fetch("/api/patch-grid", {
+            const response = await fetch(config.getApiUrl(config.endpoints.patch), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -183,13 +173,23 @@ export function PatchingWorkbench({
 
             if (!response.ok) throw new Error(response.statusText);
 
+            
+
             const data = await response.json();
-            setHeatmapData(data);
+            
+            // Transform API response to match HeatmapData interface
+            const heatmapData: HeatmapProps = {
+                data: data.results,
+                xTickLabels: data.colLabels,
+                yTickLabels: data.rowLabels,
+                chartIndex: 0,
+            };
+            
+            setHeatmapData(heatmapData);
         } catch (err) {
             console.error("Error running patching:", err);
         } finally {
             setPatchingLoading(false);
-            stopStatusUpdates();
         }
     };
 
@@ -325,10 +325,8 @@ export function PatchingWorkbench({
                 <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium">Prompts</h2>
                     <TooltipButton variant="outline" size="icon" tooltip="Swap prompts" onClick={() => {
-                        const sourcePrompt = source.prompt;
-                        const destinationPrompt = destination.prompt;
-                        setSource({ ...source, prompt: destinationPrompt });
-                        setDestination({ ...destination, prompt: sourcePrompt });
+                        setSource(source);
+                        setDestination(destination);
                         handleTokenize();
                     }}>
                         <ArrowUpDown className="w-4 h-4" />
@@ -337,8 +335,8 @@ export function PatchingWorkbench({
                 <div className="flex flex-col flex-1 relative">
                     <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Source Prompt</div>
                     <Textarea
-                        value={source.prompt}
-                        onChange={(e) => setSource({ ...source, prompt: e.target.value })}
+                        value={source}
+                        onChange={(e) => setSource(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onFocus={() => setSelectedArea("source")}
                         onBlur={() => setSelectedArea(null)}
@@ -349,8 +347,8 @@ export function PatchingWorkbench({
                 <div className="flex flex-col flex-1 relative">
                     <div className="text-xs font-medium absolute bottom-3 right-3.5 pointer-events-none">Destination Prompt</div>
                     <Textarea
-                        value={destination.prompt}
-                        onChange={(e) => setDestination({ ...destination, prompt: e.target.value })}
+                        value={destination}
+                        onChange={(e) => setDestination(e.target.value)}
                         onKeyDown={handleKeyDown}
                         onFocus={() => setSelectedArea("destination")}
                         onBlur={() => setSelectedArea(null)}

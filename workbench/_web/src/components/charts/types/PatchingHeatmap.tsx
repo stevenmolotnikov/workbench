@@ -7,17 +7,8 @@ export function PatchingHeatmap({ isLoading, data }: { isLoading: boolean, data:
     return (
         <div className="h-full w-full">
             <ChartCard
-                handleRunChart={() => {
-                    console.log("run patching heatmap");
-                }}
-                handleRemoveChart={() => {console.log("remove chart")}}
                 isLoading={isLoading}
-                chartTitle={
-                    <div>
-                        <div className="text-md font-bold">Patching Heatmap</div>
-                        <span className="text-xs text-muted-foreground">Activation Patching Results</span>
-                    </div>
-                }
+                chartId="patching-heatmap"
                 chart={
                     data ? (
                         <div className="pt-6 h-full">
@@ -28,9 +19,7 @@ export function PatchingHeatmap({ isLoading, data }: { isLoading: boolean, data:
                             <p className="text-muted-foreground">No data</p>
                         </div>
                     )
-                }
-                showRunButton={false}
-                showRemoveButton={false}
+                }   
             />
         </div>
     );

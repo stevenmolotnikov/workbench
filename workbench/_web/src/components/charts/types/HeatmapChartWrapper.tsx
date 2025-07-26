@@ -1,13 +1,13 @@
 import { Heatmap } from "@/components/charts/primatives/Heatmap";
-import type { Chart } from "@/types/charts";
+import type { ChartData } from "@/types/charts";
 import type { HeatmapData } from "@/types/charts";
 
 interface HeatmapChartWrapperProps {
-    chart: Chart;
+    chart: ChartData;
 }
 
 export function HeatmapChartWrapper({ chart }: HeatmapChartWrapperProps) {
-    if (!chart.chartData) {
+    if (!chart) {
         return (
             <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground">No data available</p>
@@ -15,9 +15,9 @@ export function HeatmapChartWrapper({ chart }: HeatmapChartWrapperProps) {
         );
     }
 
-    const heatmapData = chart.chartData as HeatmapData;
+    const heatmapData = chart as HeatmapData;
 
     return (
-        <Heatmap chartIndex={chart.position} {...heatmapData} />
+        <Heatmap chartIndex={0} {...heatmapData} />
     );
 }

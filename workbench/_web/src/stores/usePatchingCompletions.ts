@@ -3,41 +3,27 @@ import type { Completion } from '@/types/workspace';
 import type { Token } from '@/types/tokenizer';
 
 interface PatchingCompletionsState {
-    source: Completion;
-    destination: Completion;
+    source: string;
+    destination: string;
     correctToken: Token | null;
     incorrectToken: Token | null;
     
-    setSource: (completion: Completion) => void;
-    setDestination: (completion: Completion) => void;
-    updateSource: (updates: Partial<Completion>) => void;
-    updateDestination: (updates: Partial<Completion>) => void;
+    setSource: (completion: string) => void;
+    setDestination: (completion: string) => void;
+
     setCorrectToken: (token: Token | null) => void;
     setIncorrectToken: (token: Token | null) => void;
 }
 
-const makeDefaultCompletion = (name: string): Completion => ({
-    id: name,
-    prompt: "",
-});
-
 export const usePatchingCompletions = create<PatchingCompletionsState>((set, get) => ({
-    source: makeDefaultCompletion("source"),
-    destination: makeDefaultCompletion("destination"),
+    source: "",
+    destination: "",
     correctToken: null,
     incorrectToken: null,
 
-    setSource: (completion) => set({ source: completion }),
+    setSource: (source) => set({ source }),
 
-    setDestination: (completion) => set({ destination: completion }),
-
-    updateSource: (updates) => set((state) => ({
-        source: { ...state.source, ...updates }
-    })),
-
-    updateDestination: (updates) => set((state) => ({
-        destination: { ...state.destination, ...updates }
-    })),
+    setDestination: (destination) => set({ destination }),
 
     setCorrectToken: (token) => set({ correctToken: token }),
     setIncorrectToken: (token) => set({ incorrectToken: token }),

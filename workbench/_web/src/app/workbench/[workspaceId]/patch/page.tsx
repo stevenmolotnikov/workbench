@@ -8,14 +8,14 @@ import { ResizableLayout } from "@/components/Layout";
 import { TutorialsSidebar } from "@/components/TutorialsSidebar";
 import { useTour } from "@reactour/tour";
 
-import { PatchingHeatmap } from "@/components/charts/types/PatchingHeatmap";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
-import { HeatmapProps } from "@/components/charts/primatives/Heatmap";
 
-// import { getWorkspaceById } from "@/lib/api";
+import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { HeatmapChartWrapper } from "@/components/charts/types/HeatmapChartWrapper";
+import { ChartData } from "@/types/charts";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
@@ -59,7 +59,7 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         setTutorialsOpen(false);
     }, [setIsOpen]);
 
-    const handleSetHeatmapData = useCallback((data: HeatmapProps) => {
+    const handleSetHeatmapData = useCallback((data: ChartData) => {
         setHeatmapData(data);
     }, []);
 
@@ -67,7 +67,7 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         setPatchingLoading(loading);
     }, []);
 
-    const [heatmapData, setHeatmapData] = useState<HeatmapProps | null>(null);
+    const [heatmapData, setHeatmapData] = useState<ChartData | null>(null);
     const [patchingLoading, setPatchingLoading] = useState(false);
 
     const [workbenchMode, setWorkbenchMode] = useState<"lens" | "patch">("lens");
@@ -123,7 +123,7 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     charts={
                         <div className="h-full w-full bg-card p-4">
                             <div className="relative h-full w-full">
-                                <PatchingHeatmap isLoading={patchingLoading} data={heatmapData} />
+                                {heatmapData && <HeatmapChartWrapper chart={heatmapData} />}
                             </div>
                         </div>
                     }

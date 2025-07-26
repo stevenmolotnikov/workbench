@@ -60,7 +60,6 @@ class PatchRequest(BaseModel):
     edits: List[Connection]
     submodule: Literal["attn", "mlp", "blocks", "heads"]
     patch_tokens: bool = Field(alias="patchTokens")
-    job_id: str = Field(alias="jobId")
 
     # Which tokens are being predicted
     correct_id: int = Field(alias="correctId")
@@ -119,10 +118,10 @@ def patch_components(model: LanguageModel, patching_request: PatchRequest):
 
     source_cache = {}
 
-    with model.wrapped_session(job_id=patching_request.job_id):
+    with model.wrapped_session():
         results = ns.list().save()
 
-        with model.trace(patching_request.source.prompt):
+        with model.trace(patching_request.source):
             for component in components:
                 hidden_BLD = component.output
 
@@ -134,12 +133,12 @@ def patch_components(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.trace(patching_request.destination):
             destination_diff = logit_difference(model, patching_request)
 
         for component in components:
             with model.trace(
-                patching_request.destination.prompt,
+                patching_request.destination,
             ):
                 if is_tuple:
                     hidden_BLD_tuple = component.output
@@ -171,11 +170,11 @@ def patch_heads(model: LanguageModel, patching_request: PatchRequest):
     source_cache = {}
     n_heads = model.config.n_heads
 
-    with model.wrapped_session(job_id=patching_request.job_id):
+    with model.wrapped_session():
         results = ns.dict().save()
 
         # Cache source activations
-        with model.trace(patching_request.source.prompt):
+        with model.trace(patching_request.source):
             for component in components:
                 hidden_BLD = component.input
                 hidden_BLHDh = einops.rearrange(
@@ -192,12 +191,12 @@ def patch_heads(model: LanguageModel, patching_request: PatchRequest):
                 if patching_request.incorrect_id is not None:
                     source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.trace(patching_request.destination):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
             for head_idx in range(n_heads):
-                with model.trace(patching_request.destination.prompt):
+                with model.trace(patching_request.destination):
                     hidden_BLD = component.input
                     hidden_BLHDh = einops.rearrange(
                         hidden_BLD,
@@ -244,16 +243,16 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
     is_tuple = patching_request.submodule == "blocks"
 
     # Compute n_tokens
-    destination_prompt = patching_request.destination.prompt
+    destination_prompt = patching_request.destination
     destination_tokens = model.tokenizer.encode(destination_prompt)
     n_tokens = len(destination_tokens)
 
     source_cache = {}
 
-    with model.wrapped_session(job_id=patching_request.job_id):
+    with model.wrapped_session():
         results = ns.dict().save()
 
-        with model.trace(patching_request.source.prompt):
+        with model.trace(patching_request.source):
             for component in components:
                 hidden_BLD = component.output
 
@@ -268,7 +267,7 @@ def patch_tokens(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.trace(patching_request.destination):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
@@ -408,16 +407,16 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
     patching_idxs = compute_patching_idxs(
         model.tokenizer,
         connections,
-        patching_request.source.prompt,
-        patching_request.destination.prompt,
+        patching_request.source,
+        patching_request.destination,
     )
 
     source_cache = {}
 
-    with model.wrapped_session(job_id=patching_request.job_id):
+    with model.wrapped_session():
         results = ns.dict().save()
 
-        with model.trace(patching_request.source.prompt):
+        with model.trace(patching_request.source):
             for component in components:
                 hidden_BLD = component.output
 
@@ -441,13 +440,13 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
             if patching_request.incorrect_id is not None:
                 source_diff = logit_difference(model, patching_request)
 
-        with model.trace(patching_request.destination.prompt):
+        with model.trace(patching_request.destination):
             destination_diff = logit_difference(model, patching_request)
 
         for layer_idx, component in enumerate(components):
             # Patch tokens
             for token_idx in patching_idxs.destination:
-                with model.trace(patching_request.destination.prompt):
+                with model.trace(patching_request.destination):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
 
@@ -480,7 +479,7 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
 
             # Patch connections
             for connection in connections:
-                with model.trace(patching_request.destination.prompt):
+                with model.trace(patching_request.destination):
                     if is_tuple:
                         hidden_BLD_tuple = component.output
 
@@ -513,7 +512,7 @@ def patch_tokens_sync(model: LanguageModel, patching_request: PatchRequest):
                         results[(layer_idx, end_token_last_idx)] = prob
 
     x_labels, x_items = get_sync_x_labels(
-        connections, patching_request.destination.prompt, model.tokenizer
+        connections, patching_request.destination, model.tokenizer
     )
 
     results_grid = []
@@ -536,7 +535,7 @@ def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):
     # source_cache = {}
 
     # with model.wrapped_session(job_id=patching_request.job_id):
-    #     with model.trace(patching_request.source.prompt):
+    #     with model.trace(patching_request.source):
     #         for component in components:
     #             hidden_BLD = component.output
 
@@ -544,7 +543,7 @@ def patch_tokens_async(model: LanguageModel, patching_request: PatchRequest):
 router = APIRouter()
 
 
-@router.post("/patch")
+@router.post("/patch-grid")
 async def patch(patching_request: PatchRequest, request: Request):
     state = request.app.state.m
     model = state.get_model(patching_request.model)
