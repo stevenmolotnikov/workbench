@@ -54,17 +54,16 @@ const listenToSSE = <T>(url: string): Promise<T> => {
 
 const getLensLine = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {
     try {
-        const jobId = generateJobId();
-        const requestWithJobId = { ...lensRequest, job_id: jobId };
-        
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensLine), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestWithJobId),
+            body: JSON.stringify(lensRequest),
         });
 
         if (!response.ok) throw new Error("Failed to start lens computation");
+
+        const jobId = (await response.json()).job_id;
         
         // Listen for results
         const result = await listenToSSE<{ data: LensLineResponse }>(config.endpoints.listenLensLine + `/${jobId}`);
@@ -105,24 +104,28 @@ export const useLensLine = () => {
 
 const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {    
     try {
-        const jobId = generateJobId();
-        // Grid endpoint expects a single completion, not an array
-        const requestWithJobId = { 
-            ...lensRequest.completions[0], 
-            job_id: jobId 
-        };
-        
+
+        const fixedLensRequest = {
+            ...lensRequest.completions[0],
+        }
+
+        console.log(fixedLensRequest)
+
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensGrid), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestWithJobId),
+            body: JSON.stringify(fixedLensRequest),
         });
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
+
+        const jobId = (await response.json()).job_id;
         
         // Listen for results
         const result = await listenToSSE<{ data: LensGridResponse }>(config.endpoints.listenLensGrid + `/${jobId}`);
+
+        console.log(result)
         return result.data;
     } catch (error) {
         console.error("Error fetching grid lens data:", error);

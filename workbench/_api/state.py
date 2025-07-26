@@ -1,13 +1,11 @@
 import os
 import tomllib
 import types
-from functools import partial
 
 from nnsight import LanguageModel, CONFIG
 from pydantic import BaseModel
 
-# from ..ns_utils import wrapped_trace, wrapped_session
-from .. import ENV, ROOT_DIR
+from . import ENV, ROOT_DIR
 
 class ModelConfig(BaseModel):
     """Configuration for an individual model."""

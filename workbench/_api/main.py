@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .api import lens, patch, models
+from .routes import lens, patch, models
 from .state import AppState
 
 
