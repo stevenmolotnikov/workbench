@@ -24,22 +24,22 @@ export default function Page() {
         // Create a group for the visualization
         const g = svg.append("g");
 
-        // Inner circle (outline only)
-        const innerRadius = 15;
+        // Residual-in circle
+        const residInRadius = 15;
         g.append("circle")
             .attr("cx", centerX)
             .attr("cy", centerY)
-            .attr("r", innerRadius)
+            .attr("r", residInRadius)
             .attr("fill", "none")
             .attr("stroke", "purple")
             .attr("stroke-width", 2);
 
-        // Arrow coming out of the right side of the circle
-        const residArrowStartX = centerX + innerRadius;
-        const residArrowEndX = centerX + innerRadius + 240;
+        // Residual arrow that components within the layer (attn, mlp) add to
+        const residArrowStartX = centerX + residInRadius;
+        const residArrowEndX = centerX + residInRadius + 240;
         const residArrowY = centerY;
 
-        // Arrow line
+        // Residual arrow line
         g.append("line")
             .attr("x1", residArrowStartX)
             .attr("y1", residArrowY)
@@ -48,47 +48,48 @@ export default function Page() {
             .attr("stroke", "purple")
             .attr("stroke-width", 2);
 
-        // Arrow head
+        // Residual arrow head
         const arrowHeadSize = 10;
         g.append("path")
             .attr("d", `M ${residArrowEndX - arrowHeadSize} ${residArrowY - arrowHeadSize / 2} L ${residArrowEndX} ${residArrowY} L ${residArrowEndX - arrowHeadSize} ${residArrowY + arrowHeadSize / 2} Z`)
             .attr("fill", "purple");
 
-        // Semicircle path around the inner circle (right side)
-        const semicircleRadius = 25;
-        const semicirclePath = `M ${centerX} ${centerY - semicircleRadius} A ${semicircleRadius} ${semicircleRadius} 0 0 1 ${centerX} ${centerY + semicircleRadius}`;
+        // A semi-circle path around the residual-in circle that connects previous residual-in information to later attention components
+        const attnCrossTokenRadius = 25;
+        const attnCrossTokenRoundedPath = `M ${centerX} ${centerY - attnCrossTokenRadius} A ${attnCrossTokenRadius} ${attnCrossTokenRadius} 0 0 1 ${centerX} ${centerY + attnCrossTokenRadius}`;
 
         g.append("path")
-            .attr("d", semicirclePath)
+            .attr("d", attnCrossTokenRoundedPath)
             .attr("fill", "none")
             .attr("stroke", "red")
             .attr("stroke-width", 2);
 
-        // Arrow coming out of the bottom side of the circle
-        const bottomArrowX = centerX;
-        const bottomArrowStartY = centerY + semicircleRadius;
-        const bottomArrowEndY = centerY + semicircleRadius + 60;
+        // Arrow that continues the connection from the cross token semi-circle to the next token
+        const attnCrossTokenX = centerX;
+        const attnCrossTokenStartY = centerY + residInRadius;
+        const attnCrossTokenEndY = centerY + residInRadius + 60;
 
-        // Bottom arrow line
+        // Cross token arrow line
         g.append("line")
-            .attr("x1", bottomArrowX)
-            .attr("y1", bottomArrowStartY)
-            .attr("x2", bottomArrowX)
-            .attr("y2", bottomArrowEndY)
+            .attr("x1", attnCrossTokenX)
+            .attr("y1", attnCrossTokenStartY)
+            .attr("x2", attnCrossTokenX)
+            .attr("y2", attnCrossTokenEndY)
             .attr("stroke", "red")
             .attr("stroke-width", 2);
 
-        // Arrow head (pointing down, at the end of the line)
+        // Cross token arrow head (pointing down, at the end of the line)
         g.append("path")
-            .attr("d", `M ${bottomArrowX - arrowHeadSize / 2} ${bottomArrowEndY - arrowHeadSize} L ${bottomArrowX} ${bottomArrowEndY} L ${bottomArrowX + arrowHeadSize / 2} ${bottomArrowEndY - arrowHeadSize} Z`)
+            .attr("d", `M ${attnCrossTokenX - arrowHeadSize / 2} ${attnCrossTokenEndY - arrowHeadSize} L ${attnCrossTokenX} ${attnCrossTokenEndY} L ${attnCrossTokenX + arrowHeadSize / 2} ${attnCrossTokenEndY - arrowHeadSize} Z`)
             .attr("fill", "red");
 
-        // Line forking out of the bottom arrow
+        // Attn in arrow line variables
         const attnInXStart = centerX;
-        const attnInXEnd = centerX + 80;
-        const componentY = centerY + innerRadius + 25;
+        const attnXEndOffset = 100;
+        const attnInXEnd = centerX + attnXEndOffset;
+        const componentY = centerY + residInRadius + 25;
 
-        // Arrow line
+        // Attn in arrow line. This connects from the cross token residual information into the attention component
         g.append("line")
             .attr("x1", attnInXStart)
             .attr("y1", componentY)
@@ -97,12 +98,12 @@ export default function Page() {
             .attr("stroke", "red")
             .attr("stroke-width", 2);
 
-        // Arrow going back into the purple line from the red fork
+        // Attn out arrow line variables
         const attnOutX = attnInXEnd;
         const attnOutYStart = componentY;
         const attnOutYEnd = residArrowY;
 
-        // Arrow line
+        // Attn out arrow line
         g.append("line")
             .attr("x1", attnOutX)
             .attr("y1", attnOutYStart)
@@ -111,34 +112,34 @@ export default function Page() {
             .attr("stroke", "red")
             .attr("stroke-width", 2);
 
-        // Arrow head (pointing up, at the end of the line)
+        // Attn out arrow head (pointing up, at the end of the line)
         g.append("path")
             .attr("d", `M ${attnOutX - arrowHeadSize / 2} ${attnOutYEnd + arrowHeadSize} L ${attnOutX} ${attnOutYEnd} L ${attnOutX + arrowHeadSize / 2} ${attnOutYEnd + arrowHeadSize} Z`)
             .attr("fill", "red");
 
 
-        // Red square
-        const redSquareWidth = 20;
-        const redSquareHeight = 20;
-        const redSquareX = centerX + 40;
-        const redSquareY = centerY + innerRadius + (25 - redSquareHeight / 2);
+        // Attention square
+        const attnWidth = 20;
+        const attnHeight = 20;
+        const attnX = centerX + (attnXEndOffset / 2) - (attnWidth / 2);
+        const attnY = centerY + residInRadius + (25 - attnHeight / 2);
 
         g.append("rect")
-            .attr("x", redSquareX)
-            .attr("y", redSquareY)
-            .attr("width", redSquareWidth)
-            .attr("height", redSquareHeight)
+            .attr("x", attnX)
+            .attr("y", attnY)
+            .attr("width", attnWidth)
+            .attr("height", attnHeight)
             .attr("stroke", "red")
             .attr("stroke-width", 2)
             // Fill white so the line beneath is not visible
             .attr("fill", "white");
 
-        // Arrow going back into the purple line from the red fork
-        const mlpInX = attnInXEnd + 50;
+        // MLP in arrow line variables
+        const mlpInX = attnInXEnd + 25;
         const mlpInYStart = residArrowY;
         const mlpInYEnd = componentY;
 
-        // Arrow line
+        // MLP in arrow line
         g.append("line")
             .attr("x1", mlpInX)
             .attr("y1", mlpInYStart)
@@ -147,12 +148,12 @@ export default function Page() {
             .attr("stroke", "green")
             .attr("stroke-width", 2);
 
-        // Arrow going back into the purple line from the red fork
-        const mlpOutX = attnInXEnd + 150;
+        // MLP out arrow line variables
+        const mlpOutX = attnInXEnd + 125;
         const mlpOutYStart = componentY;
         const mlpOutYEnd = residArrowY;
 
-        // Arrow line
+        // MLP out arrow line
         g.append("line")
             .attr("x1", mlpOutX)
             .attr("y1", mlpOutYStart)
@@ -161,13 +162,12 @@ export default function Page() {
             .attr("stroke", "green")
             .attr("stroke-width", 2);
 
-
-        // Arrow head (pointing up)
+        // MLP out arrow connecting the MLP information back to the residual stream
         g.append("path")
             .attr("d", `M ${mlpOutX - arrowHeadSize / 2} ${mlpOutYEnd + arrowHeadSize} L ${mlpOutX} ${mlpOutYEnd} L ${mlpOutX + arrowHeadSize / 2} ${mlpOutYEnd + arrowHeadSize} Z`)
             .attr("fill", "green");
 
-        // Line going from MLP to MLP
+        // Line visually bridging the MLP-in and MLP-out arrows
         g.append("line")
             .attr("x1", mlpInX)
             .attr("y1", mlpInYEnd)
@@ -176,24 +176,24 @@ export default function Page() {
             .attr("stroke", "green")
             .attr("stroke-width", 2);
 
-        // Green rotated square
-        const greenSquareWidth = 20;
-        const greenSquareHeight = 20;
+        // MLP diamond
+        const mlpWidth = 20;
+        const mlpHeight = 20;
         // Offset is distance between in and out lines, minus half the width of the square
-        const greenSquareOffset = ((mlpOutX - mlpInX) / 2) - (greenSquareWidth / 2);
-        const greenSquareX = mlpInX + greenSquareOffset;
-        const greenSquareY = centerY + innerRadius + (25 - greenSquareHeight / 2);
+        const mlpOffset = ((mlpOutX - mlpInX) / 2) - (mlpWidth / 2);
+        const mlpX = mlpInX + mlpOffset;
+        const mlpY = centerY + residInRadius + (25 - mlpHeight / 2);
 
         g.append("rect")
-            .attr("x", greenSquareX)
-            .attr("y", greenSquareY)
-            .attr("width", greenSquareWidth)
-            .attr("height", greenSquareHeight)
+            .attr("x", mlpX)
+            .attr("y", mlpY)
+            .attr("width", mlpWidth)
+            .attr("height", mlpHeight)
             .attr("stroke", "green")
             .attr("stroke-width", 2)
             // Fill white so the line beneath is not visible
             .attr("fill", "white")
-            .attr("transform", `rotate(45, ${greenSquareX + greenSquareWidth / 2}, ${greenSquareY + greenSquareHeight / 2})`);
+            .attr("transform", `rotate(45, ${mlpX + mlpWidth / 2}, ${mlpY + mlpHeight / 2})`);
 
     }, []);
 
