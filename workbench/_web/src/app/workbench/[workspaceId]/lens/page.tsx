@@ -3,18 +3,25 @@
 import { useState, useCallback, useEffect, use } from "react";
 import { PromptBuilder } from "@/components/lens/PromptBuilder";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
+import InteractiveDisplay from "@/components/lens/InteractiveDisplay";
 
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 
 import { ResizableLayout } from "@/components/Layout";
 import { TutorialsSidebar } from "@/components/TutorialsSidebar";
 import { useTour } from "@reactour/tour";
-
+import {
+    ResizableHandle,
+    ResizablePanel,
+    ResizablePanelGroup,
+} from "@/components/ui/resizable"
 
 import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
 import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import Transformer from "@/components/InteractiveTransformer";
 
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
@@ -82,6 +89,10 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         );
     }
 
+    const clickHandler = (tokenIndex: number, layerIndex: number) => {
+        console.log(`Clicked token ${tokenIndex} at layer ${layerIndex}`);
+    }   
+
     return (
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
@@ -107,10 +118,21 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     workspaceId={resolvedParams.workspaceId}
                 />
 
-                <ResizableLayout
-                    workbench={<PromptBuilder />}
-                    charts={<ChartDisplay />}
-                />
+                <ResizablePanelGroup
+                    direction="horizontal"
+                    className="flex flex-1 min-h-0 h-full"
+                >
+                    <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
+                        <ScrollArea className="h-full">
+                            {/* <InteractiveDisplay /> */}
+                            <Transformer rowMode={true} numTokens={5} numLayers={5} showFlowOnClick={true} scale={0.5} clickHandler={clickHandler}/>
+                        </ScrollArea>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={50} minSize={30}>
+                        <ChartDisplay />
+                    </ResizablePanel>
+                </ResizablePanelGroup>
             </div>
         </div>
     );

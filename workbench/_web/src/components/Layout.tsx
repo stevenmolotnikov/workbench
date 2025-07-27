@@ -29,16 +29,6 @@ export function ResizableLayout({ workbench, charts }: ResizableLayoutProps) {
             <ResizablePanel defaultSize={50} minSize={40} maxSize={65}>
                 {charts}
             </ResizablePanel>
-            {annotationsOpen && (
-                <>
-                    <ResizableHandle />
-                    <ResizablePanel defaultSize={15} maxSize={30} minSize={15}>
-                        <div className="relative h-full">
-                            <Annotations/>
-                        </div>
-                    </ResizablePanel>
-                </>
-            )}
         </ResizablePanelGroup>
     )
 }

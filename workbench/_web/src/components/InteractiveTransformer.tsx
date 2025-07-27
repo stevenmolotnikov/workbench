@@ -19,18 +19,35 @@ interface TransformerProps {
     scale?: number;
     tokenLabels?: string[];
     unembedLabels?: string[];
-    enableDataFlowHover?: boolean;
+    showFlowOnClick?: boolean;
+    rowMode?: boolean;
+    clickHandler?: (tokenIndex: number, layerIndex: number) => void;
 }
 
 // Function to get all components that should be highlighted for a given selection
 const getDataFlowComponents = (
     selected: SelectedComponent,
     showAttn: boolean,
-    showMlp: boolean
+    showMlp: boolean,
+    numLayers: number,
+    rowMode: boolean
 ): Set<string> => {
     const highlighted = new Set<string>();
     
     const { tokenIndex, layerIndex, componentType } = selected;
+
+    if (rowMode) {
+        for (let l = 0; l < numLayers; l++) {
+            highlighted.add(`resid-circle-${tokenIndex}-${l}`);
+            highlighted.add(`resid-arrow-${tokenIndex}-${l}`);
+            highlighted.add(`cross-token-attn-${tokenIndex}-${l}`);
+            if (showAttn) highlighted.add(`attn-${tokenIndex}-${l}`);
+            if (showMlp) highlighted.add(`mlp-${tokenIndex}-${l}`);
+        }
+        highlighted.add(`embed-${tokenIndex}`);
+        highlighted.add(`unembed-${tokenIndex}`);
+        return highlighted;
+    }
     
     // Embed components have no dependencies
     if (componentType === 'embed') {
@@ -161,7 +178,9 @@ export default function Transformer({
     scale = 1,
     tokenLabels,
     unembedLabels,
-    enableDataFlowHover = false
+    showFlowOnClick = false,
+    rowMode = false,
+    clickHandler = () => {}
 }: TransformerProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -179,8 +198,8 @@ export default function Transformer({
     
     // Get the set of components that should be highlighted
     const highlightedComponents = useMemo(() => {
-        return activeComponent ? getDataFlowComponents(activeComponent, showAttn, showMlp) : null;
-    }, [activeComponent, showAttn, showMlp]);
+        return activeComponent ? getDataFlowComponents(activeComponent, showAttn, showMlp, effectiveNumLayers, rowMode) : null;
+    }, [activeComponent, showAttn, showMlp, effectiveNumLayers, rowMode]);
 
     // SVG dimensions calculation
     const dimensions = useMemo(() => {
@@ -229,7 +248,7 @@ export default function Transformer({
         svg.attr("width", dimensions.baseWidth * scale).attr("height", dimensions.baseHeight * scale);
         
         // Add background rect to capture mouse events on empty space
-        if (enableDataFlowHover) {
+        if (showFlowOnClick) {
             svg.append("rect")
                 .attr("width", dimensions.baseWidth * scale)
                 .attr("height", dimensions.baseHeight * scale)
@@ -273,7 +292,7 @@ export default function Transformer({
                     .attr("data-token-index", rowIndex)
                     .attr("data-layer-index", layerIndex)
                     .attr("data-component-id", residCircleId)
-                    .style("cursor", enableDataFlowHover ? "pointer" : "default");
+                    .style("cursor", showFlowOnClick ? "pointer" : "default");
                 
                 // Add fill for heatmap mode
                 if (isHeatmapMode && componentType === 'resid' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
@@ -284,7 +303,7 @@ export default function Transformer({
                 }
                 
                 // Add click handlers
-                if (enableDataFlowHover) {
+                if (showFlowOnClick) {
                     residCircle.on("click", (event) => {
                         event.stopPropagation();
                         setClickedComponent({
@@ -292,6 +311,7 @@ export default function Transformer({
                             layerIndex: layerIndex,
                             componentType: 'resid'
                         });
+                        clickHandler(rowIndex, layerIndex);
                     });
                 }
 
@@ -479,7 +499,7 @@ export default function Transformer({
                         .attr("data-token-index", rowIndex)
                         .attr("data-layer-index", layerIndex)
                         .attr("data-component-id", attnComponentId)
-                        .style("cursor", enableDataFlowHover ? "pointer" : "default");
+                        .style("cursor", showFlowOnClick ? "pointer" : "default");
                     
                     // Add fill for heatmap mode
                     if (isHeatmapMode && componentType === 'attn' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
@@ -490,7 +510,7 @@ export default function Transformer({
                     }
                     
                     // Add click handlers
-                    if (enableDataFlowHover) {
+                    if (showFlowOnClick) {
                         attnRect.on("click", (event) => {
                             event.stopPropagation();
                             setClickedComponent({
@@ -498,6 +518,7 @@ export default function Transformer({
                                 layerIndex: layerIndex,
                                 componentType: 'attn'
                             });
+                            clickHandler(rowIndex, layerIndex);
                         });
                     }
                 }
@@ -570,7 +591,7 @@ export default function Transformer({
                         .attr("data-token-index", rowIndex)
                         .attr("data-layer-index", layerIndex)
                         .attr("data-component-id", mlpComponentId)
-                        .style("cursor", enableDataFlowHover ? "pointer" : "default");
+                        .style("cursor", showFlowOnClick ? "pointer" : "default");
                     
                     // Add fill for heatmap mode
                     if (isHeatmapMode && componentType === 'mlp' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
@@ -581,7 +602,7 @@ export default function Transformer({
                     }
                     
                     // Add click handlers
-                    if (enableDataFlowHover) {
+                    if (showFlowOnClick) {
                         mlpRect.on("click", (event) => {
                             event.stopPropagation();
                             setClickedComponent({
@@ -589,6 +610,7 @@ export default function Transformer({
                                 layerIndex: layerIndex,
                                 componentType: 'mlp'
                             });
+                            clickHandler(rowIndex, layerIndex);
                         });
                     }
                 }
@@ -630,14 +652,14 @@ export default function Transformer({
                     .attr("data-component-type", "embed")
                     .attr("data-token-index", tokenIndex)
                     .attr("data-component-id", embedComponentId)
-                    .style("cursor", enableDataFlowHover ? "pointer" : "default");
+                    .style("cursor", showFlowOnClick ? "pointer" : "default");
                 
                 // Light blue fill when highlighted, white when greyed out
                 const isHighlighted = !highlightedComponents || highlightedComponents.has(embedComponentId);
                 embedShape.attr("fill", isHighlighted ? COLORS.fills.blue : "white");
                 
                 // Add click handlers
-                if (enableDataFlowHover) {
+                if (showFlowOnClick) {
                     embedShape.on("click", (event) => {
                         event.stopPropagation();
                         setClickedComponent({
@@ -645,6 +667,7 @@ export default function Transformer({
                             layerIndex: 0,
                             componentType: 'embed'
                         });
+                        clickHandler(tokenIndex, 0);
                     });
                 }
                 
@@ -701,21 +724,22 @@ export default function Transformer({
                     .attr("data-component-type", "unembed")
                     .attr("data-token-index", tokenIndex)
                     .attr("data-component-id", unembedComponentId)
-                    .style("cursor", enableDataFlowHover ? "pointer" : "default");
+                    .style("cursor", showFlowOnClick ? "pointer" : "default");
                 
                 // Light blue fill when highlighted, white when greyed out
                 const isHighlighted = !highlightedComponents || highlightedComponents.has(unembedComponentId);
                 unembedShape.attr("fill", isHighlighted ? COLORS.fills.blue : "white");
                 
                 // Add click handlers
-                if (enableDataFlowHover) {
+                if (showFlowOnClick) {
                     unembedShape.on("click", (event) => {
                         event.stopPropagation();
                         setClickedComponent({
                             tokenIndex: tokenIndex,
                             layerIndex: effectiveNumLayers - 1,
                             componentType: 'unembed'
-                        });
+                        }); 
+                        clickHandler(tokenIndex, effectiveNumLayers - 1);
                     });
                 }
             }
@@ -771,7 +795,7 @@ export default function Transformer({
         drawUnembed();
         drawLabels();
 
-    }, [dimensions, effectiveNumTokens, effectiveNumLayers, showAttn, showMlp, componentType, data, scale, tokenLabels, unembedLabels, highlightedComponents, isHeatmapMode, enableDataFlowHover]);
+    }, [dimensions, effectiveNumTokens, effectiveNumLayers, showAttn, showMlp, componentType, data, scale, tokenLabels, unembedLabels, highlightedComponents, isHeatmapMode, showFlowOnClick]);
 
     return (
         <div 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 
 interface SelectedComponent {
     tokenIndex: number;
     layerIndex: number;
-    componentType: 'resid' | 'attn' | 'mlp' | 'embed' | 'unembed';
+    componentType: 'resid' | 'attn' | 'mlp' | 'embed' | 'unembed' | 'row';
 }
 
 interface TransformerProps {
@@ -20,136 +20,10 @@ interface TransformerProps {
     tokenLabels?: string[];
     unembedLabels?: string[];
     enableDataFlowHover?: boolean;
+    selectedComponent?: SelectedComponent;
+    enableRowHighlighting?: boolean;
+    onRowClick?: (tokenIndex: number, layerIndex: number) => void;
 }
-
-// Function to get all components that should be highlighted for a given selection
-const getDataFlowComponents = (
-    selected: SelectedComponent,
-    showAttn: boolean,
-    showMlp: boolean
-): Set<string> => {
-    const highlighted = new Set<string>();
-    
-    const { tokenIndex, layerIndex, componentType } = selected;
-    
-    // Embed components have no dependencies
-    if (componentType === 'embed') {
-        highlighted.add(`embed-${tokenIndex}`);
-        return highlighted;
-    }
-    
-    // Unembed components see everything
-    if (componentType === 'unembed') {
-        for (let t = 0; t <= tokenIndex; t++) {
-            for (let l = 0; l < layerIndex; l++) {
-                highlighted.add(`resid-circle-${t}-${l}`);
-                highlighted.add(`resid-arrow-${t}-${l}`);
-                highlighted.add(`cross-token-attn-${t}-${l}`);
-                if (showAttn) highlighted.add(`attn-${t}-${l}`);
-                if (showMlp) highlighted.add(`mlp-${t}-${l}`);
-            }
-
-            // Highlight resid circles and cross-token attn for the curent layer
-            highlighted.add(`resid-circle-${t}-${layerIndex}`);
-            highlighted.add(`cross-token-attn-${t}-${layerIndex}`);
-
-            // Highlight the current token's components
-            highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
-            if (showAttn) highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
-            if (showMlp) highlighted.add(`mlp-${tokenIndex}-${layerIndex}`);
-
-            // Highlight the embed components up to the current token
-            highlighted.add(`embed-${t}`);
-        }
-        highlighted.add(`unembed-${tokenIndex}`);
-        return highlighted;
-    }
-    
-    // For residual components
-    if (componentType === 'resid') {
-        // Add all previous layers
-        for (let l = 0; l < layerIndex; l++) {
-            for (let t = 0; t <= tokenIndex; t++) {
-                highlighted.add(`resid-circle-${t}-${l}`);
-                highlighted.add(`embed-${t}`);
-                highlighted.add(`cross-token-attn-${t}-${l}`);
-
-                if (l !== layerIndex - 1) {
-                    highlighted.add(`resid-arrow-${t}-${l}`);
-                    if (showAttn) highlighted.add(`attn-${t}-${l}`);
-                    if (showMlp) highlighted.add(`mlp-${t}-${l}`);
-                }
-            }
-        }
-
-        highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex - 1}`);
-        if (showAttn) highlighted.add(`attn-${tokenIndex}-${layerIndex - 1}`);
-        if (showMlp) highlighted.add(`mlp-${tokenIndex}-${layerIndex - 1}`);
-
-        highlighted.add(`resid-circle-${tokenIndex}-${layerIndex}`);
-        highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
-
-        if (layerIndex === 0) {
-            highlighted.add(`embed-${tokenIndex}`);
-        }
-    }
-    
-    // For attention and MLP components: add all components in previous layers (all tokens)
-    if (componentType === 'attn' || componentType === 'mlp') {
-        for (let l = 0; l < layerIndex; l++) {
-            for (let t = 0; t <= tokenIndex; t++) {
-                highlighted.add(`resid-circle-${t}-${l}`);
-                highlighted.add(`resid-arrow-${t}-${l}`);
-                highlighted.add(`embed-${t}`);
-                highlighted.add(`cross-token-attn-${t}-${l}`);
-                if (showAttn) highlighted.add(`attn-${t}-${l}`);
-                if (showMlp) highlighted.add(`mlp-${t}-${l}`);
-            }
-        }
-    }
-    
-    // For attention and MLP: add residual circles in current layer for previous tokens
-    if (componentType === 'attn' || componentType === 'mlp') {
-        for (let t = 0; t <= tokenIndex; t++) {
-            highlighted.add(`resid-circle-${t}-${layerIndex}`);
-        }
-        // // Add the residual circle at the current token position
-        highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
-        
-        // Add cross-token attention components to the current token
-        for (let t = 0; t <= tokenIndex; t++) {
-            highlighted.add(`cross-token-attn-${t}-${layerIndex}`);
-        }
-    }
-    
-    // For MLP: also add the attention component at the same position
-    if (componentType === 'mlp' && showAttn) {
-        highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
-        highlighted.add(`mlp-${tokenIndex}-${layerIndex}`);
-    }
-    
-    // For attention: include the attention component itself
-    if (componentType === 'attn') {
-        highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
-    }
-
-    return highlighted;
-};
-
-// Color constants
-const COLORS = {
-    grey: "#9CA3AF",
-    purple: "purple",
-    red: "red",
-    green: "green",
-    blue: "#3B82F6",
-    fills: {
-        purple: "#E9D5FF",
-        red: "#FEE2E2",
-        green: "#DCFCE7",
-        blue: "#DBEAFE"
-    }
-};
 
 export default function Transformer({ 
     componentType, 
@@ -161,98 +35,218 @@ export default function Transformer({
     scale = 1,
     tokenLabels,
     unembedLabels,
-    enableDataFlowHover = false
+    enableDataFlowHover = false,
+    selectedComponent,
+    enableRowHighlighting = false,
+    onRowClick
 }: TransformerProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
+    const [hoveredComponent, setHoveredComponent] = useState<SelectedComponent | null>(null);
+    const [unembedCardPositions, setUnembedCardPositions] = useState<{ x: number; y: number; tokenIndex: number }[]>([]);
     
-    // Detect heatmap mode
-    const isHeatmapMode = componentType !== undefined && data !== undefined;
-    
-    // Use data dimensions if in heatmap mode
-    const effectiveNumTokens = isHeatmapMode && data ? data.length : numTokens;
-    const effectiveNumLayers = isHeatmapMode && data && data[0] ? data[0].length : numLayers;
-    
-    // Determine which component is currently selected
-    const activeComponent = clickedComponent;
-    
-    // Get the set of components that should be highlighted
-    const highlightedComponents = useMemo(() => {
-        return activeComponent ? getDataFlowComponents(activeComponent, showAttn, showMlp) : null;
-    }, [activeComponent, showAttn, showMlp]);
-
-    // SVG dimensions calculation
-    const dimensions = useMemo(() => {
-        const layerWidth = 210;
-        const embedWidth = 75;
-        const unembedWidth = 75;
-        const labelPadding = tokenLabels ? 60 : 0;
-        const rightLabelPadding = unembedLabels ? 80 : 0;
-        const baseWidth = labelPadding + embedWidth + effectiveNumLayers * layerWidth + unembedWidth + rightLabelPadding + 200;
-        const rowHeight = 75;
-        const baseHeight = effectiveNumTokens * rowHeight + 100;
-        const startX = 100 + embedWidth + labelPadding;
-        const startY = 75;
+    // Function to get all components that should be highlighted for a given selection
+    const getDataFlowComponents = (
+        selected: SelectedComponent,
+    ): Set<string> => {
+        const highlighted = new Set<string>();
         
-        return {
-            layerWidth,
-            embedWidth,
-            unembedWidth,
-            labelPadding,
-            rightLabelPadding,
-            baseWidth,
-            rowHeight,
-            baseHeight,
-            startX,
-            startY
-        };
-    }, [effectiveNumLayers, effectiveNumTokens, tokenLabels, unembedLabels]);
+        const { tokenIndex, layerIndex, componentType } = selected;
+        
+        // Embed components have no dependencies
+        if (componentType === 'embed') {
+            highlighted.add(`embed-${tokenIndex}`);
+            return highlighted;
+        }
 
-    // Helper function to get color based on component highlighting
-    const getComponentColor = (componentId: string, defaultColor: string): string => {
-        if (isHeatmapMode) return COLORS.grey;
-        if (!highlightedComponents) return defaultColor;
-        return highlightedComponents.has(componentId) ? defaultColor : COLORS.grey;
+        if (componentType === 'row') {
+            // Highlight embed component for this token
+            highlighted.add(`embed-${tokenIndex}`);
+            
+            // Highlight all components in all layers for this token
+            for (let l = 0; l < numLayers; l++) {
+                highlighted.add(`resid-circle-${tokenIndex}-${l}`);
+                highlighted.add(`resid-arrow-${tokenIndex}-${l}`);
+                highlighted.add(`cross-token-attn-${tokenIndex}-${l}`);
+                if (showAttn) highlighted.add(`attn-${tokenIndex}-${l}`);
+                if (showMlp) highlighted.add(`mlp-${tokenIndex}-${l}`);
+            }
+            
+            // Highlight unembed component for this token
+            highlighted.add(`unembed-${tokenIndex}`);
+            
+            return highlighted;
+        }
+        
+        // Unembed components see everything
+        if (componentType === 'unembed') {
+            for (let t = 0; t <= tokenIndex; t++) {
+                for (let l = 0; l < layerIndex; l++) {
+                    highlighted.add(`resid-circle-${t}-${l}`);
+                    highlighted.add(`resid-arrow-${t}-${l}`);
+                    highlighted.add(`cross-token-attn-${t}-${l}`);
+                    if (showAttn) highlighted.add(`attn-${t}-${l}`);
+                    if (showMlp) highlighted.add(`mlp-${t}-${l}`);
+                }
+
+                // Highlight resid circles and cross-token attn for the curent layer
+                highlighted.add(`resid-circle-${t}-${layerIndex}`);
+                highlighted.add(`cross-token-attn-${t}-${layerIndex}`);
+
+                // Highlight the current token's components
+                highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
+                if (showAttn) highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
+                if (showMlp) highlighted.add(`mlp-${tokenIndex}-${layerIndex}`);
+
+                // Highlight the embed components up to the current token
+                highlighted.add(`embed-${t}`);
+            }
+            highlighted.add(`unembed-${tokenIndex}`);
+            return highlighted;
+        }
+        
+        // For residual components
+        if (componentType === 'resid') {
+            // Add all previous layers
+            for (let l = 0; l < layerIndex; l++) {
+                for (let t = 0; t <= tokenIndex; t++) {
+                    highlighted.add(`resid-circle-${t}-${l}`);
+                    highlighted.add(`embed-${t}`);
+                    highlighted.add(`cross-token-attn-${t}-${l}`);
+
+                    if (l !== layerIndex - 1) {
+                        highlighted.add(`resid-arrow-${t}-${l}`);
+                        if (showAttn) highlighted.add(`attn-${t}-${l}`);
+                        if (showMlp) highlighted.add(`mlp-${t}-${l}`);
+                    }
+                }
+            }
+
+            highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex - 1}`);
+            if (showAttn) highlighted.add(`attn-${tokenIndex}-${layerIndex - 1}`);
+            if (showMlp) highlighted.add(`mlp-${tokenIndex}-${layerIndex - 1}`);
+
+            highlighted.add(`resid-circle-${tokenIndex}-${layerIndex}`);
+            highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
+
+            if (layerIndex === 0) {
+                highlighted.add(`embed-${tokenIndex}`);
+            }
+        }
+        
+        // For attention and MLP components: add all components in previous layers (all tokens)
+        if (componentType === 'attn' || componentType === 'mlp') {
+            for (let l = 0; l < layerIndex; l++) {
+                for (let t = 0; t <= tokenIndex; t++) {
+                    highlighted.add(`resid-circle-${t}-${l}`);
+                    highlighted.add(`resid-arrow-${t}-${l}`);
+                    highlighted.add(`embed-${t}`);
+                    highlighted.add(`cross-token-attn-${t}-${l}`);
+                    if (showAttn) highlighted.add(`attn-${t}-${l}`);
+                    if (showMlp) highlighted.add(`mlp-${t}-${l}`);
+                }
+            }
+        }
+        
+        // For attention and MLP: add residual circles in current layer for previous tokens
+        if (componentType === 'attn' || componentType === 'mlp') {
+            for (let t = 0; t <= tokenIndex; t++) {
+                highlighted.add(`resid-circle-${t}-${layerIndex}`);
+            }
+            // // Add the residual circle at the current token position
+            highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
+            
+            // Add cross-token attention components to the current token
+            for (let t = 0; t <= tokenIndex; t++) {
+                highlighted.add(`cross-token-attn-${t}-${layerIndex}`);
+            }
+        }
+        
+        // For MLP: also add the attention component at the same position
+        if (componentType === 'mlp' && showAttn) {
+            highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
+            highlighted.add(`mlp-${tokenIndex}-${layerIndex}`);
+        }
+        
+        // For attention: include the attention component itself
+        if (componentType === 'attn') {
+            highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
+        }
+
+
+        return highlighted;
     };
 
-    // Main rendering effect
     useEffect(() => {
         if (!svgRef.current) return;
+
+        // Detect heatmap mode
+        const isHeatmapMode = componentType !== undefined && data !== undefined;
+        
+        // Use data dimensions if in heatmap mode
+        const effectiveNumTokens = isHeatmapMode && data ? data.length : numTokens;
+        const effectiveNumLayers = isHeatmapMode && data && data[0] ? data[0].length : numLayers;
+        
+        // Determine which component is currently selected (either from prop or hover)
+        const activeComponent = hoveredComponent || selectedComponent;
+        
+        // Get the set of components that should be highlighted
+        const highlightedComponents = activeComponent 
+            ? getDataFlowComponents(activeComponent)
+            : null;
 
         // Clear any existing content
         d3.select(svgRef.current).selectAll("*").remove();
 
         const svg = d3.select(svgRef.current);
-        
+        const layerWidth = 210;
+        const embedWidth = 75; // Space for embed component
+        const unembedWidth = 75; // Space for unembed component
+        const labelPadding = tokenLabels ? 60 : 0; // Extra space for y-axis labels
+        const rightLabelPadding = unembedLabels ? 80 : 0; // Extra space for unembed labels
+        const baseWidth = labelPadding + embedWidth + effectiveNumLayers * layerWidth + unembedWidth + rightLabelPadding + 200;
+        const rowHeight = 75;
+        const baseHeight = effectiveNumTokens * rowHeight + 100;
+        const startX = 100 + embedWidth + labelPadding; // Shift start to make room for embed and labels
+        const startY = 75;
+
         // Set SVG dimensions with scale
-        svg.attr("width", dimensions.baseWidth * scale).attr("height", dimensions.baseHeight * scale);
+        svg.attr("width", baseWidth * scale).attr("height", baseHeight * scale);
         
         // Add background rect to capture mouse events on empty space
         if (enableDataFlowHover) {
             svg.append("rect")
-                .attr("width", dimensions.baseWidth * scale)
-                .attr("height", dimensions.baseHeight * scale)
+                .attr("width", baseWidth * scale)
+                .attr("height", baseHeight * scale)
                 .attr("fill", "transparent")
                 .style("cursor", "default")
-                .on("click", (event) => {
-                    event.stopPropagation();
-                    setClickedComponent(null);
+                .on("mouseenter", () => {
+                    setHoveredComponent(null);
                 });
         }
 
         // Create a group for the visualization with scale transform
         const g = svg.append("g").attr("transform", `scale(${scale})`);
         
+        // Define colors
+        const greyColor = "#9CA3AF";
+        
+        // Helper function to get color based on component highlighting
+        const getComponentColor = (componentId: string, defaultColor: string): string => {
+            if (isHeatmapMode) return greyColor;
+            if (!highlightedComponents) return defaultColor;
+            return highlightedComponents.has(componentId) ? defaultColor : greyColor;
+        };
+
         // Function to draw a single layer
         const drawLayer = (layerIndex: number) => {
-            const layerStartX = dimensions.startX + layerIndex * dimensions.layerWidth;
+            const layerStartX = startX + layerIndex * layerWidth;
             const isLastLayer = layerIndex === effectiveNumLayers - 1;
 
             // Function to draw a single token row within a layer
             const drawTokenRow = (rowIndex: number) => {
                 const centerX = layerStartX;
-                const centerY = dimensions.startY + rowIndex * dimensions.rowHeight;
+                const centerY = startY + rowIndex * rowHeight;
                 const isFirstRow = rowIndex === 0;
                 const isLastRow = rowIndex === effectiveNumTokens - 1;
 
@@ -260,7 +254,7 @@ export default function Transformer({
                 const residInRadius = 10;
                 const residCircleId = `resid-circle-${rowIndex}-${layerIndex}`;
                 const residArrowId = `resid-arrow-${rowIndex}-${layerIndex}`;
-                const residColor = getComponentColor(residCircleId, COLORS.purple);
+                const residColor = getComponentColor(residCircleId, "purple");
                 
                 const residCircle = g.append("circle")
                     .attr("cx", centerX)
@@ -277,21 +271,32 @@ export default function Transformer({
                 
                 // Add fill for heatmap mode
                 if (isHeatmapMode && componentType === 'resid' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
-                    residCircle.attr("fill", COLORS.purple).attr("fill-opacity", data[rowIndex][layerIndex]);
+                    residCircle.attr("fill", "purple").attr("fill-opacity", data[rowIndex][layerIndex]);
                 } else {
                     const isHighlighted = !highlightedComponents || highlightedComponents.has(residCircleId);
-                    residCircle.attr("fill", isHighlighted ? COLORS.fills.purple : "white");
+                    residCircle.attr("fill", isHighlighted ? "#E9D5FF" : "white");
                 }
                 
-                // Add click handlers
+                // Add hover and click handlers
                 if (enableDataFlowHover) {
-                    residCircle.on("click", (event) => {
-                        event.stopPropagation();
-                        setClickedComponent({
-                            tokenIndex: rowIndex,
-                            layerIndex: layerIndex,
-                            componentType: 'resid'
+                    residCircle
+                        .on("mouseover", () => {
+                            setHoveredComponent({
+                                tokenIndex: rowIndex,
+                                layerIndex: layerIndex,
+                                componentType: enableRowHighlighting ? 'row' : 'resid'
+                            });
+                        })
+                        .on("mouseout", () => {
+                            setHoveredComponent(null);
                         });
+                }
+                
+                // Add click handler for row highlighting mode
+                if (enableRowHighlighting && onRowClick) {
+                    console.log("Adding click handler for row highlighting mode");
+                    residCircle.on("click", () => {
+                        onRowClick(rowIndex, layerIndex);
                     });
                 }
 
@@ -302,13 +307,13 @@ export default function Transformer({
 
                 // If not the last layer, connect to the next layer's circle minus its radius
                 // If last layer, keep the same arrow length (use residArrowEndX)
-                const actualResidArrowEndX = isLastLayer ? residArrowEndX : layerStartX + dimensions.layerWidth - residInRadius;
+                const actualResidArrowEndX = isLastLayer ? residArrowEndX : layerStartX + layerWidth - residInRadius;
 
                 // Residual arrow color: use standard component color logic
-                const residArrowColor = getComponentColor(residArrowId, COLORS.purple);
+                const residArrowColor = getComponentColor(residArrowId, "purple");
 
                 // Residual arrow line
-                g.append("line")
+                const residArrowLine = g.append("line")
                     .attr("x1", residArrowStartX)
                     .attr("y1", residArrowY)
                     .attr("x2", actualResidArrowEndX)
@@ -319,7 +324,15 @@ export default function Transformer({
                     .attr("data-component-subtype", "resid-arrow")
                     .attr("data-token-index", rowIndex)
                     .attr("data-layer-index", layerIndex)
-                    .attr("data-component-id", residArrowId);
+                    .attr("data-component-id", residArrowId)
+                    .style("cursor", enableRowHighlighting ? "pointer" : "default");
+                
+                // Add click handler for row highlighting mode
+                if (enableRowHighlighting && onRowClick) {
+                    residArrowLine.on("click", () => {
+                        onRowClick(rowIndex, layerIndex);
+                    });
+                }
 
                 // Residual arrow head (for all layers)
                 const arrowHeadSize = 10;
@@ -336,21 +349,21 @@ export default function Transformer({
                 // A semi-circle path around the residual-in circle (only if not the first row)
                 const attnCrossTokenRadius = 20;
                 const attnComponentId = `attn-${rowIndex}-${layerIndex}`;
-                const attnColor = getComponentColor(attnComponentId, COLORS.red);
+                const attnColor = getComponentColor(attnComponentId, "red");
                 
                 // For cross-token attention arrows, check if they're part of a highlighted attention/MLP's data flow
                 const getCrossTokenColor = (currentRowIndex: number): string => {
-                    if (isHeatmapMode) return COLORS.grey;
-                    if (!highlightedComponents) return COLORS.red;
+                    if (isHeatmapMode) return greyColor;
+                    if (!highlightedComponents) return "red";
                     
                     // Check if the cross-token components are explicitly highlighted
                     const crossTokenId = `cross-token-attn-${currentRowIndex}-${layerIndex}`;
                     
                     if (highlightedComponents.has(crossTokenId)) {
-                        return COLORS.red;
+                        return "red";
                     }
                     
-                    return COLORS.grey;
+                    return greyColor;
                 };
                 
                 if ((showAttn || isHeatmapMode) && !isFirstRow) {
@@ -375,7 +388,7 @@ export default function Transformer({
                 if ((showAttn || isHeatmapMode) && !isLastRow) {
                     const attnCrossTokenX = centerX;
                     const attnCrossTokenStartY = centerY + residInRadius;
-                    const nextRowCenterY = dimensions.startY + (rowIndex + 1) * dimensions.rowHeight;
+                    const nextRowCenterY = startY + (rowIndex + 1) * rowHeight;
                     const attnCrossTokenEndY = nextRowCenterY - attnCrossTokenRadius;
                     const crossTokenColor = getCrossTokenColor(rowIndex);
 
@@ -483,21 +496,31 @@ export default function Transformer({
                     
                     // Add fill for heatmap mode
                     if (isHeatmapMode && componentType === 'attn' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
-                        attnRect.attr("fill", COLORS.red).attr("fill-opacity", data[rowIndex][layerIndex]);
+                        attnRect.attr("fill", "red").attr("fill-opacity", data[rowIndex][layerIndex]);
                     } else {
                         const isHighlighted = !highlightedComponents || highlightedComponents.has(attnComponentId);
-                        attnRect.attr("fill", isHighlighted ? COLORS.fills.red : "white");
+                        attnRect.attr("fill", isHighlighted ? "#FEE2E2" : "white");
                     }
                     
-                    // Add click handlers
+                    // Add hover handlers
                     if (enableDataFlowHover) {
-                        attnRect.on("click", (event) => {
-                            event.stopPropagation();
-                            setClickedComponent({
-                                tokenIndex: rowIndex,
-                                layerIndex: layerIndex,
-                                componentType: 'attn'
+                        attnRect
+                            .on("mouseover", () => {
+                                setHoveredComponent({
+                                    tokenIndex: rowIndex,
+                                    layerIndex: layerIndex,
+                                    componentType: enableRowHighlighting ? 'row' : 'attn'
+                                });
+                            })
+                            .on("mouseout", () => {
+                                setHoveredComponent(null);
                             });
+                    }
+                    
+                    // Add click handler for row highlighting mode
+                    if (enableRowHighlighting && onRowClick) {
+                        attnRect.on("click", () => {
+                            onRowClick(rowIndex, layerIndex);
                         });
                     }
                 }
@@ -505,7 +528,7 @@ export default function Transformer({
                 // MLP components
                 if (showMlp || isHeatmapMode) {
                     const mlpComponentId = `mlp-${rowIndex}-${layerIndex}`;
-                    const mlpColor = getComponentColor(mlpComponentId, COLORS.green);
+                    const mlpColor = getComponentColor(mlpComponentId, "green");
                     
                     // MLP in arrow line variables
                     const mlpInX = attnInXEnd + 25;
@@ -574,21 +597,31 @@ export default function Transformer({
                     
                     // Add fill for heatmap mode
                     if (isHeatmapMode && componentType === 'mlp' && data && data[rowIndex] && data[rowIndex][layerIndex] !== undefined) {
-                        mlpRect.attr("fill", COLORS.green).attr("fill-opacity", data[rowIndex][layerIndex]);
+                        mlpRect.attr("fill", "green").attr("fill-opacity", data[rowIndex][layerIndex]);
                     } else {
                         const isHighlighted = !highlightedComponents || highlightedComponents.has(mlpComponentId);
-                        mlpRect.attr("fill", isHighlighted ? COLORS.fills.green : "white");
+                        mlpRect.attr("fill", isHighlighted ? "#DCFCE7" : "white");
                     }
                     
-                    // Add click handlers
+                    // Add hover handlers
                     if (enableDataFlowHover) {
-                        mlpRect.on("click", (event) => {
-                            event.stopPropagation();
-                            setClickedComponent({
-                                tokenIndex: rowIndex,
-                                layerIndex: layerIndex,
-                                componentType: 'mlp'
+                        mlpRect
+                            .on("mouseover", () => {
+                                setHoveredComponent({
+                                    tokenIndex: rowIndex,
+                                    layerIndex: layerIndex,
+                                    componentType: enableRowHighlighting ? 'row' : 'mlp'
+                                });
+                            })
+                            .on("mouseout", () => {
+                                setHoveredComponent(null);
                             });
+                    }
+                    
+                    // Add click handler for row highlighting mode
+                    if (enableRowHighlighting && onRowClick) {
+                        mlpRect.on("click", () => {
+                            onRowClick(rowIndex, layerIndex);
                         });
                     }
                 }
@@ -605,13 +638,13 @@ export default function Transformer({
             const trapezoidHeight = 20;
             const narrowWidth = 10;
             const wideWidth = 20;
-            const embedX = dimensions.startX - dimensions.embedWidth + 20; // Position before first layer
+            const embedX = startX - embedWidth + 20; // Position before first layer
             
             // Draw for each token
             for (let tokenIndex = 0; tokenIndex < effectiveNumTokens; tokenIndex++) {
-                const embedY = dimensions.startY + tokenIndex * dimensions.rowHeight;
+                const embedY = startY + tokenIndex * rowHeight;
                 const embedComponentId = `embed-${tokenIndex}`;
-                const embedColor = getComponentColor(embedComponentId, COLORS.blue);
+                const embedColor = getComponentColor(embedComponentId, "#3B82F6");
                 
                 // Draw trapezoid (wider side facing right)
                 // Start from top-left, go clockwise
@@ -634,23 +667,26 @@ export default function Transformer({
                 
                 // Light blue fill when highlighted, white when greyed out
                 const isHighlighted = !highlightedComponents || highlightedComponents.has(embedComponentId);
-                embedShape.attr("fill", isHighlighted ? COLORS.fills.blue : "white");
+                embedShape.attr("fill", isHighlighted ? "#DBEAFE" : "white");
                 
-                // Add click handlers
+                // Add hover handlers
                 if (enableDataFlowHover) {
-                    embedShape.on("click", (event) => {
-                        event.stopPropagation();
-                        setClickedComponent({
-                            tokenIndex: tokenIndex,
-                            layerIndex: 0,
-                            componentType: 'embed'
+                    embedShape
+                        .on("mouseover", () => {
+                            setHoveredComponent({
+                                tokenIndex: tokenIndex,
+                                layerIndex: 0,
+                                componentType: 'embed'
+                            });
+                        })
+                        .on("mouseout", () => {
+                            setHoveredComponent(null);
                         });
-                    });
                 }
                 
                 // Arrow from embed to first residual circle
                 const arrowStartX = embedX + trapezoidHeight;
-                const arrowEndX = dimensions.startX - 10; // Stop before the residual circle radius
+                const arrowEndX = startX - 10; // Stop before the residual circle radius
                 const arrowY = embedY;
                 
                 g.append("line")
@@ -675,14 +711,14 @@ export default function Transformer({
             const narrowWidth = 10;
             const wideWidth = 20;
             // Position unembed at the end of the residual arrow (where it normally would end)
-            const lastLayerCenterX = dimensions.startX + (effectiveNumLayers - 1) * dimensions.layerWidth;
+            const lastLayerCenterX = startX + (effectiveNumLayers - 1) * layerWidth;
             const unembedX = lastLayerCenterX + 10 + 200; // residInRadius + residual arrow length
             
             // Draw for each token
             for (let tokenIndex = 0; tokenIndex < effectiveNumTokens; tokenIndex++) {
-                const unembedY = dimensions.startY + tokenIndex * dimensions.rowHeight;
+                const unembedY = startY + tokenIndex * rowHeight;
                 const unembedComponentId = `unembed-${tokenIndex}`;
-                const unembedColor = getComponentColor(unembedComponentId, COLORS.blue);
+                const unembedColor = getComponentColor(unembedComponentId, "#3B82F6");
                 
                 // Draw trapezoid (wider side facing left)
                 // Start from top-left, go clockwise
@@ -705,62 +741,26 @@ export default function Transformer({
                 
                 // Light blue fill when highlighted, white when greyed out
                 const isHighlighted = !highlightedComponents || highlightedComponents.has(unembedComponentId);
-                unembedShape.attr("fill", isHighlighted ? COLORS.fills.blue : "white");
+                unembedShape.attr("fill", isHighlighted ? "#DBEAFE" : "white");
                 
-                // Add click handlers
+                // Add hover handlers
                 if (enableDataFlowHover) {
-                    unembedShape.on("click", (event) => {
-                        event.stopPropagation();
-                        setClickedComponent({
-                            tokenIndex: tokenIndex,
-                            layerIndex: effectiveNumLayers - 1,
-                            componentType: 'unembed'
+                    unembedShape
+                        .on("mouseover", () => {
+                            setHoveredComponent({
+                                tokenIndex: tokenIndex,
+                                layerIndex: effectiveNumLayers - 1,
+                                componentType: 'unembed'
+                            });
+                        })
+                        .on("mouseout", () => {
+                            setHoveredComponent(null);
                         });
-                    });
                 }
             }
         };
         
-        // Draw token labels (y-axis)
-        const drawLabels = () => {
-            if (tokenLabels && tokenLabels.length > 0) {
-                for (let i = 0; i < effectiveNumTokens && i < tokenLabels.length; i++) {
-                    const labelY = dimensions.startY + i * dimensions.rowHeight;
-                    const labelX = dimensions.startX - dimensions.embedWidth - 10; // Position to the left of embed
-                    
-                    g.append("text")
-                        .attr("x", labelX)
-                        .attr("y", labelY)
-                        .attr("text-anchor", "end")
-                        .attr("dominant-baseline", "middle")
-                        .attr("font-size", "14px")
-                        .attr("fill", "#374151")
-                        .text(tokenLabels[i]);
-                }
-            }
-            
-            // Draw unembed labels (right side)
-            if (unembedLabels && unembedLabels.length > 0) {
-                const lastLayerCenterX = dimensions.startX + (effectiveNumLayers - 1) * dimensions.layerWidth;
-                const unembedX = lastLayerCenterX + 10 + 220;
-                
-                for (let i = 0; i < effectiveNumTokens && i < unembedLabels.length; i++) {
-                    const labelY = dimensions.startY + i * dimensions.rowHeight;
-                    const labelX = unembedX + 30; // Position to the right of unembed
-                    
-                    g.append("text")
-                        .attr("x", labelX)
-                        .attr("y", labelY)
-                        .attr("text-anchor", "start")
-                        .attr("dominant-baseline", "middle")
-                        .attr("font-size", "14px")
-                        .attr("fill", "#374151")
-                        .text(unembedLabels[i]);
-                }
-            }
-        };
-        
-        // Draw all components
+        // Draw embed component
         drawEmbed();
         
         // Draw all layers
@@ -768,23 +768,151 @@ export default function Transformer({
             drawLayer(i);
         }
         
+        // Draw unembed component
         drawUnembed();
-        drawLabels();
+        
+        // Draw token labels (y-axis)
+        if (tokenLabels && tokenLabels.length > 0) {
+            for (let i = 0; i < effectiveNumTokens && i < tokenLabels.length; i++) {
+                const labelY = startY + i * rowHeight;
+                const labelX = startX - embedWidth - 10; // Position to the left of embed
+                
+                g.append("text")
+                    .attr("x", labelX)
+                    .attr("y", labelY)
+                    .attr("text-anchor", "end")
+                    .attr("dominant-baseline", "middle")
+                    .attr("font-size", "14px")
+                    .attr("fill", "#374151")
+                    .text(tokenLabels[i]);
+            }
+        }
+        
+        // Collect unembed dropdown positions instead of drawing labels
+        if (unembedLabels && unembedLabels.length > 0) {
+            const lastLayerCenterX = startX + (effectiveNumLayers - 1) * layerWidth;
+            const unembedX = lastLayerCenterX + 10 + 220;
+            const positions: { x: number; y: number; tokenIndex: number }[] = [];
+            
+            for (let i = 0; i < effectiveNumTokens && i < unembedLabels.length; i++) {
+                const labelY = startY + i * rowHeight;
+                const labelX = unembedX + 30; // Position to the right of unembed
+                
+                positions.push({
+                    x: labelX, // Don't divide by scale here
+                    y: labelY,
+                    tokenIndex: i
+                });
+            }
+            
+            setUnembedCardPositions(positions);
+        } else {
+            setUnembedCardPositions([]);
+        }
 
-    }, [dimensions, effectiveNumTokens, effectiveNumLayers, showAttn, showMlp, componentType, data, scale, tokenLabels, unembedLabels, highlightedComponents, isHeatmapMode, enableDataFlowHover]);
+    }, [numTokens, numLayers, showAttn, showMlp, componentType, data, scale, tokenLabels, unembedLabels, selectedComponent, enableDataFlowHover, enableRowHighlighting, onRowClick]);
+
+    // Separate effect to handle hover state changes without rebuilding the entire visualization
+    useEffect(() => {
+        if (!svgRef.current) return;
+        
+        const svg = d3.select(svgRef.current);
+        const g = svg.select("g");
+        if (g.empty()) return;
+        
+        // Determine which component is currently active (hover takes precedence over selection)
+        const activeComponent = hoveredComponent || selectedComponent;
+        
+        // Get the set of components that should be highlighted
+        const highlightedComponents = activeComponent 
+            ? getDataFlowComponents(activeComponent)
+            : new Set<string>(); // Empty set means highlight everything
+        
+        // Update all component colors based on highlighting
+        g.selectAll("[data-component-id]").each(function() {
+            const element = d3.select(this);
+            const componentId = element.attr("data-component-id");
+            const componentType = element.attr("data-component-type");
+            
+            if (!componentId) return;
+            
+            // Determine the default color based on component type
+            let defaultColor = "purple";
+            let fillColor = "white";
+            let highlightedFillColor = "white";
+            
+            if (componentType === "attn") {
+                defaultColor = "red";
+                highlightedFillColor = "#FEE2E2";
+            } else if (componentType === "mlp") {
+                defaultColor = "green";
+                highlightedFillColor = "#DCFCE7";
+            } else if (componentType === "resid") {
+                defaultColor = "purple";
+                highlightedFillColor = "#E9D5FF";
+            } else if (componentType === "embed" || componentType === "unembed") {
+                defaultColor = "#3B82F6";
+                highlightedFillColor = "#DBEAFE";
+            } else if (componentType === "cross-token") {
+                defaultColor = "red";
+                highlightedFillColor = "#FEE2E2";
+            }
+            
+            // Apply colors based on highlighting state
+            const isHighlighted = highlightedComponents.size === 0 || highlightedComponents.has(componentId);
+            const color = isHighlighted ? defaultColor : "#9CA3AF";
+            
+            if (element.node()?.tagName === "circle" || element.node()?.tagName === "rect" || element.node()?.tagName === "path") {
+                if (element.attr("stroke")) {
+                    element.attr("stroke", color);
+                }
+                if (element.attr("fill") && element.attr("fill") !== "none") {
+                    element.attr("fill", element.node()?.tagName === "path" && componentType !== "embed" && componentType !== "unembed" ? color : (isHighlighted ? highlightedFillColor : "white"));
+                }
+            } else if (element.node()?.tagName === "line") {
+                element.attr("stroke", color);
+            }
+        });
+        
+    }, [hoveredComponent, selectedComponent, showAttn, showMlp, numLayers]);
 
     return (
         <div 
             ref={containerRef}
-            className="rounded-lg overflow-auto"
+            className="rounded-lg overflow-auto relative"
             style={{ 
                 maxWidth: '90vw', 
                 maxHeight: '70vh',
                 width: scale < 1 ? 'auto' : '90vw',
                 height: scale < 1 ? 'auto' : '70vh'
             }}
+            onMouseLeave={() => {
+                if (enableDataFlowHover) {
+                    setHoveredComponent(null);
+                }
+            }}
         >
             <svg ref={svgRef}></svg>
+            {unembedCardPositions.length}
+            {/* Unembed cards */}
+            {unembedCardPositions.map((pos, idx) => (
+                <div
+                    key={`unembed-card-${pos.tokenIndex}`}
+                    className="absolute pointer-events-auto"
+                    style={{
+                        left: `${pos.x * scale}px`,
+                        top: `${pos.y * scale}px`,
+                        transform: 'translate(0, -50%)'
+                    }}
+                >
+                    <select className="text-xs border rounded px-1 py-0.5 focus:outline-none">
+                        <option value="">Select graph type</option>
+                        <option value="dummy1">{unembedLabels && unembedLabels[idx]}</option>
+                        <option value="dummy2">Dummy Option 2</option>
+                        <option value="dummy3">Dummy Option 3</option>
+                    </select>
+                </div>
+            ))}
         </div>
     );
 }

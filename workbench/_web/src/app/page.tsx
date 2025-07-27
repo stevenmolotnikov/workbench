@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Transformer from "@/components/Transformer";
+import AnimatedTransformer from "@/components/AnimatedTransformer";
 
 export default function Page() {
     const [numTokens, setNumTokens] = useState(5);
@@ -12,6 +13,7 @@ export default function Page() {
     const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid'>('attn');
     const [testData, setTestData] = useState<number[][] | null>(null);
     const [scale, setScale] = useState(0.7);
+    const [animated, setAnimated] = useState(false);
 
     const MIN_SCALE = 0.5;
     const MAX_SCALE = 2;
@@ -179,8 +181,28 @@ export default function Page() {
                             Reset
                         </button>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setAnimated(!animated)}
+                            className={`px-4 py-2 ${animated ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        >
+                            {animated ? 'Stop Animation' : 'Start Animation'}
+                        </button>
+                    </div>
                 </div>
-            <Transformer
+            {animated ? (
+                <AnimatedTransformer
+                    numTokens={numTokens}
+                    numLayers={numLayers}
+                    showAttn={showAttn}
+                    showMlp={showMlp}
+                    scale={scale}
+                    tokenLabels={tokenLabels}
+                    unembedLabels={unembedLabels}
+                    animationSpeed={100 }
+                />
+            ) : (
+                <Transformer
                 componentType={componentType}
                 data={data}
                 numTokens={numTokens}
@@ -192,6 +214,7 @@ export default function Page() {
                 unembedLabels={unembedLabels}
                 enableDataFlowHover={true}
             />
+            )}
         </div>
     );
 }
