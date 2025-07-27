@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Transformer from "@/components/LensTransformer";
+import LensTransformer from "@/components/LensTransformer";
 
 export default function InteractiveDisplay() {
     // Generate some sample labels
@@ -7,6 +7,11 @@ export default function InteractiveDisplay() {
     const unembedLabels = ["cat", "dog", "bird", "fish", "lion"];
     const [mode, setMode] = useState<"component" | "row">("component");
     const [selectedRow, setSelectedRow] = useState<{tokenIndex: number, layerIndex: number} | null>(null);
+
+    const clickHandler = (tokenIndex: number, layerIndex: number) => {
+        console.log(`Clicked token ${tokenIndex} at layer ${layerIndex}`);
+        setSelectedRow({ tokenIndex, layerIndex });
+    }
     
     return (
         <div className="p-4">
@@ -32,19 +37,15 @@ export default function InteractiveDisplay() {
                     </div>
                 )}
             </div>
-            <Transformer
-                numTokens={5}
-                numLayers={5}
-                showAttn={true}
-                showMlp={true}
-                scale={0.5}
-                tokenLabels={tokenLabels}
-                unembedLabels={unembedLabels}
-                enableDataFlowHover={true}
-                enableRowHighlighting={true}
-                onRowClick={(tokenIndex, layerIndex) => {
-                    setSelectedRow({ tokenIndex, layerIndex });
-                }}
+            <LensTransformer 
+                clickHandler={clickHandler}
+                rowMode={mode === "row"} 
+                numTokens={5} 
+                numLayers={3} 
+                scale={0.5} 
+                showFlowOnHover={true}
+                tokenLabels={tokenLabels} 
+                unembedLabels={unembedLabels} 
             />
         </div>
     );
