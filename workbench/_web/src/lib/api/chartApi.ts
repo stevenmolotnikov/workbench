@@ -14,10 +14,6 @@ interface SSEData {
     data: LensLineResponse | LensGridResponse;
 }
 
-const generateJobId = () => {
-    return `job-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-};
-
 const listenToSSE = <T>(url: string): Promise<T> => {
     return new Promise((resolve, reject) => {
         let result: T | null = null;

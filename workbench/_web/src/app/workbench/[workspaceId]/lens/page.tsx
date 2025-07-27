@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, use } from "react";
-import { PromptBuilder } from "@/components/prompt-builders/PromptBuilder";
+import { PromptBuilder } from "@/components/lens/PromptBuilder";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
 
 import { ChartDisplay } from "@/components/charts/ChartDisplay";

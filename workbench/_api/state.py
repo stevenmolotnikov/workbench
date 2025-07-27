@@ -56,26 +56,17 @@ class AppState:
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))
 
-        remote = config.remote
+        self.remote = config.remote
 
         for _, cfg in config.models.items():
             model = LanguageModel(
                 cfg.name,
                 rename=cfg.rename,
                 device_map="cpu",
-                dispatch=not remote,
+                dispatch=not self.remote,
             )
 
-            def wrapped_trace(self, *args, **kwargs):
-                return self.trace(*args, remote=remote, **kwargs)
-            model.wrapped_trace = types.MethodType(wrapped_trace, model)
-
-            def wrapped_session(self, *args, **kwargs):
-                return self.session(*args, remote=remote, **kwargs)
-            model.wrapped_session = types.MethodType(wrapped_session, model)
-
             model.config.update(cfg.config)
-
             self.models[cfg.name] = model
 
         return config

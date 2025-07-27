@@ -60,13 +60,13 @@ class GridLensResponse(BaseModel):
 router = APIRouter()
 
 
-def logit_lens_grid(model, prompt):
+def logit_lens_grid(model, prompt, remote):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     pred_ids = []
     probs = []
-    with model.wrapped_trace(prompt):
+    with model.trace(prompt, remote=remote):
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             x = layer.output[0]
@@ -94,14 +94,14 @@ def logit_lens_grid(model, prompt):
     return pred_ids, probs, input_strs
 
 
-def logit_lens_targeted(model, model_requests):
+def logit_lens_targeted(model, model_requests, remote):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     tok = model.tokenizer
 
     all_results = []
-    with model.wrapped_trace() as tracer:
+    with model.trace(remote=remote) as tracer:
         for request in model_requests:
             # Get user queried indices
             idxs = request["idxs"]
@@ -214,7 +214,7 @@ async def process_targeted_lens_background(
 
         # Run computation in thread pool
         model_results = await asyncio.to_thread(
-            logit_lens_targeted, model, model_requests
+            logit_lens_targeted, model, model_requests, state.remote
         )
         all_results.extend(model_results)
 
@@ -244,7 +244,7 @@ async def process_grid_lens_background(
 
     # Run computation in thread pool
     pred_ids, probs, input_strs = await asyncio.to_thread(
-        logit_lens_grid, model, prompt
+        logit_lens_grid, model, prompt, state.remote
     )
 
     pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
@@ -263,7 +263,7 @@ async def process_grid_lens_background(
 
 @router.post("/get-line")
 async def get_targeted_lens(lens_request: TargetedLensRequest, request: Request):
-    return jobs.create_job(lens_request, process_targeted_lens_background, request)
+    return jobs.create_job(process_targeted_lens_background, lens_request, request)
 
 @router.get("/listen-line/{job_id}")
 async def listen_targeted_lens(job_id: str):
@@ -273,7 +273,7 @@ async def listen_targeted_lens(job_id: str):
 
 @router.post("/get-grid")
 async def get_grid_lens(lens_request: GridLensRequest, request: Request):
-    return jobs.create_job(lens_request, process_grid_lens_background, request)
+    return jobs.create_job(process_grid_lens_background, lens_request, request)
 
 @router.get("/listen-grid/{job_id}")
 async def listen_grid_lens(job_id: str):

@@ -34,9 +34,11 @@ interface PairPredictions {
     };
 }
 
-const generateJobId = () => {
-    return `job-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-};
+interface SSEData {
+    type: string;
+    message: string;
+    data: TokenPredictions | PairPredictions;
+}
 
 const listenToSSE = <T>(url: string): Promise<T> => {
     return new Promise((resolve, reject) => {
@@ -45,21 +47,23 @@ const listenToSSE = <T>(url: string): Promise<T> => {
         
         const { onCancel } = sseService.createEventSource(
             url,
-            (data: any) => {
-                console.log('Received data:', data);
-                if (data.type === 'status') {
-                    console.log('Status update:', data.message);
-                    setJobStatus(data.message);
-                } else if (data.type === 'result') {
-                    console.log('Received result:', data);
-                    result = data.data as T;
-                } else if (data.type === 'error') {
-                    setJobStatus(`Error: ${data.message}`);
-                    reject(new Error(data.message));
+            (data: unknown) => {
+                const sseData = data as SSEData;
+                console.log('Received data:', sseData);
+                if (sseData.type === 'status') {
+                    console.log('Status update:', sseData.message);
+                    setJobStatus(sseData.message);
+                } else if (sseData.type === 'result') {
+                    console.log('Received result:', sseData);
+                    result = sseData.data as T;
+                } else if (sseData.type === 'error') {
+                    setJobStatus(`Error: ${sseData.message}`);
+                    reject(new Error(sseData.message));
                 }
             },
             () => {
                 if (result) {
+                    console.log("RECEIVED RESULT", result);
                     setJobStatus('idle');
                     resolve(result);
                 } else {
@@ -71,25 +75,29 @@ const listenToSSE = <T>(url: string): Promise<T> => {
     });
 };
 
+
 export const getExecuteSelected = async (request: ExecuteSelectedRequest): Promise<TokenPredictions> => {
     try {
-        const jobId = generateJobId();
-        const requestWithJobId = { ...request, job_id: jobId };
-        
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getExecuteSelected), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestWithJobId),
+            body: JSON.stringify(request),
         });
 
         if (!response.ok) throw new Error("Failed to start computation");
         
+        const jobId = (await response.json()).job_id;   
+
+        console.log("JOB ID", jobId);
+
         // Listen for results
         const result = await listenToSSE<TokenPredictions>(
             config.endpoints.listenExecuteSelected + `/${jobId}`
         );
         
+
+        console.log("STUFF", result);
         return result;
     } catch (error) {
         console.error("Error executing selected tokens:", error);

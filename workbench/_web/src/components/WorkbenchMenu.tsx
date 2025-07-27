@@ -1,16 +1,8 @@
-import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { SquarePen, FileText, PanelLeft, LogOut, User } from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Minus, Plus } from "lucide-react";
-import { useWorkspace } from "@/stores/useWorkspace";
+import { SquarePen, FileText } from "lucide-react";
+
 import {
     Select,
     SelectContent,
@@ -22,7 +14,6 @@ import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
 // import { TutorialsToggle } from "./TutorialsToggle";
 import { WorkspaceSettingsPopover } from "./WorkspaceSettingsPopover";
-import { getCurrentUser, logout } from "@/lib/session";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
@@ -40,21 +31,6 @@ export function WorkbenchMenu({
     workspaceId
 }: WorkbenchModeProps) {
     const router = useRouter();
-    const [currentUser, setCurrentUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-    useEffect(() => {
-        async function fetchCurrentUser() {
-            try {
-                const user = await getCurrentUser();
-                setCurrentUser(user);
-            } catch (error) {
-                console.error("Failed to get current user:", error);
-            }
-        }
-        
-        fetchCurrentUser();
-    }, []);
 
     const handleValueChange = (value: "lens" | "patch") => {
         setWorkbenchMode(value);
@@ -67,23 +43,6 @@ export function WorkbenchMenu({
 
     const handleExport = () => {
         router.push('/workbench/summaries');
-    };
-
-    const handleLogout = async () => {
-        setIsLoggingOut(true);
-        try {
-            const success = await logout();
-            if (success) {
-                // Redirect to login page
-                router.push('/login');
-            } else {
-                console.error("Logout failed");
-            }
-        } catch (error) {
-            console.error("Logout error:", error);
-        } finally {
-            setIsLoggingOut(false);
-        }
     };
 
     return (
@@ -111,25 +70,6 @@ export function WorkbenchMenu({
                     Annotate
                 </Button>
                 {/* <TutorialsToggle tutorialsOpen={tutorialsOpen} toggleTutorials={toggleTutorials} /> */}
-                
-                {/* User info and logout */}
-                <div className="flex items-center gap-2 ml-4 pl-4 border-l">
-                    {currentUser && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <User size={14} />
-                            <span>{currentUser.name || currentUser.email}</span>
-                        </div>
-                    )}
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleLogout}
-                        disabled={isLoggingOut}
-                    >
-                        <LogOut size={16} />
-                        {isLoggingOut ? "Logging out..." : "Logout"}
-                    </Button>
-                </div>
             </div>
         </div>
     );

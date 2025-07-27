@@ -2,6 +2,7 @@
 
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import type React from "react";
+import { UserDropdown } from "@/components/UserDropdown";
 
 import { WorkbenchStatus } from "@/components/WorkbenchStatus";
 
@@ -29,6 +30,7 @@ export default function WorkbenchLayout({
                 <nav className="flex gap-2 items-center">
                     <WorkbenchStatus />
                     <ModeToggle /> 
+                    <UserDropdown />
                 </nav>
             </header>
             {children}

@@ -4,13 +4,15 @@ import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 
 interface TransformerProps {
-    componentType?: 'attn' | 'mlp' | 'resid';
+    componentType?: 'attn' | 'mlp' | 'resid' | 'embed' | 'unembed';
     data?: number[][];
     numTokens?: number;
     numLayers?: number;
     showAttn?: boolean;
     showMlp?: boolean;
     scale?: number;
+    tokenLabels?: string[];
+    unembedLabels?: string[];
 }
 
 export default function Transformer({ 
@@ -20,7 +22,9 @@ export default function Transformer({
     numLayers = 2,
     showAttn = true,
     showMlp = true,
-    scale = 1
+    scale = 1,
+    tokenLabels,
+    unembedLabels
 }: TransformerProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,10 +44,14 @@ export default function Transformer({
 
         const svg = d3.select(svgRef.current);
         const layerWidth = 275;
-        const baseWidth = effectiveNumLayers * layerWidth + 200;
+        const embedWidth = 75; // Space for embed component
+        const unembedWidth = 75; // Space for unembed component
+        const labelPadding = tokenLabels ? 60 : 0; // Extra space for y-axis labels
+        const rightLabelPadding = unembedLabels ? 80 : 0; // Extra space for unembed labels
+        const baseWidth = labelPadding + embedWidth + effectiveNumLayers * layerWidth + unembedWidth + rightLabelPadding + 200;
         const rowHeight = 75;
         const baseHeight = effectiveNumTokens * rowHeight + 100;
-        const startX = 100;
+        const startX = 100 + embedWidth + labelPadding; // Shift start to make room for embed and labels
         const startY = 75;
 
         // Set SVG dimensions with scale
@@ -57,6 +65,7 @@ export default function Transformer({
         const purpleColor = isHeatmapMode ? greyColor : "purple";
         const redColor = isHeatmapMode ? greyColor : "red";
         const greenColor = isHeatmapMode ? greyColor : "green";
+        const blueColor = isHeatmapMode ? greyColor : "#3B82F6";
 
         // Function to draw a single layer
         const drawLayer = (layerIndex: number) => {
@@ -92,6 +101,7 @@ export default function Transformer({
                 const residArrowY = centerY;
 
                 // If not the last layer, connect to the next layer's circle minus its radius
+                // If last layer, keep the same arrow length (use residArrowEndX)
                 const actualResidArrowEndX = isLastLayer ? residArrowEndX : layerStartX + layerWidth - residInRadius;
 
                 // Residual arrow line
@@ -296,12 +306,146 @@ export default function Transformer({
             }
         };
 
+        // Draw embed component (input side)
+        const drawEmbed = () => {
+            const trapezoidHeight = 20;
+            const narrowWidth = 10;
+            const wideWidth = 20;
+            const embedX = startX - embedWidth + 20; // Position before first layer
+            
+            // Draw for each token
+            for (let tokenIndex = 0; tokenIndex < effectiveNumTokens; tokenIndex++) {
+                const embedY = startY + tokenIndex * rowHeight;
+                
+                // Draw trapezoid (wider side facing right)
+                // Start from top-left, go clockwise
+                const trapezoidPath = `
+                    M ${embedX} ${embedY - narrowWidth/2}
+                    L ${embedX + trapezoidHeight} ${embedY - wideWidth/2}
+                    L ${embedX + trapezoidHeight} ${embedY + wideWidth/2}
+                    L ${embedX} ${embedY + narrowWidth/2}
+                    Z
+                `;
+                
+                const embedShape = g.append("path")
+                    .attr("d", trapezoidPath)
+                    .attr("stroke", blueColor)
+                    .attr("stroke-width", 2);
+                
+                // Add fill for heatmap mode
+                if (isHeatmapMode && componentType === 'embed' && data && data[tokenIndex] && data[tokenIndex][0] !== undefined) {
+                    embedShape.attr("fill", "#3B82F6").attr("fill-opacity", data[tokenIndex][0]);
+                } else {
+                    embedShape.attr("fill", "white");
+                }
+                
+                // Arrow from embed to first residual circle
+                const arrowStartX = embedX + trapezoidHeight;
+                const arrowEndX = startX - 10; // Stop before the residual circle radius
+                const arrowY = embedY;
+                
+                g.append("line")
+                    .attr("x1", arrowStartX)
+                    .attr("y1", arrowY)
+                    .attr("x2", arrowEndX)
+                    .attr("y2", arrowY)
+                    .attr("stroke", blueColor)
+                    .attr("stroke-width", 2);
+                
+                // Arrow head
+                const arrowHeadSize = 10;
+                g.append("path")
+                    .attr("d", `M ${arrowEndX - arrowHeadSize} ${arrowY - arrowHeadSize / 2} L ${arrowEndX} ${arrowY} L ${arrowEndX - arrowHeadSize} ${arrowY + arrowHeadSize / 2} Z`)
+                    .attr("fill", blueColor);
+            }
+        };
+        
+        // Draw unembed component (output side)
+        const drawUnembed = () => {
+            const trapezoidHeight = 20;
+            const narrowWidth = 10;
+            const wideWidth = 20;
+            // Position unembed at the end of the residual arrow (where it normally would end)
+            const lastLayerCenterX = startX + (effectiveNumLayers - 1) * layerWidth;
+            const unembedX = lastLayerCenterX + 10 + 240; // residInRadius + residual arrow length
+            
+            // Draw for each token
+            for (let tokenIndex = 0; tokenIndex < effectiveNumTokens; tokenIndex++) {
+                const unembedY = startY + tokenIndex * rowHeight;
+                
+                // Draw trapezoid (wider side facing left)
+                // Start from top-left, go clockwise
+                const trapezoidPath = `
+                    M ${unembedX} ${unembedY - wideWidth/2}
+                    L ${unembedX + trapezoidHeight} ${unembedY - narrowWidth/2}
+                    L ${unembedX + trapezoidHeight} ${unembedY + narrowWidth/2}
+                    L ${unembedX} ${unembedY + wideWidth/2}
+                    Z
+                `;
+                
+                const unembedShape = g.append("path")
+                    .attr("d", trapezoidPath)
+                    .attr("stroke", blueColor)
+                    .attr("stroke-width", 2);
+                
+                // Add fill for heatmap mode
+                if (isHeatmapMode && componentType === 'unembed' && data && data[tokenIndex] && data[tokenIndex][effectiveNumLayers - 1] !== undefined) {
+                    unembedShape.attr("fill", "#3B82F6").attr("fill-opacity", data[tokenIndex][effectiveNumLayers - 1]);
+                } else {
+                    unembedShape.attr("fill", "white");
+                }
+            }
+        };
+        
+        // Draw embed component
+        drawEmbed();
+        
         // Draw all layers
         for (let i = 0; i < effectiveNumLayers; i++) {
             drawLayer(i);
         }
+        
+        // Draw unembed component
+        drawUnembed();
+        
+        // Draw token labels (y-axis)
+        if (tokenLabels && tokenLabels.length > 0) {
+            for (let i = 0; i < effectiveNumTokens && i < tokenLabels.length; i++) {
+                const labelY = startY + i * rowHeight;
+                const labelX = startX - embedWidth - 10; // Position to the left of embed
+                
+                g.append("text")
+                    .attr("x", labelX)
+                    .attr("y", labelY)
+                    .attr("text-anchor", "end")
+                    .attr("dominant-baseline", "middle")
+                    .attr("font-size", "14px")
+                    .attr("fill", "#374151")
+                    .text(tokenLabels[i]);
+            }
+        }
+        
+        // Draw unembed labels (right side)
+        if (unembedLabels && unembedLabels.length > 0) {
+            const lastLayerCenterX = startX + (effectiveNumLayers - 1) * layerWidth;
+            const unembedX = lastLayerCenterX + 10 + 240;
+            
+            for (let i = 0; i < effectiveNumTokens && i < unembedLabels.length; i++) {
+                const labelY = startY + i * rowHeight;
+                const labelX = unembedX + 30; // Position to the right of unembed
+                
+                g.append("text")
+                    .attr("x", labelX)
+                    .attr("y", labelY)
+                    .attr("text-anchor", "start")
+                    .attr("dominant-baseline", "middle")
+                    .attr("font-size", "14px")
+                    .attr("fill", "#374151")
+                    .text(unembedLabels[i]);
+            }
+        }
 
-    }, [numTokens, numLayers, showAttn, showMlp, componentType, data, scale]);
+    }, [numTokens, numLayers, showAttn, showMlp, componentType, data, scale, tokenLabels, unembedLabels]);
 
     return (
         <div 

@@ -9,7 +9,7 @@ export default function Page() {
     const [showAttn, setShowAttn] = useState(true);
     const [showMlp, setShowMlp] = useState(true);
     const [testMode, setTestMode] = useState(false);
-    const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid'>('attn');
+    const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid' | 'embed' | 'unembed'>('attn');
     const [testData, setTestData] = useState<number[][] | null>(null);
     const [scale, setScale] = useState(1);
 
@@ -50,6 +50,21 @@ export default function Page() {
             return Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
         });
     };
+    
+    // Generate random strings for labels
+    const generateRandomString = (maxLength: number) => {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        const length = Math.floor(Math.random() * maxLength) + 1;
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
+    
+    // Generate token labels and unembed labels based on numTokens
+    const tokenLabels = Array.from({ length: numTokens }, () => generateRandomString(5));
+    const unembedLabels = Array.from({ length: numTokens }, () => generateRandomString(5));
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 border">
@@ -121,12 +136,14 @@ export default function Page() {
                             <>
                                 <select
                                     value={testComponentType}
-                                    onChange={(e) => setTestComponentType(e.target.value as 'attn' | 'mlp' | 'resid')}
+                                    onChange={(e) => setTestComponentType(e.target.value as 'attn' | 'mlp' | 'resid' | 'embed' | 'unembed')}
                                     className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="attn">Attention</option>
                                     <option value="mlp">MLP</option>
                                     <option value="resid">Residual</option>
+                                    <option value="embed">Embed</option>
+                                    <option value="unembed">Unembed</option>
                                 </select>
                                 <button
                                     onClick={() => {
@@ -173,6 +190,8 @@ export default function Page() {
                 showAttn={showAttn}
                 showMlp={showMlp}
                 scale={scale}
+                tokenLabels={tokenLabels}
+                unembedLabels={unembedLabels}
             />
         </div>
     );

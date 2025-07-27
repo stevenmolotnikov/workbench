@@ -17,16 +17,8 @@ const config = {
         getExecuteSelected: '/models/get-execute-selected',
         listenExecuteSelected: '/models/listen-execute-selected',
         
-        getExecutePair: '/models/get-execute-pair',
-        listenExecutePair: '/models/listen-execute-pair',
-
-        models: '/models',
-        patch: '/patch/patch-grid',
-        execute: '/api/execute',
-        executeSelected: '/api/execute_selected',
-        executePair: '/models/execute_pair',
-        processData: '/process-data',
-        tokenize: '/tokenize',
+        models: '/models/',
+        tokenize: '/models/tokenize',
     },
     
     // Helper function to get full API URL

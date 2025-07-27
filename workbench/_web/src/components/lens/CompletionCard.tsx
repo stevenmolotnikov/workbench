@@ -1,12 +1,12 @@
 import { ALargeSmall, Grid, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { TokenArea } from "@/components/prompt-builders/TokenArea";
+import { TokenArea } from "@/components/lens/TokenArea";
 import type { TokenPredictions } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
-import { PredictionDisplay } from "@/components/prompt-builders/PredictionDisplay";
+import { PredictionDisplay } from "@/components/lens/PredictionDisplay";
 import { Input } from "@/components/ui/input";
 import { tokenizeText } from "@/actions/tokenize";
 import type { Token } from "@/types/tokenizer";
