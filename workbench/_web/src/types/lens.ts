@@ -1,12 +1,8 @@
-export interface TokenCompletion {
-    idx: number;
-    target_id?: number;
-    target_text?: string;
-}
+import type { Token } from "@/types/models";
 
-export interface LensConfig { 
+export interface LensConfigData { 
     name: string;
     model: string;
     prompt: string;
-    tokens: TokenCompletion[];
+    tokens: Token[];
 }

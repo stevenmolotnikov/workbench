@@ -12,7 +12,6 @@ from ..jobs import jobs
 
 ##### TARGETED LENS REQUEST SCHEMA #####
 
-
 class TargetedLensCompletion(BaseModel):
     name: str
     tokens: list[Token]

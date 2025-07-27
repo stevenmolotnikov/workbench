@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, use } from "react";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
 import InteractiveDisplay from "@/components/lens/InteractiveDisplay";
+import { PromptBuilder } from "@/components/lens/PromptBuilder";
 
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 
@@ -125,7 +126,8 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
                         <ScrollArea className="h-full">
-                            <InteractiveDisplay />
+                            {/* <InteractiveDisplay /> */}
+                            <PromptBuilder />
                         </ScrollArea>
                     </ResizablePanel>
                     <ResizableHandle />

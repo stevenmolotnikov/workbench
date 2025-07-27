@@ -23,7 +23,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getLensChartConfigs } from "@/lib/queries/chartQueries";
 import { useCreateChartConfig } from "@/lib/api/configApi";
-import { NewChartConfig, LensChartConfig } from "@/db/schema";
+import { NewChartConfig, LensConfig } from "@/db/schema";
 
 
 export function DropdownMenuCheckboxes() {
@@ -57,7 +57,7 @@ export function DropdownMenuCheckboxes() {
 }
 
 // Generate a unique name in the format "Untitled n"
-const generateCompletionCardName = (existingCompletions: LensChartConfig[]): string => {
+const generateCompletionCardName = (existingCompletions: LensConfig[]): string => {
     const existingNames = existingCompletions.map(completion => completion.data.name);
     let counter = 1;
     let name = `Untitled ${counter}`;
@@ -135,7 +135,7 @@ export function PromptBuilder() {
             </div>
             <div className="flex-1 p-4 space-y-4">
                 {chartConfigs?.map((chartConfig) => (
-                    <CompletionCard chartConfig={chartConfig} key={chartConfig.id} />
+                    <CompletionCard initialConfig={chartConfig} key={chartConfig.id} />
                 ))}
                 
                 {/* {charts?.length === 0 && (

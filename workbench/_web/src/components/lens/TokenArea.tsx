@@ -1,19 +1,16 @@
 "use client";
 
-import { useRef } from "react";
-import type { LensCompletion } from "@/types/lens";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import type { Token } from "@/types/tokenizer";
-import { useTutorialManager } from "@/hooks/useTutorialManager";
-import { useAnnotations } from "@/stores/useAnnotations";
-import type { useTokenSelection } from "@/hooks/useTokenSelection";
+import type { Token } from "@/types/models";
+import type { LensConfigData } from "@/types/lens";
 
 interface TokenAreaProps {
-    compl: LensCompletion;
-    showPredictions: boolean;
+    config: LensConfigData;
+    setConfig: (config: LensConfigData) => void;
+    tokenData: Token[];
+    showPredictionDisplay: boolean;
     setSelectedIdx: (idx: number) => void;
-    tokenData: Token[] | null;
-    tokenSelection: ReturnType<typeof useTokenSelection>;
 }
 
 // Token styling constants
@@ -22,144 +19,82 @@ const TOKEN_STYLES = {
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
     filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
     hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
-    annotated: "bg-white after:absolute after:inset-0 after:border after:border-primary/30",
-    emphasized: "bg-yellow-500 after:absolute after:inset-0 after:border after:border-primary/30",
-    transparent: "bg-transparent",
 } as const;
 
+const fix = (text: string) => {
+    const numNewlines = (text.match(/\n/g) || []).length;
+
+    const result = text
+        .replace(/\r\n/g, '\\r\\n')  // Windows line endings
+        .replace(/\n/g, '\\n')       // Newlines
+        .replace(/\r/g, '\\r')       // Carriage returns
+        .replace(/\t/g, '\\t')       // Tabs
+
+    return {
+        result: result,
+        numNewlines: numNewlines,
+    }
+}
+
 export function TokenArea({
-    compl,
-    showPredictions,
-    setSelectedIdx,
+    config,
+    setConfig,
     tokenData,
-    tokenSelection,
+    showPredictionDisplay,
+    setSelectedIdx,
 }: TokenAreaProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    
-    const { handleTokenClick } = useTutorialManager();
-    const { annotations, emphasizedAnnotation, addPendingAnnotation } = useAnnotations();
+    const highlightedTokens = config.tokens.map(t => t.idx);
 
-    const { 
-        getGroupInformation,
-        handleMouseDown,
-        handleMouseUp,
-        handleMouseMove,
-    } = tokenSelection;
-
-    const handleTokenSelection = (idx: number) => {
-        setSelectedIdx(idx);
-        handleTokenClick(idx);
-        
-        const tokenAnnotation = {
-            id: `${compl.id}-${idx}`,
-            text: "",
-        };
-        addPendingAnnotation({ type: "token", data: tokenAnnotation });
+    const handleTokenClick = (idx: number) => {
+        if (highlightedTokens.includes(idx)) {
+            // Unhighlight this specific token
+            setConfig({
+                ...config,
+                tokens: config.tokens.filter((t) => t.idx !== idx),
+            });
+        } else {
+            setConfig({
+                ...config,
+                tokens: [...config.tokens, { idx, id: 0, text: "" }],
+            });
+        }
     };
 
-
-    const getTokenState = (idx: number) => {
-        const isFilled = compl.tokens.some(t => t.idx === idx && t.target_id !== -1);
-        const isAnnotated = annotations.some(
-            annotation => annotation.type === "token" && 
-            annotation.data.id === `${compl.id}-${idx}`
-        );
-        const isEmphasized = emphasizedAnnotation?.type === "token" && 
-            emphasizedAnnotation?.data.id === `${compl.id}-${idx}`;
-
-        return { isFilled, isAnnotated, isEmphasized };
-    };
-
-    const getTokenStyles = (
+    const getTokenStyle = (
         token: Token,
         idx: number,
-        isHighlighted: boolean,
-        isGroupStart: boolean,
-        isGroupEnd: boolean
     ) => {
-        const { isFilled, isAnnotated, isEmphasized } = getTokenState(idx);
+        const isHighlighted = highlightedTokens.includes(idx);
+        const isFilled = config.tokens.some(t => t.idx === idx && t.targetId !== undefined);
 
-        // Determine background and border based on priority: filled > highlighted > default
         let backgroundStyle = "";
-        if (isHighlighted && !isFilled) {
-            backgroundStyle = TOKEN_STYLES.highlight;
-        } else if (isFilled) {
-            backgroundStyle = TOKEN_STYLES.filled;
-        } else {
-            backgroundStyle = TOKEN_STYLES.transparent;
-        }
-
-        // Determine border radius based on grouping
-        let borderRadius = "";
         if (isHighlighted) {
-            if (isGroupStart && isGroupEnd) borderRadius = "rounded after:rounded";
-            else if (isGroupStart) borderRadius = "rounded-l after:rounded-l";
-            else if (isGroupEnd) borderRadius = "rounded-r after:rounded-r";
-            else borderRadius = "rounded-none after:rounded-none";
+            backgroundStyle = isFilled ? TOKEN_STYLES.filled : TOKEN_STYLES.highlight;
         } else {
-            borderRadius = "rounded after:rounded";
+            backgroundStyle = "bg-transparent";
         }
 
         return cn(
             TOKEN_STYLES.base,
-            borderRadius,
             backgroundStyle,
-            isAnnotated && TOKEN_STYLES.annotated,
-            isEmphasized && TOKEN_STYLES.emphasized,
-            !showPredictions && TOKEN_STYLES.hover,
-            token.text === "\\n" ? "w-full" : "w-fit",
-            (showPredictions && isHighlighted) && "cursor-pointer",
-            !showPredictions && "cursor-text"
+            (!showPredictionDisplay && !isFilled) && TOKEN_STYLES.hover,
+            token.targetText === "\\n" ? "w-full" : "w-fit",
+            !showPredictionDisplay && "cursor-pointer"
         );
     };
 
-    const renderEmptyState = () => (
-        <span className="text-sm text-muted-foreground">
-            Tokenizing...
-        </span>
-    );
+    return (
+        <>
+            {tokenData && tokenData.length > 0 ? (
 
-    const fix = (text: string) => {
-        const numNewlines = (text.match(/\n/g) || []).length;
-
-        const result = text
-            .replace(/\r\n/g, '\\r\\n')  // Windows line endings
-            .replace(/\n/g, '\\n')       // Newlines
-            .replace(/\r/g, '\\r')       // Carriage returns
-            .replace(/\t/g, '\\t')       // Tabs
-
-        return {
-            result: result,
-            numNewlines: numNewlines,
-        }
-    }
-
-    const renderTokens = () => {
-        if (!tokenData) return renderEmptyState();
-
-        return (
-            <div className="space-y-2">
                 <div
                     className="max-h-40 overflow-y-auto custom-scrollbar select-none whitespace-pre-wrap"
                     style={{ display: "inline" }}
-                    ref={containerRef}
-                    onMouseDown={showPredictions ? undefined : handleMouseDown}
-                    onMouseUp={showPredictions ? undefined : handleMouseUp}
-                    onMouseMove={showPredictions ? undefined : handleMouseMove}
-                    onMouseLeave={showPredictions ? undefined : handleMouseUp}
                 >
                     {tokenData.map((token, idx) => {
-                        const { isHighlighted, isGroupStart, isGroupEnd } = getGroupInformation(
-                            idx,
-                            tokenData
-                        );
-                        
-                        const styles = getTokenStyles(
+                        const styles = getTokenStyle(
                             token,
                             idx,
-                            isHighlighted,
-                            isGroupStart,
-                            isGroupEnd
                         );
 
                         const { result, numNewlines } = fix(token.text);
@@ -167,10 +102,16 @@ export function TokenArea({
                         return (
                             <span key={`token-${idx}`}>
                                 <span
-                                    
+
                                     data-token-id={idx}
                                     className={styles}
-                                    onClick={() => showPredictions && handleTokenSelection(idx)}
+                                    onClick={() => {
+                                        if (showPredictionDisplay) {
+                                            setSelectedIdx(idx);
+                                        } else {
+                                            handleTokenClick(idx);
+                                        }
+                                    }}
                                 >
                                     {result}
                                 </span>
@@ -179,13 +120,11 @@ export function TokenArea({
                         );
                     })}
                 </div>
-            </div>
-        );
-    };
-
-    if (!tokenData || tokenData.length === 0) {
-        return renderEmptyState();
-    }
-
-    return renderTokens();
+            ) : (
+                <span className="text-sm text-muted-foreground">
+                    Tokenizing...
+                </span>
+            )}
+        </>
+    )
 }

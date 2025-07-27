@@ -1,0 +1,19 @@
+---
+globs: *.py
+alwaysApply: false
+---
+
+Dimension key:
+
+B: batch size
+L: sequence length
+M: memory length (length of sequence being attended to)
+D: model dimension (sometimes called d_model or embedding_dim)
+V: vocabulary size
+F: feed-forward subnetwork hidden size
+H: number of attention heads in a layer
+K: size of each attention key or value (sometimes called d_kv)
+
+- Use single-letter names for logical tensor dimensions.
+- Tensor variable names must end with a dimension suffix composed of these letters, e.g. input_token_ids_BL for a tensor with batch and length dimensions
+- The dimension key is documented above. It is subject to change as the project expands.

@@ -89,7 +89,7 @@ class JobManager:
         self.job_data: dict[str, MemoryObjectReceiveStream] = {}
 
     def create_job(
-        self, background_fn: Callable, endpoint_request: Any, request: Request
+        self, background_fn: Callable, endpoint_request: Any, state: AppState
     ):
         job_id = str(uuid.uuid4())
 
@@ -108,7 +108,7 @@ class JobManager:
                 })
 
         task = asyncio.create_task(
-            wrapped_background_fn(endpoint_request, request.app.state.m)
+            wrapped_background_fn(endpoint_request, state)
         )
 
         task.add_done_callback(lambda _: self.job_data.pop(job_id, None))

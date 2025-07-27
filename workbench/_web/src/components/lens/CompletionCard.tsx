@@ -1,273 +1,72 @@
-import { ALargeSmall, Grid, X } from "lucide-react";
+"use client";
+
+import { ALargeSmall, Edit2, Grid, Keyboard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/lens/TokenArea";
-import type { TokenPredictions } from "@/types/tokenizer";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
-import { PredictionDisplay } from "@/components/lens/PredictionDisplay";
 import { Input } from "@/components/ui/input";
-import { tokenizeText } from "@/actions/tokenize";
-import type { Token } from "@/types/tokenizer";
 import { TooltipButton } from "../ui/tooltip-button";
-import { useTokenSelection } from "@/hooks/useTokenSelection";
-import { getExecuteSelected } from "@/lib/api/modelsApi";
+import { useExecuteSelected } from "@/lib/api/modelsApi";
 import { toast } from "sonner";
-import { useDeleteChartConfig, useUpdateChartConfig } from "@/lib/api/configApi";
-import { LensChartConfig, NewChart } from "@/db/schema";
-import { LensConfig } from "@/types/lens";
-import { useWorkspace } from "@/stores/useWorkspace";
-import { useCreateChart, useLensGrid } from "@/lib/api/chartApi";
-import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { getChartData } from "@/lib/queries/chartQueries";
-import { getChartConfigs } from "@/lib/queries/configQueries";
+import type { Prediction, Token } from "@/types/models";
+import type { LensConfig } from "@/db/schema";
+import type { LensConfigData } from "@/types/lens";
 
+import { PredictionBadges } from "./PredictionBadges";
 
+import { encodeText, decodeText } from "@/actions/tokenize";
 
-export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }) {
+export function CompletionCard({ initialConfig }: { initialConfig: LensConfig }) {
+    // const { workspaceId } = useParams();
 
-    const initialCompletion = chartConfig.data;
+    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
+    const [tokenData, setTokenData] = useState<Token[]>([]);
 
-    const { activeTab, setActiveTab } = useWorkspace();
-
-    // Prediction state
-    const [predictions, setPredictions] = useState<TokenPredictions | null>(null);
-    const [showPredictions, setShowPredictions] = useState<boolean>(
-        initialCompletion.tokens.length > 0
-    );
-    const [loadingPredictions, setLoadingPredictions] = useState<boolean>(false);
+    const [predictions, setPredictions] = useState<Prediction[]>([]);
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+    const [showPredictionDisplay, setShowPredictionDisplay] = useState(false);
 
-    // Tokenization state
-    const [tokenData, setTokenData] = useState<Token[] | null>(null);
-    const [lastTokenizedText, setLastTokenizedText] = useState<string | null>(null);
-    const [isRevising, setIsRevising] = useState<boolean>(false);
+    const showTokenArea = tokenData.length > 0;
+
+    // Workspace display state
     const { tokenizeOnEnter } = useLensWorkspace();
 
-    // Completion state
-    const [completion, setCompletion] = useState<LensConfig>(initialCompletion);
-
-    const updateChartConfigMutation = useUpdateChartConfig();
-    const deleteChartConfigMutation = useDeleteChartConfig();
-
-    const textHasChanged = completion.prompt !== lastTokenizedText;
-    const shouldEnableTokenize = completion.prompt && (!tokenData || textHasChanged);
-
-
-    // async function createLineChart() {
-    //     if (!chartConfig?.chartId) {
-    //         console.error("No chart available");
-    //         return;
-    //     }
-    //     try {
-    //         const data = await lensLineMutation.mutateAsync({
-    //             completions: completions,
-    //             chartId: chartConfig.chartId
-    //         });
-
-    //         return data;
-    //     } catch (error) {
-    //         console.error("Error creating line chart:", error);
-    //         throw error;
-    //     }
-    // }
-
-    const createChartMutation = useCreateChart();
-    const lensGridMutation = useLensGrid();
-    const { workspaceId } = useParams();
-
-    const { data: activeChartConfigs, refetch: refetchActiveChartConfigs } = useQuery({
-        queryKey: ["activeChartConfigs"],
-        queryFn: () => getChartConfigs(activeTab as string),
-        enabled: !!activeTab,
-    });
-
-    async function createHeatmap(chartId: string) {
-        try {
-            // Ensure we have the latest chart configs
-            const { data: latestChartConfigs } = await refetchActiveChartConfigs();
-            const configs = latestChartConfigs?.map(config => config.data as LensConfig) || [];
-            
-            const data = await lensGridMutation.mutateAsync({
-                completions: [...configs, completion],
-                chartId: chartId
-            });
-
-            return data;
-        } catch (error) {
-            console.error("Error creating heatmap:", error);
-            throw error;
-        }
-    }
-
-    async function handleCreateChart(chartType: "line" | "heatmap") {
-
-        let chartId = activeTab;
-
-        // Create a new chart if in a new tab
-        if (!chartId) {
-            const newChart: NewChart = {
-                workspaceId: workspaceId as string,
-            };
-            const createdChart = await createChartMutation.mutateAsync({ configId: chartConfig.id, chart: newChart });
-            setActiveTab(createdChart.id as string);
-            chartId = createdChart.id as string;
-        }
-
-        if (chartType === "heatmap") {
-            await createHeatmap(chartId);
-        } else {
-            console.error("Not implemented");
-        }
-    }
-
-
-    const handleDeleteCompletion = async () => {
-        await deleteChartConfigMutation.mutateAsync({
-            configId: chartConfig.id,
-        });
-    }
-
-    useEffect(() => {
-        if (showPredictions && !tokenData) {
-            handleTokenize();
-        }
-        if (showPredictions && !predictions && completion.tokens.length > 0) {
-            runPredictions();
-        }
-    }, []);
-
-    const removeToken = (idxs: number[]) => {
-        setCompletion({
-            ...completion,
-            tokens: completion.tokens.filter((t) => !idxs.includes(t.idx)),
-        });
-    };
-
-    const tokenSelection = useTokenSelection({ compl: completion, removeToken });
-
-    const handleTokenize = async () => {
-        if (!completion.prompt) {
-            setTokenData(null);
-            setLastTokenizedText(null);
-            return;
-        }
-
-        try {
-            const tokens = await tokenizeText(completion.prompt, completion.model);
-            setTokenData(tokens);
-            setLastTokenizedText(completion.prompt);
-
-            // Auto select and run for last token if first time tokenizing
-            if (tokens && !showPredictions) {
-                const lastTokenIdx = tokens.length - 1;
-                setSelectedIdx(lastTokenIdx);
-                tokenSelection.setHighlightedTokens([lastTokenIdx]);
-                await runPredictions(lastTokenIdx);
-            }
-
-        } catch (err) {
-            toast.error("Error tokenizing text");
-        }
-    };
-
-    const updateCompletionTokens = (lastTokenIndex?: number) => {
-        const existingIndices = new Set(completion.tokens.map((t) => t.idx));
-
-        // Create new tokens only for indices that don't already exist
-        const newTokens = tokenSelection.highlightedTokens
-            .filter((idx) => !existingIndices.has(idx))
-            .map((idx) => ({
-                idx,
-            }));
-
-        const updatedCompletion = {
-            ...completion,
-            tokens: [...completion.tokens, ...newTokens],
-        }
-
-        if (lastTokenIndex) {
-            updatedCompletion.tokens = [...updatedCompletion.tokens, { idx: lastTokenIndex }];
-        }
-
-        return updatedCompletion;
-    }
-
-    const runPredictions = async (lastTokenIndex?: number) => {
-        setLoadingPredictions(true);
-
-        const updatedCompletion = updateCompletionTokens(lastTokenIndex);
-
-        try {
-            const data = await getExecuteSelected({
-                prompt: updatedCompletion.prompt,
-                model: updatedCompletion.model,
-                tokens: updatedCompletion.tokens,
-            });
-
-            setPredictions(data);
-            setShowPredictions(true);
-            setCompletion(updatedCompletion);
-
-            await updateChartConfigMutation.mutateAsync({
-                configId: chartConfig.id,
-                config: {
-                    workspaceId: chartConfig.workspaceId,
-                    data: updatedCompletion,
-                    type: "lens",
-                }
-            });
-        } catch (error) {
-            console.error("Error sending request:", error);
-        } finally {
-            setLoadingPredictions(false);
-        }
-    };
-
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setCompletion({
-            ...completion,
+        setConfig({
+            ...config,
             prompt: e.target.value,
         });
     };
 
+    const handleTokenize = async () => {
+        const tokens = await encodeText(config.prompt, config.model);
+        setTokenData(tokens);
+        runPredictions();
+    }
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (shouldEnableTokenize) {
-                handleTokenize();
-            }
+            handleTokenize();
         }
     };
 
-    const handleClear = async () => {
-        setShowPredictions(false);
-        setIsRevising(false);
-        setPredictions(null);
-        tokenSelection.setHighlightedTokens([]);
-        setSelectedIdx(null);
+    const { mutateAsync: getExecuteSelected, isPending: loadingPredictions } = useExecuteSelected();
 
-        const updatedCompletion = {
-            ...completion,
-            tokens: [],
-        }
-
-        await updateChartConfigMutation.mutateAsync({
-            configId: chartConfig.id,
-            config: {
-                workspaceId: chartConfig.workspaceId,
-                data: updatedCompletion,
-                type: "lens",
-            }
-        });
+    const runPredictions = async () => {
+        console.log(config);
+        const data = await getExecuteSelected(config);
+        setShowPredictionDisplay(true);
+        setPredictions(data);
     }
 
     return (
-        <div className={cn("group relative", deleteChartConfigMutation.isPending && "opacity-50 pointer-events-none")}>
+        <div className="group relative">
             {/* Delete button */}
-            <Button
+            {/* <Button
                 variant="ghost"
                 title="Delete completion"
                 size="icon"
@@ -279,28 +78,28 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
                     size={14}
                     className="w-4 h-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                 />
-            </Button>
+            </Button> */}
 
             <div
                 className={cn(
                     "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out w-full min-w-0 max-w-full",
-                    showPredictions ? "rounded-t-lg" : "rounded-lg",
+                    "rounded-lg",
                 )}
             >
                 {/* Header */}
                 <div className="flex items-center my-4 justify-between">
                     <div className="flex px-0.5 flex-col">
                         <Input
-                            value={completion.name}
+                            value={config.name}
                             placeholder="Untitled"
-                            onChange={(e) => setCompletion({
-                                ...completion,
+                            onChange={(e) => setConfig({
+                                ...config,
                                 name: e.target.value,
                             })}
                             className="border-none shadow-none rounded h-fit px-0 py-0 font-bold"
                         />
                         <div className="flex items-center gap-2">
-                            <span className="text-xs">{completion.model}</span>
+                            <span className="text-xs">{config.model}</span>
                         </div>
                     </div>
 
@@ -310,13 +109,12 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
                             size="icon"
                             id="tokenize-button"
                             onClick={handleTokenize}
-                            disabled={!shouldEnableTokenize}
-                            tooltip={textHasChanged ? "Re-tokenize" : "Tokenize"}
+                            tooltip={"Tokenize"}
                         >
                             <ALargeSmall size={16} className="w-8 h-8" />
                         </TooltipButton>
 
-                        <TooltipButton
+                        {/* <TooltipButton
                             variant="outline"
                             size="icon"
                             id="tokenize-button"
@@ -325,54 +123,71 @@ export function CompletionCard({ chartConfig }: { chartConfig: LensChartConfig }
                             tooltip={"Create heatmap"}
                         >
                             <Grid size={16} className="w-8 h-8" />
-                        </TooltipButton>
+                        </TooltipButton> */}
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex flex-col h-full gap-4">
-                    {!showPredictions ? (
+                    {!showTokenArea ? (
                         <Textarea
-                            value={completion.prompt}
+                            value={config.prompt}
                             onChange={handlePromptChange}
                             onKeyDown={handleKeyDown}
                             className="h-24"
                             placeholder="Enter your prompt here."
-                            id="completion-text"
                         />
                     ) : (
                         <div
-                            className={cn(
-                                "flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded h-24 overflow-y-auto",
-                                loadingPredictions && "pointer-events-none"
-                            )}
-                            id="token-area"
+                            className="flex flex-col w-full px-3 py-2 animate-in slide-in-from-bottom-2 border rounded h-24 overflow-y-auto"
                         >
                             <TokenArea
-                                compl={completion}
-                                showPredictions={!isRevising}
-                                setSelectedIdx={setSelectedIdx}
+                                config={config}
+                                setConfig={setConfig}
                                 tokenData={tokenData}
-                                tokenSelection={tokenSelection}
+                                showPredictionDisplay={showPredictionDisplay}
+                                setSelectedIdx={setSelectedIdx}
                             />
                         </div>
                     )}
                 </div>
             </div>
-            {showPredictions && (
+            {showPredictionDisplay && (
                 <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
-                    <PredictionDisplay
-                        predictions={predictions || {}}
-                        compl={completion}
-                        selectedIdx={selectedIdx}
-                        onRevise={() => setIsRevising(true)}
-                        setCompletion={setCompletion}
-                        onClear={handleClear}
-                        onRunPredictions={runPredictions}
-                        loadingPredictions={loadingPredictions}
-                        highlightedTokensCount={tokenSelection.highlightedTokens.length}
-                        setIsRevising={setIsRevising}
+                    <PredictionBadges
+                        config={config}
+                        setConfig={setConfig}
+                        predictions={predictions}
+                        selectedIdx={selectedIdx ?? 0}
                     />
+
+
+                    <div className="flex gap-2 ml-4 ">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => runPredictions()}
+                            className="text-xs"
+                        >
+                            <Keyboard className="w-3 h-3" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowPredictionDisplay(false)}
+                            className="text-xs"
+                        >
+                            <Edit2 className="w-3 h-3" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowPredictionDisplay(false)}
+                            className="text-xs"
+                        >
+                            <X className="w-3 h-3" />
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

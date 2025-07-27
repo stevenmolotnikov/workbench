@@ -1,7 +1,7 @@
 import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique } from "drizzle-orm/pg-core";
 import type { ChartConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
-import type { LensConfig } from "@/types/lens";
+import type { LensConfigData } from "@/types/lens";
 import { users } from "./authSchema";
 
 // Re-export auth tables from authSchema
@@ -94,6 +94,6 @@ export type NewAnnotationGroup = typeof annotationGroups.$inferInsert;
 export type Annotation = AnnotationRow;
 
 // Specific chart config types
-export type LensChartConfig = Omit<ChartConfig, 'data'> & {
-    data: LensConfig;
+export type LensConfig = Omit<ChartConfig, 'data'> & {
+    data: LensConfigData;
 };

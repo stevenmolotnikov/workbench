@@ -11,4 +11,6 @@ class NDIFRequest(BaseModel):
 
 class Token(BaseModel):
     idx: int
+    id: int
+    text: str
     target_id: int = -1

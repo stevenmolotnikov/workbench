@@ -3,52 +3,12 @@ import type { LineGraphData, LineData } from "@/types/charts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
-import { useWorkspace } from "@/stores/useWorkspace";
-import { LensConfig } from "@/types/lens";
+import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
-import { getChartConfigs, addChartConfigLink } from "../queries/configQueries";
+import { addChartConfigLink } from "../queries/configQueries";
+import { useWorkspace } from "@/stores/useWorkspace";
 
-interface SSEData {
-    type: string;
-    message: string;
-    data: LensLineResponse | LensGridResponse;
-}
-
-const listenToSSE = <T>(url: string): Promise<T> => {
-    return new Promise((resolve, reject) => {
-        let result: T | null = null;
-        const { setJobStatus } = useWorkspace.getState();
-        
-        const { onCancel } = sseService.createEventSource(
-            url,
-            (data: unknown) => {
-                const sseData = data as SSEData;
-                console.log('Received data:', sseData);
-                if (sseData.type === 'status') {
-                    console.log('Status update:', sseData.message);
-                    setJobStatus(sseData.message);
-                } else if (sseData.type === 'result') {
-                    console.log('Received result:', sseData);
-                    result = sseData as T;
-                } else if (sseData.type === 'error') {
-                    setJobStatus(`Error: ${sseData.message}`);
-                    reject(new Error(sseData.message));
-                }
-            },
-            () => {
-                if (result) {
-                    setJobStatus('idle');
-                    resolve(result);
-                } else {
-                    setJobStatus('Error: No result received');
-                    reject(new Error('No result received'));
-                }
-            }
-        );
-    });
-};
-
-const getLensLine = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {
+const getLensLine = async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {
     try {
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensLine), {
@@ -62,7 +22,8 @@ const getLensLine = async (lensRequest: { completions: LensConfig[]; chartId: st
         const jobId = (await response.json()).job_id;
         
         // Listen for results
-        return await listenToSSE<{ data: LensLineResponse }>(config.endpoints.listenLensLine + `/${jobId}`);
+        const result = await sseService.listenToSSE<LensLineResponse>(config.endpoints.listenLensLine + `/${jobId}`);
+        return { data: result };
     } catch (error) {
         console.error("Error fetching logit lens data:", error);
         throw error;
@@ -73,7 +34,7 @@ export const useLensLine = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: { completions: LensConfig[]; chartId: string }) => {
+        mutationFn: async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {
             const response = await getLensLine(lensRequest);
             const result = processChartData(response.data);
 
@@ -95,7 +56,7 @@ export const useLensLine = () => {
     });
 };
 
-const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: string }) => {    
+const getLensGrid = async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {    
     try {
 
         const fixedLensRequest = {
@@ -114,7 +75,8 @@ const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: st
         const jobId = (await response.json()).job_id;
         
         // Listen for results
-        return await listenToSSE<{ data: LensGridResponse }>(config.endpoints.listenLensGrid + `/${jobId}`);
+        const result = await sseService.listenToSSE<LensGridResponse>(config.endpoints.listenLensGrid + `/${jobId}`);
+        return { data: result };
     } catch (error) {
         console.error("Error fetching grid lens data:", error);
         throw error;
@@ -126,7 +88,7 @@ export const useLensGrid = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: {completions: LensConfig[]; chartId: string}) => {
+        mutationFn: async (lensRequest: {completions: LensConfigData[]; chartId: string}) => {
             const response = await getLensGrid(lensRequest);
 
             const result = processHeatmapData(response.data);

@@ -1,6 +1,6 @@
 import os
 import tomllib
-import types
+from fastapi import Request
 
 from nnsight import LanguageModel, CONFIG
 from pydantic import BaseModel
@@ -49,6 +49,9 @@ class AppState:
 
     def get_config(self):
         return self.config
+    
+    def __getitem__(self, model_name: str):
+        return self.get_model(model_name)
 
     def _load(self):
         config_path = os.path.join(ROOT_DIR, "models.toml")
@@ -70,3 +73,6 @@ class AppState:
             self.models[cfg.name] = model
 
         return config
+
+def get_state(request: Request):
+    return request.app.state.m

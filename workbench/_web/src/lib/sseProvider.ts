@@ -1,5 +1,6 @@
 import config from '@/lib/config';
 import { toast } from 'sonner';
+import { useWorkspace } from '@/stores/useWorkspace';
 
 const eventSourcesMap: Record<string, EventSource> = {};
 
@@ -56,9 +57,46 @@ const createEventSource = (
   };
 };
 
+interface SSEData<T> {
+  type: string;
+  message: string;
+  data: T;
+}
+
+const listenToSSE = <T>(url: string): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    let result: T | null = null;
+    const { setJobStatus } = useWorkspace.getState();
+    
+    const { onCancel } = createEventSource(
+      url,
+      (data: unknown) => {
+        const sseData = data as SSEData<T>;
+        if (sseData.type === 'status') {
+          setJobStatus(sseData.message);
+        } else if (sseData.type === 'result') {
+          result = sseData.data;
+        } else if (sseData.type === 'error') {
+          setJobStatus(`Error: ${sseData.message}`);
+          reject(new Error(sseData.message));
+        }
+      },
+      () => {
+        if (result) {
+          setJobStatus('idle');
+          resolve(result);
+        } else {
+          setJobStatus('Error: No result received');
+          reject(new Error('No result received'));
+        }
+      }
+    );
+  });
+};
+
 const sseService = {
   createEventSource,
-  generateTaskId,
+  listenToSSE,
 };
 
 export default sseService;

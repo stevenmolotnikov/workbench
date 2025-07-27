@@ -18,7 +18,8 @@ const config = {
         listenExecuteSelected: '/models/listen-execute-selected',
         
         models: '/models/',
-        tokenize: '/models/tokenize',
+        encode: '/models/encode',
+        decode: '/models/decode',
     },
     
     // Helper function to get full API URL
