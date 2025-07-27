@@ -4,14 +4,14 @@ import { useState } from "react";
 import Transformer from "@/components/Transformer";
 
 export default function Page() {
-    const [numTokens, setNumTokens] = useState(2);
-    const [numLayers, setNumLayers] = useState(2);
+    const [numTokens, setNumTokens] = useState(5);
+    const [numLayers, setNumLayers] = useState(5);
     const [showAttn, setShowAttn] = useState(true);
     const [showMlp, setShowMlp] = useState(true);
     const [testMode, setTestMode] = useState(false);
     const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid' | 'embed' | 'unembed'>('attn');
     const [testData, setTestData] = useState<number[][] | null>(null);
-    const [scale, setScale] = useState(1);
+    const [scale, setScale] = useState(0.7);
 
     const MIN_SCALE = 0.5;
     const MAX_SCALE = 2;
@@ -192,6 +192,7 @@ export default function Page() {
                 scale={scale}
                 tokenLabels={tokenLabels}
                 unembedLabels={unembedLabels}
+                enableDataFlowHover={true}
             />
         </div>
     );
