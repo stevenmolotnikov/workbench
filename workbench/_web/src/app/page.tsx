@@ -9,7 +9,7 @@ export default function Page() {
     const [showAttn, setShowAttn] = useState(true);
     const [showMlp, setShowMlp] = useState(true);
     const [testMode, setTestMode] = useState(false);
-    const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid' | 'embed' | 'unembed'>('attn');
+    const [testComponentType, setTestComponentType] = useState<'attn' | 'mlp' | 'resid'>('attn');
     const [testData, setTestData] = useState<number[][] | null>(null);
     const [scale, setScale] = useState(0.7);
 
@@ -136,14 +136,12 @@ export default function Page() {
                             <>
                                 <select
                                     value={testComponentType}
-                                    onChange={(e) => setTestComponentType(e.target.value as 'attn' | 'mlp' | 'resid' | 'embed' | 'unembed')}
+                                    onChange={(e) => setTestComponentType(e.target.value as 'attn' | 'mlp' | 'resid')}
                                     className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="attn">Attention</option>
                                     <option value="mlp">MLP</option>
                                     <option value="resid">Residual</option>
-                                    <option value="embed">Embed</option>
-                                    <option value="unembed">Unembed</option>
                                 </select>
                                 <button
                                     onClick={() => {

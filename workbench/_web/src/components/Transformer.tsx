@@ -10,7 +10,7 @@ interface SelectedComponent {
 }
 
 interface TransformerProps {
-    componentType?: 'attn' | 'mlp' | 'resid' | 'embed' | 'unembed';
+    componentType?: 'attn' | 'mlp' | 'resid';
     data?: number[][];
     numTokens?: number;
     numLayers?: number;
@@ -617,12 +617,8 @@ export default function Transformer({
                     .attr("data-component-id", embedComponentId)
                     .style("cursor", enableDataFlowHover ? "pointer" : "default");
                 
-                // Add fill for heatmap mode
-                if (isHeatmapMode && componentType === 'embed' && data && data[tokenIndex] && data[tokenIndex][0] !== undefined) {
-                    embedShape.attr("fill", "#3B82F6").attr("fill-opacity", data[tokenIndex][0]);
-                } else {
-                    embedShape.attr("fill", "white");
-                }
+                // Always white fill (no heatmap for embed)
+                embedShape.attr("fill", "white");
                 
                 // Add hover handlers
                 if (enableDataFlowHover) {
@@ -694,12 +690,8 @@ export default function Transformer({
                     .attr("data-component-id", unembedComponentId)
                     .style("cursor", enableDataFlowHover ? "pointer" : "default");
                 
-                // Add fill for heatmap mode
-                if (isHeatmapMode && componentType === 'unembed' && data && data[tokenIndex] && data[tokenIndex][effectiveNumLayers - 1] !== undefined) {
-                    unembedShape.attr("fill", "#3B82F6").attr("fill-opacity", data[tokenIndex][effectiveNumLayers - 1]);
-                } else {
-                    unembedShape.attr("fill", "white");
-                }
+                // Always white fill (no heatmap for unembed)
+                unembedShape.attr("fill", "white");
                 
                 // Add hover handlers
                 if (enableDataFlowHover) {
