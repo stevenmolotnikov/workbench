@@ -62,10 +62,7 @@ const getLensLine = async (lensRequest: { completions: LensConfig[]; chartId: st
         const jobId = (await response.json()).job_id;
         
         // Listen for results
-        const result = await listenToSSE<{ data: LensLineResponse }>(config.endpoints.listenLensLine + `/${jobId}`);
-
-        console.log(result)
-        return result;
+        return await listenToSSE<{ data: LensLineResponse }>(config.endpoints.listenLensLine + `/${jobId}`);
     } catch (error) {
         console.error("Error fetching logit lens data:", error);
         throw error;
@@ -105,8 +102,6 @@ const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: st
             ...lensRequest.completions[0],
         }
 
-        console.log(fixedLensRequest)
-
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensGrid), {
             method: "POST",
@@ -119,10 +114,7 @@ const getLensGrid = async (lensRequest: { completions: LensConfig[]; chartId: st
         const jobId = (await response.json()).job_id;
         
         // Listen for results
-        const result = await listenToSSE<{ data: LensGridResponse }>(config.endpoints.listenLensGrid + `/${jobId}`);
-
-        console.log(result)
-        return result.data;
+        return await listenToSSE<{ data: LensGridResponse }>(config.endpoints.listenLensGrid + `/${jobId}`);
     } catch (error) {
         console.error("Error fetching grid lens data:", error);
         throw error;
@@ -136,10 +128,11 @@ export const useLensGrid = () => {
     return useMutation({
         mutationFn: async (lensRequest: {completions: LensConfig[]; chartId: string}) => {
             const response = await getLensGrid(lensRequest);
-            const result = processHeatmapData(response);
+
+            const result = processHeatmapData(response.data);
 
             // Update the database with the chart data after receiving results
-            await setChartData(lensRequest.chartId, result);
+            // await setChartData(lensRequest.chartId, result);
 
             return result;
         },
@@ -225,14 +218,13 @@ function processChartData(data: LensLineResponse): LineGraphData {
 }
 
 export interface LensGridResponse {
-    layer: number;
     input_strs: string[];
     probs: number[][];
     pred_strs: string[][];
 }
 
 function processHeatmapData(data: LensGridResponse) {
-    const { layer, probs, pred_strs, input_strs } = data;
+    const { probs, pred_strs, input_strs } = data;
 
     const yTickLabels = Array.from({ length: pred_strs.length }, (_, i) => i);
 

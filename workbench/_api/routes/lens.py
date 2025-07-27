@@ -51,7 +51,6 @@ class GridLensRequest(BaseModel):
 
 
 class GridLensResponse(BaseModel):
-    id: str
     input_strs: list[str]
     probs: list[list[float]]
     pred_strs: list[list[str]]
@@ -66,23 +65,26 @@ def logit_lens_grid(model, prompt, remote):
 
     pred_ids = []
     probs = []
+
+    def get_stuff(logits):
+        # Compute probabilities over the relevant tokens
+        relevant_tokens = logits[0, :, :]
+
+        _probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
+        _pred_ids = relevant_tokens.argmax(dim=-1)
+
+        # Gather probabilities over the predicted tokens
+        _probs = t.gather(_probs, 1, _pred_ids.unsqueeze(1)).squeeze()
+
+        pred_ids.append(_pred_ids.save())
+        probs.append(_probs.save())
+
     with model.trace(prompt, remote=remote):
-        for layer in model.model.layers:
+        for layer in model.model.layers[:-1]:
             # Decode hidden state into vocabulary
             x = layer.output[0]
-            logits = decode(x)
-
-            # Compute probabilities over the relevant tokens
-            relevant_tokens = logits[0, :, :]
-
-            _probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
-            _pred_ids = relevant_tokens.argmax(dim=-1)
-
-            # Gather probabilities over the predicted tokens
-            _probs = t.gather(_probs, 1, _pred_ids.unsqueeze(1)).squeeze()
-
-            pred_ids.append(_pred_ids.save())
-            probs.append(_probs.save())
+            get_stuff(decode(x))
+        get_stuff(model.output.logits)
 
     # TEMPORARAY FIX FOR 0.4
     probs = [p.tolist() for p in probs]
@@ -235,7 +237,6 @@ async def process_targeted_lens_background(
 async def process_grid_lens_background(
     lens_request: GridLensRequest,
     state: AppState,
-    send_stream: MemoryObjectSendStream,
 ):
     """Background task to process grid lens computation"""
     model = state.get_model(lens_request.model)
@@ -249,17 +250,11 @@ async def process_grid_lens_background(
 
     pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
 
-    # Send final result
-    await send_stream.send(
-        {
-            "type": "result",
-            "data": {
-                "input_strs": input_strs,
-                "probs": probs,
-                "pred_strs": pred_strs,
-            },
-        }
-    )
+    return {
+        "input_strs": input_strs,
+        "probs": probs,
+        "pred_strs": pred_strs,
+    }
 
 @router.post("/get-line")
 async def get_targeted_lens(lens_request: TargetedLensRequest, request: Request):
@@ -269,7 +264,6 @@ async def get_targeted_lens(lens_request: TargetedLensRequest, request: Request)
 async def listen_targeted_lens(job_id: str):
     """Listen for targeted lens results via SSE using MemoryObjectStream"""
     return jobs.get_job(job_id)
-
 
 @router.post("/get-grid")
 async def get_grid_lens(lens_request: GridLensRequest, request: Request):

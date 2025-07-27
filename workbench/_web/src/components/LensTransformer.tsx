@@ -577,6 +577,28 @@ export default function LensTransformer({
                         addComponentHandlers(mlpRect, rowIndex, layerIndex, 'mlp');
                     }
                 }
+                
+                // Add row hitbox for easier selection in row mode
+                if (rowMode && showFlowOnHover) {
+                    // Calculate hitbox dimensions
+                    const hitboxX = dimensions.startX - dimensions.embedWidth - 20; // Start before embed
+                    const hitboxWidth = dimensions.embedWidth + (numLayers * dimensions.layerWidth) + dimensions.unembedWidth + 40; // Full row width
+                    const hitboxY = centerY - dimensions.rowHeight / 2;
+                    const hitboxHeight = dimensions.rowHeight;
+                    
+                    // Create invisible rectangle for row selection
+                    const rowHitbox = g.append("rect")
+                        .attr("x", hitboxX)
+                        .attr("y", hitboxY)
+                        .attr("width", hitboxWidth)
+                        .attr("height", hitboxHeight)
+                        .attr("fill", "transparent")
+                        .attr("stroke", "none")
+                        .style("cursor", "pointer")
+                    
+                    // Add handlers - use 'resid' as component type since it triggers row highlighting in row mode
+                    addComponentHandlers(rowHitbox, rowIndex, layerIndex, 'resid');
+                }
             };
 
             // Draw all token rows for this layer
