@@ -12,9 +12,12 @@ import {
 import { useRouter } from "next/navigation"
 import { logout, getCurrentUser, UserSession } from "@/lib/session"
 import { Button } from "./ui/button"
+import { Switch } from "./ui/switch"
+import { useWorkspace } from "@/stores/useWorkspace"
 
 export function UserDropdown() {
     const router = useRouter();
+    const { userMode, setUserMode } = useWorkspace();
     const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -60,9 +63,18 @@ export function UserDropdown() {
                     <span className="px-1 text-sm font-semibold">Account</span>
                     <span className="px-1 text-sm">{currentUser?.email}</span>
                 </div>
+                <div className="flex flex-col border-b py-1.5 px-1">   
+                    <span className="px-1 text-sm font-semibold">User Mode</span>
+                    <Switch
+                        checked={userMode === "learn"}
+                        onCheckedChange={() => setUserMode(userMode === "learn" ? "experiment" : "learn")}
+                    />
+                    <span className="px-1 text-sm">{userMode === "learn" ? "Learn" : "Experiment"}</span>
+                </div>
                 <DropdownMenuItem disabled={isLoggingOut} onClick={handleLogout}>
                     Logout
                 </DropdownMenuItem>
+
             </DropdownMenuContent>
         </DropdownMenu>
     )

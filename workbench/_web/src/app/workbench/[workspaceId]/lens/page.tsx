@@ -20,10 +20,13 @@ import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
+
+    const { userMode } = useWorkspace();
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
@@ -117,10 +120,13 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     className="flex flex-1 min-h-0 h-full"
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
-                        <InteractiveDisplay />
-                        {/* <ScrollArea className="h-full">
-                            <PromptBuilder />
-                        </ScrollArea> */}
+                        {userMode === "learn" ? (
+                            <InteractiveDisplay />
+                        ) : (
+                            <ScrollArea className="h-full">
+                                <PromptBuilder />
+                            </ScrollArea>
+                        )}
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel defaultSize={50} minSize={30}>

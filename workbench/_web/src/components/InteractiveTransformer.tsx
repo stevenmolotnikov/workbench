@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { useTheme } from "next-themes";
+import EmbedComponent from "./transformer/EmbedComponent";
+import UnembedComponent from "./transformer/UnembedComponent";
+import { ScrollArea, ScrollBar } from "./ui/scroll-area";
 
 export interface SelectedComponent {
     tokenIndex: number;
@@ -15,7 +18,7 @@ interface LensTransformerProps {
     clickedComponent: SelectedComponent | null;
     setClickedComponent: (component: SelectedComponent | null) => void;
     numTokens?: number;
-    numLayers?: number;
+    layerRange: [number, number]; // [start, end] inclusive
     showAttn?: boolean;
     showMlp?: boolean;
     scale?: number;
@@ -160,7 +163,7 @@ export default function LensTransformer({
     clickedComponent,
     setClickedComponent,
     numTokens = 2,
-    numLayers = 2,
+    layerRange,
     showAttn = true,
     showMlp = true,
     scale = 1,
@@ -193,7 +196,9 @@ export default function LensTransformer({
 
     // Determine which component is currently selected
     const activeComponent = hoveredComponent || clickedComponent;
-    
+
+    const numLayers = layerRange[1] - layerRange[0] + 1;
+
     // Get the set of components that should be highlighted
     const highlightedComponents = useMemo(() => {
         return activeComponent ? getDataFlowComponents(activeComponent, showAttn, showMlp, numLayers, rowMode) : null;
@@ -202,31 +207,19 @@ export default function LensTransformer({
     // SVG dimensions calculation
     const dimensions = useMemo(() => {
         const layerWidth = 210;
-        const embedWidth = 75;
-        const unembedWidth = 75;
-        const labelPadding = tokenLabels ? 100 : 0;
-        const rightLabelPadding = unembedLabels ? 100 : 0;
-
-        const startX = embedWidth + labelPadding + 30;
-        const startY = 100;
-
-        const baseWidth = labelPadding + embedWidth + numLayers * layerWidth + unembedWidth + rightLabelPadding + 20;
         const rowHeight = 75;
+        const startY = 50;
+        const layersWidth = numLayers * layerWidth + 20; // +20 for padding (10 each side)
         const baseHeight = startY + numTokens * rowHeight + 20;
         
         return {
             layerWidth,
-            embedWidth,
-            unembedWidth,
-            labelPadding,
-            rightLabelPadding,
-            baseWidth,
+            layersWidth,
             rowHeight,
             baseHeight,
-            startX,
             startY
         };
-    }, [numLayers, numTokens, tokenLabels, unembedLabels]);
+    }, [numLayers, numTokens]);
 
 
     // Main rendering effect
@@ -267,13 +260,13 @@ export default function LensTransformer({
 
         const svg = d3.select(svgRef.current);
         
-        // Set SVG dimensions with scale
-        svg.attr("width", dimensions.baseWidth * scale).attr("height", dimensions.baseHeight * scale);
+        // Set SVG dimensions with scale - only for layers
+        svg.attr("width", dimensions.layersWidth * scale).attr("height", dimensions.baseHeight * scale);
         
         // Add background rect to capture mouse events on empty space
         if (showFlowOnHover) {
             svg.append("rect")
-                .attr("width", dimensions.baseWidth * scale)
+                .attr("width", dimensions.layersWidth * scale)
                 .attr("height", dimensions.baseHeight * scale)
                 .attr("fill", "transparent")
                 .style("cursor", "default")
@@ -291,8 +284,7 @@ export default function LensTransformer({
         
         // Function to draw a single layer
         const drawLayer = (layerIndex: number) => {
-            const layerStartX = dimensions.startX + layerIndex * dimensions.layerWidth;
-            const isLastLayer = layerIndex === numLayers - 1;
+            const layerStartX = 12 + (layerIndex - layerRange[0]) * dimensions.layerWidth; // Add 10px padding for circles
 
             // Function to draw a single token row within a layer
             const drawTokenRow = (rowIndex: number) => {
@@ -331,7 +323,8 @@ export default function LensTransformer({
 
                 // If not the last layer, connect to the next layer's circle minus its radius
                 // If last layer, keep the same arrow length (use residArrowEndX)
-                const actualResidArrowEndX = isLastLayer ? residArrowEndX : layerStartX + dimensions.layerWidth - residInRadius;
+                const isLastLayer = layerIndex === layerRange[1];
+                const actualResidArrowEndX = isLastLayer ? residArrowEndX : (12 + (layerIndex - layerRange[0] + 1) * dimensions.layerWidth) - residInRadius;
 
                 // Residual arrow color: use standard component color logic
                 const residArrowColor = COLORS.purple;
@@ -350,7 +343,7 @@ export default function LensTransformer({
 
                 // Residual arrow head (for all layers)
                 const arrowHeadSize = 10;
-                const arrowHeadX = isLastLayer ? residArrowEndX : actualResidArrowEndX;
+                const arrowHeadX = actualResidArrowEndX;
                 g.append("path")
                     .attr("d", `M ${arrowHeadX - arrowHeadSize} ${residArrowY - arrowHeadSize / 2} L ${arrowHeadX} ${residArrowY} L ${arrowHeadX - arrowHeadSize} ${residArrowY + arrowHeadSize / 2} Z`)
                     .attr("fill", residArrowColor)
@@ -589,9 +582,9 @@ export default function LensTransformer({
                 
                 // Add row hitbox for easier selection in row mode
                 if (rowMode && showFlowOnHover) {
-                    // Calculate hitbox dimensions
-                    const hitboxX = dimensions.startX - dimensions.embedWidth - 20; // Start before embed
-                    const hitboxWidth = dimensions.embedWidth + (numLayers * dimensions.layerWidth) + dimensions.unembedWidth + 40; // Full row width
+                    // Calculate hitbox dimensions for layers only
+                    const hitboxX = 0;
+                    const hitboxWidth = dimensions.layersWidth;
                     const hitboxY = centerY - dimensions.rowHeight / 2;
                     const hitboxHeight = dimensions.rowHeight;
                     
@@ -616,166 +609,28 @@ export default function LensTransformer({
             }
         };
 
-        // Draw embed component (input side)
-        const drawEmbed = () => {
-            const trapezoidHeight = 20;
-            const narrowWidth = 10;
-            const wideWidth = 20;
-            const embedX = dimensions.startX - dimensions.embedWidth + 20; // Position before first layer
-            
-            // Draw for each token
-            for (let tokenIndex = 0; tokenIndex < numTokens; tokenIndex++) {
-                const embedY = dimensions.startY + tokenIndex * dimensions.rowHeight;
-                const embedComponentId = `embed-${tokenIndex}`;
-                const embedColor = COLORS.blue;
-                
-                // Draw trapezoid (wider side facing right)
-                // Start from top-left, go clockwise
-                const trapezoidPath = `
-                    M ${embedX} ${embedY - narrowWidth/2}
-                    L ${embedX + trapezoidHeight} ${embedY - wideWidth/2}
-                    L ${embedX + trapezoidHeight} ${embedY + wideWidth/2}
-                    L ${embedX} ${embedY + narrowWidth/2}
-                    Z
-                `;
-                
-                const embedShape = g.append("path")
-                    .attr("d", trapezoidPath)
-                    .attr("stroke", embedColor)
-                    .attr("stroke-width", 2)
-                    .attr("data-component-type", "embed")
-                    .attr("data-component-subtype", "shape")
-                    .attr("data-component-id", embedComponentId)
-                    .attr("fill", COLORS.fills.blue)
-                    .style("cursor", showFlowOnHover ? "pointer" : "default");
-                
-                // Set default fill - update effect will handle highlighting
-                // embedShape.attr("fill", COLORS.fills.blue);
-                
-                // Add hover and click handlers
-                if (showFlowOnHover) {
-                    addComponentHandlers(embedShape, tokenIndex, 0, 'embed');
-                }
-                
-                // Arrow from embed to first residual circle
-                const arrowStartX = embedX + trapezoidHeight;
-                const arrowEndX = dimensions.startX - 10; // Stop before the residual circle radius
-                const arrowY = embedY;
-                
-                g.append("line")
-                    .attr("x1", arrowStartX)
-                    .attr("y1", arrowY)
-                    .attr("x2", arrowEndX)
-                    .attr("y2", arrowY)
-                    .attr("stroke", embedColor)
-                    .attr("stroke-width", 2)
-                    .attr("data-component-type", "embed")
-                    .attr("data-component-subtype", "line")
-                    .attr("data-component-id", embedComponentId);
-                
-                // Arrow head
-                const arrowHeadSize = 10;
-                g.append("path")
-                    .attr("d", `M ${arrowEndX - arrowHeadSize} ${arrowY - arrowHeadSize / 2} L ${arrowEndX} ${arrowY} L ${arrowEndX - arrowHeadSize} ${arrowY + arrowHeadSize / 2} Z`)
-                    .attr("fill", embedColor)
-                    .attr("data-component-type", "embed")
-                    .attr("data-component-subtype", "filled")
-                    .attr("data-component-id", embedComponentId);
-            }
-        };
-        
-        // Draw unembed component (output side)
-        const drawUnembed = () => {
-            const trapezoidHeight = 20;
-            const narrowWidth = 10;
-            const wideWidth = 20;
-            // Position unembed at the end of the residual arrow (where it normally would end)
-            const lastLayerCenterX = dimensions.startX + (numLayers - 1) * dimensions.layerWidth;
-            const unembedX = lastLayerCenterX + 10 + 200; // residInRadius + residual arrow length
-            
-            // Draw for each token
-            for (let tokenIndex = 0; tokenIndex < numTokens; tokenIndex++) {
-                const unembedY = dimensions.startY + tokenIndex * dimensions.rowHeight;
-                const unembedComponentId = `unembed-${tokenIndex}`;
-                
-                // Draw trapezoid (wider side facing left)
-                // Start from top-left, go clockwise
-                const trapezoidPath = `
-                    M ${unembedX} ${unembedY - wideWidth/2}
-                    L ${unembedX + trapezoidHeight} ${unembedY - narrowWidth/2}
-                    L ${unembedX + trapezoidHeight} ${unembedY + narrowWidth/2}
-                    L ${unembedX} ${unembedY + wideWidth/2}
-                    Z
-                `;
-                
-                const unembedShape = g.append("path")
-                    .attr("d", trapezoidPath)
-                    .attr("stroke", COLORS.blue)
-                    .attr("stroke-width", 2)
-                    .attr("data-component-type", "unembed")
-                    .attr("data-component-subtype", "shape")
-                    .attr("data-component-id", unembedComponentId)
-                    .attr("fill", COLORS.fills.blue)
-                    .style("cursor", showFlowOnHover ? "pointer" : "default");
-                
-                // Add hover and click handlers
-                if (showFlowOnHover) {
-                    addComponentHandlers(unembedShape, tokenIndex, numLayers - 1, 'unembed');
-                }
-            }
-        };
-        
-        // Draw token labels (y-axis)
-        const drawLabels = () => {
-            if (tokenLabels && tokenLabels.length > 0) {
-                for (let i = 0; i < numTokens && i < tokenLabels.length; i++) {
-                    const labelY = dimensions.startY + i * dimensions.rowHeight;
-                    const labelX = dimensions.startX - dimensions.embedWidth - 10; // Position to the left of embed
-                    
-                    g.append("text")
-                        .attr("x", labelX)
-                        .attr("y", labelY)
-                        .attr("text-anchor", "end")
-                        .attr("dominant-baseline", "middle")
-                        .attr("font-size", "14px")
-                        .attr("fill", theme === "dark" ? "#D1D5DB" : "#374151")
-                        .text(tokenLabels[i]);
-                }
-            }
-            
-            // Draw unembed labels
-            if (unembedLabels && unembedLabels.length > 0) {
-                const lastLayerCenterX = dimensions.startX + (numLayers - 1) * dimensions.layerWidth;
-                const unembedX = lastLayerCenterX + 10 + 220;
-                
-                for (let i = 0; i < numTokens && i < unembedLabels.length; i++) {
-                    const labelY = dimensions.startY + i * dimensions.rowHeight;
-                    const labelX = unembedX + 30; // Position to the right of unembed
-                    
-                    g.append("text")
-                        .attr("x", labelX)
-                        .attr("y", labelY)
-                        .attr("text-anchor", "start")
-                        .attr("dominant-baseline", "middle")
-                        .attr("font-size", "14px")
-                        .attr("fill", theme === "dark" ? "#D1D5DB" : "#374151")
-                        .text(unembedLabels[i]);
-                }
-            }
-        };
-        
-        // Draw all components
-        drawEmbed();
-        
-        // Draw all layers
-        for (let i = 0; i < numLayers; i++) {
-            drawLayer(i);
+        // Draw layer indices at the top
+        const layerLabelY = 20; // Position above the visualization
+        for (let i = layerRange[0]; i <= layerRange[1]; i++) {
+            const visualIndex = i - layerRange[0];
+            const layerCenterX = 12 + visualIndex * dimensions.layerWidth;
+            g.append("text")
+                .attr("x", layerCenterX)
+                .attr("y", layerLabelY)
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "middle")
+                .attr("font-size", "12px")
+                .attr("fill", theme === "dark" ? "#9CA3AF" : "#6B7280")
+                .attr("font-weight", "500")
+                .text(i);
         }
         
-        drawUnembed();
-        drawLabels();
+        // Draw all layers
+        for (let i = layerRange[0]; i <= layerRange[1]; i++) {
+            drawLayer(i);
+        }
 
-    }, [dimensions, numTokens, numLayers, showAttn, showMlp, scale, tokenLabels, unembedLabels, showFlowOnHover, clickHandler]);
+    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, clickHandler, theme]);
 
     // Separate effect to update highlighting without rebuilding the SVG
     useEffect(() => {
@@ -839,11 +694,69 @@ export default function LensTransformer({
     }, [highlightedComponents, theme, showFlowOnHover]);
 
     return (
-        <div 
-            ref={containerRef}
-            className="rounded-lg w-full items-center flex-col flex relative"
-        >
-            <svg ref={svgRef}></svg>
+        <div className="flex items-cener justify-center rounded-lg relative">
+            {/* Embed component - fixed width */}
+            <div className="flex-shrink-0">
+                <EmbedComponent
+                    numTokens={numTokens}
+                    tokenLabels={tokenLabels}
+                    theme={theme}
+                    scale={scale}
+                    hoveredComponent={hoveredComponent}
+                    clickedComponent={clickedComponent}
+                    setHoveredComponent={setHoveredComponent}
+                    setClickedComponent={setClickedComponent}
+                    clickHandler={clickHandler}
+                    showFlowOnHover={showFlowOnHover}
+                    highlightedComponents={highlightedComponents}
+                    dimensions={{
+                        embedWidth: 75,
+                        labelPadding: tokenLabels ? 100 : 0,
+                        startY: dimensions.startY,
+                        rowHeight: dimensions.rowHeight
+                    }}
+                    colors={COLORS}
+                    strokeBase={STROKE_BASE}
+                    fillBase={FILL_BASE}
+                />
+            </div>
+            
+            {/* Layers - scrollable */}
+            <ScrollArea 
+                ref={containerRef}
+                className="flex-shrink-0"
+                style={{ width: `${(3 * 210 + 1) * scale}px` }}
+            >
+                <svg ref={svgRef}></svg>
+                <ScrollBar orientation="horizontal" className="hidden" />
+            </ScrollArea>
+            
+            {/* Unembed component - fixed width */}
+            <div className="flex-shrink-0">
+                <UnembedComponent
+                    numTokens={numTokens}
+                    numLayers={numLayers}
+                    unembedLabels={unembedLabels}
+                    theme={theme}
+                    scale={scale}
+                    hoveredComponent={hoveredComponent}
+                    clickedComponent={clickedComponent}
+                    setHoveredComponent={setHoveredComponent}
+                    setClickedComponent={setClickedComponent}
+                    clickHandler={clickHandler}
+                    showFlowOnHover={showFlowOnHover}
+                    highlightedComponents={highlightedComponents}
+                    dimensions={{
+                        unembedWidth: 75,
+                        rightLabelPadding: unembedLabels ? 100 : 0,
+                        startY: dimensions.startY,
+                        rowHeight: dimensions.rowHeight
+                    }}
+                    colors={COLORS}
+                    strokeBase={STROKE_BASE}
+                    fillBase={FILL_BASE}
+                />
+            </div>
         </div>
     );
 }

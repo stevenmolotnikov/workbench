@@ -1,7 +1,7 @@
 import config from "@/lib/config";
 import type { LineGraphData, LineData } from "@/types/charts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart, getHasLinkedConfig } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
@@ -56,18 +56,13 @@ export const useLensLine = () => {
     });
 };
 
-const getLensGrid = async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {    
+const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {    
     try {
-
-        const fixedLensRequest = {
-            ...lensRequest.completions[0],
-        }
-
         // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensGrid), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(fixedLensRequest),
+            body: JSON.stringify(lensRequest.completion),
         });
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
@@ -88,13 +83,20 @@ export const useLensGrid = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: {completions: LensConfigData[]; chartId: string}) => {
+        mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
             const response = await getLensGrid(lensRequest);
 
             const result = processHeatmapData(response.data);
 
             // Update the database with the chart data after receiving results
-            // await setChartData(lensRequest.chartId, result);
+
+            const hasLinkedConfig = await getHasLinkedConfig(lensRequest.chartId);
+
+            if (!hasLinkedConfig) {
+                await addChartConfigLink(configId, lensRequest.chartId);
+            }
+
+            await setChartData(lensRequest.chartId, result);
 
             return result;
         },
@@ -103,6 +105,12 @@ export const useLensGrid = () => {
             // Invalidate queries to refresh the UI with updated data
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 
+            });
+            queryClient.invalidateQueries({ 
+                queryKey: ["unlinkedCharts"] 
+            });
+            queryClient.invalidateQueries({ 
+                queryKey: ["hasLinkedConfig"] 
             });
         },
         onError: (error, variables) => {
@@ -200,19 +208,46 @@ function processHeatmapData(data: LensGridResponse) {
     };
 }
 
+
+// export const useCreateChart = () => {
+//     const queryClient = useQueryClient();
+//     const { setActiveTab } = useWorkspace();
+
+//     return useMutation({
+//         mutationFn: async ({ configId, chart }: { configId: string; chart: NewChart }) => {
+//             const newChart = await createChart(chart);
+//             await addChartConfigLink(configId, newChart.id);
+//             return newChart;
+//         },
+//         onSuccess: (newChart, variables) => {
+//             queryClient.invalidateQueries({ queryKey: ["lensCharts", variables.chart.workspaceId] });
+//             setActiveTab(newChart.id);
+//         },
+//     });
+// };
+
 export const useCreateChart = () => {
     const queryClient = useQueryClient();
     const { setActiveTab } = useWorkspace();
 
     return useMutation({
-        mutationFn: async ({ configId, chart }: { configId: string; chart: NewChart }) => {
-            const newChart = await createChart(chart);
-            await addChartConfigLink(configId, newChart.id);
-            return newChart;
+        mutationFn: async ({ chart }: { chart: NewChart }) => {
+            return await createChart(chart);
         },
         onSuccess: (newChart, variables) => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts", variables.chart.workspaceId] });
+            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts", variables.chart.workspaceId] });
             setActiveTab(newChart.id);
+        },
+    });
+};
+
+export const useLinkConfig = () => {
+    // const queryClient = useQueryClient();
+    
+    return useMutation({
+        mutationFn: async ({ chartId, configId }: { chartId: string; configId: string }) => {
+            return await addChartConfigLink(configId, chartId);
         },
     });
 };
@@ -224,6 +259,8 @@ export const useDeleteChart = () => {
         mutationFn: (chartId: string) => deleteChart(chartId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["hasLinkedConfig"] });
         },
     });
 };

@@ -50,7 +50,8 @@ CREATE TABLE "chart_configs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"workspace_id" uuid NOT NULL,
 	"data" jsonb NOT NULL,
-	"type" varchar(32) NOT NULL
+	"type" varchar(32) NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "charts" (

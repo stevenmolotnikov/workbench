@@ -5,12 +5,15 @@ import Link from "next/link";
 import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { ModelsDisplay } from "@/components/ModelsDisplay";
 import { WorkspaceHeader } from "@/components/WorkspaceHeader";
+import { UserModeDialog } from "@/components/UserModeDialog";
 import { useQuery } from "@tanstack/react-query";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 // Force dynamic rendering to avoid build-time database queries
 export const dynamic = 'force-dynamic';
 
 export default function WorkbenchPage() {
+    const { userMode } = useWorkspace();
 
     const { data: workspaces } = useQuery({
         queryKey: ["workspaces"],
@@ -18,7 +21,9 @@ export default function WorkbenchPage() {
     });
 
     return (
-        <div className="p-6">
+        <>
+            <UserModeDialog open={userMode === null} />
+            <div className="p-6">
             <ModelsDisplay />
             
             <WorkspaceHeader />
@@ -61,6 +66,7 @@ export default function WorkbenchPage() {
                     })}
                 </div>
             )}
-        </div>
+            </div>
+        </>
     );
 }

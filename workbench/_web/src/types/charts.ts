@@ -1,4 +1,4 @@
-import { LensConfig } from "./lens";
+import { LensConfigData } from "./lens";
 import { PatchingConfig } from "./patching";
 
 export interface HeatmapData {
@@ -33,4 +33,4 @@ export interface LineGraphData {
 }
 
 export type ChartData = LineGraphData | HeatmapData;
-export type ChartConfigData = LensConfig | PatchingConfig;
+export type ChartConfigData = LensConfigData | PatchingConfig;

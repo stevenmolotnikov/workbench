@@ -9,8 +9,8 @@ interface TokenAreaProps {
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
     tokenData: Token[];
-    showPredictionDisplay: boolean;
-    setSelectedIdx: (idx: number) => void;
+    showPredictionDisplay?: boolean;
+    setSelectedIdx?: (idx: number) => void;
 }
 
 // Token styling constants
@@ -40,8 +40,8 @@ export function TokenArea({
     config,
     setConfig,
     tokenData,
-    showPredictionDisplay,
-    setSelectedIdx,
+    showPredictionDisplay = false,
+    setSelectedIdx = () => {},
 }: TokenAreaProps) {
     const highlightedTokens = config.tokens.map(t => t.idx);
 

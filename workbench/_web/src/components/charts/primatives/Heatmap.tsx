@@ -70,8 +70,6 @@ export function Heatmap({
         isColorbar: false,
     });
 
-    console.log(data);
-
     const { annotations, pendingAnnotation, addPendingAnnotation, setAnnotations } =
         useAnnotations();
 

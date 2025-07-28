@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique, timestamp } from "drizzle-orm/pg-core";
 import type { ChartConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfigData } from "@/types/lens";
@@ -39,6 +39,7 @@ export const chartConfigs = pgTable("chart_configs", {
 
     data: jsonb("data").$type<ChartConfigData>().notNull(),
     type: varchar("type", { enum: configTypes, length: 32 }).notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const chartConfigLinks = pgTable("chart_config_links", {

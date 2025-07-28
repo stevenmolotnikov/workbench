@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getLensChartConfigs } from "@/lib/queries/chartQueries";
+import { getLensConfigs } from "@/lib/queries/chartQueries";
 import { useCreateChartConfig } from "@/lib/api/configApi";
 import { NewChartConfig, LensConfig } from "@/db/schema";
 
@@ -77,7 +77,7 @@ export function PromptBuilder() {
 
     const { data: chartConfigs } = useQuery({
         queryKey: ["lensChartConfig", workspaceId],
-        queryFn: () => getLensChartConfigs(workspaceId as string),
+        queryFn: () => getLensConfigs(workspaceId as string),
     });
 
     async function createCompletion() {
