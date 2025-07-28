@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { useTheme } from "next-themes";
 
-interface SelectedComponent {
+export interface SelectedComponent {
     tokenIndex: number;
     layerIndex: number;
     componentType: 'resid' | 'attn' | 'mlp' | 'embed' | 'unembed';
@@ -12,6 +12,8 @@ interface SelectedComponent {
 
 interface LensTransformerProps {
     clickHandler: (tokenIndex: number, layerIndex: number) => void;
+    clickedComponent: SelectedComponent | null;
+    setClickedComponent: (component: SelectedComponent | null) => void;
     numTokens?: number;
     numLayers?: number;
     showAttn?: boolean;
@@ -155,6 +157,8 @@ const getDataFlowComponents = (
 
 export default function LensTransformer({ 
     clickHandler,
+    clickedComponent,
+    setClickedComponent,
     numTokens = 2,
     numLayers = 2,
     showAttn = true,
@@ -168,9 +172,7 @@ export default function LensTransformer({
     const { theme } = useTheme();
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
     const [hoveredComponent, setHoveredComponent] = useState<SelectedComponent | null>(null);
-    const [unembedCardPositions, setUnembedCardPositions] = useState<{ x: number; y: number; tokenIndex: number }[]>([]);
     
     const STROKE_BASE = theme === "dark" ? "#374151" : "#E5E7EB";
     const FILL_BASE = theme === "dark" ? "#1F2937" : "#F3F4F6";
@@ -202,13 +204,13 @@ export default function LensTransformer({
         const layerWidth = 210;
         const embedWidth = 75;
         const unembedWidth = 75;
-        const labelPadding = tokenLabels ? 60 : 0;
-        const rightLabelPadding = unembedLabels ? 80 : 0;
-        const baseWidth = labelPadding + embedWidth + numLayers * layerWidth + unembedWidth + rightLabelPadding + 200;
+        const labelPadding = tokenLabels ? 100 : 0;
+        const rightLabelPadding = unembedLabels ? 100 : 0;
+        const baseWidth = labelPadding + embedWidth + numLayers * layerWidth + unembedWidth + rightLabelPadding + 20;
         const rowHeight = 75;
-        const baseHeight = numTokens * rowHeight + 100;
-        const startX = 100 + embedWidth + labelPadding;
-        const startY = 75;
+        const baseHeight = numTokens * rowHeight + 20;
+        const startX = embedWidth + labelPadding + 30;
+        const startY = 100;
         
         return {
             layerWidth,
@@ -739,26 +741,24 @@ export default function LensTransformer({
                 }
             }
             
-            // Collect unembed dropdown positions instead of drawing labels
+            // Draw unembed labels
             if (unembedLabels && unembedLabels.length > 0) {
                 const lastLayerCenterX = dimensions.startX + (numLayers - 1) * dimensions.layerWidth;
                 const unembedX = lastLayerCenterX + 10 + 220;
-                const positions: { x: number; y: number; tokenIndex: number }[] = [];
                 
                 for (let i = 0; i < numTokens && i < unembedLabels.length; i++) {
                     const labelY = dimensions.startY + i * dimensions.rowHeight;
                     const labelX = unembedX + 30; // Position to the right of unembed
                     
-                    positions.push({
-                        x: labelX, // Don't divide by scale here
-                        y: labelY,
-                        tokenIndex: i
-                    });
+                    g.append("text")
+                        .attr("x", labelX)
+                        .attr("y", labelY)
+                        .attr("text-anchor", "start")
+                        .attr("dominant-baseline", "middle")
+                        .attr("font-size", "14px")
+                        .attr("fill", theme === "dark" ? "#D1D5DB" : "#374151")
+                        .text(unembedLabels[i]);
                 }
-                
-                setUnembedCardPositions(positions);
-            } else {
-                setUnembedCardPositions([]);
             }
         };
         
@@ -839,33 +839,9 @@ export default function LensTransformer({
     return (
         <div 
             ref={containerRef}
-            className="rounded-lg overflow-auto relative"
-            style={{ 
-                maxWidth: '90vw', 
-                maxHeight: '70vh',
-                width: scale < 1 ? 'auto' : '90vw',
-                height: scale < 1 ? 'auto' : '70vh'
-            }}
+            className="rounded-lg overflow-auto w-full items-center flex-col flex relative"
         >
             <svg ref={svgRef}></svg>
-            {/* Unembed dropdowns */}
-            {unembedCardPositions.map((pos, idx) => (
-                <div
-                    key={`unembed-card-${pos.tokenIndex}`}
-                    className="absolute pointer-events-auto"
-                    style={{
-                        left: `${pos.x * scale}px`,
-                        top: `${pos.y * scale}px`,
-                        transform: 'translate(0, -50%)'
-                    }}
-                >
-                    <select className="text-xs rounded px-1 py-0.5 focus:outline-none">
-                        <option value="logits">{unembedLabels && unembedLabels[idx]}</option>
-                        <option value="probs">Probabilities</option>
-                        <option value="topk">Top-K Tokens</option>
-                    </select>
-                </div>
-            ))}
         </div>
     );
 }

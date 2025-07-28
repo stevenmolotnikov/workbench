@@ -4,7 +4,6 @@ import { Plus, Settings2 } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useSelectedModel } from "@/stores/useSelectedModel";
-import { useModels } from "@/hooks/useModels";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
 import * as React from "react";
@@ -71,7 +70,6 @@ const generateCompletionCardName = (existingCompletions: LensConfig[]): string =
 };  
 
 export function PromptBuilder() {
-    const { isLoading } = useModels();
     const { workspaceId } = useParams();
     const { modelName } = useSelectedModel();
 

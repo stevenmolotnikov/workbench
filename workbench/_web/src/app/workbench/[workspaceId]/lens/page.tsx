@@ -117,10 +117,10 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     className="flex flex-1 min-h-0 h-full"
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
-                        <ScrollArea className="h-full">
-                            <InteractiveDisplay />
-                            {/* <PromptBuilder /> */}
-                        </ScrollArea>
+                        <InteractiveDisplay />
+                        {/* <ScrollArea className="h-full">
+                            <PromptBuilder />
+                        </ScrollArea> */}
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel defaultSize={50} minSize={30}>
