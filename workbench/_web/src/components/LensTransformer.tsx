@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
+import { useTheme } from "next-themes";
 
 interface SelectedComponent {
     tokenIndex: number;
@@ -151,20 +152,6 @@ const getDataFlowComponents = (
     return highlighted;
 };
 
-// Color constants
-const COLORS = {
-    grey: "#9CA3AF",
-    purple: "purple",
-    red: "red",
-    green: "green",
-    blue: "#3B82F6",
-    fills: {
-        purple: "#E9D5FF",
-        red: "#FEE2E2",
-        green: "#DCFCE7",
-        blue: "#DBEAFE"
-    }
-};
 
 export default function LensTransformer({ 
     clickHandler,
@@ -178,12 +165,30 @@ export default function LensTransformer({
     showFlowOnHover = false,
     rowMode = false,
 }: LensTransformerProps) {
+    const { theme } = useTheme();
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
     const [hoveredComponent, setHoveredComponent] = useState<SelectedComponent | null>(null);
     const [unembedCardPositions, setUnembedCardPositions] = useState<{ x: number; y: number; tokenIndex: number }[]>([]);
     
+    const STROKE_BASE = theme === "dark" ? "#374151" : "#E5E7EB";
+    const FILL_BASE = theme === "dark" ? "#1F2937" : "#F3F4F6";
+    
+    // Theme-aware colors
+    const COLORS = {
+        purple: theme === "dark" ? "#A855F7" : "#8B5CF6",
+        red: theme === "dark" ? "#EF4444" : "#DC2626", 
+        green: theme === "dark" ? "#22C55E" : "#16A34A",
+        blue: theme === "dark" ? "#3B82F6" : "#2563EB",
+        fills: {
+            purple: theme === "dark" ? "#2D1B69" : "#E9D5FF",
+            red: theme === "dark" ? "#7F1D1D" : "#FEE2E2",
+            green: theme === "dark" ? "#14532D" : "#DCFCE7",
+            blue: theme === "dark" ? "#1E3A8A" : "#DBEAFE"
+        }
+    };
+
     // Determine which component is currently selected
     const activeComponent = hoveredComponent || clickedComponent;
     
@@ -729,7 +734,7 @@ export default function LensTransformer({
                         .attr("text-anchor", "end")
                         .attr("dominant-baseline", "middle")
                         .attr("font-size", "14px")
-                        .attr("fill", "#374151")
+                        .attr("fill", theme === "dark" ? "#D1D5DB" : "#374151")
                         .text(tokenLabels[i]);
                 }
             }
@@ -802,10 +807,17 @@ export default function LensTransformer({
             }
             
             // Apply colors based on highlighting state
-            // When highlightedComponents is null, nothing is selected, so everything should be default color
-            const isHighlighted = highlightedComponents ? highlightedComponents.has(componentId) : true;
-            const pathColor = isHighlighted ? defaultColor : COLORS.grey;
-            const fillColor = isHighlighted ? highlightedFillColor : "white";
+            // When highlightedComponents is null and showFlowOnHover is off, preserve current state
+            // When highlightedComponents is null and showFlowOnHover is on, show all as highlighted
+            const isHighlighted = highlightedComponents 
+                ? highlightedComponents.has(componentId) 
+                : (showFlowOnHover ? true : null); // null means preserve current state
+            
+            // If isHighlighted is null, don't update colors (preserve current state)
+            if (isHighlighted === null) return;
+            
+            const pathColor = isHighlighted ? defaultColor : STROKE_BASE;
+            const fillColor = isHighlighted ? highlightedFillColor : FILL_BASE;
 
             switch (element.attr("data-component-subtype")) {
                 case "line":
@@ -822,7 +834,7 @@ export default function LensTransformer({
             }
         });
         
-    }, [highlightedComponents]);
+    }, [highlightedComponents, theme, showFlowOnHover]);
 
     return (
         <div 

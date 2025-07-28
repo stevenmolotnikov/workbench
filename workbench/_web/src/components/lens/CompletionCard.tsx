@@ -17,22 +17,27 @@ import type { LensConfigData } from "@/types/lens";
 
 import { PredictionBadges } from "./PredictionBadges";
 
-import { encodeText, decodeText } from "@/actions/tokenize";
+import { encodeText } from "@/actions/tokenize";
+import { useDeleteChartConfig, useUpdateChartConfig } from "@/lib/api/configApi";
+import { useParams } from "next/navigation";
 
 export function CompletionCard({ initialConfig }: { initialConfig: LensConfig }) {
-    // const { workspaceId } = useParams();
+    const { workspaceId } = useParams<{ workspaceId: string }>();
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const [tokenData, setTokenData] = useState<Token[]>([]);
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
     const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-    const [showPredictionDisplay, setShowPredictionDisplay] = useState(false);
-
-    const showTokenArea = tokenData.length > 0;
 
     // Workspace display state
+    const [showTokenArea, setShowTokenArea] = useState(false);
     const { tokenizeOnEnter } = useLensWorkspace();
+    const showPredictionDisplay = predictions.length > 0;
+
+    const { mutateAsync: getExecuteSelected, isPending: loadingPredictions } = useExecuteSelected();
+    const { mutateAsync: updateChartConfigMutation, isPending: updatePending } = useUpdateChartConfig();
+    const { mutateAsync: deleteChartConfigMutation, isPending: deletionPending } = useDeleteChartConfig();
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
@@ -44,7 +49,20 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
     const handleTokenize = async () => {
         const tokens = await encodeText(config.prompt, config.model);
         setTokenData(tokens);
-        runPredictions();
+        setShowTokenArea(true);
+
+        if (config.tokens.length === 0) {
+            const temporaryConfig = {
+                ...config,
+                tokens: [tokens[tokens.length - 1]],
+            }
+            setSelectedIdx(tokens.length - 1);
+            await runPredictions(temporaryConfig);
+        }
+    }
+
+    const handleDeleteCompletion = async () => {
+        await deleteChartConfigMutation({ configId: initialConfig.id });
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -54,36 +72,61 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
         }
     };
 
-    const { mutateAsync: getExecuteSelected, isPending: loadingPredictions } = useExecuteSelected();
-
-    const runPredictions = async () => {
-        console.log(config);
-        const data = await getExecuteSelected(config);
-        setShowPredictionDisplay(true);
+    const runPredictions = async (temporaryConfig: LensConfigData) => {
+        const data = await getExecuteSelected(temporaryConfig);
         setPredictions(data);
+        setConfig(temporaryConfig);
+        await updateChartConfigMutation({
+            configId: initialConfig.id, 
+            config: {
+                data: temporaryConfig,
+                workspaceId,
+                type: "lens",
+            }
+        });
+    }
+
+    const handleClear = async () => {
+        const cleanedConfig = {
+            ...config,
+            tokens: [],
+        }
+        await updateChartConfigMutation({
+            configId: initialConfig.id, 
+            config: {
+                data: cleanedConfig,
+                workspaceId,
+                type: "lens",
+            }
+        });
+        setConfig(cleanedConfig);
+        setTokenData([]);
+        setShowTokenArea(false);
+        setPredictions([]);
+        setSelectedIdx(null);
     }
 
     return (
         <div className="group relative">
             {/* Delete button */}
-            {/* <Button
+            <Button
                 variant="ghost"
                 title="Delete completion"
                 size="icon"
                 onClick={handleDeleteCompletion}
-                disabled={deleteChartConfigMutation.isPending}
+                disabled={deletionPending}
                 className="group-hover:opacity-100 opacity-0 h-6 w-6 transition-opacity duration-200 absolute -top-2 -right-2 rounded-full bg-background border shadow-sm"
             >
                 <X
                     size={14}
                     className="w-4 h-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
                 />
-            </Button> */}
+            </Button>
 
             <div
                 className={cn(
                     "border bg-card px-4 pb-4 overflow-visible transition-all duration-200 ease-in-out w-full min-w-0 max-w-full",
-                    "rounded-lg",
+                    showTokenArea ? "rounded-t-lg" : "rounded-lg",
                 )}
             >
                 {/* Header */}
@@ -152,21 +195,27 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
                     )}
                 </div>
             </div>
-            {showPredictionDisplay && (
-                <div className="border-x border-b p-4 bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2">
-                    <PredictionBadges
-                        config={config}
-                        setConfig={setConfig}
-                        predictions={predictions}
-                        selectedIdx={selectedIdx ?? 0}
-                    />
+            {(showTokenArea && predictions.length > 0) && (
+                <div
 
+                    className="border-x border-b p-4 flex justify-between bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
+                >
+                    {showPredictionDisplay ? (
+                        <PredictionBadges
+                            config={config}
+                            setConfig={setConfig}
+                            predictions={predictions}
+                            selectedIdx={selectedIdx ?? 0}
+                        />
+                    ) : (
+                        <div>a</div>
+                    )}
 
-                    <div className="flex gap-2 ml-4 ">
+                    <div className="flex gap-2 ml-4">
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => runPredictions()}
+                            onClick={() => runPredictions(config)}
                             className="text-xs"
                         >
                             <Keyboard className="w-3 h-3" />
@@ -174,7 +223,9 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setShowPredictionDisplay(false)}
+                            onClick={() => {
+                                setShowTokenArea(true);
+                            }}
                             className="text-xs"
                         >
                             <Edit2 className="w-3 h-3" />
@@ -182,7 +233,7 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setShowPredictionDisplay(false)}
+                            onClick={handleClear}
                             className="text-xs"
                         >
                             <X className="w-3 h-3" />

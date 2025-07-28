@@ -87,14 +87,6 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         );
     }
 
-    const clickHandler = (tokenIndex: number, layerIndex: number) => {
-        console.log(`Clicked token ${tokenIndex} at layer ${layerIndex}`);
-    }
-
-
-    const tokenLabels = ["The", "quick", "brown", "fox", "jumps"];
-    const unembedLabels = ["cat", "dog", "bird", "fish", "lion"];
-
     return (
         <div className="flex flex-1 min-h-0">
             {/* Left sidebar */}
@@ -126,8 +118,8 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
                         <ScrollArea className="h-full">
-                            {/* <InteractiveDisplay /> */}
-                            <PromptBuilder />
+                            <InteractiveDisplay />
+                            {/* <PromptBuilder /> */}
                         </ScrollArea>
                     </ResizablePanel>
                     <ResizableHandle />

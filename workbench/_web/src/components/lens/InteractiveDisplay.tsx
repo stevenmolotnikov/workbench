@@ -1,31 +1,34 @@
 import { useState } from "react";
 import LensTransformer from "@/components/LensTransformer";
 import { Textarea } from "@/components/ui/textarea";
-import { tokenizeText } from "@/actions/tokenize";
+import { encodeText } from "@/actions/tokenize";
 import { toast } from "sonner";
-import { LensConfig } from "@/types/lens";
+import { LensConfigData } from "@/types/lens";
 import { useLensGrid } from "@/lib/api/chartApi";
 import { Button } from "../ui/button";
+import { ModelSelector } from "../ModelSelector";
 
 export default function InteractiveDisplay() {
     // Generate some sample labels
 
     const [tokenLabels, setTokenLabels] = useState<string[]>([]);
     const [predictions, setPredictions] = useState<string[]>([]);
-    const unembedLabels = ["cat", "dog", "bird", "fish", "lion"];
-    const [mode, setMode] = useState<"component" | "row">("component");
+    // const [mode, setMode] = useState<"component" | "row">("component");
     const [selectedRow, setSelectedRow] = useState<{ tokenIndex: number, layerIndex: number } | null>(null);
+
+    const [showFlow, setShowFlow] = useState(false);
 
     const [inputText, setInputText] = useState("");
 
     const clickHandler = (tokenIndex: number, layerIndex: number) => {
         console.log(`Clicked token ${tokenIndex} at layer ${layerIndex}`);
         setSelectedRow({ tokenIndex, layerIndex });
+        setShowFlow(false);
     }
 
     const handleTokenize = async () => {
         try {
-            const tokens = await tokenizeText(inputText, "openai-community/gpt2");
+            const tokens = await encodeText(inputText, "openai-community/gpt2");
 
             if (tokens) {
                 setTokenLabels(tokens.map((token) => token.text));
@@ -48,7 +51,7 @@ export default function InteractiveDisplay() {
     async function createHeatmap(chartId: string) {
         try {
 
-            const config: LensConfig = {
+            const config: LensConfigData = {
                 name: "Heatmap",
                 model: "openai-community/gpt2",
                 prompt: inputText,
@@ -68,42 +71,73 @@ export default function InteractiveDisplay() {
     }
 
     return (
-        <div className="p-4 space-y-4">
-            <div className="flex relative">
-                <Textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="h-24 resize-none"
-                    placeholder="Enter your prompt here."
-                    id="completion-text"
-                />
-                <div className="flex gap-2 absolute bottom-2 right-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => handleTokenize()}
-                    >
-                        Tokenize
-                    </Button>
-                    <Button
-                        onClick={() => createHeatmap("heatmap")}
-                    >
-                        Run
-                    </Button>
+        <div className="h-full flex flex-col">
+            <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-medium">Model</h2>
+                    <ModelSelector />
+                </div>
+            </div>
+            <div className="p-4 border-b">
+                <div className="flex relative">
+                    <Textarea
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        className="h-24 resize-none"
+                        placeholder="Enter your prompt here."
+                        id="completion-text"
+                    />
+                    <div className="flex gap-2 absolute bottom-2 right-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => handleTokenize()}
+                        >
+                            Tokenize
+                        </Button>
+                        <Button
+                            onClick={() => createHeatmap("heatmap")}
+                        >
+                            Run
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="w-full h-full border rounded">
-                <LensTransformer
-                    clickHandler={clickHandler}
-                    rowMode={true}
-                    numTokens={tokenLabels.length}
-                    numLayers={3}
-                    scale={0.7}
-                    showFlowOnHover={true}
-                    tokenLabels={tokenLabels}
-                    unembedLabels={predictions}
-                />
+            <div className="p-4">
+                <div className=" h-full w-full border rounded relative">
+                    <div className="absolute top-2 gap-2 flex right-2 z-50">
+                        {!showFlow ? (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowFlow(true)}
+                            >
+                                Run Token
+                            </Button>
+                        ) : (
+                            <div className="text-sm h-8 border items-center justify-center flex rounded-md bg-muted p-2">
+                                Select a row.
+                            </div>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowFlow(false)}
+                            disabled={!selectedRow}
+                        >
+                            Clear
+                        </Button>
+                    </div>
+                    <LensTransformer
+                        clickHandler={clickHandler}
+                        rowMode={true}
+                        numTokens={tokenLabels.length}
+                        numLayers={2}
+                        scale={0.7}
+                        showFlowOnHover={showFlow}
+                        tokenLabels={tokenLabels}
+                        unembedLabels={predictions}
+                    />
+                </div>
             </div>
         </div>
     );

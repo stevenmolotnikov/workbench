@@ -2,15 +2,16 @@ import asyncio
 from collections import defaultdict
 
 from anyio.streams.memory import MemoryObjectSendStream
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
 
-from ..state import AppState
+from ..state import AppState, get_state
 from ..data_models import Token
 from ..jobs import jobs
 
 ##### TARGETED LENS REQUEST SCHEMA #####
+
 
 class TargetedLensCompletion(BaseModel):
     name: str
@@ -35,11 +36,14 @@ class LayerResults(BaseModel):
     layer: int
     points: list[Point]
 
+
 class LensResponse(BaseModel):
     layerResults: list[LayerResults]
     maxLayer: int
 
+
 ##### GRID LENS REQUEST SCHEMA #####
+
 
 class GridLensRequest(BaseModel):
     model: str
@@ -233,6 +237,7 @@ async def process_targeted_lens_background(
         }
     )
 
+
 async def process_grid_lens_background(
     lens_request: GridLensRequest,
     state: AppState,
@@ -255,18 +260,28 @@ async def process_grid_lens_background(
         "pred_strs": pred_strs,
     }
 
+
 @router.post("/get-line")
-async def get_targeted_lens(lens_request: TargetedLensRequest, request: Request):
-    return jobs.create_job(process_targeted_lens_background, lens_request, request)
+async def get_targeted_lens(
+    lens_request: TargetedLensRequest, state: AppState = Depends(get_state)
+):
+    return jobs.create_job(
+        process_targeted_lens_background, lens_request, state
+    )
+
 
 @router.get("/listen-line/{job_id}")
 async def listen_targeted_lens(job_id: str):
     """Listen for targeted lens results via SSE using MemoryObjectStream"""
     return jobs.get_job(job_id)
 
+
 @router.post("/get-grid")
-async def get_grid_lens(lens_request: GridLensRequest, request: Request):
-    return jobs.create_job(process_grid_lens_background, lens_request, request)
+async def get_grid_lens(
+    lens_request: GridLensRequest, state: AppState = Depends(get_state)
+):
+    return jobs.create_job(process_grid_lens_background, lens_request, state)
+
 
 @router.get("/listen-grid/{job_id}")
 async def listen_grid_lens(job_id: str):

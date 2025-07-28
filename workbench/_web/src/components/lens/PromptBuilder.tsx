@@ -137,10 +137,6 @@ export function PromptBuilder() {
                 {chartConfigs?.map((chartConfig) => (
                     <CompletionCard initialConfig={chartConfig} key={chartConfig.id} />
                 ))}
-                
-                {/* {charts?.length === 0 && (
-                    <p className="text-center py-4">No active sections. Click + to create a section.</p>
-                )} */}
             </div>
         </div>
     );

@@ -74,6 +74,9 @@ export function TokenArea({
             backgroundStyle = "bg-transparent";
         }
 
+        console.log(isFilled, config.tokens);
+
+
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
@@ -86,7 +89,6 @@ export function TokenArea({
     return (
         <>
             {tokenData && tokenData.length > 0 ? (
-
                 <div
                     className="max-h-40 overflow-y-auto custom-scrollbar select-none whitespace-pre-wrap"
                     style={{ display: "inline" }}
