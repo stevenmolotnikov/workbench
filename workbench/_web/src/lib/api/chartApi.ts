@@ -1,7 +1,7 @@
 import config from "@/lib/config";
 import type { LineGraphData, LineData } from "@/types/charts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart, getHasLinkedConfig } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
@@ -10,7 +10,6 @@ import { useWorkspace } from "@/stores/useWorkspace";
 
 const getLensLine = async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {
     try {
-        // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensLine), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -18,10 +17,7 @@ const getLensLine = async (lensRequest: { completions: LensConfigData[]; chartId
         });
 
         if (!response.ok) throw new Error("Failed to start lens computation");
-
-        const jobId = (await response.json()).job_id;
-        
-        // Listen for results
+        const {job_id: jobId} = await response.json();
         const result = await sseService.listenToSSE<LensLineResponse>(config.endpoints.listenLensLine + `/${jobId}`);
         return { data: result };
     } catch (error) {
@@ -34,20 +30,22 @@ export const useLensLine = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {
+        mutationFn: async ({lensRequest, configId}: { lensRequest: { completions: LensConfigData[]; chartId: string }; configId: string }) => {
             const response = await getLensLine(lensRequest);
             const result = processChartData(response.data);
-
-            // Update the database with the chart data after receiving results
-            await setChartData(lensRequest.chartId, result);
-
+            await setChartData(lensRequest.chartId, configId, result);
             return result;
         },
         onSuccess: (data, variables) => {
-            console.log("Successfully fetched logit lens data");
             // Invalidate queries to refresh the UI with updated data
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 
+            });
+            queryClient.invalidateQueries({ 
+                queryKey: ["unlinkedCharts"] 
+            });
+            queryClient.invalidateQueries({ 
+                queryKey: ["hasLinkedConfig"] 
             });
         },
         onError: (error, variables) => {
@@ -58,7 +56,6 @@ export const useLensLine = () => {
 
 const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {    
     try {
-        // Start the job
         const response = await fetch(config.getApiUrl(config.endpoints.getLensGrid), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -66,10 +63,7 @@ const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: s
         });
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
-
-        const jobId = (await response.json()).job_id;
-        
-        // Listen for results
+        const {job_id: jobId} = await response.json();
         const result = await sseService.listenToSSE<LensGridResponse>(config.endpoints.listenLensGrid + `/${jobId}`);
         return { data: result };
     } catch (error) {
@@ -85,23 +79,11 @@ export const useLensGrid = () => {
     return useMutation({
         mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
             const response = await getLensGrid(lensRequest);
-
             const result = processHeatmapData(response.data);
-
-            // Update the database with the chart data after receiving results
-
-            const hasLinkedConfig = await getHasLinkedConfig(lensRequest.chartId);
-
-            if (!hasLinkedConfig) {
-                await addChartConfigLink(configId, lensRequest.chartId);
-            }
-
-            await setChartData(lensRequest.chartId, result);
-
+            await setChartData(lensRequest.chartId, configId, result);
             return result;
         },
         onSuccess: (data, variables) => {
-            console.log("Successfully fetched logit lens data");
             // Invalidate queries to refresh the UI with updated data
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 

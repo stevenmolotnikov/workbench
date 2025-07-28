@@ -21,11 +21,14 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspace } from "@/stores/useWorkspace";
-
+import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
+import { useSelectedModel } from "@/stores/useSelectedModel";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
 
+    const { modelName } = useSelectedModel();
     const { userMode } = useWorkspace();
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -66,6 +69,16 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         setIsOpen(false);
         setTutorialsOpen(false);
     }, [setIsOpen]);
+
+    const { data: chartConfig, isLoading: isChartConfigLoading } = useQuery({
+        queryKey: ["chartConfig", resolvedParams.workspaceId],
+        queryFn: () => getOrCreateLensConfig(resolvedParams.workspaceId, {
+            prompt: "",
+            name: "Default Lens Config",
+            model: modelName,
+            tokens: [],
+        }),
+    });
 
     const [workbenchMode, setWorkbenchMode] = useState<"lens" | "patch">("lens");
 
@@ -120,8 +133,8 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     className="flex flex-1 min-h-0 h-full"
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
-                        {userMode === "learn" ? (
-                            <InteractiveDisplay />
+                        {userMode === "learn" && !isChartConfigLoading ? (
+                            <InteractiveDisplay initialConfig={chartConfig} />
                         ) : (
                             <ScrollArea className="h-full">
                                 <PromptBuilder />

@@ -1,14 +1,14 @@
 import { useWorkspace } from "@/stores/useWorkspace";
 import { Loader2, Plus, X } from "lucide-react";
-import { getHasLinkedConfig, getOrCreateLensCharts, getUnlinkedCharts } from "@/lib/queries/chartQueries";
+import { getOrCreateLensCharts } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useCreateChart, useDeleteChart } from "@/lib/api/chartApi";
 import { useParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useMemo } from "react";
 import { HeatmapChartWrapper } from "./types/HeatmapChartWrapper";
 import { ChartData } from "@/types/charts";
+import { TooltipButton } from "../ui/tooltip-button";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab } = useWorkspace();
@@ -17,39 +17,35 @@ export function ChartDisplay() {
     const { mutateAsync: createChart, isPending: isCreatingChart } = useCreateChart();
     const { mutate: deleteChart } = useDeleteChart();
 
-    const { data: charts, isLoading, isSuccess } = useQuery({
+    const { data: { lensCharts, unlinkedCharts } = { lensCharts: [], unlinkedCharts: [] }, isLoading, isSuccess } = useQuery({
         queryKey: ["lensCharts", workspaceId],
         queryFn: () => getOrCreateLensCharts(workspaceId as string, {
             workspaceId: workspaceId as string,
         }),
     });
 
-    const { data: unlinkedCharts } = useQuery({
-        queryKey: ["unlinkedCharts", workspaceId],
-        queryFn: () => getUnlinkedCharts(workspaceId as string),
-    });
+    const allCharts = useMemo(() => {
+        return [...(lensCharts || []), ...(unlinkedCharts || [])];
+    }, [lensCharts, unlinkedCharts]);
 
-    const { data: hasLinkedConfig } = useQuery({
-        queryKey: ["hasLinkedConfig", activeTab],
-        queryFn: () => getHasLinkedConfig(activeTab as string),
-        enabled: !!activeTab,
-    });
-    
+    const activeChart = useMemo(() => {
+        return allCharts?.find(c => c.id === activeTab);
+    }, [allCharts, activeTab]);
+
     // On load, set to the first chart
     const initial = useRef(true);
     useEffect(() => {
         if (isSuccess && initial.current) {
-            setActiveTab(charts[0].id);
+            setActiveTab(allCharts[0].id);
             initial.current = false;
         }
-    }, [isSuccess, charts, setActiveTab]);
-
+    }, [isSuccess, allCharts, setActiveTab]);
 
     const handleNewTab = async () => {
         const newChart = await createChart({
             chart: {
                 workspaceId: workspaceId as string,
-            }, 
+            },
         });
         setActiveTab(newChart.id);
     };
@@ -59,9 +55,6 @@ export function ChartDisplay() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
     );
-
-    const allCharts = [...(charts || []), ...(unlinkedCharts || [])];
-    const activeChart = allCharts?.find(c => c.id === activeTab);
 
     const handleCloseTab = (chartId: string) => {
         if (allCharts && allCharts.length > 1) {
@@ -104,31 +97,22 @@ export function ChartDisplay() {
                             </div>
                         ))}
                     </TabsList>
-                    <Button
+                    <TooltipButton
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
+                        tooltip={"Create a new chart"}
                         onClick={handleNewTab}
-                        disabled={activeTab === null || isCreatingChart || !hasLinkedConfig}
+                        disabled={activeTab === null || isCreatingChart || unlinkedCharts.length === 0}
                     >
                         <Plus className="h-4 w-4" />
-                    </Button>
+                    </TooltipButton>
                 </div>
 
                 <div className="flex-1 p-4 overflow-auto custom-scrollbar">
-                    {activeChart ? (
-                        <div className="flex h-full w-full p-4">
-                            <HeatmapChartWrapper chart={activeChart.data as ChartData} />
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-muted-foreground">
-                                {charts && charts.length === 0
-                                    ? "No charts available. Create a chart from a completion card."
-                                    : "Select a chart to run"}
-                            </p>
-                        </div>
-                    )}
+                    <div className="flex h-full w-full p-4">
+                        <HeatmapChartWrapper chart={activeChart?.data as ChartData} />
+                    </div>
                 </div>
             </Tabs>
         </div>

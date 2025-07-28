@@ -14,7 +14,6 @@ export interface SelectedComponent {
 }
 
 interface LensTransformerProps {
-    clickHandler: (tokenIndex: number, layerIndex: number) => void;
     clickedComponent: SelectedComponent | null;
     setClickedComponent: (component: SelectedComponent | null) => void;
     numTokens?: number;
@@ -159,7 +158,6 @@ const getDataFlowComponents = (
 
 
 export default function LensTransformer({ 
-    clickHandler,
     clickedComponent,
     setClickedComponent,
     numTokens = 2,
@@ -251,7 +249,6 @@ export default function LensTransformer({
                         layerIndex,
                         componentType
                     });
-                    clickHandler(tokenIndex, layerIndex);
                 });
         };
 
@@ -630,7 +627,7 @@ export default function LensTransformer({
             drawLayer(i);
         }
 
-    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, clickHandler, theme]);
+    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, theme]);
 
     // Separate effect to update highlighting without rebuilding the SVG
     useEffect(() => {
@@ -706,7 +703,6 @@ export default function LensTransformer({
                     clickedComponent={clickedComponent}
                     setHoveredComponent={setHoveredComponent}
                     setClickedComponent={setClickedComponent}
-                    clickHandler={clickHandler}
                     showFlowOnHover={showFlowOnHover}
                     highlightedComponents={highlightedComponents}
                     dimensions={{
@@ -743,7 +739,6 @@ export default function LensTransformer({
                     clickedComponent={clickedComponent}
                     setHoveredComponent={setHoveredComponent}
                     setClickedComponent={setClickedComponent}
-                    clickHandler={clickHandler}
                     showFlowOnHover={showFlowOnHover}
                     highlightedComponents={highlightedComponents}
                     dimensions={{

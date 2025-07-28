@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Token } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";

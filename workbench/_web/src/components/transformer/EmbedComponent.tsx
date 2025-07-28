@@ -13,7 +13,6 @@ interface EmbedComponentProps {
   clickedComponent: SelectedComponent | null;
   setHoveredComponent: (component: SelectedComponent | null) => void;
   setClickedComponent: (component: SelectedComponent | null) => void;
-  clickHandler: (tokenIndex: number, layerIndex: number) => void;
   showFlowOnHover: boolean;
   highlightedComponents: Set<string> | null;
   dimensions: {
@@ -41,7 +40,6 @@ export default function EmbedComponent({
   clickedComponent,
   setHoveredComponent,
   setClickedComponent,
-  clickHandler,
   showFlowOnHover,
   highlightedComponents,
   dimensions,
@@ -93,7 +91,6 @@ export default function EmbedComponent({
             layerIndex: 0,
             componentType: 'embed'
           });
-          clickHandler(tokenIndex, 0);
         });
     };
 
@@ -176,7 +173,7 @@ export default function EmbedComponent({
       }
     }
 
-  }, [numTokens, tokenLabels, theme, scale, dimensions, colors, showFlowOnHover, clickHandler]);
+  }, [numTokens, tokenLabels, theme, scale, dimensions, colors, showFlowOnHover]);
 
   // Separate effect to update highlighting
   useEffect(() => {

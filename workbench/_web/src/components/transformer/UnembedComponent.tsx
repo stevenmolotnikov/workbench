@@ -14,7 +14,6 @@ interface UnembedComponentProps {
   clickedComponent: SelectedComponent | null;
   setHoveredComponent: (component: SelectedComponent | null) => void;
   setClickedComponent: (component: SelectedComponent | null) => void;
-  clickHandler: (tokenIndex: number, layerIndex: number) => void;
   showFlowOnHover: boolean;
   highlightedComponents: Set<string> | null;
   dimensions: {
@@ -43,7 +42,6 @@ export default function UnembedComponent({
   clickedComponent,
   setHoveredComponent,
   setClickedComponent,
-  clickHandler,
   showFlowOnHover,
   highlightedComponents,
   dimensions,
@@ -95,7 +93,6 @@ export default function UnembedComponent({
             layerIndex: numLayers - 1,
             componentType: 'unembed'
           });
-          clickHandler(tokenIndex, numLayers - 1);
         });
     };
 
@@ -152,7 +149,7 @@ export default function UnembedComponent({
       }
     }
 
-  }, [numTokens, numLayers, unembedLabels, theme, scale, dimensions, colors, showFlowOnHover, clickHandler]);
+  }, [numTokens, numLayers, unembedLabels, theme, scale, dimensions, colors, showFlowOnHover]);
 
   // Separate effect to update highlighting
   useEffect(() => {

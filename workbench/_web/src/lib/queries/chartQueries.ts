@@ -16,7 +16,16 @@ import { eq, and, asc, notExists } from "drizzle-orm";
 
 
 export const setChartData = await withAuth(
-    async (user: User, chartId: string, chartData: ChartData): Promise<void> => {
+    async (user: User, chartId: string, configId: string, chartData: ChartData): Promise<void> => {
+
+        const hasLinkedConfig = await getHasLinkedConfig(chartId);
+        if (!hasLinkedConfig) {
+            await db.insert(chartConfigLinks).values({
+                chartId,
+                configId,
+            });
+        }
+
         await db.update(charts).set({ data: chartData }).where(eq(charts.id, chartId));
     }
 );
@@ -41,17 +50,20 @@ export const getLensCharts = await withAuth(
     }
 );
 
+
 export const getOrCreateLensCharts = await withAuth(
-    async (user: User, workspaceId: string, fallbackChart: NewChart): Promise<Chart[]> => {
+    async (user: User, workspaceId: string, fallbackChart: NewChart): Promise<{lensCharts: Chart[], unlinkedCharts: Chart[]}> => {
         const existingCharts = await getLensCharts(workspaceId);
+        const unlinkedCharts = await getUnlinkedCharts(workspaceId);
         
-        if (existingCharts.length > 0) {
-            return existingCharts;
+        // If there are unlinked charts, return that
+        if (unlinkedCharts.length > 0) {
+            return {lensCharts: existingCharts, unlinkedCharts: unlinkedCharts};
         }
 
         const [newChart] = await db.insert(charts).values(fallbackChart).returning();
 
-        return [newChart];
+        return {lensCharts: [], unlinkedCharts: [newChart]};
     }
 );
 
