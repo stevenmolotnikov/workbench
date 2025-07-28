@@ -10,27 +10,39 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils";
-import { useModels } from "@/hooks/useModels";
-import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getModels } from "@/lib/api/modelsApi";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 export function ModelSelector() {
-    const { baseModels, chatModels, isLoading } = useModels();
-    const { modelName, handleModelChange, initializeDefaultModel } = useSelectedModel();
+    const { selectedModel, setSelectedModel } = useWorkspace();
 
-    // Initialize default model when models are loaded
-    useEffect(() => {
-        if (!isLoading) {
-            initializeDefaultModel(baseModels, chatModels);
+    const { data: models = [], isLoading, isSuccess } = useQuery({
+        queryKey: ['models'],
+        queryFn: getModels,
+        refetchInterval: 120000,
+    });
+
+    const baseModels = models.filter(model => model.type === "base").map(model => model.name);
+    const chatModels = models.filter(model => model.type === "chat").map(model => model.name);
+
+    const handleModelChange = (modelName: string) => {
+        const model = models.find(model => model.name === modelName);
+        if (model) {
+            setSelectedModel(model);
         }
-    }, [baseModels, chatModels, isLoading, initializeDefaultModel]);
-
-    const handleChange = (name: string) => {
-        handleModelChange(name, baseModels);
     };
 
+    useEffect(() => {
+        if (isSuccess) {
+            const defaultModel = models[0];
+            setSelectedModel(defaultModel);
+        }
+    }, [isSuccess, models, setSelectedModel]);
+
     return (
-        <Select value={modelName} onValueChange={handleChange}>
+        <Select value={selectedModel?.name} onValueChange={handleModelChange}>
             <SelectTrigger className={cn("w-[220px]", {
                 "animate-pulse": isLoading
             })}>

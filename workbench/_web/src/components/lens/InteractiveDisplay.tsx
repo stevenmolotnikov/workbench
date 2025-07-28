@@ -7,7 +7,6 @@ import { LensConfigData } from "@/types/lens";
 import { useLensGrid } from "@/lib/api/chartApi";
 import { Button } from "../ui/button";
 import { ModelSelector } from "../ModelSelector";
-import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
@@ -23,8 +22,7 @@ import { useLensCharts } from "@/hooks/useLensCharts";
 
 export default function InteractiveDisplay({initialConfig}: {initialConfig: LensConfig}) {
     // Generate some sample labels
-    const { modelName } = useSelectedModel();
-
+    const { selectedModel } = useWorkspace();
     const [tokenData, setTokenData] = useState<Token[]>([]);
     const [predictions, setPredictions] = useState<string[]>([]);
     
@@ -38,7 +36,7 @@ export default function InteractiveDisplay({initialConfig}: {initialConfig: Lens
     const [sliderValues, setSliderValues] = useState<[number, number]>([0, 20]);
 
     const handleTokenize = async () => {
-        const tokens = await encodeText(activeChartConfig?.prompt || "", modelName);
+        const tokens = await encodeText(activeChartConfig?.prompt || "", selectedModel?.name || "");
         setTokenData(tokens);
     };
 
@@ -74,7 +72,7 @@ export default function InteractiveDisplay({initialConfig}: {initialConfig: Lens
             <div className="p-4 border-b">
                 <div className="flex items-center justify-between">
                     <h2 className="text-sm font-medium">Model</h2>
-
+                    {JSON.stringify(initialConfig)}
                     <ModelSelector />
                 </div>
             </div>

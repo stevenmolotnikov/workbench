@@ -3,6 +3,7 @@ import sseService from "@/lib/sseProvider";
 import type { LensConfigData } from "@/types/lens";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import type { Model } from "@/types/models";
 
 interface Prediction {
     idx: number;
@@ -34,4 +35,14 @@ export const useExecuteSelected = () => {
             toast.error(`Error: ${error}`);
         },
     });
+};
+
+export const getModels = async (): Promise<Model[]> => {
+    const response = await fetch(config.getApiUrl(config.endpoints.models));
+    
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
 };

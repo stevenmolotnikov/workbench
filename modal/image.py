@@ -1,8 +1,5 @@
 import modal
-import toml
-import os
-from pydantic import BaseModel
-from workbench._api.app.main import fastapi_app
+from workbench._api.main import fastapi_app
 
 
 dependencies = [

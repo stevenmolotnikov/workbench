@@ -15,3 +15,9 @@ export interface Prediction {
     probs: number[];
     texts: string[];
 }
+
+export interface Model {
+    name: string;
+    type: "chat" | "base";
+    n_layers: number;
+}

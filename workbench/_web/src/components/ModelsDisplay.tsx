@@ -1,9 +1,17 @@
 "use client";
 
-import { useModels } from "@/hooks/useModels";
+import { useQuery } from "@tanstack/react-query";
+import { getModels } from "@/lib/api/modelsApi";
 
 export function ModelsDisplay() {
-    const { models, baseModels, chatModels, isLoading, error } = useModels();
+    const { data: models = [], isLoading, error } = useQuery({
+        queryKey: ['models'],
+        queryFn: getModels,
+        refetchInterval: 120000,
+    });
+
+    const baseModels = models.filter(model => model.type === "base").map(model => model.name);
+    const chatModels = models.filter(model => model.type === "chat").map(model => model.name);
 
     if (isLoading) {
         return (
@@ -33,7 +41,7 @@ export function ModelsDisplay() {
                     <h3 className="font-medium text-primary/80 mb-2">Base Models ({baseModels.length})</h3>
                     {baseModels.length > 0 ? (
                         <div className="space-y-1">
-                            {baseModels.map((model) => (
+                            {baseModels.map((model: string) => (
                                 <div key={model} className="text-sm bg-background px-2 py-1 rounded border">
                                     {model}
                                 </div>
@@ -49,7 +57,7 @@ export function ModelsDisplay() {
                     <h3 className="font-medium text-primary/80 mb-2">Chat Models ({chatModels.length})</h3>
                     {chatModels.length > 0 ? (
                         <div className="space-y-1">
-                            {chatModels.map((model) => (
+                            {chatModels.map((model: string) => (
                                 <div key={model} className="text-sm bg-background px-2 py-1 rounded border">
                                     {model}
                                 </div>

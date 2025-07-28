@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Model } from '@/types/models';
 
 interface WorkspaceState {
     jobStatus: string;
@@ -10,6 +11,9 @@ interface WorkspaceState {
     
     userMode: 'learn' | 'experiment' | null;
     setUserMode: (mode: 'learn' | 'experiment') => void;
+
+    selectedModel: Model | null;
+    setSelectedModel: (model: Model | null) => void;
 }
 
 export const useWorkspace = create<WorkspaceState>()(
@@ -23,6 +27,9 @@ export const useWorkspace = create<WorkspaceState>()(
             
             userMode: null,
             setUserMode: (mode: 'learn' | 'experiment') => set({ userMode: mode }),
+
+            selectedModel: null,
+            setSelectedModel: (model: Model | null) => set({ selectedModel: model }),
         }),
         {
             name: 'workspace-storage',

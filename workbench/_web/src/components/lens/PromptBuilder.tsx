@@ -1,59 +1,19 @@
 "use client";
 
-import { Plus, Settings2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
-import { useSelectedModel } from "@/stores/useSelectedModel";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 
 import * as React from "react";
 
 import { CompletionCard } from "./CompletionCard";
-import { Button } from "@/components/ui/button";
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getLensConfigs } from "@/lib/queries/chartQueries";
 import { useCreateChartConfig } from "@/lib/api/configApi";
 import { NewChartConfig, LensConfig } from "@/db/schema";
+import { useWorkspace } from "@/stores/useWorkspace";
 
-
-export function DropdownMenuCheckboxes() {
-    const { tokenizeOnEnter, graphOnTokenize, setTokenizeOnEnter, setGraphOnTokenize } = useLensWorkspace();
-
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button size="icon">
-                    <Settings2 size={16} />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Completion Settings</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                    checked={tokenizeOnEnter}
-                    onCheckedChange={setTokenizeOnEnter}
-                >
-                    Tokenize on Enter
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                    checked={graphOnTokenize}
-                    onCheckedChange={setGraphOnTokenize}
-                >
-                    Graph on Tokenize
-                </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
 
 // Generate a unique name in the format "Untitled n"
 const generateCompletionCardName = (existingCompletions: LensConfig[]): string => {
@@ -71,7 +31,7 @@ const generateCompletionCardName = (existingCompletions: LensConfig[]): string =
 
 export function PromptBuilder() {
     const { workspaceId } = useParams();
-    const { modelName } = useSelectedModel();
+    const { selectedModel } = useWorkspace();
 
     const createChartConfigMutation = useCreateChartConfig();
 
@@ -81,11 +41,6 @@ export function PromptBuilder() {
     });
 
     async function createCompletion() {
-        if (!modelName) {
-            console.error("Missing model name");
-            return;
-        }
-        
         try {
             const chartConfig: NewChartConfig = {
                 type: "lens",
@@ -93,7 +48,7 @@ export function PromptBuilder() {
                 data: {
                     prompt: "",
                     name: generateCompletionCardName(chartConfigs || []),
-                    model: modelName,
+                    model: selectedModel?.name || "",
                     tokens: [],
                 },
             };
@@ -126,8 +81,6 @@ export function PromptBuilder() {
                                 <Plus size={16} />
                             )}
                         </TooltipButton>
-
-                        <DropdownMenuCheckboxes />
                     </div>
                 </div>
             </div>

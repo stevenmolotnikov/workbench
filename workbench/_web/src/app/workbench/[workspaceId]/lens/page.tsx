@@ -22,14 +22,12 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
-import { useSelectedModel } from "@/stores/useSelectedModel";
 import { useQuery } from "@tanstack/react-query";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
 
-    const { modelName } = useSelectedModel();
-    const { userMode } = useWorkspace();
+    const { userMode, selectedModel } = useWorkspace();
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
@@ -75,9 +73,10 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         queryFn: () => getOrCreateLensConfig(resolvedParams.workspaceId, {
             prompt: "",
             name: "Default Lens Config",
-            model: modelName,
+            model: selectedModel?.name || "",
             tokens: [],
         }),
+        enabled: !!selectedModel,
     });
 
     const [workbenchMode, setWorkbenchMode] = useState<"lens" | "patch">("lens");

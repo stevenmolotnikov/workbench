@@ -29,6 +29,7 @@ class ModelsConfig(BaseModel):
             {
                 "name": model.name,
                 "type": "chat" if model.chat else "base",
+                "n_layers" : model.config["n_layers"],
             }
             for model in self.models.values()
         ]

@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "@/components/lens/TokenArea";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { Input } from "@/components/ui/input";
 import { TooltipButton } from "../ui/tooltip-button";
 import { useExecuteSelected } from "@/lib/api/modelsApi";
@@ -32,11 +31,10 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
 
     // Workspace display state
     const [showTokenArea, setShowTokenArea] = useState(false);
-    const { tokenizeOnEnter } = useLensWorkspace();
     const showPredictionDisplay = predictions.length > 0;
 
-    const { mutateAsync: getExecuteSelected, isPending: loadingPredictions } = useExecuteSelected();
-    const { mutateAsync: updateChartConfigMutation, isPending: updatePending } = useUpdateChartConfig();
+    const { mutateAsync: getExecuteSelected } = useExecuteSelected();
+    const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
     const { mutateAsync: deleteChartConfigMutation, isPending: deletionPending } = useDeleteChartConfig();
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -66,7 +64,7 @@ export function CompletionCard({ initialConfig }: { initialConfig: LensConfig })
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (tokenizeOnEnter && e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleTokenize();
         }
