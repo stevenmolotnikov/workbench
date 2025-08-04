@@ -10,19 +10,12 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getModels } from "@/lib/api/modelsApi";
 import { useWorkspace } from "@/stores/useWorkspace";
+import useModels from "@/hooks/useModels";
 
 export function ModelSelector() {
     const { selectedModel, setSelectedModel } = useWorkspace();
-
-    const { data: models = [], isLoading, isSuccess } = useQuery({
-        queryKey: ['models'],
-        queryFn: getModels,
-        refetchInterval: 120000,
-    });
+    const { models, isLoading } = useModels();
 
     const baseModels = models.filter(model => model.type === "base").map(model => model.name);
     const chatModels = models.filter(model => model.type === "chat").map(model => model.name);
@@ -33,13 +26,6 @@ export function ModelSelector() {
             setSelectedModel(model);
         }
     };
-
-    useEffect(() => {
-        if (isSuccess) {
-            const defaultModel = models[0];
-            setSelectedModel(defaultModel);
-        }
-    }, [isSuccess, models, setSelectedModel]);
 
     return (
         <Select value={selectedModel?.name} onValueChange={handleModelChange}>

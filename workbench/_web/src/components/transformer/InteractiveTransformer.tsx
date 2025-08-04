@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
 import { useTheme } from "next-themes";
-import EmbedComponent from "./transformer/EmbedComponent";
-import UnembedComponent from "./transformer/UnembedComponent";
-import { ScrollArea, ScrollBar } from "./ui/scroll-area";
+import EmbedComponent from "./EmbedComponent";
+import UnembedComponent from "./UnembedComponent";
+import { ScrollArea, ScrollBar } from "../ui/scroll-area";
 
 export interface SelectedComponent {
     tokenIndex: number;
@@ -36,7 +36,7 @@ const getDataFlowComponents = (
     rowMode: boolean
 ): Set<string> => {
     const highlighted = new Set<string>();
-    
+
     const { tokenIndex, layerIndex, componentType } = selected;
 
     if (rowMode) {
@@ -51,13 +51,13 @@ const getDataFlowComponents = (
         highlighted.add(`unembed-${tokenIndex}`);
         return highlighted;
     }
-    
+
     // Embed components have no dependencies
     if (componentType === 'embed') {
         highlighted.add(`embed-${tokenIndex}`);
         return highlighted;
     }
-    
+
     // Unembed components see everything
     if (componentType === 'unembed') {
         for (let t = 0; t <= tokenIndex; t++) {
@@ -84,7 +84,7 @@ const getDataFlowComponents = (
         highlighted.add(`unembed-${tokenIndex}`);
         return highlighted;
     }
-    
+
     // For residual components
     if (componentType === 'resid') {
         // Add all previous layers
@@ -113,7 +113,7 @@ const getDataFlowComponents = (
             highlighted.add(`embed-${tokenIndex}`);
         }
     }
-    
+
     // For attention and MLP components: add all components in previous layers (all tokens)
     if (componentType === 'attn' || componentType === 'mlp') {
         for (let l = 0; l < layerIndex; l++) {
@@ -127,7 +127,7 @@ const getDataFlowComponents = (
             }
         }
     }
-    
+
     // For attention and MLP: add residual circles in current layer for previous tokens
     if (componentType === 'attn' || componentType === 'mlp') {
         for (let t = 0; t <= tokenIndex; t++) {
@@ -135,19 +135,19 @@ const getDataFlowComponents = (
         }
         // // Add the residual circle at the current token position
         highlighted.add(`resid-arrow-${tokenIndex}-${layerIndex}`);
-        
+
         // Add cross-token attention components to the current token
         for (let t = 0; t <= tokenIndex; t++) {
             highlighted.add(`cross-token-attn-${t}-${layerIndex}`);
         }
     }
-    
+
     // For MLP: also add the attention component at the same position
     if (componentType === 'mlp' && showAttn) {
         highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
         highlighted.add(`mlp-${tokenIndex}-${layerIndex}`);
     }
-    
+
     // For attention: include the attention component itself
     if (componentType === 'attn') {
         highlighted.add(`attn-${tokenIndex}-${layerIndex}`);
@@ -157,7 +157,7 @@ const getDataFlowComponents = (
 };
 
 
-export default function LensTransformer({ 
+export default function LensTransformer({
     clickedComponent,
     setClickedComponent,
     numTokens = 2,
@@ -174,14 +174,14 @@ export default function LensTransformer({
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [hoveredComponent, setHoveredComponent] = useState<SelectedComponent | null>(null);
-    
+
     const STROKE_BASE = theme === "dark" ? "#374151" : "#E5E7EB";
     const FILL_BASE = theme === "dark" ? "#1F2937" : "#F3F4F6";
-    
+
     // Theme-aware colors
     const COLORS = {
         purple: theme === "dark" ? "#A855F7" : "#8B5CF6",
-        red: theme === "dark" ? "#EF4444" : "#DC2626", 
+        red: theme === "dark" ? "#EF4444" : "#DC2626",
         green: theme === "dark" ? "#22C55E" : "#16A34A",
         blue: theme === "dark" ? "#3B82F6" : "#2563EB",
         fills: {
@@ -209,7 +209,7 @@ export default function LensTransformer({
         const startY = 50;
         const layersWidth = numLayers * layerWidth + 20; // +20 for padding (10 each side)
         const baseHeight = startY + numTokens * rowHeight + 20;
-        
+
         return {
             layerWidth,
             layersWidth,
@@ -256,10 +256,10 @@ export default function LensTransformer({
         d3.select(svgRef.current).selectAll("*").remove();
 
         const svg = d3.select(svgRef.current);
-        
+
         // Set SVG dimensions with scale - only for layers
         svg.attr("width", dimensions.layersWidth * scale).attr("height", dimensions.baseHeight * scale);
-        
+
         // Add background rect to capture mouse events on empty space
         if (showFlowOnHover) {
             svg.append("rect")
@@ -278,7 +278,7 @@ export default function LensTransformer({
 
         // Create a group for the visualization with scale transform
         const g = svg.append("g").attr("transform", `scale(${scale})`);
-        
+
         // Function to draw a single layer
         const drawLayer = (layerIndex: number) => {
             const layerStartX = 12 + (layerIndex - layerRange[0]) * dimensions.layerWidth; // Add 10px padding for circles
@@ -295,7 +295,7 @@ export default function LensTransformer({
                 const residCircleId = `resid-circle-${rowIndex}-${layerIndex}`;
                 const residArrowId = `resid-arrow-${rowIndex}-${layerIndex}`;
                 const residColor = COLORS.purple;
-                
+
                 const residCircle = g.append("circle")
                     .attr("cx", centerX)
                     .attr("cy", centerY)
@@ -307,7 +307,7 @@ export default function LensTransformer({
                     .attr("data-component-id", residCircleId)
                     .attr("fill", COLORS.fills.purple)
                     .style("cursor", showFlowOnHover ? "pointer" : "default");
-                
+
                 // Add hover and click handlers
                 if (showFlowOnHover) {
                     addComponentHandlers(residCircle, rowIndex, layerIndex, 'resid');
@@ -352,9 +352,9 @@ export default function LensTransformer({
                 const attnCrossTokenRadius = 20;
                 const attnComponentId = `attn-${rowIndex}-${layerIndex}`;
                 const attnColor = COLORS.red;
-                
+
                 // Cross-token arrows use red as default color
-                
+
                 if (showAttn && !isFirstRow) {
                     const attnCrossTokenRoundedPath = `M ${centerX} ${centerY - attnCrossTokenRadius} A ${attnCrossTokenRadius} ${attnCrossTokenRadius} 0 0 1 ${centerX} ${centerY + attnCrossTokenRadius}`;
                     // This semicircle is at the current row and connects to this row's attention
@@ -483,7 +483,7 @@ export default function LensTransformer({
                         .attr("data-component-id", attnComponentId)
                         .attr("fill", COLORS.fills.red)
                         .style("cursor", showFlowOnHover ? "pointer" : "default");
-                    
+
                     // Add hover and click handlers
                     if (showFlowOnHover) {
                         addComponentHandlers(attnRect, rowIndex, layerIndex, 'attn');
@@ -494,7 +494,7 @@ export default function LensTransformer({
                 if (showMlp) {
                     const mlpComponentId = `mlp-${rowIndex}-${layerIndex}`;
                     const mlpColor = COLORS.green;
-                    
+
                     // MLP in arrow line variables
                     const mlpInX = attnInXEnd + 25;
                     const mlpInYStart = residArrowY;
@@ -570,13 +570,13 @@ export default function LensTransformer({
                         .attr("data-component-id", mlpComponentId)
                         .attr("fill", COLORS.fills.green)
                         .style("cursor", showFlowOnHover ? "pointer" : "default");
-                    
+
                     // Add hover and click handlers
                     if (showFlowOnHover) {
                         addComponentHandlers(mlpRect, rowIndex, layerIndex, 'mlp');
                     }
                 }
-                
+
                 // Add row hitbox for easier selection in row mode
                 if (rowMode && showFlowOnHover) {
                     // Calculate hitbox dimensions for layers only
@@ -584,7 +584,7 @@ export default function LensTransformer({
                     const hitboxWidth = dimensions.layersWidth;
                     const hitboxY = centerY - dimensions.rowHeight / 2;
                     const hitboxHeight = dimensions.rowHeight;
-                    
+
                     // Create invisible rectangle for row selection
                     const rowHitbox = g.append("rect")
                         .attr("x", hitboxX)
@@ -594,7 +594,7 @@ export default function LensTransformer({
                         .attr("fill", "transparent")
                         .attr("stroke", "none")
                         .style("cursor", "pointer")
-                    
+
                     // Add handlers - use 'resid' as component type since it triggers row highlighting in row mode
                     addComponentHandlers(rowHitbox, rowIndex, layerIndex, 'resid');
                 }
@@ -607,21 +607,23 @@ export default function LensTransformer({
         };
 
         // Draw layer indices at the top
-        const layerLabelY = 20; // Position above the visualization
-        for (let i = layerRange[0]; i <= layerRange[1]; i++) {
-            const visualIndex = i - layerRange[0];
-            const layerCenterX = 12 + visualIndex * dimensions.layerWidth;
-            g.append("text")
-                .attr("x", layerCenterX)
-                .attr("y", layerLabelY)
-                .attr("text-anchor", "middle")
-                .attr("dominant-baseline", "middle")
-                .attr("font-size", "12px")
-                .attr("fill", theme === "dark" ? "#9CA3AF" : "#6B7280")
-                .attr("font-weight", "500")
-                .text(i);
+        if (numTokens > 0) {
+            const layerLabelY = 20; // Position above the visualization
+            for (let i = layerRange[0]; i <= layerRange[1]; i++) {
+                const visualIndex = i - layerRange[0];
+                const layerCenterX = 12 + visualIndex * dimensions.layerWidth;
+                g.append("text")
+                    .attr("x", layerCenterX)
+                    .attr("y", layerLabelY)
+                    .attr("text-anchor", "middle")
+                    .attr("dominant-baseline", "middle")
+                    .attr("font-size", "12px")
+                    .attr("fill", theme === "dark" ? "#9CA3AF" : "#6B7280")
+                    .attr("font-weight", "500")
+                    .text(i);
+            }
         }
-        
+
         // Draw all layers
         for (let i = layerRange[0]; i <= layerRange[1]; i++) {
             drawLayer(i);
@@ -632,23 +634,23 @@ export default function LensTransformer({
     // Separate effect to update highlighting without rebuilding the SVG
     useEffect(() => {
         if (!svgRef.current) return;
-        
+
         const svg = d3.select(svgRef.current);
         const g = svg.select("g");
         if (g.empty()) return;
-        
+
         // Update all component colors based on highlighting
-        g.selectAll("[data-component-id]").each(function() {
+        g.selectAll("[data-component-id]").each(function () {
             const element = d3.select(this);
             const componentId = element.attr("data-component-id");
             const componentType = element.attr("data-component-type");
-            
+
             if (!componentId || !componentType) return;
-            
+
             // Determine colors based on component type
             let defaultColor = COLORS.purple;
             let highlightedFillColor = COLORS.fills.purple;
-            
+
             if (componentType === "attn" || componentType === "cross-token") {
                 defaultColor = COLORS.red;
                 highlightedFillColor = COLORS.fills.red;
@@ -659,17 +661,17 @@ export default function LensTransformer({
                 defaultColor = COLORS.blue;
                 highlightedFillColor = COLORS.fills.blue;
             }
-            
+
             // Apply colors based on highlighting state
             // When highlightedComponents is null and showFlowOnHover is off, preserve current state
             // When highlightedComponents is null and showFlowOnHover is on, show all as highlighted
-            const isHighlighted = highlightedComponents 
-                ? highlightedComponents.has(componentId) 
+            const isHighlighted = highlightedComponents
+                ? highlightedComponents.has(componentId)
                 : (showFlowOnHover ? true : null); // null means preserve current state
-            
+
             // If isHighlighted is null, don't update colors (preserve current state)
             if (isHighlighted === null) return;
-            
+
             const pathColor = isHighlighted ? defaultColor : STROKE_BASE;
             const fillColor = isHighlighted ? highlightedFillColor : FILL_BASE;
 
@@ -687,7 +689,7 @@ export default function LensTransformer({
                     break;
             }
         });
-        
+
     }, [highlightedComponents, theme, showFlowOnHover]);
 
     return (
@@ -716,9 +718,9 @@ export default function LensTransformer({
                     fillBase={FILL_BASE}
                 />
             </div>
-            
+
             {/* Layers - scrollable */}
-            <ScrollArea 
+            <ScrollArea
                 ref={containerRef}
                 className="flex-shrink-0"
                 style={{ width: `${(3 * 210 + 1) * scale}px` }}
@@ -726,7 +728,7 @@ export default function LensTransformer({
                 <svg ref={svgRef}></svg>
                 <ScrollBar orientation="horizontal" className="hidden" />
             </ScrollArea>
-            
+
             {/* Unembed component - fixed width */}
             <div className="flex-shrink-0">
                 <UnembedComponent

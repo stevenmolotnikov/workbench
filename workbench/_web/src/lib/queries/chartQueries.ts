@@ -57,7 +57,7 @@ export const getOrCreateLensCharts = await withAuth(
         const unlinkedCharts = await getUnlinkedCharts(workspaceId);
         
         // If there are unlinked charts, return that
-        if (unlinkedCharts.length > 0) {
+        if (unlinkedCharts.length > 0 || existingCharts.length > 0) {
             return {lensCharts: existingCharts, unlinkedCharts: unlinkedCharts};
         }
 

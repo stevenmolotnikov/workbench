@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspace } from "@/lib/queries/workspaceQueries";
+import { createWorkspace, deleteWorkspace } from "@/lib/queries/workspaceQueries";
 import { setChartConfig } from "@/lib/queries/configQueries";
 import { NewChartConfig } from "@/db/schema";
 
@@ -18,6 +18,23 @@ export const useCreateWorkspace = () => {
         },
         onError: (error) => {
             console.error("Error creating workspace:", error);
+        },
+    });
+};
+
+export const useDeleteWorkspace = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ workspaceId }: { workspaceId: string }) => {
+            await deleteWorkspace(workspaceId);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+            console.log("Successfully deleted workspace");
+        },
+        onError: (error) => {
+            console.error("Error deleting workspace:", error);
         },
     });
 };

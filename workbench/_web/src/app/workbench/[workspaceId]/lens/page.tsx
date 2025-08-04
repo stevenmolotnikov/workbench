@@ -23,11 +23,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
+import useModels from "@/hooks/useModels";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
 
     const { userMode, selectedModel } = useWorkspace();
+    const { isLoading: isModelsLoading } = useModels();
+
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
@@ -101,6 +104,8 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
             </div>
         );
     }
+
+    console.log(chartConfig);
 
     return (
         <div className="flex flex-1 min-h-0">

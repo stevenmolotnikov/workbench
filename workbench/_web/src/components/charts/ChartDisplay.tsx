@@ -18,7 +18,7 @@ export function ChartDisplay() {
     const { mutate: deleteChart } = useDeleteChart();
 
     const { data: { lensCharts, unlinkedCharts } = { lensCharts: [], unlinkedCharts: [] }, isLoading, isSuccess } = useQuery({
-        queryKey: ["lensCharts", workspaceId],
+        queryKey: ["lensCharts"],
         queryFn: () => getOrCreateLensCharts(workspaceId as string, {
             workspaceId: workspaceId as string,
         }),
@@ -103,7 +103,7 @@ export function ChartDisplay() {
                         className="h-6 w-6"
                         tooltip={"Create a new chart"}
                         onClick={handleNewTab}
-                        disabled={activeTab === null || isCreatingChart || unlinkedCharts.length === 0}
+                        disabled={activeTab === null || isCreatingChart || unlinkedCharts.length > 0}
                     >
                         <Plus className="h-4 w-4" />
                     </TooltipButton>

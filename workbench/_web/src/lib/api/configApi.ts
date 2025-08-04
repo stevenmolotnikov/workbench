@@ -10,7 +10,7 @@ export const useCreateChartConfig = () => {
             await addChartConfig(chartConfig);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensChartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
         },
         onError: (error) => {
             console.error("Error generating completion:", error);
@@ -26,7 +26,7 @@ export const useDeleteChartConfig = () => {
             await deleteChartConfig(configId);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensChartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
         },
         onError: (error) => {
             console.error("Error deleting completion:", error);
@@ -42,7 +42,7 @@ export const useUpdateChartConfig = () => {
             await setChartConfig(configId, config);
         },
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["lensChartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             console.log("Successfully updated chart config");
         },
         onError: (error) => {

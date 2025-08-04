@@ -8,17 +8,29 @@ import { WorkspaceHeader } from "@/components/WorkspaceHeader";
 import { UserModeDialog } from "@/components/UserModeDialog";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/stores/useWorkspace";
+import { useDeleteWorkspace } from "@/lib/api/workspaceApi";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 // Force dynamic rendering to avoid build-time database queries
 export const dynamic = 'force-dynamic';
 
 export default function WorkbenchPage() {
     const { userMode } = useWorkspace();
+    const deleteWorkspaceMutation = useDeleteWorkspace();
 
     const { data: workspaces } = useQuery({
         queryKey: ["workspaces"],
         queryFn: () => getWorkspaces()
     });
+
+    const handleDeleteWorkspace = (e: React.MouseEvent, workspaceId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm("Are you sure you want to delete this workspace?")) {
+            deleteWorkspaceMutation.mutate({ workspaceId });
+        }
+    };
 
     return (
         <>
@@ -50,15 +62,25 @@ export default function WorkbenchPage() {
                                     <div>
                                         <h3 className="font-semibold text-lg">{workspace.name}</h3>
                                     </div>
-                                    <div className="text-right">
-                                        {workspace.public && (
-                                            <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mb-1">
-                                                Public
-                                            </span>
-                                        )}
-                                        <p className="text-xs text-muted-foreground">
-                                            {workspace.id}
-                                        </p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-right">
+                                            {workspace.public && (
+                                                <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full mb-1">
+                                                    Public
+                                                </span>
+                                            )}
+                                            <p className="text-xs text-muted-foreground">
+                                                {workspace.id}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => handleDeleteWorkspace(e, workspace.id)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </div>
                             </Link>
