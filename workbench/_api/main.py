@@ -8,7 +8,7 @@ from .state import AppState
 
 ALLOWED_ORIGINS = [
     "https://interp-workbench.vercel.app",
-    "http://0.0.0.0:3000"
+    "http://localhost:3000"
 ]
 
 
