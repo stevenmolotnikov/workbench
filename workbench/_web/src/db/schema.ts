@@ -1,15 +1,11 @@
-import { boolean, jsonb, pgTable, varchar, uuid, integer, index, unique, timestamp } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, varchar, uuid, timestamp } from "drizzle-orm/pg-core";
 import type { ChartConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfigData } from "@/types/lens";
-import { users } from "./authSchema";
-
-// Re-export auth tables from authSchema
-export { users, accounts, sessions, verificationTokens, authenticators } from "./authSchema";
 
 export const workspaces = pgTable("workspaces", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: varchar("user_id", { length: 256 }).references(() => users.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 256 }).notNull(),
     name: varchar("name", { length: 256 }).notNull(),
     public: boolean("public").default(false).notNull(),
 });
@@ -48,10 +44,6 @@ export const chartConfigLinks = pgTable("chart_config_links", {
     configId: uuid("config_id").references(() => chartConfigs.id, { onDelete: "cascade" }).notNull(),
 });
 
-// Index on chart config and chart ids
-// export const chartsWorkspaceIdIdx = index("charts_workspace_id_idx").on(charts.workspaceId);
-// export const chartConfigsChartIdIdx = index("chart_configs_chart_id_idx").on(chartConfigs.chartId);
-
 export const annotationTypes = ["point", "heatmap", "token", "range"] as const;
 
 export const annotations = pgTable("annotations", {
@@ -70,9 +62,6 @@ export const annotationGroups = pgTable("annotation_groups", {
 });
 
 // Generate types from schema
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
 export type Workspace = typeof workspaces.$inferSelect;
 export type NewWorkspace = typeof workspaces.$inferInsert;
 
