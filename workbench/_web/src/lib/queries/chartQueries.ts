@@ -2,7 +2,7 @@
 
 import { ChartData } from "@/types/charts";
 import { db } from "@/db/client";
-import { charts, chartConfigs, chartConfigLinks, NewChart, Chart, LensConfig } from "@/db/schema";
+import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
 import { eq, and, asc, notExists } from "drizzle-orm";
 
@@ -28,8 +28,8 @@ export const getLensCharts = async (workspaceId: string): Promise<Chart[]> => {
         .select()
         .from(charts)
         .innerJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
-        .innerJoin(chartConfigs, eq(chartConfigLinks.configId, chartConfigs.id))
-        .where(and(eq(charts.workspaceId, workspaceId), eq(chartConfigs.type, "lens")));
+        .innerJoin(configs, eq(chartConfigLinks.configId, configs.id))
+        .where(and(eq(charts.workspaceId, workspaceId), eq(configs.type, "lens")));
 
     return chartsData.map(({ charts }) => charts);
 };
@@ -52,13 +52,13 @@ export const getOrCreateLensCharts = async (
 };
 
 export const getLensConfigs = async (workspaceId: string): Promise<LensConfig[]> => {
-    const chartConfigsData = await db
+    const configsData = await db
         .select()
-        .from(chartConfigs)
-        .where(and(eq(chartConfigs.workspaceId, workspaceId), eq(chartConfigs.type, "lens")))
-        .orderBy(asc(chartConfigs.createdAt));
+        .from(configs)
+        .where(and(eq(configs.workspaceId, workspaceId), eq(configs.type, "lens")))
+        .orderBy(asc(configs.createdAt));
 
-    return chartConfigsData as LensConfig[];
+    return configsData as LensConfig[];
 };
 
 export const createChart = async (chart: NewChart): Promise<Chart> => {
@@ -76,9 +76,9 @@ export const getOrCreateLensConfig = async (
 ): Promise<LensConfig> => {
     const existingConfigs = await db
         .select()
-        .from(chartConfigs)
-        .where(and(eq(chartConfigs.workspaceId, workspaceId), eq(chartConfigs.type, "lens")))
-        .orderBy(asc(chartConfigs.createdAt))
+        .from(configs)
+        .where(and(eq(configs.workspaceId, workspaceId), eq(configs.type, "lens")))
+        .orderBy(asc(configs.createdAt))
         .limit(1);
 
     if (existingConfigs.length > 0) {
@@ -86,7 +86,7 @@ export const getOrCreateLensConfig = async (
     }
 
     const [newConfig] = await db
-        .insert(chartConfigs)
+        .insert(configs)
         .values({
             workspaceId,
             type: "lens",

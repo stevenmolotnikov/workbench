@@ -1,13 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addChartConfig, deleteChartConfig, setChartConfig } from "@/lib/queries/configQueries";
-import { NewChartConfig } from "@/db/schema";
+import { addConfig, deleteConfig, setConfig } from "@/lib/queries/configQueries";
+import { NewConfig } from "@/db/schema";
 
 export const useCreateChartConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ chartConfig }: { chartConfig: NewChartConfig }) => {
-            await addChartConfig(chartConfig);
+        mutationFn: async ({ config }: { config: NewConfig }) => {
+            await addConfig(config);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
@@ -23,7 +23,7 @@ export const useDeleteChartConfig = () => {
 
     return useMutation({
         mutationFn: async ({ configId }: { configId: string }) => {
-            await deleteChartConfig(configId);
+            await deleteConfig(configId);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
@@ -38,8 +38,8 @@ export const useUpdateChartConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ configId, config }: { configId: string; config: NewChartConfig }) => {
-            await setChartConfig(configId, config);
+        mutationFn: async ({ configId, config }: { configId: string; config: NewConfig }) => {
+            await setConfig(configId, config);
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });

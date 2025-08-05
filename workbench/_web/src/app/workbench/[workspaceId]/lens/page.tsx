@@ -28,7 +28,7 @@ import useModels from "@/hooks/useModels";
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
 
-    const { userMode, selectedModel } = useWorkspace();
+    const { selectedModel } = useWorkspace();
     const { isLoading: isModelsLoading } = useModels();
 
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
@@ -137,13 +137,13 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     className="flex flex-1 min-h-0 h-full"
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
-                        {userMode === "learn" && !isChartConfigLoading ? (
+                        {{userMode === "learn" && !isChartConfigLoading ? (
                             <InteractiveDisplay initialConfig={chartConfig} />
                         ) : (
                             <ScrollArea className="h-full">
                                 <PromptBuilder />
                             </ScrollArea>
-                        )}
+                        )}}
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel defaultSize={50} minSize={30}>

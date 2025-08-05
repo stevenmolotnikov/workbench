@@ -2,29 +2,29 @@
 
 import { db } from "@/db/client";
 import { eq } from "drizzle-orm";
-import { chartConfigs, NewChartConfig, ChartConfig, chartConfigLinks } from "@/db/schema";
+import { configs, NewConfig, Config, chartConfigLinks } from "@/db/schema";
 
-export const setChartConfig = async (configId: string, config: NewChartConfig): Promise<void> => {
-    await db.update(chartConfigs).set(config).where(eq(chartConfigs.id, configId));
+export const setConfig = async (configId: string, config: NewConfig): Promise<void> => {
+    await db.update(configs).set(config).where(eq(configs.id, configId));
 };
 
-export const addChartConfig = async (config: NewChartConfig): Promise<void> => {
-    await db.insert(chartConfigs).values(config);
+export const addConfig = async (config: NewConfig): Promise<void> => {
+    await db.insert(configs).values(config);
 };
 
-export const deleteChartConfig = async (configId: string): Promise<void> => {
-    await db.delete(chartConfigs).where(eq(chartConfigs.id, configId));
+export const deleteConfig = async (configId: string): Promise<void> => {
+    await db.delete(configs).where(eq(configs.id, configId));
 };
 
 export const addChartConfigLink = async (configId: string, chartId: string): Promise<void> => {
     await db.insert(chartConfigLinks).values({ configId, chartId });
 };
 
-export const getChartConfigs = async (chartId: string): Promise<ChartConfig[]> => {
-    const chartConfigsData = await db
+export const getConfigs = async (chartId: string): Promise<Config[]> => {
+    const configsData = await db
         .select()
-        .from(chartConfigs)
-        .innerJoin(chartConfigLinks, eq(chartConfigs.id, chartConfigLinks.configId))
+        .from(configs)
+        .innerJoin(chartConfigLinks, eq(configs.id, chartConfigLinks.configId))
         .where(eq(chartConfigLinks.chartId, chartId));
-    return chartConfigsData.map((data) => data.chart_configs);
+    return configsData.map((data) => data.configs);
 };

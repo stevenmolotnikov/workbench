@@ -15,8 +15,6 @@ export default async function WorkbenchPage() {
         redirect("/login");
     }
 
-    
-
     return (
         <>
             <div className="p-6">

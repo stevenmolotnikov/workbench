@@ -33,4 +33,4 @@ export interface LineGraphData {
 }
 
 export type ChartData = LineGraphData | HeatmapData;
-export type ChartConfigData = LensConfigData | PatchingConfig;
+export type ConfigData = LensConfigData | PatchingConfig;

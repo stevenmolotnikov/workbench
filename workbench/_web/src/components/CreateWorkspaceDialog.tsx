@@ -16,7 +16,11 @@ import { Label } from "@/components/ui/label";
 import { useCreateWorkspace } from "@/lib/api/workspaceApi";
 import { useRouter } from "next/navigation";
 
-export function CreateWorkspaceDialog() {
+interface CreateWorkspaceDialogProps {
+    userId: string;
+}
+
+export function CreateWorkspaceDialog({ userId }: CreateWorkspaceDialogProps) {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState("");
     const router = useRouter();
@@ -28,6 +32,7 @@ export function CreateWorkspaceDialog() {
 
         try {
             const newWorkspace = await createWorkspaceMutation.mutateAsync({
+                userId,
                 name: name.trim(),
             });
             setOpen(false);

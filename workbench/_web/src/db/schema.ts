@@ -1,5 +1,5 @@
 import { boolean, jsonb, pgTable, varchar, uuid, timestamp } from "drizzle-orm/pg-core";
-import type { ChartConfigData, ChartData } from "@/types/charts";
+import type { ConfigData, ChartData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfigData } from "@/types/lens";
 
@@ -19,9 +19,9 @@ export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
-    // Data used to display the chart
     data: jsonb("data").$type<ChartData>(),
     type: varchar("type", { enum: chartTypes, length: 32 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const configTypes = [
@@ -29,11 +29,11 @@ export const configTypes = [
     "patch",
 ] as const;
 
-export const chartConfigs = pgTable("chart_configs", {
+export const configs = pgTable("configs", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
-    data: jsonb("data").$type<ChartConfigData>().notNull(),
+    data: jsonb("data").$type<ConfigData>().notNull(),
     type: varchar("type", { enum: configTypes, length: 32 }).notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -41,24 +41,13 @@ export const chartConfigs = pgTable("chart_configs", {
 export const chartConfigLinks = pgTable("chart_config_links", {
     id: uuid("id").primaryKey().defaultRandom(),
     chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull(),
-    configId: uuid("config_id").references(() => chartConfigs.id, { onDelete: "cascade" }).notNull(),
+    configId: uuid("config_id").references(() => configs.id, { onDelete: "cascade" }).notNull(),
 });
-
-export const annotationTypes = ["point", "heatmap", "token", "range"] as const;
 
 export const annotations = pgTable("annotations", {
     id: uuid("id").primaryKey().defaultRandom(),
     chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull(),
-    groupId: uuid("group_id").references(() => annotationGroups.id, { onDelete: "set null" }),
-    
-    type: varchar("type", { enum: annotationTypes, length: 32 }).notNull(),
     data: jsonb("data").$type<AnnotationData>().notNull(),
-});
-
-export const annotationGroups = pgTable("annotation_groups", {
-    id: uuid("id").primaryKey().defaultRandom(),
-    chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 256 }),
 });
 
 // Generate types from schema
@@ -68,22 +57,16 @@ export type NewWorkspace = typeof workspaces.$inferInsert;
 export type Chart = typeof charts.$inferSelect;
 export type NewChart = typeof charts.$inferInsert;
 
-export type ChartConfig = typeof chartConfigs.$inferSelect;
-export type NewChartConfig = typeof chartConfigs.$inferInsert;
+export type Config = typeof configs.$inferSelect;
+export type NewConfig = typeof configs.$inferInsert;
 
 export type ChartConfigLink = typeof chartConfigLinks.$inferSelect;
 export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
-export type AnnotationRow = typeof annotations.$inferSelect;
+export type Annotation = typeof annotations.$inferSelect;
 export type NewAnnotation = typeof annotations.$inferInsert;
 
-export type AnnotationGroup = typeof annotationGroups.$inferSelect;
-export type NewAnnotationGroup = typeof annotationGroups.$inferInsert;
-
-// Full annotation type (matches the interface in @/types/annotations)
-export type Annotation = AnnotationRow;
-
 // Specific chart config types
-export type LensConfig = Omit<ChartConfig, 'data'> & {
+export type LensConfig = Omit<Config, 'data'> & {
     data: LensConfigData;
 };

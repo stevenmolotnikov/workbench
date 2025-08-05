@@ -24,7 +24,7 @@ export function WorkspaceList({ userId }: WorkspaceListProps) {
         e.preventDefault();
         e.stopPropagation();
         if (confirm("Are you sure you want to delete this workspace?")) {
-            deleteWorkspaceMutation.mutate({ workspaceId });
+            deleteWorkspaceMutation.mutate({ userId, workspaceId });
         }
     };
 
@@ -39,7 +39,7 @@ export function WorkspaceList({ userId }: WorkspaceListProps) {
     return (
         <>
             <div className="flex justify-end mb-6">
-                <CreateWorkspaceDialog />
+                <CreateWorkspaceDialog userId={userId} />
             </div>
             
             {!workspaces || workspaces.length === 0 ? (

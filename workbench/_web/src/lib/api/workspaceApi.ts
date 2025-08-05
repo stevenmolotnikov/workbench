@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createWorkspace, deleteWorkspace } from "@/lib/queries/workspaceQueries";
-import { setChartConfig } from "@/lib/queries/configQueries";
-import { NewChartConfig } from "@/db/schema";
+import { setConfig } from "@/lib/queries/configQueries";
+import { NewConfig } from "@/db/schema";
 
 export const useCreateWorkspace = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ name }: { name: string }) => {
+        mutationFn: async ({ userId, name }: { userId: string; name: string }) => {
             // This calls the server action which handles authentication
-            const newWorkspace = await createWorkspace(name);
+            const newWorkspace = await createWorkspace(userId, name);
             return newWorkspace;
         },
         onSuccess: () => {
@@ -26,8 +26,8 @@ export const useDeleteWorkspace = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ workspaceId }: { workspaceId: string }) => {
-            await deleteWorkspace(workspaceId);
+        mutationFn: async ({ userId, workspaceId }: { userId: string; workspaceId: string }) => {
+            await deleteWorkspace(userId, workspaceId);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["workspaces"] });
@@ -43,8 +43,8 @@ export const useUpdateChartConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ configId, config }: { configId: string; config: NewChartConfig }) => {
-            await setChartConfig(configId, config);
+        mutationFn: async ({ configId, config }: { configId: string; config: NewConfig }) => {
+            await setConfig(configId, config);
         },
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });

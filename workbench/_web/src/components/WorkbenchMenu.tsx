@@ -13,7 +13,6 @@ import {
 import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
 import { useAnnotations } from "@/stores/useAnnotations";
 // import { TutorialsToggle } from "./TutorialsToggle";
-import { WorkspaceSettingsPopover } from "./WorkspaceSettingsPopover";
 
 interface WorkbenchModeProps {
     tutorialsOpen: boolean;
@@ -60,7 +59,6 @@ export function WorkbenchMenu({
             </div>
             <div className="flex items-center gap-2">
                 <StatusUpdatesDisplay />
-                {workspaceId && <WorkspaceSettingsPopover workspaceId={workspaceId} />}
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <FileText size={16} />
                     Export

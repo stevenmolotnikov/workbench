@@ -43,13 +43,12 @@ export const deleteWorkspace = async (userId: string, workspaceId: string) => {
 };
 
 // Wrapped versions for use with server actions/components that use withAuth
-export const createWorkspace = async (userId: string, name: string, isPublic: boolean = false) => {
+export const createWorkspace = async (userId: string, name: string) => {
     const [workspace] = await db
         .insert(workspaces)
         .values({
             userId,
             name,
-            public: isPublic,
         })
         .returning();
 
