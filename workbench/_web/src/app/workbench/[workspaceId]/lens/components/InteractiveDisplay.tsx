@@ -1,60 +1,28 @@
 import { useState } from "react";
 import LensTransformer, { SelectedComponent } from "@/components/transformer/InteractiveTransformer";
-import { Textarea } from "@/components/ui/textarea";
 import { encodeText } from "@/actions/tokenize";
 import { LensConfigData } from "@/types/lens";
-import { Button } from "../ui/button";
-import { ModelSelector } from "../ModelSelector";
+import { Button } from "@/components/ui/button";
+import { ModelSelector } from "@/components/ModelSelector";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DoubleSlider } from "../ui/double-slider";
-import { TokenArea } from "./TokenArea";
+import { DoubleSlider } from "@/components/ui/double-slider";
 import { Token } from "@/types/models";
 import { LensConfig } from "@/db/schema";
+import { CompletionCard } from "./CompletionCard";
 import { useLensCharts } from "@/hooks/useLensCharts";
 
 export default function InteractiveDisplay({ initialConfig }: { initialConfig: LensConfig }) {
     // Generate some sample labels
     const { selectedModel } = useWorkspace();
     const [tokenData, setTokenData] = useState<Token[]>([]);
-    const [predictions, setPredictions] = useState<string[]>([]);
-
     const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
     const [showFlow, setShowFlow] = useState(false);
-    const [activeChartConfig, setActiveChartConfig] = useState<LensConfigData>(initialConfig.data);
 
-    const { handleCreateHeatmap } = useLensCharts({ config: activeChartConfig, configId: initialConfig.id });
+    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
 
     // Two-knob slider state
     const [sliderValues, setSliderValues] = useState<[number, number]>([0, selectedModel?.n_layers || 0]);
-
-    const handleTokenize = async () => {
-        const tokens = await encodeText(activeChartConfig?.prompt || "", selectedModel?.name || "");
-        setTokenData(tokens);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleTokenize();
-        }
-    };
-
-    const handleHeatmap = async () => {
-        const data = await handleCreateHeatmap();
-        if (data) {
-            setPredictions(data.labels[data.labels.length - 1]);
-        }
-    }
-
-    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        if (!activeChartConfig) return;
-
-        setActiveChartConfig({
-            ...activeChartConfig,
-            prompt: e.target.value,
-        });
-    };
 
     const handleSliderChange = (value: [number, number]) => {
         setSliderValues(value);
@@ -69,56 +37,11 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                 </div>
             </div>
 
-            <div className="p-4 border-b">
-                <div className="flex relative">
-
-                    {!(tokenData.length > 0) ? (
-                        <Textarea
-                            value={activeChartConfig?.prompt || ""}
-                            onChange={handlePromptChange}
-                            onKeyDown={handleKeyDown}
-                            className="h-24 resize-none"
-                            placeholder="Enter your prompt here."
-                            id="completion-text"
-                            disabled={!activeChartConfig}
-                        />
-                    ) : (
-                        <div
-                            className="flex flex-col w-full px-3 py-2 border rounded h-24 overflow-y-auto"
-                        >
-                            <TokenArea
-                                config={activeChartConfig}
-                                setConfig={setActiveChartConfig}
-                                tokenData={tokenData}
-                                showPredictionDisplay={false}
-                            />
-                        </div>
-                    )}
-
-                    <div className="flex gap-2 absolute bottom-2 right-2">
-                        {(tokenData.length === 0) ? (
-                            <Button
-                                variant="outline"
-                                onClick={() => handleTokenize()}
-                            >
-                                Tokenize
-                            </Button>) : (
-                            <Button
-                                variant="outline"
-                                onClick={() => setTokenData([])}
-                            >
-                                Clear
-                            </Button>)}
-                        <Button
-                            onClick={() => handleHeatmap()}
-                        >
-                            Run
-                        </Button>
-                    </div>
-                </div>
+            <div className="p-4">
+                <CompletionCard config={config} setConfig={setConfig} configId={initialConfig.id} />
             </div>
 
-            <div className="p-4 h-full overflow-auto flex flex-col">
+            <div className="px-4 pb-4 h-full overflow-auto flex flex-col">
                 <div className="flex gap-2 p-4 border-t border-x rounded-t">
                     <DoubleSlider
                         value={sliderValues}
@@ -161,7 +84,6 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                         scale={0.6}
                         showFlowOnHover={showFlow}
                         tokenLabels={tokenData.map((token) => token.text)}
-                        unembedLabels={predictions}
                     />
                 </ScrollArea>
             </div>

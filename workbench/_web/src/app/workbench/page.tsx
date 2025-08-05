@@ -1,9 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { ModelsDisplay } from "@/components/ModelsDisplay";
-import { WorkspaceList } from "@/components/WorkspaceList";
-import { LogoutButton } from "@/components/LogoutButton";
+import { ModelsDisplay } from "@/app/workbench/components/ModelsDisplay";
+import { WorkspaceList } from "@/app/workbench/components/WorkspaceList";
+import { LogoutButton } from "@/app/workbench/components/LogoutButton";
 import { redirect } from "next/navigation";
 
 export default async function WorkbenchPage() {

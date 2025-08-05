@@ -11,7 +11,6 @@ import { useTour } from "@reactour/tour";
 import { PatchingWorkbench } from "@/components/connections/PatchingWorkbench";
 
 import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
-import { getCurrentUser } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { HeatmapChartWrapper } from "@/components/charts/types/HeatmapChartWrapper";
@@ -25,30 +24,30 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
     const { setIsOpen } = useTour();
     const router = useRouter();
 
-    useEffect(() => {
-        async function checkAccess() {
-            try {
-                // Try to get the workspace
-                const workspace = await getWorkspaceById(resolvedParams.workspaceId);
-                setHasAccess(true);
-            } catch (error) {
-                console.error("Access check failed:", error);
-                // Check if user is logged in
-                const user = await getCurrentUser();
-                if (!user) {
-                    // Redirect to login with this workspace as the redirect target
-                    router.push(`/login?redirect=/workbench/${resolvedParams.workspaceId}`);
-                } else {
-                    // User is logged in but doesn't have access
-                    setHasAccess(false);
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        }
+    // useEffect(() => {
+    //     async function checkAccess() {
+    //         try {
+    //             // Try to get the workspace
+    //             const workspace = await getWorkspaceById(resolvedParams.workspaceId);
+    //             setHasAccess(true);
+    //         } catch (error) {
+    //             console.error("Access check failed:", error);
+    //             // Check if user is logged in
+    //             const user = await getUser();
+    //             if (!user) {
+    //                 // Redirect to login with this workspace as the redirect target
+    //                 router.push(`/login?redirect=/workbench/${resolvedParams.workspaceId}`);
+    //             } else {
+    //                 // User is logged in but doesn't have access
+    //                 setHasAccess(false);
+    //             }
+    //         } finally {
+    //             setIsLoading(false);
+    //         }
+    //     }
 
-        checkAccess();
-    }, [resolvedParams.workspaceId, router]);
+    //     checkAccess();
+    // }, [resolvedParams.workspaceId, router]);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);

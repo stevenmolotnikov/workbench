@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { LensConfigData } from "@/types/lens";
 import { Prediction, Token } from "@/types/models";
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 interface PredictionBadgesProps {

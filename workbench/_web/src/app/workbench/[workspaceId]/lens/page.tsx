@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, use } from "react";
+import { useState, useCallback, use } from "react";
 import { WorkbenchMenu } from "@/components/WorkbenchMenu";
-import InteractiveDisplay from "@/components/lens/InteractiveDisplay";
-import { PromptBuilder } from "@/components/lens/PromptBuilder";
+import InteractiveDisplay from "./components/InteractiveDisplay";
 
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 
@@ -15,11 +14,7 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 
-import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
-import { getCurrentUser } from "@/lib/session";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
@@ -29,38 +24,10 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
     const resolvedParams = use(params);
 
     const { selectedModel } = useWorkspace();
-    const { isLoading: isModelsLoading } = useModels();
+    const {} = useModels();
 
     const [tutorialsOpen, setTutorialsOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [hasAccess, setHasAccess] = useState(false);
     const { setIsOpen } = useTour();
-    const router = useRouter();
-
-    useEffect(() => {
-        async function checkAccess() {
-            try {
-                // Try to get the workspace
-                const workspace = await getWorkspaceById(resolvedParams.workspaceId);
-                setHasAccess(true);
-            } catch (error) {
-                console.error("Access check failed:", error);
-                // Check if user is logged in
-                const user = await getCurrentUser();
-                if (!user) {
-                    // Redirect to login with this workspace as the redirect target
-                    router.push(`/login?redirect=/workbench/${resolvedParams.workspaceId}`);
-                } else {
-                    // User is logged in but doesn't have access
-                    setHasAccess(false);
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        checkAccess();
-    }, [resolvedParams.workspaceId, router]);
 
     const toggleTutorials = useCallback(() => {
         setTutorialsOpen(!tutorialsOpen);
@@ -71,41 +38,20 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         setTutorialsOpen(false);
     }, [setIsOpen]);
 
-    const { data: chartConfig, isLoading: isChartConfigLoading } = useQuery({
+    const defaultConfig = {
+        prompt: "",
+        name: "Default Lens Config",
+        model: selectedModel?.name || "",
+        tokens: [],
+    }
+
+    const { data: chartConfig, isSuccess: isChartConfigSuccess } = useQuery({
         queryKey: ["chartConfig", resolvedParams.workspaceId],
-        queryFn: () => getOrCreateLensConfig(resolvedParams.workspaceId, {
-            prompt: "",
-            name: "Default Lens Config",
-            model: selectedModel?.name || "",
-            tokens: [],
-        }),
+        queryFn: () => getOrCreateLensConfig(resolvedParams.workspaceId, defaultConfig),
         enabled: !!selectedModel,
     });
 
     const [workbenchMode, setWorkbenchMode] = useState<"lens" | "patch">("lens");
-
-    if (isLoading) {
-        return (
-            <div className="flex flex-1 items-center justify-center">
-                <div className="text-center">
-                    <p className="text-muted-foreground">Loading workspace...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!hasAccess) {
-        return (
-            <div className="flex flex-1 items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
-                    <p className="text-muted-foreground">You don't have permission to access this workspace.</p>
-                </div>
-            </div>
-        );
-    }
-
-    console.log(chartConfig);
 
     return (
         <div className="flex flex-1 min-h-0">
@@ -137,13 +83,9 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     className="flex flex-1 min-h-0 h-full"
                 >
                     <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
-                        {{userMode === "learn" && !isChartConfigLoading ? (
+                        {isChartConfigSuccess &&
                             <InteractiveDisplay initialConfig={chartConfig} />
-                        ) : (
-                            <ScrollArea className="h-full">
-                                <PromptBuilder />
-                            </ScrollArea>
-                        )}}
+                        }
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel defaultSize={50} minSize={30}>

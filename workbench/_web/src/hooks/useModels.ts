@@ -1,6 +1,6 @@
 import { getModels } from "@/lib/api/modelsApi";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useWorkspace } from "@/stores/useWorkspace";
 
 const useModels = () => {
@@ -12,10 +12,15 @@ const useModels = () => {
         refetchInterval: 120000,
     });
 
+    // On the first successful fetch, set the default model
+    const initialized = useRef(false);
     useEffect(() => {
-        if (isSuccess) {
+        if (isSuccess && !initialized.current) {
             const defaultModel = models[0];
             setSelectedModel(defaultModel);
+            initialized.current = true;
+
+            console.log("Default model set:", defaultModel);
         }
     }, [isSuccess, models, setSelectedModel]);
 

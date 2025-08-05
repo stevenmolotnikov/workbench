@@ -10,44 +10,36 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
-import { logout, getCurrentUser, UserSession } from "@/lib/session"
 import { Button } from "./ui/button"
-import { Switch } from "./ui/switch"
-import { useWorkspace } from "@/stores/useWorkspace"
+import { createClient } from "@/lib/supabase/client"
 
 export function UserDropdown() {
     const router = useRouter();
-    const { userMode, setUserMode } = useWorkspace();
-    const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+    const [currentUser, setCurrentUser] = useState<any | null>(null);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     useEffect(() => {
-        async function fetchCurrentUser() {
-            try {
-                const user = await getCurrentUser();
-                setCurrentUser(user);
-            } catch (error) {
-                console.error("Failed to get current user:", error);
-            }
-        }
+        const fetchUser = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUser(user);
+        };
         
-        fetchCurrentUser();
+        fetchUser();
     }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
-        try {
-            const success = await logout();
-            if (success) {
-                // Redirect to login page
-                router.push('/login');
-            } else {
-                console.error("Logout failed");
-            }
-        } catch (error) {
+        const supabase = createClient();
+        
+        const { error } = await supabase.auth.signOut();
+        
+        if (error) {
             console.error("Logout error:", error);
-        } finally {
             setIsLoggingOut(false);
+        } else {
+            router.push("/login");
+            router.refresh();
         }
     };
 
@@ -63,16 +55,8 @@ export function UserDropdown() {
                     <span className="px-1 text-sm font-semibold">Account</span>
                     <span className="px-1 text-sm">{currentUser?.email}</span>
                 </div>
-                <div className="flex flex-col border-b py-1.5 px-1">   
-                    <span className="px-1 text-sm font-semibold">User Mode</span>
-                    <Switch
-                        checked={userMode === "learn"}
-                        onCheckedChange={() => setUserMode(userMode === "learn" ? "experiment" : "learn")}
-                    />
-                    <span className="px-1 text-sm">{userMode === "learn" ? "Learn" : "Experiment"}</span>
-                </div>
                 <DropdownMenuItem disabled={isLoggingOut} onClick={handleLogout}>
-                    Logout
+                    {isLoggingOut ? "Logging out..." : "Logout"}
                 </DropdownMenuItem>
 
             </DropdownMenuContent>
