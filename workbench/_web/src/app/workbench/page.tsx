@@ -11,9 +11,9 @@ export default async function WorkbenchPage() {
     
     const { data: { user }, error } = await supabase.auth.getUser();
     
-    // if (error || !user) {
-    //     redirect("/login");
-    // }
+    if (error || !user) {
+        redirect("/login");
+    }
 
     
 
@@ -24,8 +24,7 @@ export default async function WorkbenchPage() {
                     <div>
                         <h1 className="text-2xl font-bold">Workbench</h1>
                         <p className="text-sm text-muted-foreground">
-                            {/* Logged in as: {user.email} (ID: {user.id}) */}
-                            {JSON.stringify(user)}
+                            Logged in as: {user.email} (ID: {user.id})
                         </p>
                     </div>
                     <LogoutButton />
@@ -33,7 +32,7 @@ export default async function WorkbenchPage() {
                 
                 <ModelsDisplay />
                 
-                {/* <WorkspaceList userId={user.id} /> */}
+                <WorkspaceList userId={user.id} />
             </div>
         </>
     );

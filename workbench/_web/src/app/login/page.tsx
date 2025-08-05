@@ -5,11 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 export default function LoginPage() {
   const handleGitHubLogin = async () => {
     const supabase = createClient()
-    console.log('Login - using redirect URL:', process.env.NEXT_PUBLIC_BASE_URL)
-    
+    console.log('Login - using redirect URL:', process.env.NEXT_PUBLIC_BASE_URL, window.location.origin)
     const redirectUrl = `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/auth/callback`
-    console.log('Login - using redirect URL:', redirectUrl)
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'github',

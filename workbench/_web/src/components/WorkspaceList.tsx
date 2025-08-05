@@ -9,16 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 
 interface WorkspaceListProps {
-    userId?: string;
+    userId: string;
 }
 
 export function WorkspaceList({ userId }: WorkspaceListProps) {
     const deleteWorkspaceMutation = useDeleteWorkspace();
 
     const { data: workspaces, isLoading } = useQuery({
-        queryKey: ["workspaces", userId],
-        queryFn: () => getWorkspaces(),
-        enabled: !!userId,
+        queryKey: ["workspaces"],
+        queryFn: () => getWorkspaces(userId),
     });
 
     const handleDeleteWorkspace = (e: React.MouseEvent, workspaceId: string) => {
@@ -28,14 +27,6 @@ export function WorkspaceList({ userId }: WorkspaceListProps) {
             deleteWorkspaceMutation.mutate({ workspaceId });
         }
     };
-
-    if (!userId) {
-        return (
-            <div className="text-center py-8">
-                <p className="text-muted-foreground">Please log in to view workspaces</p>
-            </div>
-        );
-    }
 
     if (isLoading) {
         return (
