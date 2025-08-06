@@ -1,7 +1,5 @@
 import os
 import modal
-from workbench._api.main import fastapi_app
-
 
 dependencies = [
     "fastapi==0.115.6",
@@ -27,4 +25,6 @@ image = (
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
 def modal_app():
+    from workbench._api.main import fastapi_app
+    
     return fastapi_app()
