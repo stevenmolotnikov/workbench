@@ -114,7 +114,7 @@ export function ChartDisplay() {
                     <div className="flex h-full w-full p-4">                        
                         {
                             activeChart?.type === "heatmap" ? (
-                                <Heatmap {...activeChart?.data as HeatmapData} />
+                                <Heatmap data={activeChart?.data as HeatmapData} />
                             ) : (
                                 <LineGraph data={activeChart?.data as LineGraphData} />
                             )

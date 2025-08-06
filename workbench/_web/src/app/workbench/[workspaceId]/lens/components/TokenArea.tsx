@@ -8,12 +8,12 @@ interface TokenAreaProps {
     config: LensConfigData;
     handleTokenClick: (idx: number) => void;
     tokenData: Token[];
-    setSelectedIdx?: (idx: number) => void;
+    isSelectingToken: boolean;
 }
 
 // Token styling constants
 const TOKEN_STYLES = {
-    base: "text-sm whitespace-pre-wrap select-none cursor-pointer !box-border relative",
+    base: "text-sm whitespace-pre-wrap select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
     filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
     hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
@@ -38,7 +38,7 @@ export function TokenArea({
     config,
     handleTokenClick,
     tokenData,
-    setSelectedIdx = () => {},
+    isSelectingToken,
 }: TokenAreaProps) {
     const getTokenStyle = (
         token: Token,
@@ -56,8 +56,9 @@ export function TokenArea({
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
-            !isFilled && TOKEN_STYLES.hover,
+            (!isFilled && isSelectingToken) && TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
+            isSelectingToken && "cursor-pointer",
         );
     };
 

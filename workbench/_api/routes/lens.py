@@ -7,6 +7,7 @@ from ..state import AppState, get_state
 from ..data_models import Token
 from ..jobs import jobs
 
+
 class LensLineRequest(BaseModel):
     model: str
     prompt: str
@@ -14,18 +15,17 @@ class LensLineRequest(BaseModel):
 
 
 class Point(BaseModel):
-    name: str
-    prob: float
+    x: int
+    y: float
 
 
-class LayerResults(BaseModel):
-    layer: int
-    points: list[Point]
+class Line(BaseModel):
+    id: str
+    data: list[Point]
 
 
 class LensLineResponse(BaseModel):
-    layerResults: list[LayerResults]
-    maxLayer: int
+    lines: list[Line]
 
 
 router = APIRouter()
@@ -67,20 +67,18 @@ async def execute_line(
     raw_results = await asyncio.to_thread(line, lens_request, state)
 
     # Postprocess results
-    layer_results = [
-        LayerResults(
-            layer=layer_idx,
-            points=[
-                Point(name=str(i), prob=prob)
-                for i, prob in enumerate(probs.tolist())
-            ],
-        )
-        for layer_idx, probs in enumerate(raw_results)
-    ]
+    lines = []
+    for layer_idx, probs in enumerate(raw_results):
+        for line_idx, prob in enumerate(probs.tolist()):
+            if layer_idx == 0:
+                lines.append(
+                    Line(id=str(line_idx), data=[Point(x=layer_idx, y=prob)])
+                )
+            else:
+                lines[line_idx].data.append(Point(x=layer_idx, y=prob))
 
     return LensLineResponse(
-        layerResults=layer_results,
-        maxLayer=len(layer_results) - 1,
+        lines=lines,
     ).model_dump()
 
 
@@ -102,10 +100,16 @@ class GridLensRequest(BaseModel):
     prompt: str
 
 
+class GridCell(Point):
+    label: str
+
+class GridRow(BaseModel):
+    # Token ID
+    id: str
+    data: list[GridCell]
+
 class GridLensResponse(BaseModel):
-    input_strs: list[str]
-    probs: list[list[float]]
-    pred_strs: list[list[str]]
+    rows: list[GridRow]
 
 
 def heatmap(req: GridLensRequest, state: AppState):
@@ -136,13 +140,11 @@ def heatmap(req: GridLensRequest, state: AppState):
         _compute_top_probs(model.output.logits)
 
     # TEMP FIX FOR 0.4
+    # Specifically, can't call .tolist() bc items are still proxies
     probs = [p.tolist() for p in probs]
     pred_ids = [p.tolist() for p in pred_ids]
 
-    tok = model.tokenizer
-    input_strs = tok.batch_decode(tok.encode(req.prompt))
-
-    return pred_ids, probs, input_strs
+    return pred_ids, probs
 
 
 async def execute_grid(
@@ -151,21 +153,26 @@ async def execute_grid(
 ):
     """Background task to process grid lens computation"""
 
-    # Run computation in thread pool
-    pred_ids, probs, input_strs = await asyncio.to_thread(
-        heatmap, lens_request, state
-    )
+    # NOTE: These are ordered by layer
+    pred_ids, probs = await asyncio.to_thread(heatmap, lens_request, state)
 
-    pred_strs = [
-        state[lens_request.model].tokenizer.batch_decode(_pred_ids)
-        for _pred_ids in pred_ids
-    ]
+    # Get the stringified tokens of the input
+    tok = state[lens_request.model].tokenizer
+    input_strs = tok.batch_decode(tok.encode(lens_request.prompt))
 
-    return GridLensResponse(
-        input_strs=input_strs,
-        probs=probs,
-        pred_strs=pred_strs,
-    ).model_dump()
+    rows = []
+    for seq_idx, input_str in enumerate(input_strs):
+        points = [
+            GridCell(
+                x=layer_idx,
+                y=prob[seq_idx],
+                label=tok.decode(pred_id[seq_idx]),
+            )
+            for layer_idx, (prob, pred_id) in enumerate(zip(probs, pred_ids))
+        ]
+        rows.append(GridRow(id=input_str, data=points))
+
+    return GridLensResponse(rows=rows).model_dump()
 
 
 @router.post("/get-grid")

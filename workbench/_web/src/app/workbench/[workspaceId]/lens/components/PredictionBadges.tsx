@@ -11,14 +11,12 @@ interface PredictionBadgesProps {
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
     predictions: Prediction[];
-    selectedIdx: number;
 }
 
 export const PredictionBadges = ({
     config,
     setConfig,
     predictions,
-    selectedIdx,
 }: PredictionBadgesProps) => {
     const [additionalTokens, setAdditionalTokens] = useState<Token[]>([]);
     const [addingToken, setAddingToken] = useState(false);
@@ -26,7 +24,7 @@ export const PredictionBadges = ({
 
     const [selectedPredictionIds, setSelectedPredictionIds] = useState<number[]>([]);
 
-    const currentTokenPrediction = predictions.find((p) => p.idx === selectedIdx);
+    const currentTokenPrediction = predictions[0];
 
     if (!currentTokenPrediction) {
         toast.error("Selected index not in predictions.")
@@ -107,7 +105,7 @@ export const PredictionBadges = ({
 
         } else {
             const newToken: Token = {
-                idx: selectedIdx,
+                idx: currentTokenPrediction.idx,
                 id: currentTokenPrediction.ids[tokenIndexInData],
                 text: currentTokenPrediction.texts[tokenIndexInData],
                 targetIds: [],

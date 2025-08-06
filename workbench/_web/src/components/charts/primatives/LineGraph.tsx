@@ -1,59 +1,62 @@
 "use client";
 
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
 import type { LineGraphData } from "@/types/charts";
-import { CustomTooltip } from "./Tooltip";
+import { ResponsiveLine } from '@nivo/line'
+import { lineTheme } from './theming'
 
 interface LineGraphProps {
     data?: LineGraphData;
 }
 
 export function LineGraph({ data }: LineGraphProps) {
-    if (!data?.chartData?.length) {
-        return <div>No data to display.</div>;
-    }
-
-    const { chartData, chartConfig, maxLayer } = data;
+    if (!data) return (
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+            No data to display
+        </div>
+    )
 
     return (
-        <div className="w-full h-full">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-                <LineChart
-                    data={chartData}
-                    margin={{ left: 12, right: 12, top: 10, bottom: 10 }}
-                >
-                    <CartesianGrid vertical={false} />
-                    <YAxis
-                        domain={[0, 1]}
-                        label={{ value: "Probability", angle: -90, position: "insideLeft" }}
-                        tickLine={false}
-                        axisLine={false}
-                    />
-                    <XAxis
-                        dataKey="layer"
-                        type="number"
-                        domain={[0, maxLayer]}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                    />
-                    <Legend />
-                    <Tooltip content={<CustomTooltip />} />
-
-                    {Object.keys(chartConfig).map((seriesKey) => (
-                        <Line
-                            key={seriesKey}
-                            dataKey={seriesKey}
-                            type="linear"
-                            stroke={chartConfig[seriesKey].color}
-                            strokeWidth={2}
-                            dot={false}
-                            connectNulls={true}
-                        />
-                    ))}
-                </LineChart>
-            </ChartContainer>
-        </div>
+        <ResponsiveLine
+            data={data.lines}
+            margin={{ top: 30, right: 25, bottom: 50, left: 50 }}
+            yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: true, reverse: false }}
+            axisBottom={{ 
+                legend: 'layer', 
+                legendOffset: 36,
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0
+            }}
+            axisLeft={{ 
+                legend: 'probability', 
+                legendOffset: -40,
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0
+            }}
+            pointSize={8}
+            pointColor={{ theme: 'background' }}
+            pointBorderWidth={2}
+            pointBorderColor={{ from: 'seriesColor' }}
+            pointLabelYOffset={-12}
+            enableTouchCrosshair={true}
+            useMesh={true}
+            theme={lineTheme}
+            colors={{ scheme: 'nivo' }}
+            enableGridX={true}
+            enableGridY={true}
+            legends={[
+                {
+                    anchor: 'top',
+                    direction: 'row',
+                    translateY: -30,
+                    itemWidth: 80,
+                    itemHeight: 20,
+                    itemTextColor: 'hsl(var(--foreground))',
+                    symbolSize: 12,
+                    symbolShape: 'circle'
+                }
+            ]}
+        />
     );
 }

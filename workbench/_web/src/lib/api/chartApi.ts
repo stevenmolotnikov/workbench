@@ -5,7 +5,7 @@ import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
-import { LensLineResponse, LensGridResponse, processLineData, processHeatmapData } from "@/lib/chartUtils";
+import { LineGraphData, HeatmapData } from "@/types/charts"
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
@@ -17,7 +17,7 @@ const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: s
 
         if (!response.ok) throw new Error("Failed to start lens computation");
         const {job_id: jobId} = await response.json();
-        const result = await sseService.listenToSSE<LensLineResponse>(config.endpoints.listenLensLine + `/${jobId}`);
+        const result = await sseService.listenToSSE<LineGraphData>(config.endpoints.listenLensLine + `/${jobId}`);
         return { data: result };
     } catch (error) {
         console.error("Error fetching logit lens data:", error);
@@ -31,9 +31,8 @@ export const useLensLine = () => {
     return useMutation({
         mutationFn: async ({lensRequest, configId}: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
             const response = await getLensLine(lensRequest);
-            const result = processLineData(response.data);
-            await setChartData(lensRequest.chartId, configId, result, "line");
-            return result;
+            await setChartData(lensRequest.chartId, configId, response.data, "line");
+            return response.data;
         },
         onSuccess: (data, variables) => {
             // Invalidate queries to refresh the UI with updated data
@@ -63,7 +62,7 @@ const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: s
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
         const {job_id: jobId} = await response.json();
-        const result = await sseService.listenToSSE<LensGridResponse>(config.endpoints.listenLensGrid + `/${jobId}`);
+        const result = await sseService.listenToSSE<HeatmapData>(config.endpoints.listenLensGrid + `/${jobId}`);
         return { data: result };
     } catch (error) {
         console.error("Error fetching grid lens data:", error);
@@ -78,9 +77,8 @@ export const useLensGrid = () => {
     return useMutation({
         mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
             const response = await getLensGrid(lensRequest);
-            const result = processHeatmapData(response.data);
-            await setChartData(lensRequest.chartId, configId, result, "heatmap");
-            return result;
+            await setChartData(lensRequest.chartId, configId, response.data, "heatmap");
+            return response.data;
         },
         onSuccess: (data, variables) => {
             // Invalidate queries to refresh the UI with updated data

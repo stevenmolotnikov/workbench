@@ -1,35 +1,33 @@
 import { LensConfigData } from "./lens";
 import { PatchingConfig } from "./patching";
 
+interface Cell {
+    x: number;
+    y: number;
+    label: string;
+}
+
+interface Row {
+    id: string;
+    data: Cell[];
+}
+
 export interface HeatmapData {
-    data: number[][];
-    labels?: string[][];
-    xTickLabels?: (string | number)[];
-    yTickLabels?: (string | number)[];
-    xAxisLabel?: string;
-    yAxisLabel?: string;
-    cellSize?: number;
-    fontSize?: number;
+    rows: Row[];
 }
 
-interface ChartDataPoint {
-    layer: number;
-    [key: string]: number | string | null;
+interface Point {
+    x: number;
+    y: number;
 }
 
-interface LineChartConfig {
-    [key: string]: { label: string; color: string };
-}
-
-export interface LineData {
-    [key: string]: number;
+interface Line {
+    id: string;
+    data: Point[];
 }
 
 export interface LineGraphData {
-    chartData: ChartDataPoint[];
-    chartConfig: LineChartConfig;
-    maxLayer: number;
-    lineData: LineData;
+    lines: Line[];
 }
 
 export type ChartData = LineGraphData | HeatmapData;

@@ -1,11 +1,10 @@
 "use client";
 
-import { ALargeSmall, ChartLine, Edit2, Grid3x3, RotateCcw, X } from "lucide-react";
+import { ChartLine, Grid3x3, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState } from "react";
-import { TooltipButton } from "@/components/ui/tooltip-button";
 import { useExecuteSelected } from "@/lib/api/modelsApi";
 import type { Prediction, Token } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
@@ -29,12 +28,12 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
     const [tokenData, setTokenData] = useState<Token[]>([]);
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
-    const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
     // Workspace display state
     const [showTokenArea, setShowTokenArea] = useState(false);
+    const [isSelectingToken, setIsSelectingToken] = useState(false);
 
-    const { mutateAsync: getExecuteSelected } = useExecuteSelected();
+    const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ config, configId });
 
@@ -54,8 +53,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
         const temporaryConfig: LensConfigData = {
             ...config,
             token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
-        }   
-        setSelectedIdx(tokens.length - 1);
+        }
 
         // Run predictions
         await runPredictions(temporaryConfig);
@@ -82,13 +80,25 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
         });
     }
 
-    const handleTokenClick = (idx: number) => {
-        if (config.token.idx === idx) return;
+    const handleTokenClick = async (idx: number) => {
+        // Skip if the token is already selected
+        if (config.token.idx === idx || !isSelectingToken) return;
 
         setConfig({
             ...config,
             token: { idx, id: 0, text: "", targetIds: [] },
         });
+
+        setIsSelectingToken(false);
+
+        // Set the token to the last token in the list
+        const temporaryConfig: LensConfigData = {
+            ...config,
+            token: { idx, id: 0, text: "", targetIds: [] }
+        }
+
+        // Run predictions
+        await runPredictions(temporaryConfig);
     };
 
     const handleClear = async () => {
@@ -108,7 +118,6 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
         setTokenData([]);
         setShowTokenArea(false);
         setPredictions([]);
-        setSelectedIdx(null);
     }
 
     return (
@@ -134,20 +143,19 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                             config={config}
                             handleTokenClick={handleTokenClick}
                             tokenData={tokenData}
-                            setSelectedIdx={setSelectedIdx}
+                            isSelectingToken={isSelectingToken}
                         />
                     </div>
                 )}
                 <div className="flex gap-2 absolute bottom-2 right-2">
-                    <TooltipButton
+                    <Button
                         variant="outline"
                         size="sm"
                         id="tokenize-button"
                         onClick={handleTokenize}
-                        tooltip={"Tokenize"}
                     >
                         Tokenize
-                    </TooltipButton>
+                    </Button>
                     <Button
                         size="icon"
                         onClick={handleCreateHeatmap}
@@ -157,6 +165,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                     <Button
                         size="icon"
                         onClick={handleCreateLineChart}
+                        disabled={config.token.targetIds.length === 0}
                     >
                         <ChartLine className="w-4 h-4" />
                     </Button>
@@ -164,7 +173,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
             </div>
 
-            {(showTokenArea && predictions.length > 0) && (
+            {(showTokenArea && predictions.length > 0 && !isExecuting) && (
                 <div
 
                     className="border-x border-b p-2 flex justify-between bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
@@ -173,26 +182,38 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                         config={config}
                         setConfig={setConfig}
                         predictions={predictions}
-                        selectedIdx={selectedIdx ?? 0}
                     />
                     <div className="flex gap-2 ml-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                setShowTokenArea(true);
-                            }}
-                            className="text-xs"
-                        >
-                            Reselect Token
-                        </Button>
+                        {!isSelectingToken ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setIsSelectingToken(true);
+                                }}
+                                className="text-xs"
+                            >
+                                Reselect
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setIsSelectingToken(false);
+                                }}
+                                className="text-xs"
+                            >
+                                Cancel
+                            </Button>
+                        )}
                         <Button
                             variant="outline"
                             size="icon"
                             onClick={handleClear}
                             className="text-xs"
                         >
-                            <RotateCcw className="w-4 h-4" />   
+                            <RotateCcw className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
