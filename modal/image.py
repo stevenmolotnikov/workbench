@@ -14,7 +14,6 @@ image = (
     .env({"WORKBENCH_DIR" : "/root/"})
     .add_local_dir("./workbench/_api", remote_path="/root/workbench/_api", ignore=["__pycache__"])
     .add_local_file("./models.toml", remote_path="/root/models.toml")
-    .add_local_file("./.env", remote_path="/root/.env")
 )
 
 @app.function(
@@ -26,5 +25,5 @@ image = (
 @modal.asgi_app()
 def modal_app():
     from workbench._api.main import fastapi_app
-    
+
     return fastapi_app()
