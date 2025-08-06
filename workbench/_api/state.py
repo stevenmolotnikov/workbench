@@ -5,8 +5,6 @@ from fastapi import Request
 from nnsight import LanguageModel, CONFIG
 from pydantic import BaseModel
 
-from . import ENV, ROOT_DIR
-
 class ModelConfig(BaseModel):
     """Configuration for an individual model."""
 
@@ -37,7 +35,7 @@ class ModelsConfig(BaseModel):
 class AppState:
     def __init__(self):
         # Set NDIF key
-        CONFIG.set_default_api_key(ENV["NDIF_API_KEY"])
+        CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
 
         # Defaults
         self.models: dict[str, LanguageModel] = {}
@@ -55,7 +53,7 @@ class AppState:
         return self.get_model(model_name)
 
     def _load(self):
-        config_path = os.path.join(ROOT_DIR, "models.toml")
+        config_path = os.path.join(os.environ.get("WORKBENCH_DIR"), "models.toml")
 
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))

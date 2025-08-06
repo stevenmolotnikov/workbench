@@ -9,7 +9,6 @@ from anyio.streams.memory import (
 from typing import Callable, Any
 from fastapi.responses import StreamingResponse
 import uuid
-from fastapi import Request
 from contextlib import asynccontextmanager
 from .state import AppState
 

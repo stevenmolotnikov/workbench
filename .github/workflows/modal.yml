@@ -28,7 +28,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install modal
 
-
       - name: Deploy to Modal
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
