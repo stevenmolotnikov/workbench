@@ -20,7 +20,7 @@ export async function encodeText(text: string, model: string, addSpecialTokens: 
         const data = await response.json();
         return data;
     } catch (error) {
-        toast.error("Error encoding text");
+        toast("Error encoding text");
         return [];
     }
 }

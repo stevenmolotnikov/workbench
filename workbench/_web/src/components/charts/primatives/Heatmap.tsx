@@ -39,7 +39,6 @@ interface TooltipData {
 }
 
 export interface HeatmapProps {
-    chartIndex: number;
     data: number[][];
     labels?: string[][];
     xTickLabels?: (string | number)[];
@@ -51,7 +50,6 @@ export interface HeatmapProps {
 }
 
 export function Heatmap({
-    chartIndex,
     data,
     labels,
     xTickLabels = [],

@@ -37,9 +37,18 @@ export const PredictionBadges = ({
         );
     };
 
-    const fixString = (str: string | undefined) => {
-        if (!str) return "";
-        return str.replace(" ", "_");
+    const renderTokenText = (text: string | undefined) => {
+        if (!text) return "";
+        if (text.includes(" ")) {
+            return (
+                <>
+                    {text.split(" ")[0]}
+                    <span className="text-blue-500">_</span>
+                    {text.split(" ").slice(1).join(" ")}
+                </>
+            );
+        }
+        return text;
     };
 
     const handlePredictionClick = (id: number) => {
@@ -129,7 +138,7 @@ export const PredictionBadges = ({
                         onClick={() => handlePredictionClick(currentTokenPrediction.ids[index])}
                     >
                         <span className="font-medium">
-                            {fixString(currentTokenPrediction.texts[index])}
+                            {renderTokenText(currentTokenPrediction.texts[index])}
                         </span>
                         <span className="opacity-70 ml-2">
                             {currentTokenPrediction.probs[index].toFixed(4)}
@@ -143,7 +152,7 @@ export const PredictionBadges = ({
                         onClick={() => handleAdditionalTokenClick(index)}
                     >
                         <span className="font-medium">
-                            {fixString(token.text)}
+                            {renderTokenText(token.text)}
                         </span>
                         <span className="opacity-70 ml-2">
                             {currentTokenPrediction.probs[currentTokenPrediction.texts.indexOf(token.text)].toFixed(4)}

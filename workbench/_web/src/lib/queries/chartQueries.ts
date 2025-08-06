@@ -6,7 +6,7 @@ import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig } from "
 import { LensConfigData } from "@/types/lens";
 import { eq, and, asc, notExists } from "drizzle-orm";
 
-export const setChartData = async (chartId: string, configId: string, chartData: ChartData) => {
+export const setChartData = async (chartId: string, configId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     const hasLinkedConfig = await getHasLinkedConfig(chartId);
     if (!hasLinkedConfig) {
         await db.insert(chartConfigLinks).values({
@@ -15,7 +15,7 @@ export const setChartData = async (chartId: string, configId: string, chartData:
         });
     }
 
-    await db.update(charts).set({ data: chartData }).where(eq(charts.id, chartId));
+    await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
 };
 
 export const getChartData = async (chartId: string): Promise<ChartData> => {

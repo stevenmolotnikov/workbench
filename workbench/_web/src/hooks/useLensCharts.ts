@@ -4,7 +4,7 @@ import { LensConfigData } from "@/types/lens";
 import { useLensGrid, useLensLine } from "@/lib/api/chartApi";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 
-export const useLensCharts = ({config, configId}: {config: LensConfigData, configId: string}) => {
+export const useLensCharts = ({configId}: {configId: string}) => {
     const { activeTab } = useWorkspace();
     const { workspaceId } = useParams();
 
@@ -12,7 +12,7 @@ export const useLensCharts = ({config, configId}: {config: LensConfigData, confi
     const { mutateAsync: updateChartConfig } = useUpdateChartConfig();
     const { mutateAsync: createLineChart } = useLensLine();
 
-    const handleCreateHeatmap = async () => {
+    const handleCreateHeatmap = async (config: LensConfigData) => {
         if (!activeTab) return;
 
         const data = await createHeatmap({
@@ -35,12 +35,12 @@ export const useLensCharts = ({config, configId}: {config: LensConfigData, confi
         return data;
     };
 
-    const handleCreateLineChart = async () => {
+    const handleCreateLineChart = async (config: LensConfigData) => {
         if (!activeTab) return;
 
         const data = await createLineChart({
             lensRequest: {
-                completions: [config],
+                completion: config,
                 chartId: activeTab,
             },
             configId: configId,

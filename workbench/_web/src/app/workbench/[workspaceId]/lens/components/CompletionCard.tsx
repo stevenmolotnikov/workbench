@@ -36,7 +36,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
     const { mutateAsync: getExecuteSelected } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
-    const { handleCreateHeatmap } = useLensCharts({ config, configId });
+    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
@@ -113,7 +113,6 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
     return (
         <div className="flex flex-col w-full">
-
             {/* Content */}
             <div className="flex size-full relative">
                 {!showTokenArea ? (
@@ -151,7 +150,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                     </TooltipButton>
                     <Button
                         size="sm"
-                        onClick={handleCreateHeatmap}
+                        onClick={() => handleCreateHeatmap(config)}
                     >
                         Run
                     </Button>

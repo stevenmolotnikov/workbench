@@ -7,12 +7,12 @@ import { NewChart } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { LensLineResponse, LensGridResponse, processLineData, processHeatmapData } from "@/lib/chartUtils";
 
-const getLensLine = async (lensRequest: { completions: LensConfigData[]; chartId: string }) => {
+const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
         const response = await fetch(config.getApiUrl(config.endpoints.getLensLine), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(lensRequest),
+            body: JSON.stringify(lensRequest.completion),
         });
 
         if (!response.ok) throw new Error("Failed to start lens computation");
@@ -29,10 +29,10 @@ export const useLensLine = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({lensRequest, configId}: { lensRequest: { completions: LensConfigData[]; chartId: string }; configId: string }) => {
+        mutationFn: async ({lensRequest, configId}: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
             const response = await getLensLine(lensRequest);
             const result = processLineData(response.data);
-            await setChartData(lensRequest.chartId, configId, result);
+            await setChartData(lensRequest.chartId, configId, result, "line");
             return result;
         },
         onSuccess: (data, variables) => {
@@ -79,7 +79,7 @@ export const useLensGrid = () => {
         mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
             const response = await getLensGrid(lensRequest);
             const result = processHeatmapData(response.data);
-            await setChartData(lensRequest.chartId, configId, result);
+            await setChartData(lensRequest.chartId, configId, result, "heatmap");
             return result;
         },
         onSuccess: (data, variables) => {

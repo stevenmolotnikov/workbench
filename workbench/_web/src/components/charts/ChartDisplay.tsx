@@ -6,9 +6,10 @@ import { useCreateChart, useDeleteChart } from "@/lib/api/chartApi";
 import { useParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useRef, useMemo } from "react";
-import { HeatmapChartWrapper } from "./types/HeatmapChartWrapper";
-import { ChartData } from "@/types/charts";
+import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
+import { Heatmap } from "./primatives/Heatmap";
+import { LineGraph } from "./primatives/LineGraph";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab } = useWorkspace();
@@ -110,8 +111,14 @@ export function ChartDisplay() {
                 </div>
 
                 <div className="flex-1 p-4 overflow-auto custom-scrollbar">
-                    <div className="flex h-full w-full p-4">
-                        <HeatmapChartWrapper chart={activeChart?.data as ChartData} />
+                    <div className="flex h-full w-full p-4">                        
+                        {
+                            activeChart?.type === "heatmap" ? (
+                                <Heatmap {...activeChart?.data as HeatmapData} />
+                            ) : (
+                                <LineGraph data={activeChart?.data as LineGraphData} />
+                            )
+                        }
                     </div>
                 </div>
             </Tabs>

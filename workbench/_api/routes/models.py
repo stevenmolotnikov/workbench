@@ -6,14 +6,19 @@ from pydantic import BaseModel
 
 from ..jobs import jobs
 from ..state import AppState, get_state
-from .lens import TargetedLensCompletion
 from ..data_models import Token
 
 router = APIRouter()
 
 
+class LensCompletion(BaseModel):
+    model: str
+    prompt: str
+    token: Token
+
+
 def _execute_selected(
-    execute_request: TargetedLensCompletion, state: AppState
+    execute_request: LensCompletion, state: AppState
 ) -> tuple[t.Tensor, t.Tensor]:
     idxs = [execute_request.token.idx]
     model = state.get_model(execute_request.model)
@@ -38,7 +43,7 @@ class Prediction(BaseModel):
 
 
 async def process_execute_selected_background(
-    execute_request: TargetedLensCompletion,
+    execute_request: LensCompletion,
     state: AppState,
 ) -> list[Prediction]:
     values_LD, indices_LD = await asyncio.to_thread(
@@ -74,7 +79,7 @@ async def process_execute_selected_background(
 
 @router.post("/get-execute-selected")
 async def get_execute_selected(
-    execute_request: TargetedLensCompletion, state: AppState = Depends(get_state)
+    execute_request: LensCompletion, state: AppState = Depends(get_state)
 ):
     return jobs.create_job(
         process_execute_selected_background, execute_request, state
@@ -114,7 +119,7 @@ async def encode(
     )
     text_ids = tok.batch_decode(ids)
     return [
-        Token(idx=i, id=id, text=text)
+        Token(idx=i, id=id, text=text, targetIds=[])
         for i, (id, text) in enumerate(zip(ids, text_ids))
     ]
 

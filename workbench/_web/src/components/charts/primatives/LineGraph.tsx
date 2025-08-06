@@ -6,11 +6,10 @@ import type { LineGraphData } from "@/types/charts";
 import { CustomTooltip } from "./Tooltip";
 
 interface LineGraphProps {
-    chartIndex: number;
     data?: LineGraphData;
 }
 
-export function LineGraph({ chartIndex, data }: LineGraphProps) {
+export function LineGraph({ data }: LineGraphProps) {
     if (!data?.chartData?.length) {
         return <div>No data to display.</div>;
     }

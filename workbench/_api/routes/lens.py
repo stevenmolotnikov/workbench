@@ -1,7 +1,4 @@
 import asyncio
-from collections import defaultdict
-
-from anyio.streams.memory import MemoryObjectSendStream
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
@@ -10,21 +7,10 @@ from ..state import AppState, get_state
 from ..data_models import Token
 from ..jobs import jobs
 
-##### TARGETED LENS REQUEST SCHEMA #####
-
-
-class TargetedLensCompletion(BaseModel):
-    name: str
-    token: Token
+class LensLineRequest(BaseModel):
     model: str
     prompt: str
-
-
-class TargetedLensRequest(BaseModel):
-    completions: list[TargetedLensCompletion]
-
-
-##### TARGETED LENS RESPONSE SCHEMA #####
+    token: Token
 
 
 class Point(BaseModel):
@@ -37,20 +23,83 @@ class LayerResults(BaseModel):
     points: list[Point]
 
 
-class LensResponse(BaseModel):
+class LensLineResponse(BaseModel):
     layerResults: list[LayerResults]
     maxLayer: int
 
 
-##### GRID LENS REQUEST SCHEMA #####
+router = APIRouter()
+
+
+def line(req: LensLineRequest, state: AppState):
+    model = state.get_model(req.model)
+
+    def decode(x):
+        return model.lm_head(model.model.ln_f(x))
+
+    results = []
+    with model.trace(req.prompt, remote=state.remote):
+        for layer in model.model.layers:
+            # Decode hidden state into vocabulary
+            hidden_BLD = layer.output[0]
+            logits_BLV = decode(hidden_BLD)
+
+            # Compute probabilities over the relevant tokens
+            logits_V = logits_BLV[0, req.token.idx, :]
+
+            probs_V = t.nn.functional.softmax(logits_V, dim=-1)
+
+            # Gather probabilities over the predicted tokens
+            target_probs_X = t.gather(
+                probs_V, 0, t.tensor(req.token.target_ids)
+            )
+
+            results.append(target_probs_X.save())
+
+    return [r.value for r in results]
+
+
+async def execute_line(
+    lens_request: LensLineRequest,
+    state: AppState,
+):
+    # Run computation in thread pool
+    raw_results = await asyncio.to_thread(line, lens_request, state)
+
+    # Postprocess results
+    layer_results = [
+        LayerResults(
+            layer=layer_idx,
+            points=[
+                Point(name=str(i), prob=prob)
+                for i, prob in enumerate(probs.tolist())
+            ],
+        )
+        for layer_idx, probs in enumerate(raw_results)
+    ]
+
+    return LensLineResponse(
+        layerResults=layer_results,
+        maxLayer=len(layer_results) - 1,
+    ).model_dump()
+
+
+@router.post("/get-line")
+async def get_line(
+    lens_request: LensLineRequest, state: AppState = Depends(get_state)
+):
+    return jobs.create_job(execute_line, lens_request, state)
+
+
+@router.get("/listen-line/{job_id}")
+async def listen_line(job_id: str):
+    """Listen for line lens results via SSE using MemoryObjectStream"""
+    return jobs.get_job(job_id)
 
 
 class GridLensRequest(BaseModel):
     model: str
     prompt: str
-
-
-##### GRID LENS RESPONSE SCHEMA #####
 
 
 class GridLensResponse(BaseModel):
@@ -59,231 +108,74 @@ class GridLensResponse(BaseModel):
     pred_strs: list[list[str]]
 
 
-router = APIRouter()
+def heatmap(req: GridLensRequest, state: AppState):
+    model = state.get_model(req.model)
 
-
-def logit_lens_grid(model, prompt, remote):
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     pred_ids = []
     probs = []
 
-    def get_stuff(logits):
-        # Compute probabilities over the relevant tokens
-        relevant_tokens = logits[0, :, :]
+    def _compute_top_probs(logits_BLV: t.Tensor):
+        relevant_tokens_LV = logits_BLV[0, :, :]
 
-        _probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
-        _pred_ids = relevant_tokens.argmax(dim=-1)
+        probs_LV = t.nn.functional.softmax(relevant_tokens_LV, dim=-1)
+        pred_ids_L = relevant_tokens_LV.argmax(dim=-1)
 
         # Gather probabilities over the predicted tokens
-        _probs = t.gather(_probs, 1, _pred_ids.unsqueeze(1)).squeeze()
+        pred_ids_L1 = pred_ids_L.unsqueeze(1)
+        probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
 
-        pred_ids.append(_pred_ids.save())
-        probs.append(_probs.save())
+        pred_ids.append(pred_ids_L.save())
+        probs.append(probs_L.save())
 
-    with model.trace(prompt, remote=remote):
+    with model.trace(req.prompt, remote=state.remote):
         for layer in model.model.layers[:-1]:
-            # Decode hidden state into vocabulary
-            x = layer.output[0]
-            get_stuff(decode(x))
-        get_stuff(model.output.logits)
+            _compute_top_probs(decode(layer.output[0]))
+        _compute_top_probs(model.output.logits)
 
-    # TEMPORARAY FIX FOR 0.4
+    # TEMP FIX FOR 0.4
     probs = [p.tolist() for p in probs]
     pred_ids = [p.tolist() for p in pred_ids]
 
     tok = model.tokenizer
-    input_strs = tok.batch_decode(tok.encode(prompt))
+    input_strs = tok.batch_decode(tok.encode(req.prompt))
 
     return pred_ids, probs, input_strs
 
 
-def logit_lens_targeted(model, model_requests, remote):
-    def decode(x):
-        return model.lm_head(model.model.ln_f(x))
-
-    tok = model.tokenizer
-
-    all_results = []
-    with model.trace(remote=remote) as tracer:
-        for request in model_requests:
-            # Get user queried indices
-            idxs = request["idxs"]
-            target_ids = request["target_ids"]
-            target_id_strs = tok.batch_decode(target_ids)
-            results = []
-
-            prompt_id_strs = tok.batch_decode(tok.encode(request["prompt"]))
-            with tracer.invoke(request["prompt"]):
-                for layer_idx, layer in enumerate(model.model.layers):
-                    # Decode hidden state into vocabulary
-                    x = layer.output[0]
-                    logits = decode(x)
-
-                    # Compute probabilities over the relevant tokens
-                    relevant_tokens = logits[0, idxs, :]
-
-                    probs = t.nn.functional.softmax(relevant_tokens, dim=-1)
-
-                    # Gather probabilities over the predicted tokens
-                    target_probs = t.gather(
-                        probs, 1, target_ids.unsqueeze(1)
-                    ).squeeze()
-
-                    # Save results
-                    results.append(
-                        {
-                            "name": request["name"],
-                            "layer_idx": layer_idx,
-                            "target_probs": target_probs.save(),
-                            "target_id_strs": target_id_strs,
-                            "idxs": idxs,
-                            "prompt_id_strs": prompt_id_strs,
-                        }
-                    )
-
-            all_results.extend(results)
-
-    return all_results
-
-
-def preprocess(lens_request: TargetedLensRequest):
-    # Batch prompts for the same model
-    grouped_requests = defaultdict(list)
-    for completion in lens_request.completions:
-        idxs = []
-        target_ids = []
-
-        token = completion.token
-        # These tokens have no target token set
-        if token.target_id != -1:
-            idxs.append(token.idx)
-            target_ids.append(token.target_id)
-
-        target_ids = t.tensor(target_ids)
-
-        request = {
-            "name": completion.name,
-            "prompt": completion,
-            "idxs": idxs,
-            "target_ids": target_ids,
-        }
-        grouped_requests[completion.model].append(request)
-
-    return grouped_requests
-
-
-def postprocess(results):
-    processed_results = defaultdict(list)
-    for result in results:
-        target_probs = result["target_probs"].tolist()
-        target_idxs = result["idxs"]
-        prompt_id_strs = result["prompt_id_strs"]
-        target_id_strs = result["target_id_strs"]
-
-        # If only a single token is selected, pred_probs is a float
-        if not isinstance(target_probs, list):
-            target_probs = [target_probs]
-
-        layer_idx = result["layer_idx"]
-        for idx, prob, id_str in zip(target_idxs, target_probs, target_id_strs):
-            processed_results[layer_idx].append(
-                {
-                    "name": result["name"]
-                    + f' - ("{prompt_id_strs[idx]}" → "{id_str}")',
-                    "prob": round(prob, 2),
-                }
-            )
-
-    layer_results = [
-        {"layer": layer_idx, "points": processed_results[layer_idx]}
-        for layer_idx in processed_results
-    ]
-
-    return layer_results
-
-
-async def process_targeted_lens_background(
-    lens_request: TargetedLensRequest,
-    state: AppState,
-    send_stream: MemoryObjectSendStream,
-):
-    """Background task to process targeted lens computation"""
-    grouped_requests = preprocess(lens_request)
-
-    # Process each model
-    all_results = []
-    for model_name, model_requests in grouped_requests.items():
-        model = state.get_model(model_name)
-
-        # Run computation in thread pool
-        model_results = await asyncio.to_thread(
-            logit_lens_targeted, model, model_requests, state.remote
-        )
-        all_results.extend(model_results)
-
-    # Process results
-    results = postprocess(all_results)
-
-    # Send final result
-    await send_stream.send(
-        {
-            "type": "result",
-            "data": {
-                "layerResults": results,
-                "maxLayer": len(results) - 1,
-            },
-        }
-    )
-
-
-async def process_grid_lens_background(
+async def execute_grid(
     lens_request: GridLensRequest,
     state: AppState,
 ):
     """Background task to process grid lens computation"""
-    model = state.get_model(lens_request.model)
-    tok = model.tokenizer
-    prompt = lens_request.prompt
 
     # Run computation in thread pool
     pred_ids, probs, input_strs = await asyncio.to_thread(
-        logit_lens_grid, model, prompt, state.remote
+        heatmap, lens_request, state
     )
 
-    pred_strs = [tok.batch_decode(_pred_ids) for _pred_ids in pred_ids]
+    pred_strs = [
+        state[lens_request.model].tokenizer.batch_decode(_pred_ids)
+        for _pred_ids in pred_ids
+    ]
 
-    return {
-        "input_strs": input_strs,
-        "probs": probs,
-        "pred_strs": pred_strs,
-    }
-
-
-@router.post("/get-line")
-async def get_targeted_lens(
-    lens_request: TargetedLensRequest, state: AppState = Depends(get_state)
-):
-    return jobs.create_job(
-        process_targeted_lens_background, lens_request, state
-    )
-
-
-@router.get("/listen-line/{job_id}")
-async def listen_targeted_lens(job_id: str):
-    """Listen for targeted lens results via SSE using MemoryObjectStream"""
-    return jobs.get_job(job_id)
+    return GridLensResponse(
+        input_strs=input_strs,
+        probs=probs,
+        pred_strs=pred_strs,
+    ).model_dump()
 
 
 @router.post("/get-grid")
-async def get_grid_lens(
+async def get_grid(
     lens_request: GridLensRequest, state: AppState = Depends(get_state)
 ):
-    return jobs.create_job(process_grid_lens_background, lens_request, state)
+    return jobs.create_job(execute_grid, lens_request, state)
 
 
 @router.get("/listen-grid/{job_id}")
-async def listen_grid_lens(job_id: str):
+async def listen_grid(job_id: str):
     """Listen for grid lens results via SSE using MemoryObjectStream"""
     return jobs.get_job(job_id)

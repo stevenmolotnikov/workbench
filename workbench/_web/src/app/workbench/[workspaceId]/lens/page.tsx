@@ -19,6 +19,7 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import useModels from "@/hooks/useModels";
+import { LensConfigData } from "@/types/lens";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
@@ -38,9 +39,8 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         setTutorialsOpen(false);
     }, [setIsOpen]);
 
-    const defaultConfig = {
+    const defaultConfig: LensConfigData = {
         prompt: "",
-        name: "Default Lens Config",
         model: selectedModel?.name || "",
         token: { idx: 0, id: 0, text: "", targetIds: [] },
     }
