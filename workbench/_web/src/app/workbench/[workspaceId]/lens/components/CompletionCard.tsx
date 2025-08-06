@@ -1,6 +1,6 @@
 "use client";
 
-import { ALargeSmall, Edit2, X } from "lucide-react";
+import { ALargeSmall, Edit2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
@@ -38,7 +38,6 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
     const { handleCreateHeatmap } = useLensCharts({ config, configId });
 
-
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
             ...config,
@@ -51,11 +50,14 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
         setTokenData(tokens);
         setShowTokenArea(true);
 
-        const temporaryConfig = {
+        // Set the token to the last token in the list
+        const temporaryConfig: LensConfigData = {
             ...config,
-            tokens: [{ idx: tokens[tokens.length - 1].idx, id: 0, text: "" }],
-        }
+            token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
+        }   
         setSelectedIdx(tokens.length - 1);
+
+        // Run predictions
         await runPredictions(temporaryConfig);
     }
 
@@ -80,32 +82,19 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
         });
     }
 
-    const handleHeatmap = async () => {
-        const data = await handleCreateHeatmap();
-
-    }
-
-
     const handleTokenClick = (idx: number) => {
-        const highlightedTokens = config.tokens.map(t => t.idx);
-        if (highlightedTokens.includes(idx)) {
-            // Unhighlight this specific token
-            setConfig({
-                ...config,
-                tokens: config.tokens.filter((t) => t.idx !== idx),
-            });
-        } else {
-            setConfig({
-                ...config,
-                tokens: [{ idx, id: 0, text: "" }],
-            });
-        }
+        if (config.token.idx === idx) return;
+
+        setConfig({
+            ...config,
+            token: { idx, id: 0, text: "", targetIds: [] },
+        });
     };
 
     const handleClear = async () => {
-        const cleanedConfig = {
+        const cleanedConfig: LensConfigData = {
             ...config,
-            tokens: [],
+            token: { idx: 0, id: 0, text: "", targetIds: [] },
         }
         await updateChartConfigMutation({
             configId,
@@ -162,7 +151,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                     </TooltipButton>
                     <Button
                         size="sm"
-                        onClick={handleHeatmap}
+                        onClick={handleCreateHeatmap}
                     >
                         Run
                     </Button>
@@ -173,7 +162,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
             {(showTokenArea && predictions.length > 0) && (
                 <div
 
-                    className="border-x border-b p-4 flex justify-between bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
+                    className="border-x border-b p-2 flex justify-between bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
                 >
                     <PredictionBadges
                         config={config}
@@ -190,15 +179,15 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                             }}
                             className="text-xs"
                         >
-                            Select Token
+                            Reselect Token
                         </Button>
                         <Button
                             variant="outline"
-                            size="sm"
+                            size="icon"
                             onClick={handleClear}
                             className="text-xs"
                         >
-                            Clear
+                            <RotateCcw className="w-4 h-4" />   
                         </Button>
                     </div>
                 </div>

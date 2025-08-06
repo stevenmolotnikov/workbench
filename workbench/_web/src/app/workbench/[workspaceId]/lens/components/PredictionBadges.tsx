@@ -20,80 +20,101 @@ export const PredictionBadges = ({
     predictions,
     selectedIdx,
 }: PredictionBadgesProps) => {
-    const [additionalToken, setAdditionalToken] = useState<Token | null>(null);
+    const [additionalTokens, setAdditionalTokens] = useState<Token[]>([]);
     const [addingToken, setAddingToken] = useState(false);
     const [targetToken, setTargetToken] = useState<string>("");
 
-    const [selectedPredictionIdx, setSelectedPredictionIdx] = useState<number | null>(null);
+    const [selectedPredictionIds, setSelectedPredictionIds] = useState<number[]>([]);
 
     const currentTokenPrediction = predictions.find((p) => p.idx === selectedIdx);
+
+    if (!currentTokenPrediction) {
+        toast.error("Selected index not in predictions.")
+        return (
+            <div>
+                No predictions for this token.
+            </div>
+        );
+    };
 
     const fixString = (str: string | undefined) => {
         if (!str) return "";
         return str.replace(" ", "_");
     };
 
+    const handlePredictionClick = (id: number) => {
+        // If already selected, remove
+        if (selectedPredictionIds.includes(id)) {
+            // Remove from the selected prediction indices
+            setSelectedPredictionIds(selectedPredictionIds.filter(i => i !== id));
+
+            // Remove the id from the target ids
+            const newTargetIds = config.token.targetIds.filter(targetId => targetId !== id)
+
+            // Update the config
+            setConfig({
+                ...config,
+                token: {
+                    ...config.token,
+                    targetIds: newTargetIds,
+                },
+            })
+            return;
+        }
+
+        // Else, add the id to the target ids
+        setConfig({
+            ...config,
+            token: {
+                ...config.token,
+                targetIds: [...config.token.targetIds, id],
+            },
+        })
+
+        // Add the index to the selected prediction indices
+        setSelectedPredictionIds([...selectedPredictionIds, id])
+    }
+
     const handleTokenSubmit = async (text: string) => {
         const tokens = await encodeText(text, config.model, false);
 
-        if (tokens.length === 1) {
-            const token = tokens[0];
+        // Only add if it's a single token
+        if (tokens.length !== 1) toast.error(`Please enter a single token.`);
+        const token = tokens[0];
 
-            if (!currentTokenPrediction) {
-                toast.error("Selected index not in predictions.")
-                return;
-            };
+        // If the token is already selected, dont change anything.
+        // If the token is not selected, highlight the existing badge rather than adding a new one.
+        if (currentTokenPrediction.ids.includes(token.id)) {
+            if (!selectedPredictionIds.includes(token.id)) handlePredictionClick(token.id);
+            setAddingToken(false);
+            setTargetToken("");
+            return;
+        }
 
-            const tokenIndexInData = currentTokenPrediction.ids.findIndex((id) => id === token.id);
+        // If the token index is not in the data, skip bc prob is too low
+        const tokenIndexInData = currentTokenPrediction.ids.findIndex((id) => id === token.id);
+        if (tokenIndexInData === -1) {
+            toast.error("Token probability is too low. Caden will fix this soon.")
 
-            const newToken = {
+        } else {
+            const newToken: Token = {
                 idx: selectedIdx,
                 id: currentTokenPrediction.ids[tokenIndexInData],
                 text: currentTokenPrediction.texts[tokenIndexInData],
-                prob: currentTokenPrediction.probs[tokenIndexInData],
+                targetIds: [],
             }
 
-            if (tokenIndexInData === -1) {
-                toast.error("Token not in predictions.")
-                return;
-            } else {
-                setAdditionalToken(newToken);
-                setAddingToken(false);
-            }
-
-        } else {
-            toast.error(`Please enter a single token.`);
+            setAdditionalTokens([...additionalTokens, newToken]);
+            setAddingToken(false);
         }
 
         setTargetToken("");
     };
 
-    const handlePredictionClick = (index: number, id: number) => {
-        if (selectedPredictionIdx === index) {
-            setSelectedPredictionIdx(null);
-            return;
-        }
-
-        // Find and replace token with same idx, or add if not found
-        const existingTokenIndex = config.tokens.findIndex(token => token.idx === selectedIdx);
-        if (existingTokenIndex === -1) toast.error("Token not found.")
-
-        const newToken = {
-            ...config.tokens[existingTokenIndex],
-            targetId: id,
-            targetText: currentTokenPrediction?.texts[index] ?? "",
-        }
-
-        // Replace existing token
-        const updatedTokens = [...config.tokens];
-        updatedTokens[existingTokenIndex] = newToken;
-        setConfig({
-            ...config,
-            tokens: updatedTokens,
-        });
-        setSelectedPredictionIdx(index);
+    const handleAdditionalTokenClick = (index: number) => {
+        // Remove from the additional tokens
+        setAdditionalTokens(additionalTokens.filter((_, i) => i !== index));
     }
-
 
     if (currentTokenPrediction) {
         return (
@@ -103,9 +124,9 @@ export const PredictionBadges = ({
                         key={index}
                         className={cn(
                             "border text-xs rounded px-2 py-1 flex items-center bg-muted hover:bg-muted/80 cursor-pointer",
-                            selectedPredictionIdx === index && "border-primary"
+                            selectedPredictionIds.includes(currentTokenPrediction.ids[index]) && "border-primary"
                         )}
-                        onClick={() => handlePredictionClick(index, currentTokenPrediction.ids[index])}
+                        onClick={() => handlePredictionClick(currentTokenPrediction.ids[index])}
                     >
                         <span className="font-medium">
                             {fixString(currentTokenPrediction.texts[index])}
@@ -115,18 +136,20 @@ export const PredictionBadges = ({
                         </span>
                     </div>
                 ))}
-                {additionalToken && (
+                {additionalTokens.map((token, index) => (
                     <div
+                        key={index}
                         className={"border text-xs rounded px-2 py-1 flex items-center bg-muted border-primary hover:bg-muted/80 cursor-pointer"}
+                        onClick={() => handleAdditionalTokenClick(index)}
                     >
                         <span className="font-medium">
-                            {fixString(additionalToken.text)}
+                            {fixString(token.text)}
                         </span>
                         <span className="opacity-70 ml-2">
-                            {additionalToken.prob?.toFixed(4)}
+                            {currentTokenPrediction.probs[currentTokenPrediction.texts.indexOf(token.text)].toFixed(4)}
                         </span>
                     </div>
-                )}
+                ))}
                 {addingToken ? (
                     <input
                         type="text"

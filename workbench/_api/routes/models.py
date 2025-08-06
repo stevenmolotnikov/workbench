@@ -15,7 +15,7 @@ router = APIRouter()
 def _execute_selected(
     execute_request: TargetedLensCompletion, state: AppState
 ) -> tuple[t.Tensor, t.Tensor]:
-    idxs = [token.idx for token in execute_request.tokens]
+    idxs = [execute_request.token.idx]
     model = state.get_model(execute_request.model)
 
     with model.trace(execute_request.prompt, remote=state.remote):
@@ -46,7 +46,7 @@ async def process_execute_selected_background(
     )
 
     tok = state[execute_request.model].tokenizer
-    idxs = [token.idx for token in execute_request.tokens]
+    idxs = [execute_request.token.idx]
     predictions = []
 
     for idx_values, idx_indices, token_index in zip(

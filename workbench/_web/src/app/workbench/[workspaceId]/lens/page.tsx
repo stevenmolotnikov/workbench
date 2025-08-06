@@ -42,7 +42,7 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
         prompt: "",
         name: "Default Lens Config",
         model: selectedModel?.name || "",
-        tokens: [],
+        token: { idx: 0, id: 0, text: "", targetIds: [] },
     }
 
     const { data: chartConfig, isSuccess: isChartConfigSuccess } = useQuery({

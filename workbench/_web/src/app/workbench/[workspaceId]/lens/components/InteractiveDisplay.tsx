@@ -11,6 +11,7 @@ import { Token } from "@/types/models";
 import { LensConfig } from "@/db/schema";
 import { CompletionCard } from "./CompletionCard";
 import { useLensCharts } from "@/hooks/useLensCharts";
+import { ChevronRight, ChevronDown, RotateCcw } from "lucide-react";
 
 export default function InteractiveDisplay({ initialConfig }: { initialConfig: LensConfig }) {
     // Generate some sample labels
@@ -18,6 +19,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
     const [tokenData, setTokenData] = useState<Token[]>([]);
     const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
     const [showFlow, setShowFlow] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
 
@@ -42,50 +44,61 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
             </div>
 
             <div className="px-4 pb-4 h-full overflow-auto flex flex-col">
-                <div className="flex gap-2 p-4 border-t border-x rounded-t">
-                    <DoubleSlider
-                        value={sliderValues}
-                        onValueChange={handleSliderChange}
-                        min={0}
-                        max={selectedModel?.n_layers || 0}
-                        step={2}
-                        className="w-1/2"
-                    />
-                    <div className="text-xs border rounded-md p-2 h-8 w-32 items-center justify-center flex text-muted-foreground">
-                        [{sliderValues[0]}, {sliderValues[1]}]
-                    </div>
-                    {!showFlow ? (
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowFlow(true)}
-                        >
-                            Run Token
-                        </Button>
-                    ) : (
-                        <div className="text-sm h-8 border items-center justify-center flex rounded-md bg-muted p-2">
-                            Select a row.
-                        </div>
-                    )}
-                    <Button
-                        variant="outline"
-                        onClick={() => setClickedComponent(null)}
-                        disabled={!clickedComponent}
+                {!isExpanded ? (
+                    <button
+                        onClick={() => setIsExpanded(true)}
+                        className="flex items-center gap-2 p-4 border rounded hover:bg-muted/50 transition-colors w-full text-left"
                     >
-                        Clear
-                    </Button>
-                </div>
-                <ScrollArea className="h-full w-full pt-4 flex rounded-b items-center justify-center border">
-                    <LensTransformer
-                        clickedComponent={clickedComponent}
-                        setClickedComponent={setClickedComponent}
-                        rowMode={true}
-                        numTokens={tokenData.length}
-                        layerRange={sliderValues}
-                        scale={0.6}
-                        showFlowOnHover={showFlow}
-                        tokenLabels={tokenData.map((token) => token.text)}
-                    />
-                </ScrollArea>
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="text-sm font-medium">View Internals</span>
+                    </button>
+                ) : (
+                    <>
+                        <div className="flex gap-2 p-4 justify-between border-t border-x rounded-t">
+                            <button
+                                onClick={() => setIsExpanded(false)}
+                                className="p-1 hover:bg-muted rounded transition-colors"
+                            >
+                                <ChevronDown className="h-4 w-4" />
+                            </button>
+                            <div className="flex gap-2 w-3/4">
+                                <div className="flex border rounded w-full h-8">
+                                    <DoubleSlider
+                                        value={sliderValues}
+                                        onValueChange={handleSliderChange}
+                                        min={0}
+                                        max={selectedModel?.n_layers || 0}
+                                        step={2}
+                                        className="mx-2"
+                                    />
+                                    <div className="text-xs border-l p-2 w-24 items-center justify-center flex text-muted-foreground">
+                                        [{sliderValues[0]}, {sliderValues[1]}]
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setClickedComponent(null)}
+                                    disabled={!clickedComponent}
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                        <ScrollArea className="h-full w-full pt-4 flex rounded-b items-center justify-center border">
+                            <LensTransformer
+                                clickedComponent={clickedComponent}
+                                setClickedComponent={setClickedComponent}
+                                rowMode={true}
+                                numTokens={tokenData.length}
+                                layerRange={sliderValues}
+                                scale={0.6}
+                                showFlowOnHover={showFlow}
+                                tokenLabels={tokenData.map((token) => token.text)}
+                            />
+                        </ScrollArea>
+                    </>
+                )}
             </div>
         </div>
     );

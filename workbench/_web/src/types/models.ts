@@ -3,9 +3,7 @@ export interface Token {
     idx: number;
     id: number;
     text: string;
-    prob?: number;
-    targetId?: number;
-    targetText?: string;
+    targetIds: number[];
 }
 
 export interface Prediction {

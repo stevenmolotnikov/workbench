@@ -15,7 +15,7 @@ from ..jobs import jobs
 
 class TargetedLensCompletion(BaseModel):
     name: str
-    tokens: list[Token]
+    token: Token
     model: str
     prompt: str
 
@@ -155,11 +155,11 @@ def preprocess(lens_request: TargetedLensRequest):
         idxs = []
         target_ids = []
 
-        for token in completion.tokens:
-            # These tokens have no target token set
-            if token.target_id != -1:
-                idxs.append(token.idx)
-                target_ids.append(token.target_id)
+        token = completion.token
+        # These tokens have no target token set
+        if token.target_id != -1:
+            idxs.append(token.idx)
+            target_ids.append(token.target_id)
 
         target_ids = t.tensor(target_ids)
 

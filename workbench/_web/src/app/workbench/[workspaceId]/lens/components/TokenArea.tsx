@@ -38,31 +38,26 @@ export function TokenArea({
     config,
     handleTokenClick,
     tokenData,
-    setSelectedIdx = () => { },
+    setSelectedIdx = () => {},
 }: TokenAreaProps) {
     const getTokenStyle = (
         token: Token,
         idx: number,
     ) => {
-        const highlightedTokens = config.tokens.map(t => t.idx);
-        const isHighlighted = highlightedTokens.includes(idx);
-        const isFilled = config.tokens.some(t => t.idx === idx && t.targetId !== undefined);
+        const isFilled = config.token.targetIds.length > 0;
 
         let backgroundStyle = "";
-        if (isHighlighted) {
+        if (config.token.idx === idx) {
             backgroundStyle = isFilled ? TOKEN_STYLES.filled : TOKEN_STYLES.highlight;
         } else {
             backgroundStyle = "bg-transparent";
         }
 
-        console.log(isFilled, config.tokens);
-
-
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
             !isFilled && TOKEN_STYLES.hover,
-            token.targetText === "\\n" ? "w-full" : "w-fit",
+            token.text === "\\n" ? "w-full" : "w-fit",
         );
     };
 

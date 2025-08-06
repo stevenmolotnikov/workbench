@@ -13,4 +13,4 @@ class Token(BaseModel):
     idx: int
     id: int
     text: str
-    target_id: int = -1
+    target_ids: list[int] = []

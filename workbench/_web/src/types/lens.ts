@@ -4,5 +4,5 @@ export interface LensConfigData {
     name: string;
     model: string;
     prompt: string;
-    tokens: Token[];
+    token: Token;
 }
