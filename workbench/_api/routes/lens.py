@@ -66,13 +66,16 @@ async def execute_line(
     # Run computation in thread pool
     raw_results = await asyncio.to_thread(line, lens_request, state)
 
+    tok = state[lens_request.model].tokenizer
+    target_token_strs = tok.batch_decode(lens_request.token.target_ids)
+
     # Postprocess results
     lines = []
     for layer_idx, probs in enumerate(raw_results):
         for line_idx, prob in enumerate(probs.tolist()):
             if layer_idx == 0:
                 lines.append(
-                    Line(id=str(line_idx), data=[Point(x=layer_idx, y=prob)])
+                    Line(id=target_token_strs[line_idx].replace(" ", "_"), data=[Point(x=layer_idx, y=prob)])
                 )
             else:
                 lines[line_idx].data.append(Point(x=layer_idx, y=prob))

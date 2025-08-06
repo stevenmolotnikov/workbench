@@ -1,19 +1,25 @@
 import { LensConfigData } from "./lens";
 import { PatchingConfig } from "./patching";
 
-interface Cell {
-    x: number;
-    y: number;
-    label: string;
+export interface HeatmapCell {
+    x: string | number;
+    y: number | null;
+    label?: string;
 }
 
-interface Row {
+export interface HeatmapRow {
     id: string;
-    data: Cell[];
+    data: HeatmapCell[];
+}
+
+export interface HeatmapHighlight {
+    x: number;
+    y: number;
 }
 
 export interface HeatmapData {
-    rows: Row[];
+    rows: HeatmapRow[];
+    highlights?: HeatmapHighlight[];
 }
 
 interface Point {

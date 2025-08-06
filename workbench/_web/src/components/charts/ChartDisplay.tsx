@@ -10,6 +10,7 @@ import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
 import { Heatmap } from "./primatives/Heatmap";
 import { LineGraph } from "./primatives/LineGraph";
+import { Input } from "../ui/input";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab } = useWorkspace();
@@ -110,8 +111,17 @@ export function ChartDisplay() {
                     </TooltipButton>
                 </div>
 
-                <div className="flex-1 p-4 overflow-auto custom-scrollbar">
-                    <div className="flex h-full w-full p-4">                        
+                <div className="flex flex-col h-full p-4">
+                    <div className="flex h-[10%] items-center gap-2">
+                        {/* <Input placeholder="Search" /> */}
+                        <h1 className="text-xl font-bold">
+                            Title
+                        </h1>
+                        {/* <Button variant="outline" size="icon">
+                            <Search className="h-4 w-4" />
+                        </Button> */}
+                    </div>
+                    <div className="flex h-[90%] w-full border rounded">
                         {
                             activeChart?.type === "heatmap" ? (
                                 <Heatmap data={activeChart?.data as HeatmapData} />

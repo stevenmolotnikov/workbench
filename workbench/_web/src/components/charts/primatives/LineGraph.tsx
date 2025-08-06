@@ -19,7 +19,7 @@ export function LineGraph({ data }: LineGraphProps) {
         <ResponsiveLine
             data={data.lines}
             margin={{ top: 30, right: 25, bottom: 50, left: 50 }}
-            yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: true, reverse: false }}
+            yScale={{ type: 'linear', min: 0, max: 1, stacked: true, reverse: false }}
             axisBottom={{ 
                 legend: 'layer', 
                 legendOffset: 36,
@@ -41,6 +41,7 @@ export function LineGraph({ data }: LineGraphProps) {
             pointLabelYOffset={-12}
             enableTouchCrosshair={true}
             useMesh={true}
+            enableCrosshair={false}
             theme={lineTheme}
             colors={{ scheme: 'nivo' }}
             enableGridX={true}

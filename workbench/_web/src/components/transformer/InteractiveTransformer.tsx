@@ -577,27 +577,7 @@ export default function LensTransformer({
                     }
                 }
 
-                // Add row hitbox for easier selection in row mode
-                if (rowMode && showFlowOnHover) {
-                    // Calculate hitbox dimensions for layers only
-                    const hitboxX = 0;
-                    const hitboxWidth = dimensions.layersWidth;
-                    const hitboxY = centerY - dimensions.rowHeight / 2;
-                    const hitboxHeight = dimensions.rowHeight;
-
-                    // Create invisible rectangle for row selection
-                    const rowHitbox = g.append("rect")
-                        .attr("x", hitboxX)
-                        .attr("y", hitboxY)
-                        .attr("width", hitboxWidth)
-                        .attr("height", hitboxHeight)
-                        .attr("fill", "transparent")
-                        .attr("stroke", "none")
-                        .style("cursor", "pointer")
-
-                    // Add handlers - use 'resid' as component type since it triggers row highlighting in row mode
-                    addComponentHandlers(rowHitbox, rowIndex, layerIndex, 'resid');
-                }
+                // Row hitbox moved outside of layer loop to avoid duplication
             };
 
             // Draw all token rows for this layer
@@ -629,7 +609,25 @@ export default function LensTransformer({
             drawLayer(i);
         }
 
-    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, theme]);
+        // Add row hitboxes for row mode (after all layers to avoid duplication)
+        if (rowMode && showFlowOnHover) {
+            for (let rowIndex = 0; rowIndex < numTokens; rowIndex++) {
+                const hitboxY = dimensions.startY + rowIndex * dimensions.rowHeight - dimensions.rowHeight / 2;
+                const rowHitbox = g.append("rect")
+                    .attr("x", 0)
+                    .attr("y", hitboxY)
+                    .attr("width", dimensions.layersWidth)
+                    .attr("height", dimensions.rowHeight)
+                    .attr("fill", "transparent")
+                    .attr("stroke", "none")
+                    .style("cursor", "pointer");
+                
+                // Add handlers - use 'resid' as component type since it triggers row highlighting in row mode
+                addComponentHandlers(rowHitbox, rowIndex, layerRange[0], 'resid');
+            }
+        }
+
+    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, theme, rowMode]);
 
     // Separate effect to update highlighting without rebuilding the SVG
     useEffect(() => {
@@ -690,7 +688,27 @@ export default function LensTransformer({
             }
         });
 
-    }, [highlightedComponents, theme, showFlowOnHover]);
+        // Add visual dashed stroke around clicked row in row mode
+        g.selectAll(".row-stroke").remove(); // Remove any existing stroke
+        
+        if (rowMode && clickedComponent) {
+            const rowY = dimensions.startY + clickedComponent.tokenIndex * dimensions.rowHeight;
+            g.append("rect")
+                .attr("class", "row-stroke")
+                .attr("x", 5)
+                .attr("y", rowY - dimensions.rowHeight / 2 + 5)
+                .attr("width", dimensions.layersWidth - 10)
+                .attr("height", dimensions.rowHeight - 10)
+                .attr("fill", "none")
+                .attr("stroke", theme === "dark" ? "#60A5FA" : "#3B82F6")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "5,5")
+                .attr("rx", 8)
+                .attr("ry", 8)
+                .attr("pointer-events", "none");
+        }
+
+    }, [highlightedComponents, theme, showFlowOnHover, rowMode, clickedComponent, dimensions]);
 
     return (
         <div className="flex items-cener justify-center rounded-lg relative">

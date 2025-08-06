@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState } from "react";
 import { useExecuteSelected } from "@/lib/api/modelsApi";
-import type { Prediction, Token } from "@/types/models";
+import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
 
 import { PredictionBadges } from "./PredictionBadges";
@@ -16,6 +16,7 @@ import { useUpdateChartConfig } from "@/lib/api/configApi";
 import { useParams } from "next/navigation";
 import { useLensCharts } from "@/hooks/useLensCharts";
 import { cn } from "@/lib/utils";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 interface CompletionCardProps {
     config: LensConfigData;
@@ -25,7 +26,7 @@ interface CompletionCardProps {
 
 export function CompletionCard({ config, setConfig, configId }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
-    const [tokenData, setTokenData] = useState<Token[]>([]);
+    const { tokenData, setTokenData } = useLensWorkspace();
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
 

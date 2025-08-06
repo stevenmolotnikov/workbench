@@ -12,13 +12,12 @@ import { LensConfig } from "@/db/schema";
 import { CompletionCard } from "./CompletionCard";
 import { useLensCharts } from "@/hooks/useLensCharts";
 import { ChevronRight, ChevronDown, RotateCcw } from "lucide-react";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 export default function InteractiveDisplay({ initialConfig }: { initialConfig: LensConfig }) {
     // Generate some sample labels
     const { selectedModel } = useWorkspace();
-    const [tokenData, setTokenData] = useState<Token[]>([]);
-    const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
-    const [showFlow, setShowFlow] = useState(false);
+    const { tokenData, clickedComponent, setClickedComponent } = useLensWorkspace();
     const [isExpanded, setIsExpanded] = useState(false);
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
@@ -61,7 +60,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                             >
                                 <ChevronDown className="h-4 w-4" />
                             </button>
-                            <div className="flex gap-2 w-3/4">
+                            {/* <div className="flex gap-2 w-3/4">
                                 <div className="flex border rounded w-full h-8">
                                     <DoubleSlider
                                         value={sliderValues}
@@ -83,17 +82,17 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                                 >
                                     <RotateCcw className="w-4 h-4" />
                                 </Button>
-                            </div>
+                            </div> */}
                         </div>
                         <ScrollArea className="h-full w-full pt-4 flex rounded-b items-center justify-center border">
                             <LensTransformer
                                 clickedComponent={clickedComponent}
                                 setClickedComponent={setClickedComponent}
-                                rowMode={true}
+                                rowMode={false}
                                 numTokens={tokenData.length}
                                 layerRange={sliderValues}
                                 scale={0.6}
-                                showFlowOnHover={showFlow}
+                                showFlowOnHover={true}
                                 tokenLabels={tokenData.map((token) => token.text)}
                             />
                         </ScrollArea>
