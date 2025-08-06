@@ -17,7 +17,6 @@ class ModelsConfig(BaseModel):
     """Root configuration containing all models."""
 
     remote: bool
-    callback_url: str
     
     models: dict[str, ModelConfig]
 
@@ -53,7 +52,11 @@ class AppState:
         return self.get_model(model_name)
 
     def _load(self):
-        config_path = os.path.join(os.environ.get("WORKBENCH_DIR"), "models.toml")
+        env = os.environ.get("ENVIRONMENT", "local")
+        print(f"Loading {env} config")
+        
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(current_path, f"_model_configs/{env}.toml")
 
         with open(config_path, "rb") as f:
             config = ModelsConfig(**tomllib.load(f))

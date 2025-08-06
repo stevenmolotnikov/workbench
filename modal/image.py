@@ -11,9 +11,8 @@ app = modal.App(name=os.environ.get("MODAL_APP_NAME", "interp-workbench"))
 image = (
     modal.Image.debian_slim()
     .pip_install(*dependencies)
-    .env({"WORKBENCH_DIR" : "/root/"})
+    .env({"ENVIRONMENT" : "dev"}) # Configures which models are loaded
     .add_local_dir("./workbench/_api", remote_path="/root/workbench/_api", ignore=["__pycache__"])
-    .add_local_file("./models.toml", remote_path="/root/models.toml")
 )
 
 @app.function(

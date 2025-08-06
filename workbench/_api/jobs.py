@@ -1,7 +1,6 @@
 import anyio
 import asyncio
 import json
-import httpx
 from anyio.streams.memory import (
     MemoryObjectSendStream,
     MemoryObjectReceiveStream,
@@ -11,15 +10,6 @@ from fastapi.responses import StreamingResponse
 import uuid
 from contextlib import asynccontextmanager
 from .state import AppState
-
-
-async def send_update(callback_url: str, response_body: dict):
-    async with httpx.AsyncClient() as client:
-        try:
-            await client.post(callback_url, json=response_body)
-        except Exception as e:
-            print(f"Failed to send update: {e}")
-
 
 def format_sse_event(data: dict) -> str:
     """Format data as Server-Sent Event"""
