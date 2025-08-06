@@ -110,7 +110,6 @@ export function Heatmap({
     const containerWidth = containerDimensions.width;
     const containerHeight = containerDimensions.height;
 
-
     // Calculate space allocation as percentages of container size
     const yLabelSpace = yAxisLabel ? containerWidth * 0.04 : 0;
     const yTickSpace = yTickLabels.length > 0 ? containerWidth * 0.04 : 0;

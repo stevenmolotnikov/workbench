@@ -1,6 +1,6 @@
 "use client";
 
-import { ALargeSmall, Edit2, RotateCcw, X } from "lucide-react";
+import { ALargeSmall, ChartLine, Edit2, Grid3x3, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
@@ -36,7 +36,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
     const { mutateAsync: getExecuteSelected } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
-    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
+    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ config, configId });
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
@@ -149,10 +149,16 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
                         Tokenize
                     </TooltipButton>
                     <Button
-                        size="sm"
-                        onClick={() => handleCreateHeatmap(config)}
+                        size="icon"
+                        onClick={handleCreateHeatmap}
                     >
-                        Run
+                        <Grid3x3 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                        size="icon"
+                        onClick={handleCreateLineChart}
+                    >
+                        <ChartLine className="w-4 h-4" />
                     </Button>
                 </div>
 
