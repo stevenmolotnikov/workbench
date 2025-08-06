@@ -1,3 +1,4 @@
+import os
 import modal
 from workbench._api.main import fastapi_app
 
@@ -9,7 +10,7 @@ dependencies = [
     "python-dotenv>=1.0.1"
 ]
 
-app = modal.App(name="interp-workbench")
+app = modal.App(name=os.environ.get("MODAL_APP_NAME", "interp-workbench"))
 image = (
     modal.Image.debian_slim()
     .pip_install(*dependencies)

@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - prod
+      - dev
 
 jobs:
   deploy:
@@ -31,4 +31,9 @@ jobs:
 
       - name: Deploy to Modal
         run: |
-          modal deploy modal/image.py  
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            export MODAL_APP_NAME="interp-workbench-prod"
+          elif [ "${{ github.ref }}" == "refs/heads/dev" ]; then
+            export MODAL_APP_NAME="interp-workbench-dev"
+          fi
+          modal deploy modal/image.py
