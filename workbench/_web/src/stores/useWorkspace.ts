@@ -22,7 +22,7 @@ export const useWorkspace = create<WorkspaceState>()((set) => ({
     activeTab: null,
     setActiveTab: (tabId: string | null) => set({ activeTab: tabId }),
 
-    annotationsOpen: false,
+    annotationsOpen: true,
     setAnnotationsOpen: (annotationsOpen: boolean) => set({ annotationsOpen }),
 
     selectedModel: null,

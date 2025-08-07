@@ -116,9 +116,6 @@ export function ChartDisplay() {
                         <h1 className="text-xl font-bold">
                             Title
                         </h1>
-                        {/* <Button variant="outline" size="icon">
-                            <Search className="h-4 w-4" />
-                        </Button> */}
                     </div>
                     <div className="flex h-[90%] w-full border rounded">
                         {

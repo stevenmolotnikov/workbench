@@ -101,7 +101,7 @@ export function Heatmap({
                         className="select-none"
                         style={{ fill: cell.labelTextColor, fontSize: 10 }}
                     >
-                        {cell.formattedValue}
+                        {cell.label}
                     </text>
                 )}
             </g>
@@ -126,7 +126,7 @@ export function Heatmap({
         >
             <ResponsiveHeatMap
                 data={data.rows}
-                margin={{ top: 50, right: 80, bottom: 50, left: 50 }}
+                margin={{ top: 50, right: 80, bottom: 50, left: 70 }}
                 valueFormat=">-.2f"
                 axisTop={null}
                 axisBottom={{
