@@ -1,18 +1,12 @@
 "use client";
 
-import { useState, useMemo } from 'react';
 import type { LineGraphData } from "@/types/charts";
-import { ResponsiveLine } from '@nivo/line'
+import { LineSeries, PointOrSliceMouseHandler, ResponsiveLine } from '@nivo/line'
 import { lineTheme } from '../primatives/theming'
-import { LineSeries, PointOrSliceMouseHandler } from '@nivo/line'
-import { LineAnnotationLayer } from './LineAnnotationLayer'
-import { useAnnotations } from '@/stores/useAnnotations';
-import { useQuery } from "@tanstack/react-query";
-import { getAnnotations } from '@/lib/queries/annotationQueries';
-import { LineAnnotation } from '@/types/annotations';
+import { useLineAnnotationLayer, LineAnnotationLayer } from './LineAnnotationLayer'
+import { useState } from "react";
 
 interface LineGraphProps {
-    chartId: string;
     data?: LineGraphData;
 }
 
@@ -21,22 +15,9 @@ export interface RangeSelection {
     ranges: Array<[number, number]>;
 }
 
-export function LineGraph({ chartId, data }: LineGraphProps) {
-    const { data: annotations } = useQuery({
-        queryKey: ["annotations"],
-        queryFn: () => getAnnotations(chartId),
-    });
-
+export function LineGraph({ data }: LineGraphProps) {
+    const { addPendingAnnotation } = useLineAnnotationLayer();
     const [hoveredPoint, setHoveredPoint] = useState<{ lineId: string; index: number } | null>(null);
-
-    const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
-
-    const lineAnnotationLayer = useMemo(() => {
-        const lineAnnotations = annotations?.filter(a => a.type === "line").map(a => a.data as LineAnnotation);
-        return (props: any) => {
-            return LineAnnotationLayer({ ...props, annotations: lineAnnotations, hoveredPoint });
-        };
-    }, [annotations, hoveredPoint]);
 
     if (!data) return (
         <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -44,42 +25,29 @@ export function LineGraph({ chartId, data }: LineGraphProps) {
         </div>
     )
 
-    const handlePointClick: PointOrSliceMouseHandler<LineSeries> = (datum) => {
-        // Only handle point clicks, not slice clicks
-        if (!('seriesId' in datum)) return;
-
-        const lineId = datum.seriesId as string;
-        const layerIndex = datum.indexInSeries as number;
-
-        if (!pendingAnnotation) {
-            // First click - start selection
-            setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
-        }
-
-        // Narrow type to line annotation
-        if (pendingAnnotation && pendingAnnotation.type === "line") {
-            // If the annotation is complete, start a new one
-            if (pendingAnnotation.layerEnd) {
-                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
-                return;
-            };
-
-            if (pendingAnnotation.lineId === lineId && pendingAnnotation.layerStart === layerIndex) {
-                // Clicking same point - clear all selections
-                setPendingAnnotation(null);
-            } else if (pendingAnnotation.lineId === lineId) {
-                // Second click on same line - add/complete range
-                setPendingAnnotation({
-                    ...pendingAnnotation,
-                    layerStart: Math.min(pendingAnnotation.layerStart, layerIndex),
-                    layerEnd: Math.max(pendingAnnotation.layerStart, layerIndex),
-                });
-
-            } else {
-                // Different line - start new selection
-                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
-            }
-        }
+    const HoverIndicatorLayer = ({ series }: any) => {
+        return (
+            <g>
+                {/* Render hover indicator (solid circle) */}
+                {hoveredPoint && (() => {
+                    const line = series.find(s => s.id === hoveredPoint.lineId);
+                    if (!line) return null;
+                    const point = line.data[hoveredPoint.index];
+                    if (!point) return null;
+    
+                    return (
+                        <circle
+                            cx={point.position.x}
+                            cy={point.position.y}
+                            r={8}
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                        />
+                    );
+                })()}
+            </g>
+        );
     };
 
     const handleMouseMove: PointOrSliceMouseHandler<LineSeries> = (datum) => {
@@ -92,6 +60,7 @@ export function LineGraph({ chartId, data }: LineGraphProps) {
             index: datum.indexInSeries as number
         });
     };
+
 
     return (
         <ResponsiveLine
@@ -117,15 +86,16 @@ export function LineGraph({ chartId, data }: LineGraphProps) {
             colors={{ scheme: 'nivo' }}
             enableGridX={true}
             enableGridY={true}
-            onClick={handlePointClick}
+            onClick={addPendingAnnotation}
             onMouseMove={handleMouseMove}
             enablePoints={false}
             layers={[
                 'grid',
                 'axes',
-                lineAnnotationLayer,
-                'mesh',
                 'legends',
+                HoverIndicatorLayer,
+                LineAnnotationLayer,
+                'mesh',
             ]}
             legends={[
                 {

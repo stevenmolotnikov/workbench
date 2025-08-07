@@ -126,7 +126,7 @@ export function ChartDisplay() {
                             activeChart.type === "heatmap" ? (
                                 <Heatmap data={activeChart.data as HeatmapData} />
                             ) : (
-                                <LineGraph data={activeChart.data as LineGraphData} chartId={activeChart.id} />
+                                <LineGraph data={activeChart.data as LineGraphData} />
                             )
                         }
                     </div>

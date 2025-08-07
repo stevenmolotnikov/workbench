@@ -1,22 +1,75 @@
 "use client";
 
-import { ComputedSeries, ComputedDatum, LineSeries, LineCustomSvgLayerProps } from '@nivo/line'
+import { ComputedSeries, ComputedDatum, LineSeries, PointOrSliceMouseHandler } from '@nivo/line'
 import { Position } from '@/types/charts'
 import { LineAnnotation } from '@/types/annotations'
 import { useAnnotations } from '@/stores/useAnnotations';
+import { useQuery } from '@tanstack/react-query';
+import { getAnnotations } from '@/lib/queries/annotationQueries';
+import { useWorkspace } from '@/stores/useWorkspace';
+
+export const useLineAnnotationLayer = () => {
+    const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
+
+    const addPendingAnnotation: PointOrSliceMouseHandler<LineSeries> = (datum) => {
+        // Only handle point clicks, not slice clicks
+        if (!('seriesId' in datum)) return;
+
+        const lineId = datum.seriesId as string;
+        const layerIndex = datum.indexInSeries as number;
+
+        if (!pendingAnnotation) {
+            // First click - start selection
+            setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
+        }
+
+        // Narrow type to line annotation
+        if (pendingAnnotation && pendingAnnotation.type === "line") {
+            // If the annotation is complete, start a new one
+            if (pendingAnnotation.layerEnd) {
+                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
+                return;
+            };
+
+            if (pendingAnnotation.lineId === lineId && pendingAnnotation.layerStart === layerIndex) {
+                // Clicking same point - clear all selections
+                setPendingAnnotation(null);
+            } else if (pendingAnnotation.lineId === lineId) {
+                // Second click on same line - add/complete range
+                setPendingAnnotation({
+                    ...pendingAnnotation,
+                    layerStart: Math.min(pendingAnnotation.layerStart, layerIndex),
+                    layerEnd: Math.max(pendingAnnotation.layerStart, layerIndex),
+                });
+
+            } else {
+                // Different line - start new selection
+                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
+            }
+        }
+    };
+
+    return {
+        addPendingAnnotation
+    }
+}
 
 interface Segment {
     points: Position[];
     isAnnotated: boolean;
 }
 
-export interface LineAnnotationLayer extends LineCustomSvgLayerProps<LineSeries> {
-    annotations: LineAnnotation[] | null;
-    hoveredPoint: { lineId: string; index: number } | null;
-}
-
 // Custom line layer that renders segments with different colors
-export const LineAnnotationLayer = ({ series, lineGenerator, annotations, hoveredPoint }: LineAnnotationLayer) => {
+export const LineAnnotationLayer = ({ series, lineGenerator }: any) => {
+    const { activeTab: chartId } = useWorkspace();
+
+    const { data: allAnnotations } = useQuery({
+        queryKey: ["annotations"],
+        queryFn: () => getAnnotations(chartId as string),
+        enabled: !!chartId,
+    });
+
+    const annotations = allAnnotations?.filter(a => a.type === "line").map(a => a.data as LineAnnotation);
     const { pendingAnnotation } = useAnnotations();
 
     if (pendingAnnotation && pendingAnnotation.type !== "line") return null;
@@ -79,24 +132,6 @@ export const LineAnnotationLayer = ({ series, lineGenerator, annotations, hovere
                 );
             })}
 
-            {/* Render hover indicator (solid circle) */}
-            {hoveredPoint && (() => {
-                const line = series.find(s => s.id === hoveredPoint.lineId);
-                if (!line) return null;
-                const point = line.data[hoveredPoint.index];
-                if (!point) return null;
-
-                return (
-                    <circle
-                        cx={point.position.x}
-                        cy={point.position.y}
-                        r={8}
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                    />
-                );
-            })()}
 
             {/* Render start point indicator (dashed circle) */}
             {(pendingAnnotation) && (() => {
