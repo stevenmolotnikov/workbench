@@ -22,14 +22,14 @@ export interface HeatmapData {
     highlights?: HeatmapHighlight[];
 }
 
-interface Point {
+export interface Position {
     x: number;
     y: number;
 }
 
-interface Line {
+export interface Line {
     id: string;
-    data: Point[];
+    data: Position[];
 }
 
 export interface LineGraphData {

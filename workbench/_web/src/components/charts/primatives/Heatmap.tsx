@@ -11,11 +11,10 @@ interface HeatmapProps {
     data: HeatmapData
 }
 
-
 export function Heatmap({
     data,
 }: HeatmapProps) {
-    const { clickedComponent } = useLensWorkspace();
+    const { clickedComponent, setClickedComponent } = useLensWorkspace();
 
     const CustomCell = ({
         cell,
@@ -35,23 +34,40 @@ export function Heatmap({
 
         const isActive = layerIndex === clickedComponent?.layerIndex && tokenIndex === clickedComponent?.tokenIndex
 
+        const handleOnClick = () => {
+            if (typeof layerIndex !== 'number') {
+                throw new Error('Layer index is not a number')
+            }
+
+            setClickedComponent({
+                layerIndex,
+                tokenIndex,
+                componentType: 'resid'
+            })
+            onClick?.(cell)
+        }
+
+        const strokeWidth = isActive ? 2 : borderWidth
+        const adjustedWidth = cell.width - strokeWidth
+        const adjustedHeight = cell.height - strokeWidth
+
         return (
             <g
                 transform={`translate(${cell.x}, ${cell.y})`}
                 onMouseEnter={onMouseEnter?.(cell)}
                 onMouseMove={onMouseMove?.(cell)}
                 onMouseLeave={onMouseLeave?.(cell)}
-                onClick={onClick?.(cell)}
+                onClick={handleOnClick}
             >
                 <rect
-                    x={-cell.width / 2}
-                    y={-cell.height / 2}
-                    width={cell.width}
-                    height={cell.height}
+                    x={-adjustedWidth / 2}
+                    y={-adjustedHeight / 2}
+                    width={adjustedWidth}
+                    height={adjustedHeight}
                     fill={cell.color}
                     fillOpacity={cell.opacity}
-                    strokeWidth={isActive ? 3 : borderWidth}
-                    stroke={isActive ? 'hsl(var(--primary))' : cell.borderColor}
+                    strokeWidth={strokeWidth}
+                    stroke={isActive ? 'red' : cell.borderColor}
                 />
                 {enableLabels && (
                     <text

@@ -9,7 +9,7 @@ import { useEffect, useRef, useMemo } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
 import { Heatmap } from "./primatives/Heatmap";
-import { LineGraph } from "./primatives/LineGraph";
+import { LineGraph } from "./line/LineGraph";
 import { Input } from "../ui/input";
 
 export function ChartDisplay() {

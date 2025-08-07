@@ -77,14 +77,20 @@ export default function UnembedComponent({
     ) => {
       element
         .on("mouseenter", () => {
-          setHoveredComponent({
-            tokenIndex,
-            layerIndex: numLayers - 1,
-            componentType: 'unembed'
-          });
+          // Only update hover if nothing is clicked
+          if (!clickedComponent) {
+            setHoveredComponent({
+              tokenIndex,
+              layerIndex: numLayers - 1,
+              componentType: 'unembed'
+            });
+          }
         })
         .on("mouseleave", () => {
-          setHoveredComponent(null);
+          // Only clear hover if nothing is clicked
+          if (!clickedComponent) {
+            setHoveredComponent(null);
+          }
         })
         .on("click", (event) => {
           event.stopPropagation();
@@ -149,7 +155,7 @@ export default function UnembedComponent({
       }
     }
 
-  }, [numTokens, numLayers, unembedLabels, theme, scale, dimensions, colors, showFlowOnHover]);
+  }, [numTokens, numLayers, unembedLabels, theme, scale, dimensions, colors, showFlowOnHover, clickedComponent]);
 
   // Separate effect to update highlighting
   useEffect(() => {
@@ -174,20 +180,25 @@ export default function UnembedComponent({
       
       if (isHighlighted === null) return;
       
-      const pathColor = isHighlighted ? colors.blue : strokeBase;
-      const fillColor = isHighlighted ? colors.fills.blue : fillBase;
+      // Use original colors with opacity for non-highlighted components
+      const opacity = isHighlighted ? 1.0 : 0.15;
+      const pathColor = colors.blue;
+      const fillColor = colors.fills.blue;
 
       switch (element.attr("data-component-subtype")) {
         case "line":
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
         case "shape":
           element.attr("fill", fillColor);
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
         case "filled":
           element.attr("fill", pathColor);
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
       }
     });

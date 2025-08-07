@@ -193,7 +193,7 @@ export default function LensTransformer({
     };
 
     // Determine which component is currently selected
-    const activeComponent = hoveredComponent || clickedComponent;
+    const activeComponent = clickedComponent || hoveredComponent;
 
     const numLayers = layerRange[1] - layerRange[0] + 1;
 
@@ -233,14 +233,20 @@ export default function LensTransformer({
         ) => {
             element
                 .on("mouseenter", () => {
-                    setHoveredComponent({
-                        tokenIndex,
-                        layerIndex,
-                        componentType
-                    });
+                    // Only update hover if nothing is clicked
+                    if (!clickedComponent) {
+                        setHoveredComponent({
+                            tokenIndex,
+                            layerIndex,
+                            componentType
+                        });
+                    }
                 })
                 .on("mouseleave", () => {
-                    setHoveredComponent(null);
+                    // Only clear hover if nothing is clicked
+                    if (!clickedComponent) {
+                        setHoveredComponent(null);
+                    }
                 })
                 .on("click", (event) => {
                     event.stopPropagation();
@@ -268,7 +274,10 @@ export default function LensTransformer({
                 .attr("fill", "transparent")
                 .style("cursor", "default")
                 .on("mouseenter", () => {
-                    setHoveredComponent(null);
+                    // Only clear hover if nothing is clicked
+                    if (!clickedComponent) {
+                        setHoveredComponent(null);
+                    }
                 })
                 .on("click", (event) => {
                     event.stopPropagation();
@@ -627,7 +636,7 @@ export default function LensTransformer({
             }
         }
 
-    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, theme, rowMode]);
+    }, [dimensions, numTokens, layerRange, showAttn, showMlp, scale, showFlowOnHover, theme, rowMode, clickedComponent]);
 
     // Separate effect to update highlighting without rebuilding the SVG
     useEffect(() => {
@@ -670,45 +679,33 @@ export default function LensTransformer({
             // If isHighlighted is null, don't update colors (preserve current state)
             if (isHighlighted === null) return;
 
-            const pathColor = isHighlighted ? defaultColor : STROKE_BASE;
-            const fillColor = isHighlighted ? highlightedFillColor : FILL_BASE;
+            // Use original colors with opacity for non-highlighted components
+            const opacity = isHighlighted ? 1.0 : 0.15;
+            const pathColor = defaultColor;
+            const fillColor = highlightedFillColor;
 
             switch (element.attr("data-component-subtype")) {
                 case "line":
                     element.attr("stroke", pathColor);
+                    element.attr("opacity", opacity);
                     break;
                 case "shape":
                     element.attr("fill", fillColor);
                     element.attr("stroke", pathColor);
+                    element.attr("opacity", opacity);
                     break;
                 case "filled":
                     element.attr("fill", pathColor);
                     element.attr("stroke", pathColor);
+                    element.attr("opacity", opacity);
                     break;
             }
         });
 
-        // Add visual dashed stroke around clicked row in row mode
-        g.selectAll(".row-stroke").remove(); // Remove any existing stroke
-        
-        if (rowMode && clickedComponent) {
-            const rowY = dimensions.startY + clickedComponent.tokenIndex * dimensions.rowHeight;
-            g.append("rect")
-                .attr("class", "row-stroke")
-                .attr("x", 5)
-                .attr("y", rowY - dimensions.rowHeight / 2 + 5)
-                .attr("width", dimensions.layersWidth - 10)
-                .attr("height", dimensions.rowHeight - 10)
-                .attr("fill", "none")
-                .attr("stroke", theme === "dark" ? "#60A5FA" : "#3B82F6")
-                .attr("stroke-width", 2)
-                .attr("stroke-dasharray", "5,5")
-                .attr("rx", 8)
-                .attr("ry", 8)
-                .attr("pointer-events", "none");
-        }
+        // Remove any existing stroke (cleanup)
+        g.selectAll(".row-stroke").remove();
 
-    }, [highlightedComponents, theme, showFlowOnHover, rowMode, clickedComponent, dimensions]);
+    }, [highlightedComponents, theme, showFlowOnHover, rowMode, dimensions]);
 
     return (
         <div className="flex items-cener justify-center rounded-lg relative">

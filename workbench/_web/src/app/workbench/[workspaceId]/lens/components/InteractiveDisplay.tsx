@@ -17,13 +17,22 @@ import { useLensWorkspace } from "@/stores/useLensWorkspace";
 export default function InteractiveDisplay({ initialConfig }: { initialConfig: LensConfig }) {
     // Generate some sample labels
     const { selectedModel } = useWorkspace();
+
     const { tokenData, clickedComponent, setClickedComponent } = useLensWorkspace();
     const [isExpanded, setIsExpanded] = useState(false);
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
 
     // Two-knob slider state
-    const [sliderValues, setSliderValues] = useState<[number, number]>([0, selectedModel?.n_layers || 0]);
+
+    const getSliderValues = (): [number, number] => {
+        if (!selectedModel) {
+            return [0, 0];
+        }
+        return [0, selectedModel.n_layers - 1];
+    }
+
+    const [sliderValues, setSliderValues] = useState<[number, number]>(getSliderValues());
 
     const handleSliderChange = (value: [number, number]) => {
         setSliderValues(value);
@@ -88,7 +97,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                             <LensTransformer
                                 clickedComponent={clickedComponent}
                                 setClickedComponent={setClickedComponent}
-                                rowMode={false}
+                                rowMode={true}
                                 numTokens={tokenData.length}
                                 layerRange={sliderValues}
                                 scale={0.6}

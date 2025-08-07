@@ -75,14 +75,20 @@ export default function EmbedComponent({
     ) => {
       element
         .on("mouseenter", () => {
-          setHoveredComponent({
-            tokenIndex,
-            layerIndex: 0,
-            componentType: 'embed'
-          });
+          // Only update hover if nothing is clicked
+          if (!clickedComponent) {
+            setHoveredComponent({
+              tokenIndex,
+              layerIndex: 0,
+              componentType: 'embed'
+            });
+          }
         })
         .on("mouseleave", () => {
-          setHoveredComponent(null);
+          // Only clear hover if nothing is clicked
+          if (!clickedComponent) {
+            setHoveredComponent(null);
+          }
         })
         .on("click", (event) => {
           event.stopPropagation();
@@ -173,7 +179,7 @@ export default function EmbedComponent({
       }
     }
 
-  }, [numTokens, tokenLabels, theme, scale, dimensions, colors, showFlowOnHover]);
+  }, [numTokens, tokenLabels, theme, scale, dimensions, colors, showFlowOnHover, clickedComponent]);
 
   // Separate effect to update highlighting
   useEffect(() => {
@@ -198,20 +204,25 @@ export default function EmbedComponent({
       
       if (isHighlighted === null) return;
       
-      const pathColor = isHighlighted ? colors.blue : strokeBase;
-      const fillColor = isHighlighted ? colors.fills.blue : fillBase;
+      // Use original colors with opacity for non-highlighted components
+      const opacity = isHighlighted ? 1.0 : 0.15;
+      const pathColor = colors.blue;
+      const fillColor = colors.fills.blue;
 
       switch (element.attr("data-component-subtype")) {
         case "line":
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
         case "shape":
           element.attr("fill", fillColor);
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
         case "filled":
           element.attr("fill", pathColor);
           element.attr("stroke", pathColor);
+          element.attr("opacity", opacity);
           break;
       }
     });
