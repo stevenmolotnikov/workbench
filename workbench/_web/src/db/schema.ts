@@ -44,10 +44,17 @@ export const chartConfigLinks = pgTable("chart_config_links", {
     configId: uuid("config_id").references(() => configs.id, { onDelete: "cascade" }).notNull(),
 });
 
+export const annotationTypes = [
+    "line",
+    "heatmap",
+] as const;
+
 export const annotations = pgTable("annotations", {
     id: uuid("id").primaryKey().defaultRandom(),
     chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull(),
+
     data: jsonb("data").$type<AnnotationData>().notNull(),
+    type: varchar("type", { enum: annotationTypes, length: 32 }).notNull(),
 });
 
 // Generate types from schema

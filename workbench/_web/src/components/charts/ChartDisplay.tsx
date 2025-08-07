@@ -52,7 +52,7 @@ export function ChartDisplay() {
         setActiveTab(newChart.id);
     };
 
-    if (isLoading) return (
+    if (isLoading || !activeChart) return (
         <div className="flex-1 flex h-full items-center justify-center bg-muted">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -123,10 +123,10 @@ export function ChartDisplay() {
                     </div>
                     <div className="flex h-[90%] w-full border rounded">
                         {
-                            activeChart?.type === "heatmap" ? (
-                                <Heatmap data={activeChart?.data as HeatmapData} />
+                            activeChart.type === "heatmap" ? (
+                                <Heatmap data={activeChart.data as HeatmapData} />
                             ) : (
-                                <LineGraph data={activeChart?.data as LineGraphData} />
+                                <LineGraph data={activeChart.data as LineGraphData} chartId={activeChart.id} />
                             )
                         }
                     </div>

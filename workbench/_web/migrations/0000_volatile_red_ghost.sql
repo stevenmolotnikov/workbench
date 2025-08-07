@@ -1,7 +1,8 @@
 CREATE TABLE "annotations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"chart_id" uuid NOT NULL,
-	"data" jsonb NOT NULL
+	"data" jsonb NOT NULL,
+	"type" varchar(32) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "chart_config_links" (

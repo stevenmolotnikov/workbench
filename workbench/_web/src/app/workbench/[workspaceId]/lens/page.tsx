@@ -20,6 +20,7 @@ import { getOrCreateLensConfig } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import useModels from "@/hooks/useModels";
 import { LensConfigData } from "@/types/lens";
+import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 
 export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
     const resolvedParams = use(params);
@@ -82,14 +83,18 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
                     direction="horizontal"
                     className="flex flex-1 min-h-0 h-full"
                 >
-                    <ResizablePanel className="h-full" defaultSize={50} minSize={30}>
+                    <ResizablePanel className="h-full" defaultSize={35} minSize={25}>
                         {isChartConfigSuccess &&
                             <InteractiveDisplay initialConfig={chartConfig} />
                         }
                     </ResizablePanel>
                     <ResizableHandle />
-                    <ResizablePanel defaultSize={50} minSize={30}>
+                    <ResizablePanel defaultSize={45} minSize={35}>
                         <ChartDisplay />
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={20} minSize={15}>
+                        <AnnotationsDisplay />
                     </ResizablePanel>
                 </ResizablePanelGroup>
             </div>

@@ -1,5 +1,5 @@
 {
-  "id": "c6b15043-ca24-46ed-b5c0-e33012d8648f",
+  "id": "7ec7b969-82a8-45ba-97bd-0c465960c04d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -24,6 +24,12 @@
         "data": {
           "name": "data",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "varchar(32)",
           "primaryKey": false,
           "notNull": true
         }

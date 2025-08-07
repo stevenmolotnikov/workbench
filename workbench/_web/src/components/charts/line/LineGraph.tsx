@@ -4,10 +4,14 @@ import { useState, useMemo } from 'react';
 import type { LineGraphData } from "@/types/charts";
 import { ResponsiveLine } from '@nivo/line'
 import { lineTheme } from '../primatives/theming'
-import { LineSeries, LineCustomSvgLayerProps, PointOrSliceMouseHandler } from '@nivo/line'
+import { LineSeries, PointOrSliceMouseHandler } from '@nivo/line'
 import { LineAnnotationLayer } from './LineAnnotationLayer'
+import { useAnnotations } from '@/stores/useAnnotations';
+import { useQuery } from "@tanstack/react-query";
+import { getLineAnnotations } from '@/lib/queries/annotationQueries';
 
 interface LineGraphProps {
+    chartId: string;
     data?: LineGraphData;
 }
 
@@ -16,15 +20,21 @@ export interface RangeSelection {
     ranges: Array<[number, number]>;
 }
 
-export function LineGraph({ data }: LineGraphProps) {
-    const [selection, setSelection] = useState<RangeSelection | null>(null);
-    const [firstClick, setFirstClick] = useState<{ lineId: string; index: number } | null>(null);
+export function LineGraph({ chartId, data }: LineGraphProps) {
+    const { data: lineAnnotations } = useQuery({
+        queryKey: ["lineAnnotations"],
+        queryFn: () => getLineAnnotations(chartId),
+    });
+
+    const [hoveredPoint, setHoveredPoint] = useState<{ lineId: string; index: number } | null>(null);
+
+    const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
 
     const lineAnnotationLayer = useMemo(() => {
-        return (props: LineCustomSvgLayerProps<LineSeries>) => {
-            return LineAnnotationLayer({ ...props, selection });
+        return (props: any) => {
+            return LineAnnotationLayer({ ...props, lineAnnotations, hoveredPoint });
         };
-    }, [selection]);
+    }, [lineAnnotations, hoveredPoint]);
 
     if (!data) return (
         <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -35,44 +45,50 @@ export function LineGraph({ data }: LineGraphProps) {
     const handlePointClick: PointOrSliceMouseHandler<LineSeries> = (datum) => {
         // Only handle point clicks, not slice clicks
         if (!('seriesId' in datum)) return;
-        
+
         const lineId = datum.seriesId as string;
-        const index = datum.indexInSeries as number;
-        console.log(lineId, index);
+        const layerIndex = datum.indexInSeries as number;
 
-        if (!firstClick) {
+        if (!pendingAnnotation) {
             // First click - start selection
-            setFirstClick({ lineId, index });
-        } else if (firstClick.lineId === lineId && firstClick.index === index) {
-            // Clicking same point - clear all selections
-            setFirstClick(null);
-            setSelection(null);
-        } else if (firstClick.lineId === lineId) {
-            // Second click on same line - add/complete range
-            const newRange: [number, number] = [
-                Math.min(firstClick.index, index),
-                Math.max(firstClick.index, index)
-            ];
-
-            if (selection?.lineId === lineId) {
-                // Add to existing ranges for this line
-                setSelection({
-                    lineId,
-                    ranges: [...selection.ranges, newRange]
-                });
-            } else {
-                // Start new selection for this line
-                setSelection({
-                    lineId,
-                    ranges: [newRange]
-                });
-            }
-            setFirstClick(null);
-        } else {
-            // Different line - start new selection
-            setFirstClick({ lineId, index });
-            setSelection(null);
+            setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
         }
+
+        // Narrow type to line annotation
+        if (pendingAnnotation && pendingAnnotation.type === "line") {
+            // If the annotation is complete, start a new one
+            if (pendingAnnotation.layerEnd) {
+                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
+                return;
+            };
+
+            if (pendingAnnotation.lineId === lineId && pendingAnnotation.layerStart === layerIndex) {
+                // Clicking same point - clear all selections
+                setPendingAnnotation(null);
+            } else if (pendingAnnotation.lineId === lineId) {
+                // Second click on same line - add/complete range
+                setPendingAnnotation({
+                    ...pendingAnnotation,
+                    layerStart: Math.min(pendingAnnotation.layerStart, layerIndex),
+                    layerEnd: Math.max(pendingAnnotation.layerStart, layerIndex),
+                });
+
+            } else {
+                // Different line - start new selection
+                setPendingAnnotation({ type: "line", lineId, layerStart: layerIndex, text: "" });
+            }
+        }
+    };
+
+    const handleMouseMove: PointOrSliceMouseHandler<LineSeries> = (datum) => {
+        if (!datum || !('seriesId' in datum)) {
+            setHoveredPoint(null);
+            return;
+        }
+        setHoveredPoint({
+            lineId: datum.seriesId as string,
+            index: datum.indexInSeries as number
+        });
     };
 
     return (
@@ -94,29 +110,18 @@ export function LineGraph({ data }: LineGraphProps) {
                 tickPadding: 5,
                 tickRotation: 0
             }}
-            pointSize={8}
-            pointColor={{ theme: 'background' }}
-            pointBorderWidth={2}
-            pointBorderColor={{ from: 'seriesColor' }}
-            pointLabelYOffset={-12}
-            enableTouchCrosshair={true}
             useMesh={true}
-            // enableCrosshair={false}
             theme={lineTheme}
             colors={{ scheme: 'nivo' }}
             enableGridX={true}
             enableGridY={true}
             onClick={handlePointClick}
+            onMouseMove={handleMouseMove}
             enablePoints={false}
             layers={[
                 'grid',
-                'markers',
                 'axes',
-                'areas',
-                'crosshair',
                 lineAnnotationLayer,
-                'points',   
-                'slices',
                 'mesh',
                 'legends',
             ]}

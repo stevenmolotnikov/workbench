@@ -1,9 +1,9 @@
 "use client";
 
-
 import { ComputedSeries, ComputedDatum, LineSeries, LineCustomSvgLayerProps } from '@nivo/line'
-import { RangeSelection } from './LineGraph'
 import { Position } from '@/types/charts'
+import { LineAnnotation } from '@/types/annotations'
+import { useAnnotations } from '@/stores/useAnnotations';
 
 interface Segment {
     points: Position[];
@@ -11,18 +11,30 @@ interface Segment {
 }
 
 export interface LineAnnotationLayer extends LineCustomSvgLayerProps<LineSeries> {
-    selection: RangeSelection | null;
+    selection: LineAnnotation[] | null;
+    hoveredPoint: { lineId: string; index: number } | null;
 }
 
 // Custom line layer that renders segments with different colors
-export const LineAnnotationLayer = ({ series, lineGenerator, selection }: LineAnnotationLayer) => {
+export const LineAnnotationLayer = ({ series, lineGenerator, selection, hoveredPoint }: LineAnnotationLayer) => {
+    const { pendingAnnotation } = useAnnotations();
+
+    if (pendingAnnotation && pendingAnnotation.type !== "line") return null;
+
     return (
         <g>
             {series.map(({ data, id, color }: ComputedSeries<LineSeries>) => {
-                const isSelected = selection?.lineId === id;
+                let relevantRanges = selection?.filter(s => s.lineId === id).map(s => [s.layerStart, s.layerEnd]);
+                if (pendingAnnotation && pendingAnnotation.lineId === id && "layerEnd" in pendingAnnotation) {
+                    if (relevantRanges) {
+                        relevantRanges.push([pendingAnnotation.layerStart, pendingAnnotation.layerEnd]);
+                    } else {
+                        relevantRanges = [[pendingAnnotation.layerStart, pendingAnnotation.layerEnd]];
+                    }
+                }
                 const points = data.map((d: ComputedDatum<LineSeries>) => d.position);
 
-                if (!isSelected || !selection?.ranges.length) {
+                if (!relevantRanges || relevantRanges.length === 0) {
                     // Render entire line normally
                     return (
                         <path
@@ -38,7 +50,7 @@ export const LineAnnotationLayer = ({ series, lineGenerator, selection }: LineAn
                 // Render line in segments based on ranges
                 const segments: Segment[] = [];
                 for (let i = 0; i < data.length - 1; i++) {
-                    const isAnnotated = selection.ranges.some(
+                    const isAnnotated = relevantRanges.some(
                         ([start, end]) => i >= start && i < end
                     );
 
@@ -66,6 +78,75 @@ export const LineAnnotationLayer = ({ series, lineGenerator, selection }: LineAn
                     </g>
                 );
             })}
+
+            {/* Render hover indicator (solid circle) */}
+            {hoveredPoint && (() => {
+                const line = series.find(s => s.id === hoveredPoint.lineId);
+                if (!line) return null;
+                const point = line.data[hoveredPoint.index];
+                if (!point) return null;
+
+                return (
+                    <circle
+                        cx={point.position.x}
+                        cy={point.position.y}
+                        r={8}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                    />
+                );
+            })()}
+
+            {/* Render start point indicator (dashed circle) */}
+            {(pendingAnnotation) && (() => {
+                const line = series.find(s => s.id === pendingAnnotation.lineId);
+                if (!line) return null;
+                const startPoint = line.data[pendingAnnotation.layerStart];
+                if (!startPoint) return null;
+
+                if (pendingAnnotation.layerEnd) {
+                    const endPoint = line.data[pendingAnnotation.layerEnd];
+                    if (!endPoint) return null;
+
+                    return (
+                        <>
+                            <circle
+                                cx={startPoint.position.x}
+                                cy={startPoint.position.y}
+                                r={8}
+                                fill="none"
+                                stroke="#3b82f6"
+                                strokeWidth={2}
+                                strokeDasharray="5,5"
+                            />
+                            <circle
+                                cx={endPoint.position.x}
+                                cy={endPoint.position.y}
+                                r={8}
+                                fill="none"
+                                stroke="#3b82f6"
+                                strokeWidth={2}
+                                strokeDasharray="5,5"
+                            />
+                        </>
+                    );
+
+                }
+
+                // The position is already in pixel coordinates
+                return (
+                    <circle
+                        cx={startPoint.position.x}
+                        cy={startPoint.position.y}
+                        r={8}
+                        fill="none"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        strokeDasharray="5,5"
+                    />
+                );
+            })()}
         </g>
     );
 };

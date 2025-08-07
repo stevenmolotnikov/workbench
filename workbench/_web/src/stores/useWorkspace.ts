@@ -8,6 +8,9 @@ interface WorkspaceState {
     activeTab: string | null;
     setActiveTab: (tabId: string | null) => void;
 
+    annotationsOpen: boolean;
+    setAnnotationsOpen: (annotationsOpen: boolean) => void;
+
     selectedModel: Model | null;
     setSelectedModel: (model: Model | null) => void;
 }
@@ -18,6 +21,9 @@ export const useWorkspace = create<WorkspaceState>()((set) => ({
     
     activeTab: null,
     setActiveTab: (tabId: string | null) => set({ activeTab: tabId }),
+
+    annotationsOpen: false,
+    setAnnotationsOpen: (annotationsOpen: boolean) => set({ annotationsOpen }),
 
     selectedModel: null,
     setSelectedModel: (model: Model | null) => set({ selectedModel: model }),

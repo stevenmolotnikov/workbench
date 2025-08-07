@@ -11,7 +11,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { StatusUpdatesDisplay } from "./StatusUpdatesDisplay";
-import { useAnnotations } from "@/stores/useAnnotations";
+import { useWorkspace } from "@/stores/useWorkspace";
 // import { TutorialsToggle } from "./TutorialsToggle";
 
 interface WorkbenchModeProps {
@@ -30,15 +30,11 @@ export function WorkbenchMenu({
     workspaceId
 }: WorkbenchModeProps) {
     const router = useRouter();
-
+    const { annotationsOpen, setAnnotationsOpen } = useWorkspace();
     const handleValueChange = (value: "lens" | "patch") => {
         setWorkbenchMode(value);
     };
 
-    const toggleAnnotations = () => {
-        const { isOpen } = useAnnotations.getState();
-        useAnnotations.setState({ isOpen: !isOpen });
-    };
 
     const handleExport = () => {
         router.push('/workbench/summaries');
@@ -63,7 +59,7 @@ export function WorkbenchMenu({
                     <FileText size={16} />
                     Export
                 </Button>
-                <Button variant="outline" size="sm" onClick={toggleAnnotations}>
+                <Button variant="outline" size="sm" onClick={() => setAnnotationsOpen(!annotationsOpen)}>
                     <SquarePen size={16} />
                     Annotate
                 </Button>

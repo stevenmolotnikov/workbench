@@ -1,28 +1,18 @@
-export interface BaseAnnotationData {
+export interface BaseAnnotation {
     text: string;
 }
 
-export interface LineGraphAnnotation extends BaseAnnotationData { 
+export interface LineAnnotation extends BaseAnnotation { 
+    type: "line";
     lineId: string;
-    layer: number;
-    chartIndex: number;
+    layerStart: number;
+    layerEnd?: number;
 }
 
-export interface LineGraphRangeAnnotation extends BaseAnnotationData { 
-    lineId: string;
-    start: number;
-    end: number;
-    chartIndex: number;
+export interface HeatmapAnnotation extends BaseAnnotation { 
+    type: "heatmap";
+    x: number;
+    y: number;
 }
 
-export interface CellPosition {
-    row: number;
-    col: number;
-}
-
-export interface HeatmapAnnotation extends BaseAnnotationData { 
-    positions: CellPosition[];
-    chartIndex: number;
-}   
-
-export type AnnotationData = LineGraphAnnotation | LineGraphRangeAnnotation | HeatmapAnnotation | BaseAnnotationData;
+export type AnnotationData = LineAnnotation | HeatmapAnnotation;
