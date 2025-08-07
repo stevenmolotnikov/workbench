@@ -34,9 +34,6 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
 
     const [sliderValues, setSliderValues] = useState<[number, number]>(getSliderValues());
 
-    const handleSliderChange = (value: [number, number]) => {
-        setSliderValues(value);
-    };
 
     return (
         <div className="h-full flex flex-col">

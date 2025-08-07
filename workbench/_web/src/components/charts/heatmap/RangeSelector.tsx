@@ -57,13 +57,14 @@ export function RangeSelector({
     };
 
     const handleDeleteRange = (id: string) => {
-        onRangesChange(ranges.filter(r => r.id !== id));
+        const newRanges = ranges.filter(r => r.id !== id);
+        onRangesChange(newRanges);
     };
 
     const handleCancelAdd = () => {
-        if (ranges.length === 0) {
-            setOpen(false);
-        }
+        // if (ranges.length === 0) {
+        //     setOpen(false);
+        // }
         setCurrentRange([min, max]);
         setIsAddingRange(false);
     };
@@ -84,10 +85,10 @@ export function RangeSelector({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-64 !p-0">
-                {ranges.length > 0 && (
+                {!isAddingRange && (
                     <>
                         <DropdownMenuLabel className="flex items-center border-b justify-between">
-                            <span>Selected Ranges</span>
+                            <span>Ranges</span>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -98,26 +99,34 @@ export function RangeSelector({
                                 <Plus className="h-3 w-3" />
                             </Button>
                         </DropdownMenuLabel>
-                        <div className={isAddingRange ? "border-b" : ""}>
-                            {ranges.map((range) => (
-                                <div
-                                    key={range.id}
-                                    className="flex items-center justify-between px-2 py-1 bg-secondary/50"
-                                >
-                                    <span className="text-sm font-medium">
-                                        {range.range[0]} - {range.range[1]}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6"
-                                        onClick={() => handleDeleteRange(range.id)}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
+
+                        {
+                            ranges.length > 0 ? (
+                                <>
+                                    {ranges.map((range) => (
+                                        <div
+                                            key={range.id}
+                                            className="flex items-center justify-between px-2 py-1 bg-secondary/50"
+                                        >
+                                            <span className="text-sm font-medium">
+                                                {range.range[0]} - {range.range[1]}
+                                            </span>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleDeleteRange(range.id)}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : (
+                                <div className="text-sm text-muted-foreground px-2 py-2">No ranges selected</div>
+                            )
+                        }
+
                     </>
                 )}
 

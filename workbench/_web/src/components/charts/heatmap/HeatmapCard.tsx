@@ -69,7 +69,7 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
     }, [data, xRanges, yRanges]);
 
     return (
-        <div className="flex flex-col h-full border rounded bg-muted m-2">
+        <div className="flex flex-col h-full border rounded bg-muted m-4">
             <div className="flex h-[10%] items-center gap-2 p-4">
                 {isEditingTitle ? (
                     <Input

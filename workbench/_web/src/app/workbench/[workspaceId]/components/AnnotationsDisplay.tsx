@@ -17,7 +17,7 @@ export function AnnotationsDisplay() {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
     const { activeTab } = useWorkspace();
     const [annotationText, setAnnotationText] = useState("");
-    
+
     const { mutate: createAnnotation, isPending: isCreating } = useCreateAnnotation();
     const { mutate: deleteAnnotation } = useDeleteAnnotation();
 
@@ -92,91 +92,97 @@ export function AnnotationsDisplay() {
     };
 
     return (
-        <div className="flex flex-col h-full p-4">
-            <h2 className="text-lg font-semibold mb-4">Annotations</h2>
-            
-            {pendingAnnotation && (
-                <Card className="p-4 mb-4">
-                    <div className="space-y-3">
-                        <div>
-                            <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                                {getAnnotationIcon(pendingAnnotation.type)}
-                                <span className="capitalize">{pendingAnnotation.type} Annotation</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {formatAnnotationDetails(pendingAnnotation.type, pendingAnnotation)}
-                            </p>
-                        </div>
-                        
-                        <Textarea
-                            placeholder="Enter your annotation..."
-                            value={annotationText}
-                            onChange={(e) => setAnnotationText(e.target.value)}
-                            className="min-h-[80px]"
-                        />
-                        
-                        <div className="flex gap-2">
-                            <Button
-                                size="sm"
-                                onClick={handleSaveAnnotation}
-                                disabled={!annotationText.trim() || isCreating}
-                                className="flex-1"
-                            >
-                                Save
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleCancelAnnotation}
-                                disabled={isCreating}
-                                className="flex-1"
-                            >
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-            )}
+        <>
+            <div className="h-12 px-3 py-2 border-b items-center flex">
+                Annotations
+            </div>
 
-            <ScrollArea className="flex-1">
-                <div className="space-y-2">
-                    {annotations.length === 0 && !pendingAnnotation && (
-                        <div className="text-center py-8 text-muted-foreground">
-                            <p className="text-sm">No annotations yet</p>
-                            <p className="text-xs mt-1">Click on the chart to add annotations</p>
-                        </div>
-                    )}
-                    
-                    {annotations.map((annotation) => (
-                        <Card key={annotation.id} className="p-3">
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {getAnnotationIcon(annotation.type)}
-                                        <span className="text-sm font-medium capitalize">
-                                            {annotation.type}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {formatAnnotationDetails(annotation.type, annotation.data)}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-foreground/90 break-words">
-                                        {annotation.data.text}
-                                    </p>
+            <div className="flex flex-col h-full p-2">
+
+
+                {pendingAnnotation && (
+                    <Card className="p-4 mb-4">
+                        <div className="space-y-3">
+                            <div>
+                                <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                                    {getAnnotationIcon(pendingAnnotation.type)}
+                                    <span className="capitalize">{pendingAnnotation.type} Annotation</span>
                                 </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {formatAnnotationDetails(pendingAnnotation.type, pendingAnnotation)}
+                                </p>
+                            </div>
+
+                            <Textarea
+                                placeholder="Enter your annotation..."
+                                value={annotationText}
+                                onChange={(e) => setAnnotationText(e.target.value)}
+                                className="min-h-[80px]"
+                            />
+
+                            <div className="flex gap-2">
                                 <Button
                                     size="sm"
-                                    variant="ghost"
-                                    className="h-6 w-6 p-0 flex-shrink-0"
-                                    onClick={() => handleDeleteAnnotation(annotation.id)}
+                                    onClick={handleSaveAnnotation}
+                                    disabled={!annotationText.trim() || isCreating}
+                                    className="flex-1"
                                 >
-                                    <X className="h-3 w-3" />
+                                    Save
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleCancelAnnotation}
+                                    disabled={isCreating}
+                                    className="flex-1"
+                                >
+                                    Cancel
                                 </Button>
                             </div>
-                        </Card>
-                    ))}
-                </div>
-            </ScrollArea>
-        </div>
+                        </div>
+                    </Card>
+                )}
+
+                <ScrollArea className="flex-1">
+                    <div className="space-y-2">
+                        {annotations.length === 0 && !pendingAnnotation && (
+                            <div className="text-center py-8 text-muted-foreground">
+                                <p className="text-sm">No annotations yet</p>
+                                <p className="text-xs mt-1">Click on the chart to add annotations</p>
+                            </div>
+                        )}
+
+                        {annotations.map((annotation) => (
+                            <Card key={annotation.id} className="p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            {getAnnotationIcon(annotation.type)}
+                                            <span className="text-sm font-medium capitalize">
+                                                {annotation.type}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {formatAnnotationDetails(annotation.type, annotation.data)}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-foreground/90 break-words">
+                                            {annotation.data.text}
+                                        </p>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 flex-shrink-0"
+                                        onClick={() => handleDeleteAnnotation(annotation.id)}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                </ScrollArea>
+            </div>
+        </>
     );
 }
