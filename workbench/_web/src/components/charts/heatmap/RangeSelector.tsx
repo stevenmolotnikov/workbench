@@ -10,7 +10,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DoubleSlider } from "@/components/ui/double-slider";
-import { X, ChevronDown } from "lucide-react";
+import { X, ChevronDown, Check, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Range = [number, number];
 
@@ -26,6 +27,7 @@ interface RangeSelectorProps {
     onRangesChange: (ranges: RangeWithId[]) => void;
     maxRanges?: number;
     axisLabel: string;
+    className?: string;
 }
 
 export function RangeSelector({
@@ -35,18 +37,20 @@ export function RangeSelector({
     onRangesChange,
     maxRanges = 5,
     axisLabel,
+    className,
 }: RangeSelectorProps) {
     const [currentRange, setCurrentRange] = useState<Range>([min, max]);
-    const [isAddingRange, setIsAddingRange] = useState(false);
+    const [isAddingRange, setIsAddingRange] = useState(ranges.length === 0);
+    const [open, setOpen] = useState(false);
 
     const handleAddRange = () => {
         if (ranges.length >= maxRanges) return;
-        
+
         const newRange: RangeWithId = {
             id: `range-${Date.now()}`,
             range: currentRange,
         };
-        
+
         onRangesChange([...ranges, newRange]);
         setCurrentRange([min, max]);
         setIsAddingRange(false);
@@ -57,35 +61,48 @@ export function RangeSelector({
     };
 
     const handleCancelAdd = () => {
+        if (ranges.length === 0) {
+            setOpen(false);
+        }
         setCurrentRange([min, max]);
         setIsAddingRange(false);
     };
 
-    const getTriggerText = () => {
-        if (ranges.length === 0) {
-            return `${axisLabel}: No ranges`;
+    const handleOpenChange = (open: boolean) => {
+        setOpen(open);
+        if (open && ranges.length === 0) {
+            setIsAddingRange(true);
         }
-        return `${axisLabel}: ${ranges.length} range${ranges.length > 1 ? 's' : ''}`;
     };
 
     return (
-        <DropdownMenu>
+        <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                    <span>{getTriggerText()}</span>
+                <Button variant="outline" className={cn("w-full justify-between", className)}>
+                    {axisLabel}
                     <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-80">
+            <DropdownMenuContent className="w-64 !p-0">
                 {ranges.length > 0 && (
                     <>
-                        <DropdownMenuLabel>Selected Ranges</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <div className="p-2 space-y-2">
+                        <DropdownMenuLabel className="flex items-center border-b justify-between">
+                            <span>Selected Ranges</span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setIsAddingRange(true)}
+                                disabled={ranges.length >= maxRanges}
+                            >
+                                <Plus className="h-3 w-3" />
+                            </Button>
+                        </DropdownMenuLabel>
+                        <div className={isAddingRange ? "border-b" : ""}>
                             {ranges.map((range) => (
                                 <div
                                     key={range.id}
-                                    className="flex items-center justify-between p-2 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors"
+                                    className="flex items-center justify-between px-2 py-1 bg-secondary/50"
                                 >
                                     <span className="text-sm font-medium">
                                         {range.range[0]} - {range.range[1]}
@@ -104,66 +121,46 @@ export function RangeSelector({
                     </>
                 )}
 
-                {ranges.length < maxRanges && (
+                {(ranges.length < maxRanges && isAddingRange) && (
                     <>
-                        {ranges.length > 0 && <DropdownMenuSeparator />}
                         <DropdownMenuLabel>
-                            {isAddingRange ? "New Range" : "Add Range"}
+                            <div className="flex items-center justify-between">
+                                <span>
+                                    New Range
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelAdd}>
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6"
+                                        onClick={handleAddRange}
+                                        disabled={currentRange[0] >= currentRange[1]}
+                                    >
+                                        <Check className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        
-                        <div className="p-4 space-y-4">
-                            {!isAddingRange ? (
-                                <Button
-                                    className="w-full"
-                                    onClick={() => setIsAddingRange(true)}
-                                    disabled={ranges.length >= maxRanges}
-                                >
-                                    Add New Range
-                                </Button>
-                            ) : (
-                                <>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-sm text-muted-foreground">
-                                            <span>Min: {currentRange[0]}</span>
-                                            <span>Max: {currentRange[1]}</span>
-                                        </div>
-                                        <DoubleSlider
-                                            value={currentRange}
-                                            onValueChange={setCurrentRange}
-                                            min={min}
-                                            max={max}
-                                            step={1}
-                                            className="w-full"
-                                        />
-                                    </div>
-                                    
-                                    <div className="flex gap-2">
-                                        <Button
-                                            className="flex-1"
-                                            onClick={handleAddRange}
-                                            disabled={currentRange[0] >= currentRange[1]}
-                                        >
-                                            Confirm
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            className="flex-1"
-                                            onClick={handleCancelAdd}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
+
+                        <div className="space-y-2 px-2 pb-3">
+                            <div className="flex justify-between text-sm text-muted-foreground">
+                                <span>Min: {currentRange[0]}</span>
+                                <span>Max: {currentRange[1]}</span>
+                            </div>
+                            <DoubleSlider
+                                value={currentRange}
+                                onValueChange={setCurrentRange}
+                                min={min}
+                                max={max}
+                                step={1}
+                                className="w-full"
+                            />
                         </div>
                     </>
-                )}
-
-                {ranges.length >= maxRanges && (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
-                        Maximum {maxRanges} ranges reached
-                    </div>
                 )}
             </DropdownMenuContent>
         </DropdownMenu>

@@ -4,10 +4,10 @@ import { getOrCreateLensCharts } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useCreateChart, useDeleteChart } from "@/lib/api/chartApi";
 import { useParams } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useRef, useMemo } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
+import { cn } from "@/lib/utils";
 
 import { HeatmapCard } from "./heatmap/HeatmapCard";
 import { LineCard } from "./line/LineCard";
@@ -34,6 +34,8 @@ export function ChartDisplay() {
         return allCharts?.find(c => c.id === activeTab);
     }, [allCharts, activeTab]);
 
+    const multipleTabs = allCharts.length > 1;
+
     // On load, set to the first chart
     const initial = useRef(true);
     useEffect(() => {
@@ -59,7 +61,7 @@ export function ChartDisplay() {
     );
 
     const handleCloseTab = (chartId: string) => {
-        if (allCharts && allCharts.length > 1) {
+        if (multipleTabs) {
             // Find next tab to activate
             const chartIndex = allCharts.findIndex(c => c.id === chartId);
             if (activeTab === chartId) {
@@ -72,53 +74,61 @@ export function ChartDisplay() {
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
-            <Tabs value={activeTab || ""} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                <div className="px-2 pt-1 flex items-center gap-1 bg-background">
-                    <TabsList className="h-8 bg-transparent ">
-                        {allCharts?.map((chart) => (
-                            <div key={chart.id} className="inline-flex items-center group relative">
-                                <TabsTrigger
-                                    value={chart.id}
-                                    className="rounded-b-none h-8 pr-8 relative !shadow-none"
-                                >
-                                    <span className="px-2">
-                                        Untitled Chart
-                                    </span>
-                                </TabsTrigger>
-                                {allCharts.length > 1 && (
-                                    <span
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-sm hover:bg-muted-foreground/20 flex items-center justify-center cursor-pointer z-10"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCloseTab(chart.id);
-                                        }}
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </span>
+            {/* Tabs */}
+            <div className="px-2 py-2 flex items-center bg-background gap-1 h-12 border-b">
+                {/* Tabs List */}
+                <div className="flex items-center gap-1">
+                    {allCharts?.map((chart) => (
+                        // Individual tab
+                        <div key={chart.id} className="relative group">
+                            <button
+                                onClick={() => setActiveTab(chart.id)}
+                                className={cn(
+                                    "inline-flex items-center px-3 py-1 rounded-md transition-colors",
+                                    "group-hover:bg-muted/50",
+                                    multipleTabs && "pr-8",
+                                    activeTab === chart.id
+                                        ? "bg-muted text-foreground"
+                                        : "text-muted-foreground"
                                 )}
-                            </div>
-                        ))}
-                    </TabsList>
-                    <TooltipButton
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        tooltip={"Create a new chart"}
-                        onClick={handleNewTab}
-                        disabled={activeTab === null || isCreatingChart || unlinkedCharts.length > 0}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </TooltipButton>
+                            >
+                                Untitled Chart
+                            </button>
+                            {multipleTabs && (
+                                <button
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 rounded-sm flex items-center justify-center cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCloseTab(chart.id);
+                                    }}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
                 </div>
+                {/* New Tab Button */}
+                <TooltipButton
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 flex items-center justify-center"
+                    tooltip={"Create a new chart"}
+                    onClick={handleNewTab}
+                    disabled={activeTab === null || isCreatingChart || unlinkedCharts.length > 0}
+                >
+                    <Plus className="h-4 w-4" />
+                </TooltipButton>
+            </div>
 
-                {
-                    activeChart.type === "heatmap" ? (
-                        <HeatmapCard data={activeChart.data as HeatmapData} />
-                    ) : (
-                        <LineCard data={activeChart.data as LineGraphData} />
-                    )
-                }
-            </Tabs>
+            {/* Tab Content */}
+
+            {activeChart.type === "heatmap" ? (
+                <HeatmapCard data={activeChart.data as HeatmapData} />
+            ) : (
+                <LineCard data={activeChart.data as LineGraphData} />
+            )}
+
         </div>
     );
 }

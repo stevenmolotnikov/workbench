@@ -40,11 +40,9 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
 
     return (
         <div className="h-full flex flex-col">
-            <div className="px-2 py-1 border-b">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-medium">Model</h2>
-                    <ModelSelector />
-                </div>
+            <div className="px-2 py-2 border-b h-12 flex items-center justify-between">
+                <h2 className="text-sm font-medium">Model</h2>
+                <ModelSelector />
             </div>
 
             <div className="p-4">
@@ -69,29 +67,6 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                             >
                                 <ChevronDown className="h-4 w-4" />
                             </button>
-                            {/* <div className="flex gap-2 w-3/4">
-                                <div className="flex border rounded w-full h-8">
-                                    <DoubleSlider
-                                        value={sliderValues}
-                                        onValueChange={handleSliderChange}
-                                        min={0}
-                                        max={selectedModel?.n_layers || 0}
-                                        step={2}
-                                        className="mx-2"
-                                    />
-                                    <div className="text-xs border-l p-2 w-24 items-center justify-center flex text-muted-foreground">
-                                        [{sliderValues[0]}, {sliderValues[1]}]
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setClickedComponent(null)}
-                                    disabled={!clickedComponent}
-                                >
-                                    <RotateCcw className="w-4 h-4" />
-                                </Button>
-                            </div> */}
                         </div>
                         <ScrollArea className="h-full w-full pt-4 flex rounded-b items-center justify-center border">
                             <LensTransformer
@@ -100,7 +75,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                                 rowMode={true}
                                 numTokens={tokenData.length}
                                 layerRange={sliderValues}
-                                scale={0.6}
+                                scale={0.4}
                                 showFlowOnHover={true}
                                 tokenLabels={tokenData.map((token) => token.text)}
                             />

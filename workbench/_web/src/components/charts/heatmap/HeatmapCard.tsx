@@ -48,9 +48,9 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
             rows: data.rows
                 .map((row, yIndex) => {
                     // Check if this row index is within any Y range
-                    const inYRange = yRanges.length === 0 || 
+                    const inYRange = yRanges.length === 0 ||
                         yRanges.some(r => yIndex >= r.range[0] && yIndex <= r.range[1]);
-                    
+
                     if (!inYRange) {
                         return null;
                     }
@@ -69,8 +69,8 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
     }, [data, xRanges, yRanges]);
 
     return (
-        <div className="flex flex-col h-full p-4">
-            <div className="flex h-[10%] items-center gap-2">
+        <div className="flex flex-col h-full border rounded bg-muted m-2">
+            <div className="flex h-[10%] items-center gap-2 p-4">
                 {isEditingTitle ? (
                     <Input
                         value={title}
@@ -90,38 +90,38 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
                     </h1>
                 )}
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setIsEditingTitle(true)}
-                >
-                    <Pencil className="h-4 w-4" />
-                </Button>
+
 
                 <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setIsEditingTitle(true)}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+
                     <RangeSelector
                         min={0}
                         max={xMax}
                         ranges={xRanges}
                         onRangesChange={setXRanges}
-                        axisLabel="X Axis"
+                        axisLabel="X Range"
                     />
-                    
+
                     <RangeSelector
                         min={0}
                         max={yMax}
                         ranges={yRanges}
                         onRangesChange={setYRanges}
-                        axisLabel="Y Axis"
+                        axisLabel="Y Range"
                     />
                 </div>
             </div>
-            <div className="flex h-[90%] w-full rounded">
-                <Heatmap 
-                    data={filteredData} 
-                    xRange={[0, xMax]}
-                    yRange={[0, yMax]}
+            <div className="flex h-[90%] w-full">
+                <Heatmap
+                    data={filteredData}
                 />
             </div>
         </div>

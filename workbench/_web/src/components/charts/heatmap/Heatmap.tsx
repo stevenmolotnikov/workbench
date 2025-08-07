@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ResponsiveHeatMap } from '@nivo/heatmap'
 import { HeatmapData, HeatmapCell } from '@/types/charts'
 import { heatmapTheme } from '../theming'
@@ -14,14 +14,10 @@ import { HeatmapAnnotation } from '@/types/annotations';
 
 interface HeatmapProps {
     data: HeatmapData
-    xRange: [number, number]
-    yRange: [number, number]
 }
 
 export function Heatmap({
     data,
-    xRange,
-    yRange,
 }: HeatmapProps) {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
@@ -129,19 +125,18 @@ export function Heatmap({
         >
             <ResponsiveHeatMap
                 data={data.rows}
-                margin={{ top: 50, right: 80, bottom: 50, left: 70 }}
+                margin={{ top: 50, right: 80, bottom: 70, left: 80 }}
                 valueFormat=">-.2f"
                 axisTop={null}
                 axisBottom={{
-                    legend: 'layer',
-                    tickRotation: 0,
-                    legendOffset: 30,
-                    tickSize: 5,
-                    tickPadding: 5,
+                    legend: 'Layer',
+                    legendOffset: 40,
+                    tickSize: 0,
+                    tickPadding: 10,
                 }}
                 axisLeft={{
-                    tickSize: 5,
-                    tickPadding: 5,
+                    tickSize: 0,
+                    tickPadding: 10,
                 }}
                 label={(cell) => cell.data.label || ''}
                 labelTextColor='hsl(var(--foreground))'
@@ -163,7 +158,7 @@ export function Heatmap({
                         translateX: 30,
                         translateY: 0,
                         length: 400,
-                        thickness: 6,
+                        thickness: 8,
                         direction: 'column',
                         tickPosition: 'after',
                         tickSize: 3,
@@ -171,7 +166,6 @@ export function Heatmap({
                         tickOverlap: false,
                         tickFormat: '>-.2f',
                         titleAlign: 'start',
-                        titleOffset: 4
                     }
                 ]}
             />
