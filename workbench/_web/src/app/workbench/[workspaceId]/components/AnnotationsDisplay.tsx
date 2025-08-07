@@ -75,7 +75,7 @@ export function AnnotationsDisplay() {
             return `Layer ${lineData.layerStart}`;
         } else if (type === "heatmap") {
             const heatmapData = data as HeatmapAnnotation;
-            return `Position (${heatmapData.x}, ${heatmapData.y})`;
+            return `Cells: ${heatmapData.cellIds.length}`;
         }
         return "";
     };

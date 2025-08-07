@@ -2,11 +2,11 @@
 
 import type { LineGraphData } from "@/types/charts";
 import { LineSeries, PointOrSliceMouseHandler, ResponsiveLine } from '@nivo/line'
-import { lineTheme } from '../primatives/theming'
+import { lineTheme } from '../theming'
 import { useLineAnnotationLayer, LineAnnotationLayer } from './LineAnnotationLayer'
 import { useState } from "react";
 
-interface LineGraphProps {
+interface LineProps {
     data?: LineGraphData;
 }
 
@@ -15,7 +15,7 @@ export interface RangeSelection {
     ranges: Array<[number, number]>;
 }
 
-export function LineGraph({ data }: LineGraphProps) {
+export function Line({ data }: LineProps) {
     const { addPendingAnnotation } = useLineAnnotationLayer();
     const [hoveredPoint, setHoveredPoint] = useState<{ lineId: string; index: number } | null>(null);
 
@@ -85,6 +85,8 @@ export function LineGraph({ data }: LineGraphProps) {
             theme={lineTheme}
             colors={{ scheme: 'nivo' }}
             enableGridX={true}
+            animate={false}
+            yFormat=">-.2f"
             enableGridY={true}
             onClick={addPendingAnnotation}
             onMouseMove={handleMouseMove}

@@ -11,8 +11,7 @@ export interface LineAnnotation extends BaseAnnotation {
 
 export interface HeatmapAnnotation extends BaseAnnotation { 
     type: "heatmap";
-    x: number;
-    y: number;
+    cellIds: string[];
 }
 
 export type AnnotationData = LineAnnotation | HeatmapAnnotation;

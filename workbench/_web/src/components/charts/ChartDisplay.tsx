@@ -8,9 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useRef, useMemo } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
-import { Heatmap } from "./primatives/Heatmap";
-import { LineGraph } from "./line/LineGraph";
-import { Input } from "../ui/input";
+import { Heatmap } from "./heatmap/Heatmap";
+import { Line } from "./line/Line";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab } = useWorkspace();
@@ -126,7 +125,7 @@ export function ChartDisplay() {
                             activeChart.type === "heatmap" ? (
                                 <Heatmap data={activeChart.data as HeatmapData} />
                             ) : (
-                                <LineGraph data={activeChart.data as LineGraphData} />
+                                <Line data={activeChart.data as LineGraphData} />
                             )
                         }
                     </div>
