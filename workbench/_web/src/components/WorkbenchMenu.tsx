@@ -36,8 +36,8 @@ export function WorkbenchMenu({
     };
 
 
-    const handleExport = () => {
-        router.push('/workbench/summaries');
+    const handleOverview = () => {
+        router.push(`/workbench/${workspaceId}/overview`);
     };
 
     return (
@@ -55,9 +55,9 @@ export function WorkbenchMenu({
             </div>
             <div className="flex items-center gap-2">
                 <StatusUpdatesDisplay />
-                <Button variant="outline" size="sm" onClick={handleExport}>
+                <Button variant="outline" size="sm" onClick={handleOverview}>
                     <FileText size={16} />
-                    Export
+                    Overview
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setAnnotationsOpen(!annotationsOpen)}>
                     <SquarePen size={16} />

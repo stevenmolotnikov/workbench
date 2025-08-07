@@ -48,9 +48,9 @@ export function Heatmap({
         enableLabels,
     }: CellComponentProps<HeatmapCell>) => {
 
-        if (cell.value === null) return null
+        if (cell.value === null || chartId === undefined) return null
 
-        const cellId = `${cell.serieId}-${cell.data.x}`
+        const cellId = `${chartId}-${cell.serieId}-${cell.data.x}`
 
         let isSelected = false
         if (selectedCells.has(cellId) || annotations?.some(a => {
