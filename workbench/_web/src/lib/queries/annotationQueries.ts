@@ -2,10 +2,23 @@
 
 import { db } from "@/db/client";
 import { eq, and } from "drizzle-orm";
-import { annotations } from "@/db/schema";
-import { LineAnnotation } from "@/types/annotations";
+import { annotations, type Annotation, type NewAnnotation } from "@/db/schema";
+import { LineAnnotation, AnnotationData } from "@/types/annotations";
 
-export const getLineAnnotations = async (chartId: string): Promise<LineAnnotation[]> => {
-    const lineAnnotations = await db.select().from(annotations).where(and(eq(annotations.chartId, chartId), eq(annotations.type, "line")));
-    return lineAnnotations.map((annotation) => annotation.data as LineAnnotation);
+export const getAnnotations = async (chartId: string): Promise<Annotation[]> => {
+    const result = await db.select().from(annotations).where(eq(annotations.chartId, chartId));
+    return result;
+}
+
+export const createAnnotation = async (chartId: string, type: "line" | "heatmap", data: AnnotationData): Promise<Annotation> => {
+    const [newAnnotation] = await db.insert(annotations).values({
+        chartId,
+        type,
+        data,
+    }).returning();
+    return newAnnotation;
+}
+
+export const deleteAnnotation = async (id: string): Promise<void> => {
+    await db.delete(annotations).where(eq(annotations.id, id));
 }

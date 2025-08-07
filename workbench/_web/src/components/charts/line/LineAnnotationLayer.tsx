@@ -11,12 +11,12 @@ interface Segment {
 }
 
 export interface LineAnnotationLayer extends LineCustomSvgLayerProps<LineSeries> {
-    selection: LineAnnotation[] | null;
+    annotations: LineAnnotation[] | null;
     hoveredPoint: { lineId: string; index: number } | null;
 }
 
 // Custom line layer that renders segments with different colors
-export const LineAnnotationLayer = ({ series, lineGenerator, selection, hoveredPoint }: LineAnnotationLayer) => {
+export const LineAnnotationLayer = ({ series, lineGenerator, annotations, hoveredPoint }: LineAnnotationLayer) => {
     const { pendingAnnotation } = useAnnotations();
 
     if (pendingAnnotation && pendingAnnotation.type !== "line") return null;
@@ -24,7 +24,7 @@ export const LineAnnotationLayer = ({ series, lineGenerator, selection, hoveredP
     return (
         <g>
             {series.map(({ data, id, color }: ComputedSeries<LineSeries>) => {
-                let relevantRanges = selection?.filter(s => s.lineId === id).map(s => [s.layerStart, s.layerEnd]);
+                let relevantRanges = annotations?.filter(s => s.lineId === id).map(s => [s.layerStart, s.layerEnd]);
                 if (pendingAnnotation && pendingAnnotation.lineId === id && "layerEnd" in pendingAnnotation) {
                     if (relevantRanges) {
                         relevantRanges.push([pendingAnnotation.layerStart, pendingAnnotation.layerEnd]);

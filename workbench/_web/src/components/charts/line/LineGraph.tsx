@@ -8,7 +8,8 @@ import { LineSeries, PointOrSliceMouseHandler } from '@nivo/line'
 import { LineAnnotationLayer } from './LineAnnotationLayer'
 import { useAnnotations } from '@/stores/useAnnotations';
 import { useQuery } from "@tanstack/react-query";
-import { getLineAnnotations } from '@/lib/queries/annotationQueries';
+import { getAnnotations } from '@/lib/queries/annotationQueries';
+import { LineAnnotation } from '@/types/annotations';
 
 interface LineGraphProps {
     chartId: string;
@@ -21,9 +22,9 @@ export interface RangeSelection {
 }
 
 export function LineGraph({ chartId, data }: LineGraphProps) {
-    const { data: lineAnnotations } = useQuery({
-        queryKey: ["lineAnnotations"],
-        queryFn: () => getLineAnnotations(chartId),
+    const { data: annotations } = useQuery({
+        queryKey: ["annotations"],
+        queryFn: () => getAnnotations(chartId),
     });
 
     const [hoveredPoint, setHoveredPoint] = useState<{ lineId: string; index: number } | null>(null);
@@ -31,10 +32,11 @@ export function LineGraph({ chartId, data }: LineGraphProps) {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
 
     const lineAnnotationLayer = useMemo(() => {
+        const lineAnnotations = annotations?.filter(a => a.type === "line").map(a => a.data as LineAnnotation);
         return (props: any) => {
-            return LineAnnotationLayer({ ...props, lineAnnotations, hoveredPoint });
+            return LineAnnotationLayer({ ...props, annotations: lineAnnotations, hoveredPoint });
         };
-    }, [lineAnnotations, hoveredPoint]);
+    }, [annotations, hoveredPoint]);
 
     if (!data) return (
         <div className="flex items-center justify-center h-full text-muted-foreground">
