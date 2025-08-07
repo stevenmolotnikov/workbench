@@ -14,10 +14,14 @@ import { HeatmapAnnotation } from '@/types/annotations';
 
 interface HeatmapProps {
     data: HeatmapData
+    xRange: [number, number]
+    yRange: [number, number]
 }
 
 export function Heatmap({
     data,
+    xRange,
+    yRange,
 }: HeatmapProps) {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set())
@@ -108,7 +112,6 @@ export function Heatmap({
         )
     }
 
-
     const handleMouseUp = () => {
         setIsDragging(false)
         setPendingAnnotation({
@@ -134,11 +137,11 @@ export function Heatmap({
                     tickRotation: 0,
                     legendOffset: 30,
                     tickSize: 5,
-                    tickPadding: 5
+                    tickPadding: 5,
                 }}
                 axisLeft={{
                     tickSize: 5,
-                    tickPadding: 5
+                    tickPadding: 5,
                 }}
                 label={(cell) => cell.data.label || ''}
                 labelTextColor='hsl(var(--foreground))'

@@ -71,13 +71,13 @@ export default function Workbench({ params }: { params: Promise<{ workspaceId: s
             {/* Main content */}
             <div className="flex-1 flex flex-col">
                 {/* Top bar within main content */}
-                <WorkbenchMenu
+                {/* <WorkbenchMenu
                     tutorialsOpen={tutorialsOpen}
                     setWorkbenchMode={setWorkbenchMode}
                     workbenchMode={workbenchMode}
                     toggleTutorials={toggleTutorials}
                     workspaceId={resolvedParams.workspaceId}
-                />
+                /> */}
 
                 <ResizablePanelGroup
                     direction="horizontal"

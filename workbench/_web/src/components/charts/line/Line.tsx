@@ -65,26 +65,26 @@ export function Line({ data }: LineProps) {
     return (
         <ResponsiveLine
             data={data.lines}
-            margin={{ top: 30, right: 25, bottom: 50, left: 50 }}
-            yScale={{ type: 'linear', min: 0, max: 1, stacked: true, reverse: false }}
+            margin={{ top: 50, right: 30, bottom: 70, left: 75 }}
+            yScale={{ type: 'linear', min: 0, max: 1, stacked: false, reverse: false }}
             axisBottom={{
-                legend: 'layer',
-                legendOffset: 36,
-                tickSize: 5,
-                tickPadding: 5,
+                legend: 'Layer',
+                legendOffset: 35,
+                tickSize: 0,
+                tickPadding: 10,
                 tickRotation: 0
             }}
             axisLeft={{
-                legend: 'probability',
-                legendOffset: -40,
-                tickSize: 5,
-                tickPadding: 5,
-                tickRotation: 0
+                legend: 'Probability',
+                legendOffset: -45,
+                tickSize: 0,
+                tickPadding: 10,
+                tickRotation: 0,
             }}
             useMesh={true}
             theme={lineTheme}
-            colors={{ scheme: 'nivo' }}
-            enableGridX={true}
+            colors={{ scheme: 'set1' }}
+            enableGridX={false}
             animate={false}
             yFormat=">-.2f"
             enableGridY={true}
@@ -104,11 +104,11 @@ export function Line({ data }: LineProps) {
                     anchor: 'top',
                     direction: 'row',
                     translateY: -30,
-                    itemWidth: 80,
+                    itemWidth: 60,
                     itemHeight: 20,
                     itemTextColor: 'hsl(var(--foreground))',
-                    symbolSize: 12,
-                    symbolShape: 'circle'
+                    symbolSize: 6,
+                    symbolShape: 'square'
                 }
             ]}
         />

@@ -124,7 +124,7 @@ export const LineAnnotationLayer = ({ series, lineGenerator }: any) => {
                                 key={idx}
                                 d={lineGenerator(segment.points) || ''}
                                 fill="none"
-                                stroke={segment.isAnnotated ? '#3b82f6' : color}
+                                stroke={segment.isAnnotated ? '#fff' : color}
                                 strokeWidth={2}
                             />
                         ))}

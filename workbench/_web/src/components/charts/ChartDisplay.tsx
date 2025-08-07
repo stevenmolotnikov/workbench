@@ -8,8 +8,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useRef, useMemo } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 import { TooltipButton } from "../ui/tooltip-button";
-import { Heatmap } from "./heatmap/Heatmap";
-import { Line } from "./line/Line";
+
+import { HeatmapCard } from "./heatmap/HeatmapCard";
+import { LineCard } from "./line/LineCard";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab } = useWorkspace();
@@ -52,7 +53,7 @@ export function ChartDisplay() {
     };
 
     if (isLoading || !activeChart) return (
-        <div className="flex-1 flex h-full items-center justify-center bg-muted">
+        <div className="flex-1 flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
     );
@@ -70,7 +71,7 @@ export function ChartDisplay() {
     };
 
     return (
-        <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar bg-muted relative">
+        <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
             <Tabs value={activeTab || ""} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                 <div className="px-2 pt-1 flex items-center gap-1 bg-background">
                     <TabsList className="h-8 bg-transparent ">
@@ -78,7 +79,7 @@ export function ChartDisplay() {
                             <div key={chart.id} className="inline-flex items-center group relative">
                                 <TabsTrigger
                                     value={chart.id}
-                                    className="data-[state=active]:bg-muted rounded-b-none h-8 pr-8 relative !shadow-none"
+                                    className="rounded-b-none h-8 pr-8 relative !shadow-none"
                                 >
                                     <span className="px-2">
                                         Untitled Chart
@@ -110,23 +111,13 @@ export function ChartDisplay() {
                     </TooltipButton>
                 </div>
 
-                <div className="flex flex-col h-full p-4">
-                    <div className="flex h-[10%] items-center gap-2">
-                        {/* <Input placeholder="Search" /> */}
-                        <h1 className="text-xl font-bold">
-                            Title
-                        </h1>
-                    </div>
-                    <div className="flex h-[90%] w-full border rounded">
-                        {
-                            activeChart.type === "heatmap" ? (
-                                <Heatmap data={activeChart.data as HeatmapData} />
-                            ) : (
-                                <Line data={activeChart.data as LineGraphData} />
-                            )
-                        }
-                    </div>
-                </div>
+                {
+                    activeChart.type === "heatmap" ? (
+                        <HeatmapCard data={activeChart.data as HeatmapData} />
+                    ) : (
+                        <LineCard data={activeChart.data as LineGraphData} />
+                    )
+                }
             </Tabs>
         </div>
     );

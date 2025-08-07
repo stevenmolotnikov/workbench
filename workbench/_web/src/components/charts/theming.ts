@@ -1,7 +1,10 @@
+const fontFamily = 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif'
+
 const baseTheme = {
     background: 'transparent',
     text: {
         fontSize: 11,
+        fontFamily: fontFamily,
         fill: 'hsl(var(--foreground))',
         outlineWidth: 0,
         outlineColor: 'transparent'
@@ -9,13 +12,14 @@ const baseTheme = {
     axis: {
         domain: {
             line: {
-                stroke: 'hsl(var(--border))',
-                strokeWidth: 1
+                stroke: 'transparent',
+                strokeWidth: 0
             }
         },
         legend: {
             text: {
                 fontSize: 12,
+                fontFamily: fontFamily,
                 fill: 'hsl(var(--foreground))',
                 outlineWidth: 0,
                 outlineColor: 'transparent'
@@ -28,6 +32,7 @@ const baseTheme = {
             },
             text: {
                 fontSize: 11,
+                fontFamily: fontFamily,
                 fill: 'hsl(var(--muted-foreground))',
                 outlineWidth: 0,
                 outlineColor: 'transparent'
@@ -38,6 +43,7 @@ const baseTheme = {
         title: {
             text: {
                 fontSize: 11,
+                fontFamily: fontFamily,
                 fill: 'hsl(var(--foreground))',
                 outlineWidth: 0,
                 outlineColor: 'transparent'
@@ -45,6 +51,7 @@ const baseTheme = {
         },
         text: {
             fontSize: 11,
+            fontFamily: fontFamily,
             fill: 'hsl(var(--foreground))',
             outlineWidth: 0,
             outlineColor: 'transparent'
@@ -53,6 +60,7 @@ const baseTheme = {
             line: {},
             text: {
                 fontSize: 10,
+                fontFamily: fontFamily,
                 fill: 'hsl(var(--foreground))',
                 outlineWidth: 0,
                 outlineColor: 'transparent'
@@ -62,6 +70,7 @@ const baseTheme = {
     annotations: {
         text: {
             fontSize: 13,
+            fontFamily: fontFamily,
             fill: 'hsl(var(--foreground))',
             outlineWidth: 2,
             outlineColor: 'hsl(var(--background))',
@@ -94,6 +103,7 @@ const baseTheme = {
             background: 'hsl(var(--popover))',
             color: 'hsl(var(--popover-foreground))',
             fontSize: 12,
+            fontFamily: fontFamily,
             borderRadius: 'calc(var(--radius) - 2px)',
             boxShadow: 'var(--shadow-lg)',
             padding: '5px 9px'
@@ -128,6 +138,7 @@ export const heatmapTheme = {
     labels: {
         text: {
             fontSize: 10,
+            fontFamily: fontFamily,
             fill: 'hsl(var(--foreground))',
             outlineWidth: 0,
             outlineColor: 'transparent'
