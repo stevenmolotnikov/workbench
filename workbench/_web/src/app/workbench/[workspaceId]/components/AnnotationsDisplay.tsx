@@ -22,7 +22,7 @@ export function AnnotationsDisplay() {
     const { mutate: deleteAnnotation } = useDeleteAnnotation();
 
     const { data: annotations = [] } = useQuery({
-        queryKey: ["annotations"],
+        queryKey: ["annotations", activeTab],
         queryFn: () => getAnnotations(activeTab as string),
         enabled: !!activeTab,
     });

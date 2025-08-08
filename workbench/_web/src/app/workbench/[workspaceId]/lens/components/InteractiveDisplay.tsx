@@ -69,7 +69,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                             <LensTransformer
                                 clickedComponent={clickedComponent}
                                 setClickedComponent={setClickedComponent}
-                                rowMode={true}
+                                rowMode={false}
                                 numTokens={tokenData.length}
                                 layerRange={sliderValues}
                                 scale={0.5}

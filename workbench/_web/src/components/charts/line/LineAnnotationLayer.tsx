@@ -64,7 +64,7 @@ export const LineAnnotationLayer = ({ series, lineGenerator }: any) => {
     const { activeTab: chartId } = useWorkspace();
 
     const { data: allAnnotations } = useQuery({
-        queryKey: ["annotations"],
+        queryKey: ["annotations", chartId],
         queryFn: () => getAnnotations(chartId as string),
         enabled: !!chartId,
     });
