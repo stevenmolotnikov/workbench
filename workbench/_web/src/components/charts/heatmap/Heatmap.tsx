@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
 import { HeatmapData } from '@/types/charts'
 import { heatmapTheme } from '../theming'
+import { resolveThemeCssVars } from '@/lib/utils'
 import useSelectionClick from './SelectionLayer';
 
 
@@ -18,6 +19,9 @@ export function Heatmap({
 
     const { handleCellClick, handleMouseMove } = useSelectionClick({ canvasRef, data })
 
+    // Resolve all CSS variables in the theme to concrete colors for Canvas compatibility
+    const resolvedTheme = useMemo(() => resolveThemeCssVars(heatmapTheme), [])
+    
     return (
         <div 
             className="size-full relative"
@@ -56,9 +60,8 @@ export function Heatmap({
                     maxValue: 1
                 }}
                 hoverTarget="cell"
-                emptyColor="hsl(var(--muted))"
                 inactiveOpacity={1}
-                theme={heatmapTheme}
+                theme={resolvedTheme}
                 animate={false}
                 onClick={handleCellClick}
                 legends={[

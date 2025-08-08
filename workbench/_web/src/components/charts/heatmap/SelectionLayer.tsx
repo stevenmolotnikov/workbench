@@ -20,6 +20,7 @@ interface UseSelectionClickProps {
 
 const useSelectionClick = ({ canvasRef, data }: UseSelectionClickProps) => {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
+    const [isSelecting, setIsSelecting] = useState(false)
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
     const animationFrameRef = useRef<number>()
 
@@ -228,8 +229,9 @@ const useSelectionClick = ({ canvasRef, data }: UseSelectionClickProps) => {
         
         if (rowIndex === -1 || colIndex === undefined) return
 
-        if (!selectionRect) {
+        if (!isSelecting) {
             // Start new selection
+            setIsSelecting(true)
             setSelectionRect({
                 startX: colIndex,
                 startY: rowIndex,
@@ -255,13 +257,14 @@ const useSelectionClick = ({ canvasRef, data }: UseSelectionClickProps) => {
                 cellIds: Array.from(cells),
                 text: ""
             })
-            setSelectionRect(null)
+            // setSelectionRect(null)
+            setIsSelecting(false)
         }
     }, [selectionRect, data.rows, chartId, setPendingAnnotation])
 
     // Handle mouse move on the container (for selection preview)
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (!selectionRect) return
+        if (!isSelecting || !selectionRect) return
 
         const rect = canvasRef.current?.getBoundingClientRect()
         if (!rect) return
