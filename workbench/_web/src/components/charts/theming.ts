@@ -66,6 +66,8 @@ const baseTheme = {
     },
 }
 
+export const heatmapMargin = { top: 0, right: 80, bottom: 70, left: 70 }
+
 export const lineTheme = baseTheme
 
 export const heatmapTheme = {

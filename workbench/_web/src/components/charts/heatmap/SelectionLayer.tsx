@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, RefObject } from "react";
 import { getAnnotations } from "@/lib/queries/annotationQueries";
 import { HeatmapAnnotation } from "@/types/annotations";
 import { HeatmapData } from "@/types/charts";
+import { heatmapMargin as margin } from "../theming";
 
 interface SelectionRect {
     startX: number
@@ -33,9 +34,6 @@ const useSelectionClick = ({ canvasRef, data }: UseSelectionClickProps) => {
     });
 
     const annotations: HeatmapAnnotation[] = allAnnotations?.filter(a => a.type === "heatmap").map(a => a.data as HeatmapAnnotation) || []
-
-    // Heatmap dimensions (matching Nivo's defaults)
-    const margin = { top: 50, right: 80, bottom: 70, left: 80 }
 
     useEffect(() => {   
         if (!pendingAnnotation || pendingAnnotation.type !== 'heatmap') {

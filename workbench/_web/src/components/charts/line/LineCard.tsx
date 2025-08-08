@@ -1,33 +1,76 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { LineGraphData } from "@/types/charts";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Pencil, Settings } from "lucide-react";
 import { Line } from "./Line";
+import { RangeSelector } from "../heatmap/RangeSelector";
+
+type Range = [number, number];
+type RangeWithId = {
+    id: string;
+    range: Range;
+};
 
 interface LineCardProps {
     data: LineGraphData
 }
 
 export const LineCard = ({ data }: LineCardProps) => {
-    const [title, setTitle] = useState("Title");
+    const [title, setTitle] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
-    const [xRange, setXRange] = useState<[number, number] | undefined>(undefined);
-    const [yRange, setYRange] = useState<[number, number] | undefined>(undefined);
+    const [xRanges, setXRanges] = useState<RangeWithId[]>([]);
+    const [yRanges, setYRanges] = useState<RangeWithId[]>([]);
+    
+    // Extract single range from array format
+    const xRange = xRanges.length > 0 ? xRanges[0].range : undefined;
+    const yRange = yRanges.length > 0 ? yRanges[0].range : undefined;
+
+    // Calculate the bounds from the data
+    const bounds = useMemo(() => {
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        
+        data.lines.forEach(line => {
+            line.data.forEach(point => {
+                minX = Math.min(minX, point.x);
+                maxX = Math.max(maxX, point.x);
+                minY = Math.min(minY, point.y);
+                maxY = Math.max(maxY, point.y);
+            });
+        });
+        
+        return {
+            xMin: minX === Infinity ? 0 : minX,
+            xMax: maxX === -Infinity ? 100 : maxX,
+            yMin: minY === Infinity ? 0 : minY,
+            yMax: maxY === -Infinity ? 1 : maxY,
+        };
+    }, [data]);
+
+    // Filter the data based on X range only
+    const filteredData = useMemo(() => {
+        if (!xRange) {
+            return data;
+        }
+
+        const xMin = xRange[0];
+        const xMax = xRange[1];
+
+        return {
+            ...data,
+            lines: data.lines.map(line => ({
+                ...line,
+                data: line.data.filter(point => 
+                    point.x >= xMin && point.x <= xMax
+                )
+            }))
+        };
+    }, [data, xRange]);
 
     return (
-        <div className="flex flex-col h-full p-4">
-            <div className="flex h-[10%] items-center gap-2">
+        <div className="flex flex-col h-full m-2 border rounded bg-muted">
+            <div className="flex h-[10%] gap-2 p-4 lg:p-8 justify-between">
                 {isEditingTitle ? (
-                    <Input
+                    <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         onBlur={() => setIsEditingTitle(false)}
@@ -36,81 +79,44 @@ export const LineCard = ({ data }: LineCardProps) => {
                                 setIsEditingTitle(false);
                             }
                         }}
-                        className="text-xl font-bold h-auto py-0 px-1 w-fit"
+                        placeholder="Untitled Chart"
+                        className="text-xl font-bold p-0 m-0 border-primary border overflow-clip rounded bg-transparent w-64"
                         autoFocus
                     />
                 ) : (
-                    <h1 className="text-xl font-bold">
-                        {title}
+                    <h1 
+                        className="text-xl font-bold cursor-pointer border rounded border-transparent w-64 overflow-clip items-center flex hover:border-border transition-opacity p-0 m-0"
+                        onClick={() => setIsEditingTitle(true)}
+                    >
+                        {title || "Untitled Chart"}
                     </h1>
                 )}
 
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setIsEditingTitle(true)}
-                >
-                    <Pencil className="h-4 w-4" />
-                </Button>
-
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8">
-                            <Settings className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                        <DropdownMenuLabel>Axis Limits</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        
-                        <div className="p-2 space-y-3">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">X Axis</label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="number"
-                                        placeholder="Min"
-                                        value={xRange?.[0] ?? ""}
-                                        onChange={(e) => setXRange([Number(e.target.value), xRange?.[1] ?? 0])}
-                                        className="h-8"
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="Max"
-                                        value={xRange?.[1] ?? ""}
-                                        onChange={(e) => setXRange([xRange?.[0] ?? 0, Number(e.target.value)])}
-                                        className="h-8"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Y Axis</label>
-                                <div className="flex gap-2">
-                                    <Input
-                                        type="number"
-                                        placeholder="Min"
-                                        value={yRange?.[0] ?? ""}
-                                        onChange={(e) => setYRange([Number(e.target.value), yRange?.[1] ?? 0])}
-                                        className="h-8"
-                                    />
-                                    <Input
-                                        type="number"
-                                        placeholder="Max"
-                                        value={yRange?.[1] ?? ""}
-                                        onChange={(e) => setYRange([yRange?.[0] ?? 0, Number(e.target.value)])}
-                                        className="h-8"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-2">
+                    <RangeSelector
+                        min={bounds.xMin}
+                        max={bounds.xMax}
+                        ranges={xRanges}
+                        onRangesChange={setXRanges}
+                        maxRanges={1}
+                        axisLabel="X Range"
+                    />
+                    
+                    <RangeSelector
+                        min={0}
+                        max={1}
+                        ranges={yRanges}
+                        onRangesChange={setYRanges}
+                        maxRanges={1}
+                        axisLabel="Y Range"
+                        step={0.01}
+                    />
+                </div>
             </div>
-            <div className="flex h-[90%] w-full rounded">
+            <div className="flex h-[90%] w-full">
                 <Line 
-                    data={data} 
+                    data={filteredData}
+                    yRange={yRange}
                 />
             </div>
         </div>

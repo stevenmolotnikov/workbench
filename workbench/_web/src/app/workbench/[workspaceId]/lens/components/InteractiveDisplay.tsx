@@ -42,11 +42,11 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                 <ModelSelector />
             </div>
 
-            <div className="p-4">
+            <div className="p-2">
                 <CompletionCard config={config} setConfig={setConfig} configId={initialConfig.id} />
             </div>
 
-            <div className="px-4 pb-4 h-full overflow-auto flex flex-col">
+            <div className="px-2 pb-2 h-full overflow-auto flex flex-col">
                 {!isExpanded ? (
                     <button
                         onClick={() => setIsExpanded(true)}

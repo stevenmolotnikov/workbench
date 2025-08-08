@@ -101,7 +101,7 @@ export function AnnotationsDisplay() {
 
 
                 {pendingAnnotation && (
-                    <Card className="p-4 mb-4">
+                    <Card className="p-4 mb-4 rounded">
                         <div className="space-y-3">
                             <div>
                                 <div className="flex items-center gap-2 text-sm font-medium mb-1">
@@ -153,7 +153,7 @@ export function AnnotationsDisplay() {
                         )}
 
                         {annotations.map((annotation) => (
-                            <Card key={annotation.id} className="p-3">
+                            <Card key={annotation.id} className="p-3 rounded">
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">

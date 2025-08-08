@@ -18,13 +18,32 @@ export const PredictionBadges = ({
     setConfig,
     predictions,
 }: PredictionBadgesProps) => {
+
+    const currentTokenPrediction = predictions[0];
+    // const getAdditionalTokens = (): Token[] => {
+    //     // Get target ids not in the top 3 predictions
+    //     const top3Ids = currentTokenPrediction.ids.slice(0, 3);
+    //     const additionalIds = config.token.targetIds.filter(id => !top3Ids.includes(id));
+
+    //     // Get the tokens for the additional tokens
+    //     const additionalTokens = additionalIds.map(id => {
+    //         const tokenIndex = currentTokenPrediction.ids.findIndex(predictionId => predictionId === id);
+    //         return {
+    //             idx: currentTokenPrediction.idx,
+    //             id: id,
+    //             text: currentTokenPrediction.texts[tokenIndex],
+    //             targetIds: [],
+    //         }
+    //     })
+
+    //     return additionalTokens;
+    // }
+
     const [additionalTokens, setAdditionalTokens] = useState<Token[]>([]);
     const [addingToken, setAddingToken] = useState(false);
     const [targetToken, setTargetToken] = useState<string>("");
 
-    const [selectedPredictionIds, setSelectedPredictionIds] = useState<number[]>([]);
-
-    const currentTokenPrediction = predictions[0];
+    const [selectedPredictionIds, setSelectedPredictionIds] = useState<number[]>(config.token.targetIds);
 
     if (!currentTokenPrediction) {
         toast.error("Selected index not in predictions.")

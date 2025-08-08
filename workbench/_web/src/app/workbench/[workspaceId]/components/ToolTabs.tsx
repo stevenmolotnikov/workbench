@@ -50,7 +50,7 @@ export function ToolTabs() {
                 ))}
             </div>
             <div className="flex items-center gap-1">
-                <button onClick={() => handleToolClick("/overview")} className="flex items-center gap-2 pr-2 py-1 text-foreground transition-colors">
+                <button onClick={() => handleToolClick("/overview")} className="flex border rounded items-center gap-2 px-3 py-1 text-foreground transition-colors">
                     <FileText className="h-4 w-4" />
                     Overview
                 </button>

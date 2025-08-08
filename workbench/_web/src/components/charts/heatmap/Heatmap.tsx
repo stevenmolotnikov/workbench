@@ -3,7 +3,7 @@
 import { useMemo, useRef } from 'react'
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
 import { HeatmapData } from '@/types/charts'
-import { heatmapTheme } from '../theming'
+import { heatmapTheme, heatmapMargin } from '../theming'
 import { resolveThemeCssVars } from '@/lib/utils'
 import useSelectionClick from './SelectionLayer';
 
@@ -33,7 +33,7 @@ export function Heatmap({
             />
             <ResponsiveHeatMapCanvas
                 data={data.rows}
-                margin={{ top: 50, right: 80, bottom: 70, left: 80 }}
+                margin={heatmapMargin}
                 valueFormat=">-.2f"
                 axisTop={null}
                 axisBottom={{

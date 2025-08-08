@@ -28,6 +28,7 @@ interface RangeSelectorProps {
     maxRanges?: number;
     axisLabel: string;
     className?: string;
+    step?: number;
 }
 
 export function RangeSelector({
@@ -38,6 +39,7 @@ export function RangeSelector({
     maxRanges = 5,
     axisLabel,
     className,
+    step = 1,
 }: RangeSelectorProps) {
     const [currentRange, setCurrentRange] = useState<Range>([min, max]);
     const [isAddingRange, setIsAddingRange] = useState(ranges.length === 0);
@@ -165,7 +167,7 @@ export function RangeSelector({
                                 onValueChange={setCurrentRange}
                                 min={min}
                                 max={max}
-                                step={1}
+                                step={step}
                                 className="w-full"
                             />
                         </div>

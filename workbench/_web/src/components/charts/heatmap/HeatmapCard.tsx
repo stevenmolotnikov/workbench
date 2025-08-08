@@ -1,9 +1,6 @@
 import { useState, useMemo } from "react";
 import { Heatmap } from "./Heatmap";
 import { HeatmapData } from "@/types/charts";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Pencil } from "lucide-react";
 import { RangeSelector } from "./RangeSelector";
 
 type Range = [number, number];
@@ -19,7 +16,7 @@ interface HeatmapCardProps {
 
 
 export const HeatmapCard = ({ data }: HeatmapCardProps) => {
-    const [title, setTitle] = useState("Title");
+    const [title, setTitle] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
     const [xRanges, setXRanges] = useState<RangeWithId[]>([]);
@@ -69,10 +66,10 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
     }, [data, xRanges, yRanges]);
 
     return (
-        <div className="flex flex-col h-full m-4">
-            <div className="flex h-[10%] items-center gap-2 p-4">
+        <div className="flex flex-col h-full m-2 border rounded bg-muted">
+            <div className="flex h-[10%] gap-2 p-4 lg:p-8 justify-between">
                 {isEditingTitle ? (
-                    <Input
+                    <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         onBlur={() => setIsEditingTitle(false)}
@@ -81,27 +78,22 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
                                 setIsEditingTitle(false);
                             }
                         }}
-                        className="text-xl font-bold h-auto py-0 px-1 w-fit"
+                        placeholder="Untitled Chart"
+                        className="text-xl font-bold p-0 m-0 border-primary border overflow-clip rounded bg-transparent w-64"
                         autoFocus
                     />
                 ) : (
-                    <h1 className="text-xl font-bold">
-                        {title}
+                    <h1 
+                        className="text-xl font-bold cursor-pointer border rounded border-transparent w-64 overflow-clip items-center flex hover:border-border transition-opacity p-0 m-0"
+                        onClick={() => setIsEditingTitle(true)}
+                    >
+                        {title || "Untitled Chart"}
                     </h1>
                 )}
 
 
 
-                <div className="flex gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setIsEditingTitle(true)}
-                    >
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-
+                <div className="flex items-center gap-2">
                     <RangeSelector
                         min={0}
                         max={xMax}
@@ -119,7 +111,7 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
                     />
                 </div>
             </div>
-            <div className="flex h-[90%] border rounded bg-muted w-full">
+            <div className="flex h-[90%] w-full">
                 <Heatmap
                     data={filteredData}
                 />

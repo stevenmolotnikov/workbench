@@ -8,6 +8,7 @@ import { useState } from "react";
 
 interface LineProps {
     data?: LineGraphData;
+    yRange?: [number, number];
 }
 
 export interface RangeSelection {
@@ -15,7 +16,7 @@ export interface RangeSelection {
     ranges: Array<[number, number]>;
 }
 
-export function Line({ data }: LineProps) {
+export function Line({ data, yRange }: LineProps) {
     const { addPendingAnnotation } = useLineAnnotationLayer();
     const [hoveredPoint, setHoveredPoint] = useState<{ lineId: string; index: number } | null>(null);
 
@@ -66,7 +67,13 @@ export function Line({ data }: LineProps) {
         <ResponsiveLine
             data={data.lines}
             margin={{ top: 50, right: 30, bottom: 70, left: 75 }}
-            yScale={{ type: 'linear', min: 0, max: 1, stacked: false, reverse: false }}
+            yScale={{ 
+                type: 'linear', 
+                min: yRange ? yRange[0] : 0, 
+                max: yRange ? yRange[1] : 1, 
+                stacked: false, 
+                reverse: false,
+            }}
             axisBottom={{
                 legend: 'Layer',
                 legendOffset: 35,
