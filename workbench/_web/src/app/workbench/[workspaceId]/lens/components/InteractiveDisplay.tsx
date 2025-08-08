@@ -72,7 +72,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
                                 rowMode={true}
                                 numTokens={tokenData.length}
                                 layerRange={sliderValues}
-                                scale={0.4}
+                                scale={0.5}
                                 showFlowOnHover={true}
                                 tokenLabels={tokenData.map((token) => token.text)}
                             />

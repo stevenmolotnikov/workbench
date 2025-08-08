@@ -738,7 +738,7 @@ export default function LensTransformer({
             <ScrollArea
                 ref={containerRef}
                 className="flex-shrink-0"
-                style={{ width: `${(3 * 210 + 1) * scale}px` }}
+                style={{ width: `${(4 * 210 + 1) * scale}px` }}
             >
                 <svg ref={svgRef}></svg>
                 <ScrollBar orientation="horizontal" className="hidden" />

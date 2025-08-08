@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { LineGraphData } from "@/types/charts";
 import { Line } from "./Line";
-import { RangeSelector } from "../heatmap/RangeSelector";
+import { RangeSelector } from "../RangeSelector";
 
 type Range = [number, number];
 type RangeWithId = {

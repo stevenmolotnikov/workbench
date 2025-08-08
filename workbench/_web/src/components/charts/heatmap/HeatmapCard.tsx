@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Heatmap } from "./Heatmap";
 import { HeatmapData } from "@/types/charts";
-import { RangeSelector } from "./RangeSelector";
+import { RangeSelector } from "../RangeSelector";
 
 type Range = [number, number];
 type RangeWithId = {
