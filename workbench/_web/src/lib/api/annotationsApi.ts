@@ -11,7 +11,7 @@ export const useCreateAnnotation = () => {
             return newAnnotation;
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["annotations", variables.chartId] });
+            queryClient.invalidateQueries({ queryKey: ["annotations"] });
             console.log("Successfully created annotation");
         },
         onError: (error) => {
@@ -29,7 +29,7 @@ export const useDeleteAnnotation = () => {
             return { id, chartId };
         },
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["annotations", data.chartId] });
+            queryClient.invalidateQueries({ queryKey: ["annotations"] });
             console.log("Successfully deleted annotation");
         },
         onError: (error) => {

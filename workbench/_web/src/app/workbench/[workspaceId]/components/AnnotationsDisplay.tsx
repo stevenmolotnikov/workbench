@@ -21,9 +21,9 @@ export function AnnotationsDisplay() {
     const { mutate: createAnnotation, isPending: isCreating } = useCreateAnnotation();
     const { mutate: deleteAnnotation } = useDeleteAnnotation();
 
-    const { data: annotations = [], refetch } = useQuery({
-        queryKey: ["annotations", activeTab],
-        queryFn: () => activeTab ? getAnnotations(activeTab) : Promise.resolve([]),
+    const { data: annotations = [] } = useQuery({
+        queryKey: ["annotations"],
+        queryFn: () => getAnnotations(activeTab as string),
         enabled: !!activeTab,
     });
 
@@ -50,7 +50,6 @@ export function AnnotationsDisplay() {
                 onSuccess: () => {
                     setPendingAnnotation(null);
                     setAnnotationText("");
-                    refetch();
                 },
             }
         );
@@ -101,7 +100,7 @@ export function AnnotationsDisplay() {
 
 
                 {pendingAnnotation && (
-                    <Card className="p-4 mb-4 rounded">
+                    <Card className="p-4 mb-2 rounded">
                         <div className="space-y-3">
                             <div>
                                 <div className="flex items-center gap-2 text-sm font-medium mb-1">

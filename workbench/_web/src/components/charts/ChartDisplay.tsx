@@ -136,10 +136,14 @@ export function ChartDisplay() {
 
             {/* Tab Content */}
 
-            {activeChart.type === "heatmap" ? (
+            {activeChart.type === "heatmap" && (activeChart.data !== null) ? (
                 <HeatmapCard data={activeChart.data as HeatmapData} />
-            ) : (
+            ) : activeChart.data !== null ? (
                 <LineCard data={activeChart.data as LineGraphData} />
+            ) : (
+                <div className="flex-1 flex h-full items-center justify-center">
+                    <div className="text-muted-foreground">No data available</div>
+                </div>
             )}
 
         </div>

@@ -33,6 +33,10 @@ const useSelectionClick = ({ canvasRef, data }: UseSelectionClickProps) => {
         enabled: !!chartId,
     });
 
+    useEffect(() => {
+        console.log("allAnnotations", allAnnotations)
+    }, [allAnnotations])
+
     const annotations: HeatmapAnnotation[] = allAnnotations?.filter(a => a.type === "heatmap").map(a => a.data as HeatmapAnnotation) || []
 
     useEffect(() => {   
