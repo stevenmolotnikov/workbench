@@ -4,7 +4,7 @@ import { ChartLine, Grid3x3, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useExecuteSelected } from "@/lib/api/modelsApi";
 import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
@@ -37,6 +37,23 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
     const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ config, configId });
+
+
+    const init = useRef(false);
+    useEffect(() => {
+        if (init.current) return;
+        if (config.token.targetIds.length > 0) {
+            handleInit();
+        }
+    }, []);
+
+    // If targetIds already exist, run with the initial config
+    const handleInit = async () => {
+        const tokens = await encodeText(config.prompt, config.model);
+        setTokenData(tokens);
+        setShowTokenArea(true);
+        await runPredictions(config);
+    }
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({

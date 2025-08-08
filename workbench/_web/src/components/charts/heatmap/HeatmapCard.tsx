@@ -69,7 +69,7 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
     }, [data, xRanges, yRanges]);
 
     return (
-        <div className="flex flex-col h-full border rounded bg-muted m-4">
+        <div className="flex flex-col h-full m-4">
             <div className="flex h-[10%] items-center gap-2 p-4">
                 {isEditingTitle ? (
                     <Input
@@ -119,7 +119,7 @@ export const HeatmapCard = ({ data }: HeatmapCardProps) => {
                     />
                 </div>
             </div>
-            <div className="flex h-[90%] w-full">
+            <div className="flex h-[90%] border rounded bg-muted w-full">
                 <Heatmap
                     data={filteredData}
                 />

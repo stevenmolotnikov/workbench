@@ -38,7 +38,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
     return (
         <div className="h-full flex flex-col">
             <div className="px-2 py-2 border-b h-12 flex items-center justify-between">
-                <h2 className="text-sm font-medium">Model</h2>
+                <h2 className="text-sm pl-2 font-medium">Model</h2>
                 <ModelSelector />
             </div>
 

@@ -173,7 +173,8 @@ async def execute_grid(
             )
             for layer_idx, (prob, pred_id) in enumerate(zip(probs, pred_ids))
         ]
-        rows.append(GridRow(id=input_str, data=points))
+        # Add the input string to the row id to make it unique
+        rows.append(GridRow(id=f"{input_str}-{seq_idx}", data=points))
 
     return GridLensResponse(rows=rows).model_dump()
 
