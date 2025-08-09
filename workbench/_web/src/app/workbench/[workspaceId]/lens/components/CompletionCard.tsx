@@ -171,43 +171,44 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         />
                     </div>
                 )}
-                <div className="flex gap-2 absolute bottom-2 right-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        id="tokenize-button"
-                        onClick={handleTokenize}
-                    >
-                        Tokenize
-                    </Button>
-                    <Button
-                        size="icon"
-                        onClick={handleCreateHeatmap}
-                    >
-                        <Grid3x3 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        size="icon"
-                        onClick={handleCreateLineChart}
-                        disabled={config.token.targetIds.length === 0}
-                    >
-                        <ChartLine className="w-4 h-4" />
-                    </Button>
-                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    id="tokenize-button"
+                    onClick={handleTokenize}
+                    className="absolute bottom-2 right-2"
+                >
+                    Tokenize
+                </Button>
 
             </div>
 
             {(showTokenArea && predictions.length > 0 && !isExecuting) && (
                 <div
-
-                    className="border-x border-b p-2 flex justify-between bg-card/30 rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
+                    className="border-x border-b p-2 flex items-center justify-between bg-muted rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
                 >
-                    <PredictionBadges
-                        config={config}
-                        setConfig={setConfig}
-                        predictions={predictions}
-                    />
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 items-start flex-1">
+                        <Button
+                            size="icon"
+                            onClick={handleCreateHeatmap}
+                        >
+                            <Grid3x3 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                            size="icon"
+                            onClick={handleCreateLineChart}
+                            disabled={config.token.targetIds.length === 0}
+                        >
+                            <ChartLine className="w-4 h-4" />
+                        </Button>
+                        <PredictionBadges
+                            config={config}
+                            setConfig={setConfig}
+                            predictions={predictions}
+                        />
+                    </div>
+
+                    {/* <div className="flex gap-2 ml-4">
                         {!isSelectingToken ? (
                             <Button
                                 variant="outline"
@@ -239,7 +240,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         >
                             <RotateCcw className="w-4 h-4" />
                         </Button>
-                    </div>
+                    </div> */}
                 </div>
             )}
         </div>

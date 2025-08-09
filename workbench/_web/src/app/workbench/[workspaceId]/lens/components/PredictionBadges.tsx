@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { encodeText } from "@/actions/tokenize";
-import { toast } from "sonner"
+import { useEffect, useMemo } from "react";
+import Select, {
+    MultiValue,
+    type FilterOptionOption,
+    type StylesConfig,
+} from "react-select";
 import { LensConfigData } from "@/types/lens";
-import { Prediction, Token } from "@/types/models";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Prediction } from "@/types/models";
 
 interface PredictionBadgesProps {
     config: LensConfigData;
@@ -13,210 +13,252 @@ interface PredictionBadgesProps {
     predictions: Prediction[];
 }
 
+// Token option for react-select
+interface TokenOption {
+    value: number; // token id
+    label: string; // token text
+    prob: number;  // probability
+    normalizedLabel: string; // label with leading space trimmed and lowercased for matching
+}
+
 export const PredictionBadges = ({
     config,
     setConfig,
     predictions,
 }: PredictionBadgesProps) => {
+    const currentTokenPrediction = predictions?.[0];
 
-    const currentTokenPrediction = predictions[0];
-    // const getAdditionalTokens = (): Token[] => {
-    //     // Get target ids not in the top 3 predictions
-    //     const top3Ids = currentTokenPrediction.ids.slice(0, 3);
-    //     const additionalIds = config.token.targetIds.filter(id => !top3Ids.includes(id));
-
-    //     // Get the tokens for the additional tokens
-    //     const additionalTokens = additionalIds.map(id => {
-    //         const tokenIndex = currentTokenPrediction.ids.findIndex(predictionId => predictionId === id);
-    //         return {
-    //             idx: currentTokenPrediction.idx,
-    //             id: id,
-    //             text: currentTokenPrediction.texts[tokenIndex],
-    //             targetIds: [],
-    //         }
-    //     })
-
-    //     return additionalTokens;
-    // }
-
-    const [additionalTokens, setAdditionalTokens] = useState<Token[]>([]);
-    const [addingToken, setAddingToken] = useState(false);
-    const [targetToken, setTargetToken] = useState<string>("");
-
-    const [selectedPredictionIds, setSelectedPredictionIds] = useState<number[]>(config.token.targetIds);
-
-    if (!currentTokenPrediction) {
-        toast.error("Selected index not in predictions.")
-        return (
-            <div>
-                No predictions for this token.
-            </div>
-        );
-    };
-
+    // Helper function to render token text with blue underscore for leading spaces
     const renderTokenText = (text: string | undefined) => {
         if (!text) return "";
-        if (text.includes(" ")) {
+        if (text.startsWith(" ")) {
             return (
                 <>
-                    {text.split(" ")[0]}
                     <span className="text-blue-500">_</span>
-                    {text.split(" ").slice(1).join(" ")}
+                    {text.slice(1)}
                 </>
             );
         }
         return text;
     };
 
-    const handlePredictionClick = (id: number) => {
-        // If already selected, remove
-        if (selectedPredictionIds.includes(id)) {
-            // Remove from the selected prediction indices
-            setSelectedPredictionIds(selectedPredictionIds.filter(i => i !== id));
+    // Build options from all predicted tokens
+    const options: TokenOption[] = useMemo(() => {
+        if (!currentTokenPrediction) return [];
+        return currentTokenPrediction.ids.map((id: number, index: number) => {
+            const text = currentTokenPrediction.texts[index] ?? "";
+            const prob = currentTokenPrediction.probs[index] ?? 0;
+            const normalizedLabel = text.replace(/^\s+/, "").toLowerCase();
+            return { value: id, label: text, prob, normalizedLabel } as TokenOption;
+        });
+    }, [currentTokenPrediction]);
 
-            // Remove the id from the target ids
-            const newTargetIds = config.token.targetIds.filter(targetId => targetId !== id)
-
-            // Update the config
+    // Default to the top token (index 0) if none selected yet
+    useEffect(() => {
+        if (!currentTokenPrediction) return;
+        if (config.token.targetIds.length === 0 && currentTokenPrediction.ids.length > 0) {
             setConfig({
                 ...config,
-                token: {
-                    ...config.token,
-                    targetIds: newTargetIds,
-                },
-            })
-            return;
+                token: { ...config.token, targetIds: [currentTokenPrediction.ids[0]] },
+            });
         }
+    }, [currentTokenPrediction]);
 
-        // Else, add the id to the target ids
+    const selectedOptions: TokenOption[] = useMemo(() => {
+        if (!options.length) return [];
+        const idSet = new Set(config.token.targetIds);
+        return options.filter(opt => idSet.has(opt.value));
+    }, [options, config.token.targetIds]);
+
+    const handleChange = (newValue: MultiValue<TokenOption>) => {
+        const newIds = newValue.map(opt => opt.value);
         setConfig({
             ...config,
-            token: {
-                ...config.token,
-                targetIds: [...config.token.targetIds, id],
-            },
-        })
-
-        // Add the index to the selected prediction indices
-        setSelectedPredictionIds([...selectedPredictionIds, id])
-    }
-
-    const handleTokenSubmit = async (text: string) => {
-        const tokens = await encodeText(text, config.model, false);
-
-        // Only add if it's a single token
-        if (tokens.length !== 1) toast.error(`Please enter a single token.`);
-        const token = tokens[0];
-
-        // If the token is already selected, dont change anything.
-        // If the token is not selected, highlight the existing badge rather than adding a new one.
-        if (currentTokenPrediction.ids.includes(token.id)) {
-            if (!selectedPredictionIds.includes(token.id)) handlePredictionClick(token.id);
-            setAddingToken(false);
-            setTargetToken("");
-            return;
-        }
-
-        // If the token index is not in the data, skip bc prob is too low
-        const tokenIndexInData = currentTokenPrediction.ids.findIndex((id) => id === token.id);
-        if (tokenIndexInData === -1) {
-            toast.error("Token probability is too low. Caden will fix this soon.")
-
-        } else {
-            const newToken: Token = {
-                idx: currentTokenPrediction.idx,
-                id: currentTokenPrediction.ids[tokenIndexInData],
-                text: currentTokenPrediction.texts[tokenIndexInData],
-                targetIds: [],
-            }
-
-            setAdditionalTokens([...additionalTokens, newToken]);
-            setAddingToken(false);
-        }
-
-        setTargetToken("");
+            token: { ...config.token, targetIds: newIds },
+        });
     };
 
-    const handleAdditionalTokenClick = (index: number) => {
-        // Remove from the additional tokens
-        setAdditionalTokens(additionalTokens.filter((_, i) => i !== index));
-    }
-
-    if (currentTokenPrediction) {
+    // Custom filtering: compare against leading-space-trimmed, lowercased tokens
+    const filterOption = (
+        option: FilterOptionOption<TokenOption>,
+        rawInput: string
+    ) => {
+        const input = rawInput.replace(/^\s+/, "").toLowerCase();
+        if (!input) return true;
         return (
-            <div className="flex flex-wrap gap-2 item-center">
-                {Array.from({ length: 3 }).map((_, index) => (
-                    <div
-                        key={index}
-                        className={cn(
-                            "border text-xs rounded px-2 py-1 flex items-center bg-muted hover:bg-muted/80 cursor-pointer",
-                            selectedPredictionIds.includes(currentTokenPrediction.ids[index]) && "border-primary"
-                        )}
-                        onClick={() => handlePredictionClick(currentTokenPrediction.ids[index])}
-                    >
-                        <span className="font-medium">
-                            {renderTokenText(currentTokenPrediction.texts[index])}
-                        </span>
-                        <span className="opacity-70 ml-2">
-                            {currentTokenPrediction.probs[index].toFixed(4)}
-                        </span>
-                    </div>
-                ))}
-                {additionalTokens.map((token, index) => (
-                    <div
-                        key={index}
-                        className={"border text-xs rounded px-2 py-1 flex items-center bg-muted border-primary hover:bg-muted/80 cursor-pointer"}
-                        onClick={() => handleAdditionalTokenClick(index)}
-                    >
-                        <span className="font-medium">
-                            {renderTokenText(token.text)}
-                        </span>
-                        <span className="opacity-70 ml-2">
-                            {currentTokenPrediction.probs[currentTokenPrediction.texts.indexOf(token.text)].toFixed(4)}
-                        </span>
-                    </div>
-                ))}
-                {addingToken ? (
-                    <input
-                        type="text"
-                        className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs border border-primary outline-none"
-                        placeholder="Enter token"
-                        value={targetToken}
-                        onChange={(e) => setTargetToken(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                handleTokenSubmit(targetToken);
-                            }
-                        }}
-                        onBlur={() => {
-                            if (targetToken) {
-                                handleTokenSubmit(targetToken);
-                            } else {
-                                setTargetToken("");
-                                setAddingToken(false);
-                            }
-                        }}
-                        autoFocus
-                    />
-                ) : (
-                    <div>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setAddingToken(true)}
-                        >
-                            <Plus size={16} className="w-4 h-4" />
-                        </Button>
-                    </div>
-                )}
-            </div>
-        )
-    } else {
+            option.data.normalizedLabel.includes(input) ||
+            String(option.value).includes(input)
+        );
+    };
+
+    if (!currentTokenPrediction) {
         return (
             <div>
                 No predictions for this token.
             </div>
-        )
+        );
     }
 
+    return (
+        <div className="w-full flex-1 min-w-[12rem]">
+            <Select<TokenOption, true>
+                classNamePrefix="pred-select"
+                isMulti
+                isClearable
+                options={options}
+                value={selectedOptions}
+                onChange={handleChange}
+                filterOption={filterOption}
+                styles={selectStyles}
+                placeholder="Select tokens…"
+                closeMenuOnSelect={false}
+                formatOptionLabel={(option: TokenOption) => (
+                    <div className="flex items-center justify-between w-full">
+                        <span className="font-medium text-foreground">{renderTokenText(option.label)}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{option.prob.toFixed(4)}</span>
+                    </div>
+                )}
+                components={{
+                    DropdownIndicator: () => null,
+                    IndicatorSeparator: () => null
+                }}
+                onKeyDown={(e) => {
+                    // Space key should not be used to select tokens
+                    if (e.key === ' ' && !e.currentTarget.querySelector('input')?.value) {
+                        e.preventDefault();
+                    }
+                }}
+            />
+        </div>
+    );
+};
+
+
+// Theme-aware styles for react-select using shadcn/tailwind CSS variables
+const selectStyles: StylesConfig<TokenOption, true> = {
+    container: (base) => ({
+        ...base,
+        width: "100%",
+    }),
+    control: (base, state) => ({
+        ...base,
+        backgroundColor: "hsl(var(--background))",
+        borderColor: state.isFocused
+            ? "hsl(var(--ring))"
+            : "hsl(var(--input))",
+        boxShadow: state.isFocused
+            ? "0 0 0 1px hsl(var(--ring))"
+            : "none",
+        boxSizing: "border-box",
+        minHeight: "2rem", // match h-8 icon buttons while allowing wrap growth
+        fontSize: "0.875rem", // text-sm
+        lineHeight: "1rem",
+        alignItems: "center",
+        paddingTop: 0,
+        paddingBottom: 0,
+        paddingLeft: 0,
+        paddingRight: 6,
+        ':hover': {
+            borderColor: "hsl(var(--input))",
+        },
+    }),
+    valueContainer: (base) => ({
+        ...base,
+        position: "relative",
+        paddingTop: 4,
+        paddingBottom: 4,
+        paddingLeft: 6,
+        gap: 4,
+        display: "flex",
+        alignItems: "center",
+        minHeight: "2rem",
+        flexWrap: "wrap",
+    }),
+    input: (base) => ({
+        ...base,
+        color: "hsl(var(--foreground))",
+        margin: 0,
+        padding: 0,
+        order: 1,
+        minWidth: 2,
+    }),
+    singleValue: (base) => ({
+        ...base,
+        color: "hsl(var(--foreground))",
+        lineHeight: "1rem",
+    }),
+    multiValue: (base) => ({
+        ...base,
+        backgroundColor: "hsl(var(--muted))",
+        border: "1px solid hsl(var(--input))",
+        margin: 0,
+        alignItems: "center",
+        minHeight: "1.25rem",
+        borderRadius: "0.375rem",
+        paddingLeft: 2,
+        paddingRight: 2,
+    }),
+    multiValueLabel: (base) => ({
+        ...base,
+        color: "hsl(var(--muted-foreground))",
+        padding: "0 8px",
+        lineHeight: "1.125rem",
+    }),
+    multiValueRemove: (base) => ({
+        ...base,
+        color: "hsl(var(--muted-foreground))",
+        padding: 0,
+        height: "0.75rem",
+        width: "0.75rem",
+        ':hover': {
+            backgroundColor: "hsl(var(--accent))",
+            color: "hsl(var(--accent-foreground))",
+        },
+    }),
+    indicatorsContainer: (base) => ({
+        ...base,
+        padding: 0,
+        alignItems: "center",
+    }),
+    clearIndicator: (base) => ({
+        ...base,
+        color: "hsl(var(--muted-foreground))",
+        padding: 0,
+        height: ".75rem",
+        width: ".75rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        alignSelf: "center",
+        ':hover': {
+            color: "hsl(var(--foreground))",
+        },
+    }),
+    menu: (base) => ({
+        ...base,
+        backgroundColor: "hsl(var(--popover))",
+        border: "1px solid hsl(var(--border))",
+        overflow: "hidden",
+        zIndex: 50,
+        fontSize: "0.75rem",
+    }),
+    menuList: (base) => ({
+        ...base,
+        '&::-webkit-scrollbar': {
+            display: 'none',
+        },
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+    }),
+    option: (base, state) => ({
+        ...base,
+        backgroundColor: state.isSelected
+            ? "hsl(var(--accent))"
+            : state.isFocused
+                ? "hsl(var(--accent))"
+                : "transparent",
+        color: state.isSelected || state.isFocused
+            ? "hsl(var(--accent-foreground))"
+            : "hsl(var(--popover-foreground))",
+    }),
 };
