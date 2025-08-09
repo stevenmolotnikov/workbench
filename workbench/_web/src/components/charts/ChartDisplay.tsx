@@ -1,6 +1,6 @@
 import { useWorkspace } from "@/stores/useWorkspace";
 import { Loader2, PanelRight, PanelRightClose } from "lucide-react";
-import { getOrCreateLensCharts } from "@/lib/queries/chartQueries";
+import { getLensCharts } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
@@ -14,29 +14,23 @@ export function ChartDisplay() {
     const { activeTab, setActiveTab, setAnnotationsOpen, annotationsOpen } = useWorkspace();
     const { workspaceId } = useParams();
 
-    const { data: { lensCharts, unlinkedCharts } = { lensCharts: [], unlinkedCharts: [] }, isLoading, isSuccess } = useQuery({
+    const { data: lensCharts, isLoading, isSuccess } = useQuery({
         queryKey: ["lensCharts", workspaceId],
-        queryFn: () => getOrCreateLensCharts(workspaceId as string, {
-            workspaceId: workspaceId as string,
-        }),
+        queryFn: () => getLensCharts(workspaceId as string),
     });
 
-    const allCharts = useMemo(() => {
-        return [...(lensCharts || []), ...(unlinkedCharts || [])];
-    }, [lensCharts, unlinkedCharts]);
-
     const activeChart = useMemo(() => {
-        return allCharts?.find(c => c.id === activeTab) || null;
-    }, [allCharts, activeTab]);
+        return lensCharts?.find(c => c.id === activeTab) || null;
+    }, [lensCharts, activeTab]);
 
     // On load, set to the first chart
     const initial = useRef(true);
     useEffect(() => {
-        if (isSuccess && initial.current && allCharts.length > 0) {
-            setActiveTab(allCharts[0].id);
+        if (isSuccess && initial.current && lensCharts.length > 0) {
+            setActiveTab(lensCharts[0].id);
             initial.current = false;
         }
-    }, [isSuccess, allCharts, setActiveTab]);
+    }, [isSuccess, lensCharts, setActiveTab]);
 
     if (isLoading) return (
         <div className="flex-1 flex h-full items-center justify-center">

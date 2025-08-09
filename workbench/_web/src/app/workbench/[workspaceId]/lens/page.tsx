@@ -17,9 +17,7 @@ import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 import { ToolTabs } from "../components/ToolTabs";
 import ChartCardsSidebar from "./components/ChartCardsSidebar";
 
-export default function Workbench({ params }: { params: Promise<{ workspaceId: string }> }) {
-    const resolvedParams = use(params);
-
+export default function Workbench() {
     const { annotationsOpen } = useWorkspace();
 
     // Ensure a selected model exists

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getOrCreateLensCharts } from "@/lib/queries/chartQueries";
+import { getLensCharts } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,16 +14,10 @@ export default function ChartCardsSidebar() {
     const { workspaceId } = useParams();
     const { activeTab, setActiveTab, selectedModel } = useWorkspace();
 
-    const { data: { lensCharts, unlinkedCharts } = { lensCharts: [], unlinkedCharts: [] }, isLoading } = useQuery({
+    const { data: lensCharts, isLoading } = useQuery({
         queryKey: ["lensCharts", workspaceId],
-        queryFn: () => getOrCreateLensCharts(workspaceId as string, {
-            workspaceId: workspaceId as string,
-        }),
+        queryFn: () => getLensCharts(workspaceId as string),
     });
-
-    const allCharts = useMemo(() => {
-        return [...(lensCharts || []), ...(unlinkedCharts || [])];
-    }, [lensCharts, unlinkedCharts]);
 
     const { mutate: createPair, isPending: isCreating } = useCreateLensChartPair();
 
@@ -38,6 +32,8 @@ export default function ChartCardsSidebar() {
         });
     };
 
+    if (!lensCharts) return null;
+
     return (
         <div className="flex h-full flex-col overflow-hidden">
             <div className="h-12 px-3 py-2 border-b flex items-center justify-between">
@@ -50,10 +46,10 @@ export default function ChartCardsSidebar() {
                 {isLoading && (
                     <div className="text-xs text-muted-foreground px-2 py-6 text-center">Loading charts…</div>
                 )}
-                {allCharts.length === 0 && !isLoading && (
+                {lensCharts.length === 0 && !isLoading && (
                     <div className="text-xs text-muted-foreground px-2 py-6 text-center">No charts yet. Create one to get started.</div>
                 )}
-                {allCharts.map((chart) => {
+                {lensCharts.map((chart) => {
                     const isSelected = chart.id === activeTab;
                     const type = chart.type as "line" | "heatmap" | null | undefined;
                     const createdAt = chart.createdAt ? new Date(chart.createdAt).toLocaleString() : "";
