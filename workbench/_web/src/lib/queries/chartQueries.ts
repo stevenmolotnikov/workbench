@@ -4,17 +4,9 @@ import { ChartData } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
-import { eq, and, asc, notExists } from "drizzle-orm";
+import { eq, and, asc, notExists, or } from "drizzle-orm";
 
-export const setChartData = async (chartId: string, configId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
-    const hasLinkedConfig = await getHasLinkedConfig(chartId);
-    if (!hasLinkedConfig) {
-        await db.insert(chartConfigLinks).values({
-            chartId,
-            configId,
-        });
-    }
-
+export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
 };
 
@@ -32,23 +24,6 @@ export const getLensCharts = async (workspaceId: string): Promise<Chart[]> => {
         .where(and(eq(charts.workspaceId, workspaceId), eq(configs.type, "lens")));
 
     return chartsData.map(({ charts }) => charts);
-};
-
-export const getOrCreateLensCharts = async (
-    workspaceId: string,
-    fallbackChart: NewChart
-): Promise<{ lensCharts: Chart[]; unlinkedCharts: Chart[] }> => {
-    const existingCharts = await getLensCharts(workspaceId);
-    const unlinkedCharts = await getUnlinkedCharts(workspaceId);
-
-    // If there are unlinked charts, return that
-    if (unlinkedCharts.length > 0 || existingCharts.length > 0) {
-        return { lensCharts: existingCharts, unlinkedCharts: unlinkedCharts };
-    }
-
-    const [newChart] = await db.insert(charts).values(fallbackChart).returning();
-
-    return { lensCharts: [], unlinkedCharts: [newChart] };
 };
 
 export const getLensConfigs = async (workspaceId: string): Promise<LensConfig[]> => {
@@ -106,21 +81,33 @@ export const getHasLinkedConfig = async (chartId: string): Promise<boolean> => {
     return linkedConfigs.length > 0;
 };
 
-export const getUnlinkedCharts = async (workspaceId: string): Promise<Chart[]> => {
-    const unlinkedCharts = await db
+export const getConfigForChart = async (chartId: string): Promise<LensConfig | null> => {
+    const rows = await db
         .select()
-        .from(charts)
-        .where(
-            and(
-                eq(charts.workspaceId, workspaceId),
-                notExists(
-                    db
-                        .select()
-                        .from(chartConfigLinks)
-                        .where(eq(chartConfigLinks.chartId, charts.id))
-                )
-            )
-        );
+        .from(configs)
+        .innerJoin(chartConfigLinks, eq(configs.id, chartConfigLinks.configId))
+        .where(eq(chartConfigLinks.chartId, chartId))
+        .limit(1);
+    if (rows.length === 0) return null;
+    return rows[0].configs as LensConfig;
+};
 
-    return unlinkedCharts;
+// Create a new chart and config at once. Used in the ChartDisplay.
+export const createLensChartPair = async (
+    workspaceId: string,
+    defaultConfig: LensConfigData
+): Promise<{ chart: Chart; config: LensConfig }> => {
+    const [newChart] = await db.insert(charts).values({ workspaceId }).returning();
+    const [newConfig] = await db
+        .insert(configs)
+        .values({ workspaceId, type: "lens", data: defaultConfig })
+        .returning();
+    
+    // Create the link between chart and config
+    await db.insert(chartConfigLinks).values({
+        chartId: newChart.id,
+        configId: newConfig.id,
+    });
+    
+    return { chart: newChart as Chart, config: newConfig as LensConfig };
 };

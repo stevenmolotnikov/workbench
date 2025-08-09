@@ -1,6 +1,6 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart, createLensChartPair } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
@@ -31,7 +31,7 @@ export const useLensLine = () => {
     return useMutation({
         mutationFn: async ({lensRequest, configId}: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
             const response = await getLensLine(lensRequest);
-            await setChartData(lensRequest.chartId, configId, response.data, "line");
+            await setChartData(lensRequest.chartId, response.data, "line");
             return response.data;
         },
         onSuccess: (data, variables) => {
@@ -77,7 +77,7 @@ export const useLensGrid = () => {
     return useMutation({
         mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
             const response = await getLensGrid(lensRequest);
-            await setChartData(lensRequest.chartId, configId, response.data, "heatmap");
+            await setChartData(lensRequest.chartId, response.data, "heatmap");
             return response.data;
         },
         onSuccess: (data, variables) => {
@@ -123,6 +123,25 @@ export const useDeleteChart = () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["hasLinkedConfig"] });
+        },
+    });
+};
+
+export const useCreateLensChartPair = () => {
+    const queryClient = useQueryClient();
+    const { setActiveTab } = useWorkspace();
+
+    return useMutation({
+        mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: LensConfigData }) => {
+            return await createLensChartPair(workspaceId, defaultConfig);
+        },
+        onSuccess: ({ chart }) => {
+            // Refresh charts and configs
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
+            // Set active to the new chart id
+            setActiveTab(chart.id);
         },
     });
 };

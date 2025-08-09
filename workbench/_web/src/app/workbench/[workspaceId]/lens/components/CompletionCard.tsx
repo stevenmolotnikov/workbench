@@ -18,13 +18,13 @@ import { useLensCharts } from "@/hooks/useLensCharts";
 import { cn } from "@/lib/utils";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
+import { LensConfig } from "@/db/schema";
+
 interface CompletionCardProps {
-    config: LensConfigData;
-    setConfig: (config: LensConfigData) => void;
-    configId: string;
+    initialConfig: LensConfig;
 }
 
-export function CompletionCard({ config, setConfig, configId }: CompletionCardProps) {
+export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
     const { tokenData, setTokenData } = useLensWorkspace();
 
@@ -36,6 +36,11 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
     const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
+
+
+    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
+    const configId = initialConfig.id;
+
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ config, configId });
 
 
@@ -75,6 +80,7 @@ export function CompletionCard({ config, setConfig, configId }: CompletionCardPr
 
         // Run predictions
         await runPredictions(temporaryConfig);
+        await handleCreateHeatmap();
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
