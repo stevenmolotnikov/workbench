@@ -5,7 +5,9 @@ import { useCallback, useEffect, useRef, useState, RefObject } from "react";
 import { getAnnotations } from "@/lib/queries/annotationQueries";
 import { HeatmapAnnotation } from "@/types/annotations";
 import { HeatmapData } from "@/types/charts";
-import { heatmapMargin as margin } from "../theming";
+import { getCellFromPosition } from "./utils/heatmap-geometry";
+import { drawSelection } from "./utils/draw-utils";
+import { useHeatmap } from "./HeatmapProvider";
 
 interface SelectionRect {
     startX: number
@@ -19,10 +21,10 @@ interface UseSelectionClickProps {
     data: HeatmapData
     mode?: "annotation" | "zoom"
     enabled?: boolean
-    onZoomComplete?: (bounds: { minRow: number, maxRow: number, minCol: number, maxCol: number }) => void
 }
 
-const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = true, onZoomComplete }: UseSelectionClickProps) => {
+const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = true }: UseSelectionClickProps) => {
+    const { handleZoomComplete: onZoomComplete } = useHeatmap()
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
     const [isSelecting, setIsSelecting] = useState(false)
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
@@ -36,164 +38,14 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
         enabled: !!chartId,
     });
 
-    useEffect(() => {
-        console.log("allAnnotations", allAnnotations)
-    }, [allAnnotations])
-
     const annotations: HeatmapAnnotation[] = allAnnotations?.filter(a => a.type === "heatmap").map(a => a.data as HeatmapAnnotation) || []
 
+    // Clear selection when pending annotation cancelled or not a heatmap
     useEffect(() => {   
         if (!pendingAnnotation || pendingAnnotation.type !== 'heatmap') {
             setSelectionRect(null)
         }
     }, [pendingAnnotation])
-
-    // Calculate cell dimensions based on canvas size and data
-    const getCellDimensions = useCallback(() => {
-        if (!canvasRef.current || !data.rows.length || !data.rows[0].data.length) {
-            return null
-        }
-
-        const canvas = canvasRef.current
-        const width = canvas.offsetWidth
-        const height = canvas.offsetHeight
-
-        const gridWidth = width - margin.left - margin.right
-        const gridHeight = height - margin.top - margin.bottom
-
-        const numCols = data.rows[0].data.length
-        const numRows = data.rows.length
-
-        const cellWidth = gridWidth / numCols
-        const cellHeight = gridHeight / numRows
-
-        return {
-            cellWidth,
-            cellHeight,
-            gridWidth,
-            gridHeight,
-            numCols,
-            numRows
-        }
-    }, [data.rows, margin.top, margin.right, margin.bottom, margin.left])
-
-    // Convert mouse position to cell indices
-    const getCellFromPosition = useCallback((x: number, y: number) => {
-        const dims = getCellDimensions()
-        if (!dims) return null
-
-        const gridX = x - margin.left
-        const gridY = y - margin.top
-
-        if (gridX < 0 || gridY < 0 || gridX >= dims.gridWidth || gridY >= dims.gridHeight) {
-            return null
-        }
-
-        const col = Math.floor(gridX / dims.cellWidth)
-        const row = Math.floor(gridY / dims.cellHeight)
-
-        if (col >= 0 && col < dims.numCols && row >= 0 && row < dims.numRows) {
-            return { col, row }
-        }
-
-        return null
-    }, [getCellDimensions, margin.left, margin.top])
-
-    // Helper function to get bounding box from cell IDs
-    const getCellBounds = useCallback((cellIds: string[]) => {
-        let minRow = Infinity, maxRow = -Infinity
-        let minCol = Infinity, maxCol = -Infinity
-        
-        cellIds.forEach(cellId => {
-            const parts = cellId.split('-')
-            if (parts.length >= 3) {
-                const row = parseInt(parts[parts.length - 2])
-                const col = parseInt(parts[parts.length - 1])
-                
-                if (!isNaN(row) && !isNaN(col)) {
-                    minRow = Math.min(minRow, row)
-                    maxRow = Math.max(maxRow, row)
-                    minCol = Math.min(minCol, col)
-                    maxCol = Math.max(maxCol, col)
-                }
-            }
-        })
-        
-        return minRow !== Infinity ? { minRow, maxRow, minCol, maxCol } : null
-    }, [])
-
-    // Helper function to draw a bounding rectangle
-    const drawBoundingRect = useCallback((
-        ctx: CanvasRenderingContext2D,
-        bounds: { minRow: number, maxRow: number, minCol: number, maxCol: number },
-        dims: { cellWidth: number, cellHeight: number },
-        style: { fillStyle: string, strokeStyle: string, lineWidth: number }
-    ) => {
-        const x = margin.left + bounds.minCol * dims.cellWidth
-        const y = margin.top + bounds.minRow * dims.cellHeight
-        const width = (bounds.maxCol - bounds.minCol + 1) * dims.cellWidth
-        const height = (bounds.maxRow - bounds.minRow + 1) * dims.cellHeight
-        
-        ctx.fillStyle = style.fillStyle
-        ctx.strokeStyle = style.strokeStyle
-        ctx.lineWidth = style.lineWidth
-        
-        ctx.fillRect(x, y, width, height)
-        ctx.strokeRect(x, y, width, height)
-    }, [margin])
-
-    // Draw selection on canvas
-    const drawSelection = useCallback(() => {
-        const canvas = canvasRef.current
-        const ctx = canvas?.getContext('2d')
-        if (!canvas || !ctx) return
-
-        const dims = getCellDimensions()
-        if (!dims) return
-
-        // Clear canvas (accounting for device pixel ratio)
-        const dpr = window.devicePixelRatio || 1
-        ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr)
-
-        // Draw existing annotations
-        if (annotations && chartId) {
-            annotations.forEach(annotation => {
-                if (Array.isArray(annotation.cellIds) && annotation.cellIds.length > 0) {
-                    const bounds = getCellBounds(annotation.cellIds)
-                    if (bounds) {
-                        drawBoundingRect(ctx, bounds, dims, {
-                            fillStyle: 'rgba(255, 0, 0, 0.2)',
-                            strokeStyle: 'red',
-                            lineWidth: 2
-                        })
-                    }
-                }
-            })
-        }
-
-        // Draw current selection rectangle
-        if (selectionRect) {
-            // Translate absolute x values to column indices
-            const firstRow = data.rows[0]
-            const toIdx = (xVal: number) => firstRow.data.findIndex(c => c.x === xVal)
-            const startXIdx = toIdx(selectionRect.startX)
-            const endXIdx = toIdx(selectionRect.endX)
-            if (startXIdx === -1 || endXIdx === -1) return
-
-            const bounds = {
-                minCol: Math.min(startXIdx, endXIdx),
-                maxCol: Math.max(startXIdx, endXIdx),
-                minRow: Math.min(selectionRect.startY, selectionRect.endY),
-                maxRow: Math.max(selectionRect.startY, selectionRect.endY)
-            }
-            
-            drawBoundingRect(ctx, bounds, dims, {
-                fillStyle: 'rgba(59, 130, 246, 0.3)',
-                strokeStyle: '#3b82f6',
-                lineWidth: 2
-            })
-        }
-    }, [selectionRect, getCellDimensions, annotations, chartId, getCellBounds, drawBoundingRect, data.rows])
 
     // Handle canvas resize with proper DPI scaling
     useEffect(() => {
@@ -212,14 +64,14 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
                     ctx.scale(dpr, dpr)
                 }
                 
-                drawSelection()
+                drawSelection(canvasRef, data, annotations, chartId, selectionRect)
             }
         }
 
         updateCanvasSize()
         window.addEventListener('resize', updateCanvasSize)
         return () => window.removeEventListener('resize', updateCanvasSize)
-    }, [drawSelection])
+    }, [drawSelection, canvasRef, data, annotations, chartId, selectionRect])
 
     // Redraw when selection changes
     useEffect(() => {
@@ -227,9 +79,9 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
             cancelAnimationFrame(animationFrameRef.current)
         }
         animationFrameRef.current = requestAnimationFrame(() => {
-            drawSelection()
+            drawSelection(canvasRef, data, annotations, chartId, selectionRect)
         })
-    }, [selectionRect, drawSelection])
+    }, [selectionRect, canvasRef, data, annotations, chartId, selectionRect])
 
     // Handle click from Nivo canvas
     const handleCellClick = useCallback((cell: any) => {
@@ -277,7 +129,6 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
                 cellIds: Array.from(cells),
                 text: ""
             })
-            // setSelectionRect(null)
             setIsSelecting(false)
         }
     }, [selectionRect, data.rows, chartId, setPendingAnnotation, mode, enabled, onZoomComplete])
@@ -292,7 +143,7 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
 
         const x = e.clientX - rect.left
         const y = e.clientY - rect.top
-        const cell = getCellFromPosition(x, y)
+        const cell = getCellFromPosition(canvasRef, data, x, y)
 
         if (cell) {
             const firstRow = data.rows[0]
@@ -303,7 +154,7 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
                 endY: cell.row
             } : null)
         }
-    }, [selectionRect, getCellFromPosition, enabled, isSelecting, data.rows])
+    }, [selectionRect, enabled, isSelecting, data.rows])
 
     return {
         handleCellClick,

@@ -29,7 +29,6 @@ interface RangeSelectorProps {
     axisLabel: string;
     className?: string;
     step?: number;
-    formatValue?: (value: number) => string;
 }
 
 export function RangeSelector({
@@ -41,7 +40,6 @@ export function RangeSelector({
     axisLabel,
     className,
     step = 1,
-    formatValue,
 }: RangeSelectorProps) {
     const [currentRange, setCurrentRange] = useState<Range>([min, max]);
     const [isAddingRange, setIsAddingRange] = useState(ranges.length === 0);
@@ -105,15 +103,13 @@ export function RangeSelector({
 
     const isSingleMode = maxRanges === 1;
 
-    const formatVal = (v: number) => formatValue ? formatValue(v) : String(v);
-
     return (
         <DropdownMenu open={open} onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-between", className)}>
                     {isSingleMode
                         ? (ranges.length > 0
-                            ? `${axisLabel.replace(/\s*Range/i, '').trim()}: ${formatVal(ranges[0].range[0])}-${formatVal(ranges[0].range[1])}`
+                            ? `${axisLabel.replace(/\s*Range/i, '').trim()}: ${ranges[0].range[0]}-${ranges[0].range[1]}`
                             : `Set ${axisLabel.toLowerCase()}`)
                         : axisLabel}
                     <ChevronDown className="h-4 w-4 ml-2" />
@@ -146,8 +142,8 @@ export function RangeSelector({
                         <DropdownMenuSeparator />
                         <div className="space-y-2 px-2 pb-3">
                             <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Min: {formatVal(currentRange[0])}</span>
-                                <span>Max: {formatVal(currentRange[1])}</span>
+                                <span>Min: {currentRange[0]}</span>
+                                <span>Max: {currentRange[1]}</span>
                             </div>
                             <DoubleSlider
                                 value={currentRange}
@@ -185,7 +181,7 @@ export function RangeSelector({
                                                     className="flex items-center justify-between px-2 py-1 bg-secondary/50"
                                                 >
                                                     <span className="text-sm font-medium">
-                                                        {formatVal(range.range[0])} - {formatVal(range.range[1])}
+                                                        {range.range[0]} - {range.range[1]}
                                                     </span>
                                                     <Button
                                                         variant="ghost"
@@ -233,8 +229,8 @@ export function RangeSelector({
 
                                 <div className="space-y-2 px-2 pb-3">
                                     <div className="flex justify-between text-sm text-muted-foreground">
-                                        <span>Min: {formatVal(currentRange[0])}</span>
-                                        <span>Max: {formatVal(currentRange[1])}</span>
+                                        <span>Min: {currentRange[0]}</span>
+                                        <span>Max: {currentRange[1]}</span>
                                     </div>
                                     <DoubleSlider
                                         value={currentRange}
