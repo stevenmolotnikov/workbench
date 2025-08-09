@@ -1,6 +1,6 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart, createLensChartPair } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { NewChart } from "@/db/schema";
@@ -123,6 +123,24 @@ export const useDeleteChart = () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["hasLinkedConfig"] });
+        },
+    });
+};
+
+export const useCreateLensChartPair = () => {
+    const queryClient = useQueryClient();
+    const { setActiveTab } = useWorkspace();
+
+    return useMutation({
+        mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: LensConfigData }) => {
+            return await createLensChartPair(workspaceId, defaultConfig);
+        },
+        onSuccess: ({ chart }) => {
+            // Refresh charts and configs
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
+            // Set active to the new chart id
+            setActiveTab(chart.id);
         },
     });
 };

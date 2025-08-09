@@ -1,39 +1,72 @@
-import { useState } from "react";
-import LensTransformer, { SelectedComponent } from "@/components/transformer/InteractiveTransformer";
-import { encodeText } from "@/actions/tokenize";
+import { useEffect, useState } from "react";
+import LensTransformer, { type SelectedComponent } from "@/components/transformer/InteractiveTransformer";
 import { LensConfigData } from "@/types/lens";
-import { Button } from "@/components/ui/button";
 import { ModelSelector } from "@/components/ModelSelector";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DoubleSlider } from "@/components/ui/double-slider";
-import { Token } from "@/types/models";
-import { LensConfig } from "@/db/schema";
 import { CompletionCard } from "./CompletionCard";
-import { useLensCharts } from "@/hooks/useLensCharts";
-import { ChevronRight, ChevronDown, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getOrCreateLensConfigForChart } from "@/lib/queries/chartQueries";
 
-export default function InteractiveDisplay({ initialConfig }: { initialConfig: LensConfig }) {
-    // Generate some sample labels
-    const { selectedModel } = useWorkspace();
+export default function InteractiveDisplay() {
+    const { selectedModel, activeTab } = useWorkspace();
+    const { workspaceId } = useParams<{ workspaceId: string }>();
 
-    const { tokenData, clickedComponent, setClickedComponent } = useLensWorkspace();
+    const { tokenData } = useLensWorkspace();
     const [isExpanded, setIsExpanded] = useState(false);
+    const [clickedComponent, setClickedComponent] = useState<SelectedComponent | null>(null);
 
-    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
+    const defaultConfig: LensConfigData = {
+        prompt: "",
+        model: selectedModel?.name || "",
+        token: { idx: 0, id: 0, text: "", targetIds: [] },
+    };
+
+    const { data: configRecord, isSuccess } = useQuery({
+        queryKey: ["chartConfig", workspaceId, activeTab],
+        queryFn: () => getOrCreateLensConfigForChart(workspaceId as string, activeTab as string, defaultConfig),
+        enabled: !!selectedModel && !!activeTab,
+        staleTime: 0,
+    });
+
+    const [config, setConfig] = useState<LensConfigData | null>(null);
+
+    useEffect(() => {
+        if (isSuccess && configRecord) {
+            setConfig(configRecord.data);
+        } else if (!activeTab) {
+            setConfig(null);
+        }
+    }, [isSuccess, configRecord, activeTab]);
 
     // Two-knob slider state
-
     const getSliderValues = (): [number, number] => {
         if (!selectedModel) {
             return [0, 0];
         }
         return [0, selectedModel.n_layers - 1];
-    }
+    };
 
     const [sliderValues, setSliderValues] = useState<[number, number]>(getSliderValues());
 
+    if (!activeTab) {
+        return (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+                Select a chart to edit its config
+            </div>
+        );
+    }
+
+    if (!config || !configRecord) {
+        return (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+                Loading config…
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col">
@@ -43,7 +76,7 @@ export default function InteractiveDisplay({ initialConfig }: { initialConfig: L
             </div>
 
             <div className="p-2">
-                <CompletionCard config={config} setConfig={setConfig} configId={initialConfig.id} />
+                <CompletionCard config={config} setConfig={setConfig} configId={configRecord.id} />
             </div>
 
             <div className="px-2 pb-2 h-full overflow-auto flex flex-col">

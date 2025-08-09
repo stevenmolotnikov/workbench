@@ -4,17 +4,10 @@ import { ChartData } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
-import { eq, and, asc, notExists } from "drizzle-orm";
+import { eq, and, asc, notExists, or } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, configId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
-    const hasLinkedConfig = await getHasLinkedConfig(chartId);
-    if (!hasLinkedConfig) {
-        await db.insert(chartConfigLinks).values({
-            chartId,
-            configId,
-        });
-    }
-
+    await ensureOneToOneLink(chartId, configId);
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
 };
 
@@ -41,7 +34,6 @@ export const getOrCreateLensCharts = async (
     const existingCharts = await getLensCharts(workspaceId);
     const unlinkedCharts = await getUnlinkedCharts(workspaceId);
 
-    // If there are unlinked charts, return that
     if (unlinkedCharts.length > 0 || existingCharts.length > 0) {
         return { lensCharts: existingCharts, unlinkedCharts: unlinkedCharts };
     }
@@ -123,4 +115,52 @@ export const getUnlinkedCharts = async (workspaceId: string): Promise<Chart[]> =
         );
 
     return unlinkedCharts;
+};
+
+// New helpers to enforce and work with 1:1 links
+export const ensureOneToOneLink = async (chartId: string, configId: string): Promise<void> => {
+    // Remove any prior links for either chart or config, then insert the single link
+    await db.delete(chartConfigLinks).where(or(eq(chartConfigLinks.chartId, chartId), eq(chartConfigLinks.configId, configId)));
+    await db.insert(chartConfigLinks).values({ chartId, configId });
+};
+
+export const getConfigForChart = async (chartId: string): Promise<LensConfig | null> => {
+    const rows = await db
+        .select()
+        .from(configs)
+        .innerJoin(chartConfigLinks, eq(configs.id, chartConfigLinks.configId))
+        .where(eq(chartConfigLinks.chartId, chartId))
+        .limit(1);
+    if (rows.length === 0) return null;
+    return rows[0].configs as LensConfig;
+};
+
+export const getOrCreateLensConfigForChart = async (
+    workspaceId: string,
+    chartId: string,
+    fallbackConfig: LensConfigData
+): Promise<LensConfig> => {
+    const existing = await getConfigForChart(chartId);
+    if (existing) return existing;
+
+    const [newConfig] = await db
+        .insert(configs)
+        .values({ workspaceId, type: "lens", data: fallbackConfig })
+        .returning();
+
+    await ensureOneToOneLink(chartId, newConfig.id);
+    return newConfig as LensConfig;
+};
+
+export const createLensChartPair = async (
+    workspaceId: string,
+    defaultConfig: LensConfigData
+): Promise<{ chart: Chart; config: LensConfig }> => {
+    const [newChart] = await db.insert(charts).values({ workspaceId }).returning();
+    const [newConfig] = await db
+        .insert(configs)
+        .values({ workspaceId, type: "lens", data: defaultConfig })
+        .returning();
+    await ensureOneToOneLink(newChart.id, newConfig.id);
+    return { chart: newChart as Chart, config: newConfig as LensConfig };
 };
