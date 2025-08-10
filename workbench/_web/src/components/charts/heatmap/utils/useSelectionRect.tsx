@@ -3,8 +3,9 @@ import { getCellDimensions, getCellBounds } from "./heatmap-geometry";
 import { HeatmapData } from "@/types/charts";
 import { HeatmapAnnotation } from "@/types/annotations";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { getHeatmapAnnotations } from "@/lib/queries/annotationQueries";
+import { getAnnotations } from "@/lib/queries/annotationQueries";
 import { useQuery } from "@tanstack/react-query";
+import { Annotation } from "@/db/schema";
 
 interface SelectionRect {
     startX: number
@@ -23,11 +24,16 @@ interface useSelectionRectProps {
 const useSelectionRect = ({ canvasRef, data, chartId, selectionRect }: useSelectionRectProps) => {
     const animationFrameRef = useRef<number>()
 
-    const { data: annotations } = useQuery<HeatmapAnnotation[]>({
+    const { data: allAnnotations } = useQuery<Annotation[]>({
         queryKey: ["annotations", chartId],
-        queryFn: () => getHeatmapAnnotations(chartId!),
+        queryFn: () => getAnnotations(chartId!),
         enabled: !!chartId,
     });
+
+    const annotations = useMemo(
+        () => allAnnotations?.filter((annotation) => annotation.type === "heatmap").map((annotation) => annotation.data as HeatmapAnnotation) ?? [],
+        [allAnnotations]
+    );
 
     // Map x values to their column index for fast lookup during draw
     const xIndexByValue = useMemo(() => {
@@ -72,7 +78,7 @@ const useSelectionRect = ({ canvasRef, data, chartId, selectionRect }: useSelect
     ) => {
         const canvas = canvasRef.current;
         const ctx = canvas?.getContext("2d");
-    
+
         if (!canvas || !ctx) return;
 
         const dims = getCellDimensions(canvasRef, data);
@@ -121,7 +127,7 @@ const useSelectionRect = ({ canvasRef, data, chartId, selectionRect }: useSelect
     }, [annotations, canvasRef, data, xIndexByValue]);
 
     // Redraw when selection changes
-    useEffect(() => {        
+    useEffect(() => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current)
         }

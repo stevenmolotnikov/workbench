@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { X, CircleDot, Layers, Grid3X3 } from "lucide-react";
-import type { LineAnnotation, HeatmapAnnotation } from "@/types/annotations";
+import type { LineAnnotation, HeatmapAnnotation, AnnotationData } from "@/types/annotations";
+import { NewAnnotation } from "@/db/schema";
 
 export function AnnotationsDisplay() {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
@@ -35,23 +36,21 @@ export function AnnotationsDisplay() {
     const handleSaveAnnotation = () => {
         if (!pendingAnnotation || !annotationText.trim() || !activeTab) return;
 
-        const annotationData = {
-            ...pendingAnnotation,
-            text: annotationText.trim(),
+        const newAnnotation: NewAnnotation = {
+            chartId: activeTab,
+            type: pendingAnnotation.type,
+            data: {
+                ...pendingAnnotation,
+                text: annotationText.trim(),
+            },
         };
 
-        createAnnotation(
-            {
-                chartId: activeTab,
-                type: pendingAnnotation.type,
-                data: annotationData,
+        createAnnotation(newAnnotation, {
+            onSuccess: () => {
+                setPendingAnnotation(null);
+                setAnnotationText("");
             },
-            {
-                onSuccess: () => {
-                    setPendingAnnotation(null);
-                    setAnnotationText("");
-                },
-            }
+        }
         );
     };
 
@@ -65,7 +64,9 @@ export function AnnotationsDisplay() {
         deleteAnnotation({ id, chartId: activeTab });
     };
 
-    const formatAnnotationDetails = (type: string, data: any) => {
+    const formatAnnotationDetails = (type: string, data: AnnotationData) => {
+        console.log(data)
+        console.log("ANNOTATIONS", annotations)
         if (type === "line") {
             const lineData = data as LineAnnotation;
             if (lineData.layerEnd !== undefined) {
