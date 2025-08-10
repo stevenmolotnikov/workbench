@@ -3,8 +3,8 @@ import { useHeatmapControls } from "./HeatmapControlsProvider";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { useCallback, useEffect, useState } from "react";
-import { getCellFromPosition } from "./utils/heatmap-geometry";
-import useSelectionRect from "./utils/useSelectionRect";
+import { getCellFromPosition } from "./heatmap-geometry";
+import useSelectionRect from "./useSelectionRect";
 
 interface SelectionRect {
     startX: number

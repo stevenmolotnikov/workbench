@@ -231,7 +231,7 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
 
     return (
         <HeatmapControlsContext.Provider value={contextValue}>
-            <div className="flex h-[10%] gap-2 p-4 lg:p-8 justify-between">
+            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-between">
                 {isEditingTitle ? (
                     <input
                         value={title}
@@ -296,15 +296,17 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
 
                     <Button
                         variant={isZoomSelecting ? "default" : "outline"}
-                        size="icon"
+                        size="sm"
+                        className="h-8 w-8"
                         onClick={() => toggleZoomSelecting()}
                         aria-pressed={isZoomSelecting}
+
                         title={isZoomSelecting ? "Exit zoom selection" : "Enter zoom selection"}
                     >
                         <Search className="w-4 h-4" />
                     </Button>
 
-                    <Button variant="outline" size="icon" onClick={handleReset} title="Reset ranges">
+                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset ranges">
                         <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>

@@ -2,9 +2,9 @@
 
 import { ChartData } from "@/types/charts";
 import { db } from "@/db/client";
-import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig } from "@/db/schema";
+import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
-import { eq, and, asc, notExists, or } from "drizzle-orm";
+import { eq, and, asc, notExists, or, desc, sql } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
@@ -45,42 +45,6 @@ export const deleteChart = async (chartId: string): Promise<void> => {
     await db.delete(charts).where(eq(charts.id, chartId));
 };
 
-export const getOrCreateLensConfig = async (
-    workspaceId: string,
-    fallbackConfig: LensConfigData
-): Promise<LensConfig> => {
-    const existingConfigs = await db
-        .select()
-        .from(configs)
-        .where(and(eq(configs.workspaceId, workspaceId), eq(configs.type, "lens")))
-        .orderBy(asc(configs.createdAt))
-        .limit(1);
-
-    if (existingConfigs.length > 0) {
-        return existingConfigs[0] as LensConfig;
-    }
-
-    const [newConfig] = await db
-        .insert(configs)
-        .values({
-            workspaceId,
-            type: "lens",
-            data: fallbackConfig,
-        })
-        .returning();
-
-    return newConfig as LensConfig;
-};
-
-export const getHasLinkedConfig = async (chartId: string): Promise<boolean> => {
-    const linkedConfigs = await db
-        .select()
-        .from(chartConfigLinks)
-        .where(eq(chartConfigLinks.chartId, chartId));
-
-    return linkedConfigs.length > 0;
-};
-
 export const getConfigForChart = async (chartId: string): Promise<LensConfig | null> => {
     const rows = await db
         .select()
@@ -110,4 +74,68 @@ export const createLensChartPair = async (
     });
     
     return { chart: newChart as Chart, config: newConfig as LensConfig };
+};
+
+export const getAllChartsByType = async (workspaceId?: string): Promise<Record<string, Chart[]>> => {
+    // Join charts with their configs to get the config type
+    const query = db
+        .select({
+            chart: charts,
+            configType: configs.type,
+        })
+        .from(charts)
+        .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
+        .leftJoin(configs, eq(chartConfigLinks.configId, configs.id));
+    
+    const chartsWithConfigs = workspaceId 
+        ? await query.where(eq(charts.workspaceId, workspaceId))
+        : await query;
+
+    // Group charts by their config type
+    const chartsByType: Record<string, Chart[]> = {};
+    
+    for (const { chart, configType } of chartsWithConfigs) {
+        const type = configType || 'unknown';
+        if (!chartsByType[type]) {
+            chartsByType[type] = [];
+        }
+        chartsByType[type].push(chart);
+    }
+    
+    return chartsByType;
+};
+
+// Minimal chart info for sidebar cards with config type and annotation count
+export type ToolTypedChart = {
+    id: string;
+    chartType: "line" | "heatmap" | null;
+    toolType: "lens" | "patch" | null;
+    createdAt: Date;
+    annotationCount: number;
+};
+
+export const getChartsForSidebar = async (workspaceId: string): Promise<ToolTypedChart[]> => {
+    const rows = await db
+        .select({
+            id: charts.id,
+            chartType: charts.type,
+            createdAt: charts.createdAt,
+            toolType: configs.type,
+            annotationCount: sql<number>`count(${annotations.id})`,
+        })
+        .from(charts)
+        .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
+        .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
+        .leftJoin(annotations, eq(annotations.chartId, charts.id))
+        .where(eq(charts.workspaceId, workspaceId))
+        .groupBy(charts.id, charts.createdAt, charts.type, configs.type)
+        .orderBy(desc(charts.createdAt));
+
+    return rows.map((r) => ({
+        id: r.id,
+        chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
+        toolType: (r.toolType as "lens" | "patch" | null) ?? null,
+        createdAt: r.createdAt as Date,
+        annotationCount: Number(r.annotationCount ?? 0),
+    }));
 };

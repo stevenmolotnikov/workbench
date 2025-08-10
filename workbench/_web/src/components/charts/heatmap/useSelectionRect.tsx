@@ -1,4 +1,4 @@
-import { heatmapMargin as margin } from "../../theming";
+import { heatmapMargin as margin } from "../theming";
 import { getCellDimensions, getCellBounds } from "./heatmap-geometry";
 import { HeatmapData } from "@/types/charts";
 import { HeatmapAnnotation } from "@/types/annotations";

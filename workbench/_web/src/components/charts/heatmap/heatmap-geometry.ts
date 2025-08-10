@@ -1,5 +1,5 @@
 import { HeatmapData } from "@/types/charts";
-import { heatmapMargin as margin } from "../../theming";
+import { heatmapMargin as margin } from "../theming";
 
 // Calculate cell dimensions based on canvas size and data
 const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: HeatmapData) => {

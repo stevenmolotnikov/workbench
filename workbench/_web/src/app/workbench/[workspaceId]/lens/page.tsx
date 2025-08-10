@@ -15,7 +15,7 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import useModels from "@/hooks/useModels";
 import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 import { ToolTabs } from "../components/ToolTabs";
-import ChartCardsSidebar from "./components/ChartCardsSidebar";
+import ChartCardsSidebar from "../components/ChartCardsSidebar";
 
 export default function Workbench() {
     const { annotationsOpen } = useWorkspace();
