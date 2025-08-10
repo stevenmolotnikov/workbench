@@ -1,14 +1,10 @@
 import React, { createContext, useContext, ReactNode, useRef } from "react";
-import { useHeatmap } from "./HeatmapProvider";
+import { useHeatmapControls } from "./HeatmapControlsProvider";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useWorkspace } from "@/stores/useWorkspace";
-import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { getAnnotations } from "@/lib/queries/annotationQueries";
-import { HeatmapAnnotation } from "@/types/annotations";
 import { getCellFromPosition } from "./utils/heatmap-geometry";
-import { drawSelection } from "./utils/draw";
-import { useZoom } from "./ZoomProvider";
+import useSelectionRect from "./utils/useSelectionRect";
 
 interface SelectionRect {
     startX: number
@@ -21,7 +17,6 @@ interface CanvasContextValue {
     canvasRef: React.RefObject<HTMLCanvasElement>
 
     handleCellClick: (cell: any) => void
-    handleMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null);
@@ -40,24 +35,17 @@ interface CanvasProviderProps {
 
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const { filteredData: data } = useHeatmap();
-    const enabled = true
-    
-    const { handleZoomComplete: onZoomComplete, isZoomSelecting } = useZoom()
+
+    const { filteredData: data, handleZoomComplete: onZoomComplete, isZoomSelecting } = useHeatmapControls();
+
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
     const [isSelecting, setIsSelecting] = useState(false)
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
-    const animationFrameRef = useRef<number>()
 
     const { activeTab: chartId } = useWorkspace();
 
-    const { data: allAnnotations } = useQuery({
-        queryKey: ["annotations", chartId],
-        queryFn: () => getAnnotations(chartId as string),
-        enabled: !!chartId,
-    });
 
-    const annotations: HeatmapAnnotation[] = allAnnotations?.filter(a => a.type === "heatmap").map(a => a.data as HeatmapAnnotation) || []
+    useSelectionRect({ canvasRef, data, chartId, selectionRect })
 
     // Clear selection when pending annotation cancelled or not a heatmap
     useEffect(() => {   
@@ -82,29 +70,16 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
                 if (ctx) {
                     ctx.scale(dpr, dpr)
                 }
-                
-                drawSelection(canvasRef, data, annotations, chartId, selectionRect)
             }
         }
 
         updateCanvasSize()
         window.addEventListener('resize', updateCanvasSize)
         return () => window.removeEventListener('resize', updateCanvasSize)
-    }, [drawSelection, canvasRef, data, annotations, chartId, selectionRect])
-
-    // Redraw when selection changes
-    useEffect(() => {
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current)
-        }
-        animationFrameRef.current = requestAnimationFrame(() => {
-            drawSelection(canvasRef, data, annotations, chartId, selectionRect)
-        })
-    }, [selectionRect, canvasRef, data, annotations, chartId, selectionRect])
+    }, [canvasRef])
 
     // Handle click from Nivo canvas
     const handleCellClick = useCallback((cell: any) => {
-        if (!enabled) return
         if (!chartId) return
 
         // Extract row and column indices from the cell data
@@ -150,11 +125,10 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
             })
             setIsSelecting(false)
         }
-    }, [selectionRect, data.rows, chartId, setPendingAnnotation, isZoomSelecting, enabled, onZoomComplete])
+    }, [selectionRect, data.rows, chartId, setPendingAnnotation, isZoomSelecting, onZoomComplete])
 
     // Handle mouse move on the container (for selection preview)
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (!enabled) return
         if (!isSelecting || !selectionRect) return
 
         const rect = canvasRef.current?.getBoundingClientRect()
@@ -173,13 +147,11 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
                 endY: cell.row
             } : null)
         }
-    }, [selectionRect, enabled, isSelecting, data.rows])
-
+    }, [selectionRect, isSelecting, data.rows])
 
     const contextValue: CanvasContextValue = {
         canvasRef,
         handleCellClick,
-        handleMouseMove,
     }
 
     return (

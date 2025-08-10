@@ -2,22 +2,17 @@
 
 import { useMemo } from 'react'
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
-import { HeatmapData } from '@/types/charts'
 import { heatmapTheme, heatmapMargin } from '../theming'
 import { resolveThemeCssVars } from '@/lib/utils'
 import { useCanvas } from './CanvasProvider';
+import { useHeatmapControls } from './HeatmapControlsProvider';
 
 
-interface HeatmapProps {
-    data: HeatmapData
-}
-
-export function Heatmap({
-    data,
-}: HeatmapProps) {
+export function Heatmap() {
     // Resolve all CSS variables in the theme to concrete colors for Canvas compatibility
     const resolvedTheme = useMemo(() => resolveThemeCssVars(heatmapTheme), [])
     const { handleCellClick } = useCanvas()
+    const { filteredData: data } = useHeatmapControls()
 
     return (
 
