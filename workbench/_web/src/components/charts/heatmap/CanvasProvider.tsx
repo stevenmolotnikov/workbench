@@ -1,13 +1,14 @@
+import React, { createContext, useContext, ReactNode, useRef } from "react";
+import { useHeatmap } from "./HeatmapProvider";
 import { useAnnotations } from "@/stores/useAnnotations";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState, RefObject } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAnnotations } from "@/lib/queries/annotationQueries";
 import { HeatmapAnnotation } from "@/types/annotations";
-import { HeatmapData } from "@/types/charts";
 import { getCellFromPosition } from "./utils/heatmap-geometry";
-import { drawSelection } from "./utils/draw-utils";
-import { useHeatmap } from "./HeatmapProvider";
+import { drawSelection } from "./utils/draw";
+import { useZoom } from "./ZoomProvider";
 
 interface SelectionRect {
     startX: number
@@ -16,15 +17,33 @@ interface SelectionRect {
     endY: number
 }
 
-interface UseSelectionClickProps {
-    canvasRef: RefObject<HTMLCanvasElement>
-    data: HeatmapData
-    mode?: "annotation" | "zoom"
-    enabled?: boolean
+interface CanvasContextValue {
+    canvasRef: React.RefObject<HTMLCanvasElement>
+
+    handleCellClick: (cell: any) => void
+    handleMouseMove: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
-const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = true }: UseSelectionClickProps) => {
-    const { handleZoomComplete: onZoomComplete } = useHeatmap()
+const CanvasContext = createContext<CanvasContextValue | null>(null);
+
+export const useCanvas = () => {
+    const context = useContext(CanvasContext);
+    if (!context) {
+        throw new Error("useCanvas must be used within a CanvasProvider");
+    }
+    return context;
+};
+
+interface CanvasProviderProps {
+    children: ReactNode;
+}
+
+export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const { filteredData: data } = useHeatmap();
+    const enabled = true
+    
+    const { handleZoomComplete: onZoomComplete, isZoomSelecting } = useZoom()
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations()
     const [isSelecting, setIsSelecting] = useState(false)
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
@@ -110,7 +129,7 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
             const minRow = Math.min(selectionRect.startY, rowIndex)
             const maxRow = Math.max(selectionRect.startY, rowIndex)
 
-            if (mode === 'zoom') {
+            if (isZoomSelecting) {
                 onZoomComplete?.({ minRow, maxRow, minCol, maxCol })
                 setIsSelecting(false)
                 setSelectionRect(null)
@@ -131,7 +150,7 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
             })
             setIsSelecting(false)
         }
-    }, [selectionRect, data.rows, chartId, setPendingAnnotation, mode, enabled, onZoomComplete])
+    }, [selectionRect, data.rows, chartId, setPendingAnnotation, isZoomSelecting, enabled, onZoomComplete])
 
     // Handle mouse move on the container (for selection preview)
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -156,10 +175,25 @@ const useSelectionClick = ({ canvasRef, data, mode = 'annotation', enabled = tru
         }
     }, [selectionRect, enabled, isSelecting, data.rows])
 
-    return {
+
+    const contextValue: CanvasContextValue = {
+        canvasRef,
         handleCellClick,
         handleMouseMove,
     }
-}
 
-export default useSelectionClick
+    return (
+        <div
+            className="size-full relative"
+            onMouseMove={handleMouseMove}
+        >
+            <canvas
+                ref={canvasRef}
+                className="absolute inset-0 size-full pointer-events-none z-10"
+            />
+            <CanvasContext.Provider value={contextValue}>
+                {children}
+            </CanvasContext.Provider>
+        </div>
+    );
+};

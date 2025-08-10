@@ -4,9 +4,14 @@ import { Button } from "@/components/ui/button";
 import { RangeSelector } from "../RangeSelector";
 import { Search, RotateCcw } from "lucide-react";
 import { useHeatmap } from "./HeatmapProvider";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useZoom } from "./ZoomProvider";
+import { useAnnotations } from "@/stores/useAnnotations";
 
 export function HeatmapControls() {
+
+  const { setPendingAnnotation } = useAnnotations();
+
   const {
     bounds: { xMin, xMax, yMin, yMax },
     xRanges,
@@ -15,19 +20,21 @@ export function HeatmapControls() {
     setYRanges,
     xStepInput,
     setXStepInput,
-    isZoomSelecting,
-    toggleZoomSelecting,
-    handleReset,
-    formatYValue,
   } = useHeatmap();
 
+  const { setIsZoomSelecting, isZoomSelecting, toggleZoomSelecting } = useZoom();
+
+  // Handle reset
+  const handleReset = () => {
+    setXRanges([]);
+    setYRanges([]);
+    setIsZoomSelecting(false);
+    setPendingAnnotation(null);
+    setXStepInput(1);
+  };
 
   const [title, setTitle] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-
-  const sanitizedXStep = useMemo(() => {
-    return Number.isFinite(xStepInput) && xStepInput > 0 ? xStepInput : 1;
-  }, [xStepInput]);
 
   return (
     <div className="flex h-[10%] gap-2 p-4 lg:p-8 justify-between">
@@ -61,7 +68,7 @@ export function HeatmapControls() {
           onRangesChange={setXRanges}
           maxRanges={1}
           axisLabel="X Range"
-          step={sanitizedXStep}
+          step={xStepInput}
         />
         <div className="flex items-center gap-2">
           <input
@@ -91,7 +98,6 @@ export function HeatmapControls() {
           onRangesChange={setYRanges}
           maxRanges={1}
           axisLabel="Y Range"
-          formatValue={formatYValue}
         />
 
         <Button

@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from "react";
 import { HeatmapData } from "@/types/charts";
-import { useAnnotations } from "@/stores/useAnnotations";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 type Range = [number, number];
 type RangeWithId = {
@@ -9,11 +7,18 @@ type RangeWithId = {
     range: Range;
 };
 
-interface ZoomBounds {
+export interface ZoomBounds {
     minRow: number;
     maxRow: number;
     minCol: number;
     maxCol: number;
+}
+
+export interface Bounds {
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
 }
 
 interface HeatmapContextValue {
@@ -22,28 +27,14 @@ interface HeatmapContextValue {
     yRanges: RangeWithId[];
     setXRanges: (ranges: RangeWithId[]) => void;
     setYRanges: (ranges: RangeWithId[]) => void;
-    
-    // Zoom State
-    isZoomSelecting: boolean;
-    setIsZoomSelecting: (selecting: boolean) => void;
-    
+
     // Step State
     xStepInput: number;
     setXStepInput: (step: number) => void;
-    
+
     // Computed Values
-    bounds: {
-        xMin: number;
-        xMax: number;
-        yMin: number;
-        yMax: number;
-    };
+    bounds: Bounds;
     filteredData: HeatmapData;
-    
-    // Actions
-    handleZoomComplete: (bounds: ZoomBounds) => void;
-    toggleZoomSelecting: (next?: boolean) => void;
-    handleReset: () => void;
 }
 
 const HeatmapContext = createContext<HeatmapContextValue | null>(null);
@@ -62,17 +53,9 @@ interface HeatmapProviderProps {
 }
 
 export const HeatmapProvider: React.FC<HeatmapProviderProps> = ({ data, children }) => {
-    
     // Range State
     const [xRanges, setXRanges] = useState<RangeWithId[]>([]);
     const [yRanges, setYRanges] = useState<RangeWithId[]>([]);
-    
-    // Zoom State
-    const [isZoomSelecting, setIsZoomSelecting] = useState(false);
-    
-    // External stores
-    const { setPendingAnnotation } = useAnnotations();
-    const { tokenData } = useLensWorkspace();
 
     // Calculate bounds
     const bounds = useMemo(() => {
@@ -94,7 +77,7 @@ export const HeatmapProvider: React.FC<HeatmapProviderProps> = ({ data, children
 
     // Step State
     const [xStepInput, setXStepInput] = useState<number>(defaultXStep);
-    
+
     // Update step when default changes
     useEffect(() => {
         if (xRanges.length === 0) {
@@ -115,8 +98,7 @@ export const HeatmapProvider: React.FC<HeatmapProviderProps> = ({ data, children
     const filteredData = useMemo(() => {
         const xRange = xRanges[0]?.range || [bounds.xMin, bounds.xMax];
         const yRange = yRanges[0]?.range || [bounds.yMin, bounds.yMax];
-        const sanitizedXStep = Number.isFinite(xStepInput) && xStepInput > 0 ? xStepInput : 1;
-        const stride = Math.max(1, Math.floor(sanitizedXStep));
+        const stride = Math.max(1, Math.floor(xStepInput));
 
         return {
             ...data,
@@ -148,87 +130,20 @@ export const HeatmapProvider: React.FC<HeatmapProviderProps> = ({ data, children
         };
     }, [data, xRanges, yRanges, bounds.xMin, bounds.xMax, bounds.yMin, bounds.yMax]);
 
-    const computeNewRanges = (zoomBounds: ZoomBounds) => {
-        const hasX = xRanges.length > 0;
-        const hasY = yRanges.length > 0;
-
-        const xOffset = 0;
-        const yOffset = hasY ? Math.floor(yRanges[0].range[0]) : 0;
-
-        const absMinCol = Math.max(bounds.xMin, Math.min(bounds.xMax, xOffset + zoomBounds.minCol));
-        const absMaxCol = Math.max(bounds.xMin, Math.min(bounds.xMax, xOffset + zoomBounds.maxCol));
-        const absMinRow = Math.max(bounds.yMin, Math.min(bounds.yMax, yOffset + zoomBounds.minRow));
-        const absMaxRow = Math.max(bounds.yMin, Math.min(bounds.yMax, yOffset + zoomBounds.maxRow));
-
-        const currentX = hasX ? xRanges[0].range : [bounds.xMin, bounds.xMax] as Range;
-        const currentY = hasY ? yRanges[0].range : [bounds.yMin, bounds.yMax] as Range;
-
-        const newX: Range = [
-            Math.max(currentX[0], Math.min(absMinCol, absMaxCol)),
-            Math.min(currentX[1], Math.max(absMinCol, absMaxCol))
-        ];
-        const newY: Range = [
-            Math.max(currentY[0], Math.min(absMinRow, absMaxRow)),
-            Math.min(currentY[1], Math.max(absMinRow, absMaxRow))
-        ];
-
-        return {
-            newX,
-            newY
-        }
-    }
-
-    // Handle zoom completion
-    const handleZoomComplete = (zoomBounds: ZoomBounds) => {
-        const { newX, newY } = computeNewRanges(zoomBounds);
-
-        setXRanges([{ id: `x-zoom-${Date.now()}`, range: newX }]);
-        setYRanges([{ id: `y-zoom-${Date.now()}`, range: newY }]);
-        
-        setIsZoomSelecting(false);
-    };
-
-    const toggleZoomSelecting = (next?: boolean) => {
-        const value = typeof next === "boolean" ? next : !isZoomSelecting;
-        setIsZoomSelecting(value);
-        if (value) {
-            // Disable annotation creation while zooming
-            setPendingAnnotation(null);
-        }
-    };
-
-    // Handle reset
-    const handleReset = () => {
-        setXRanges([]);
-        setYRanges([]);
-        setIsZoomSelecting(false);
-        setPendingAnnotation(null);
-        setXStepInput(defaultXStep);
-    };
-
-    const contextValue: HeatmapContextValue = {    
+    const contextValue: HeatmapContextValue = {
         // Range State
         xRanges,
         yRanges,
         setXRanges,
         setYRanges,
-        
-        // Zoom State
-        isZoomSelecting,
-        setIsZoomSelecting,
-        
+
         // Step State
         xStepInput,
         setXStepInput,
-        
+
         // Computed Values
         bounds,
         filteredData,
-        
-        // Actions
-        handleZoomComplete,
-        toggleZoomSelecting,
-        handleReset,
     };
 
     return (
