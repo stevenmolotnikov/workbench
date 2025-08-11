@@ -14,8 +14,8 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import useModels from "@/hooks/useModels";
 import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 import ChartCardsSidebar from "../components/ChartCardsSidebar";
-import InteractiveDisplay from "../lens/components/InteractiveDisplay";
-import SimplePatchArea from "../patch/components/SimplePatchArea";
+import InteractiveDisplay from "./components/lens/InteractiveDisplay";
+import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 

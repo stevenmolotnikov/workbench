@@ -47,7 +47,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const init = useRef(false);
     useEffect(() => {
         if (init.current) return;
-        if (config.token.targetIds.length > 0) {
+        if ("token" in config && config.token.targetIds.length > 0) {
             handleInit();
         }
     }, []);
