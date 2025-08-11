@@ -84,7 +84,9 @@ export function Editor() {
             LinkNode,
             ChartEmbedNode,
         ],
-        editorState: document?.content || undefined,
+        // Lexical expects either an EditorState instance or a JSON string here.
+        // We store a SerializedEditorState object in the DB, so stringify it for Lexical to parse.
+        editorState: document?.content ? JSON.stringify(document.content) : undefined,
         onError: (error: Error) => {
             console.error('Lexical error:', error);
         },
