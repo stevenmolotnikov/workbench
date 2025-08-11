@@ -167,7 +167,14 @@ export function useTokenHighlight(side: "source" | "destination") {
         finalizeSelection(idx);
     };
 
-    const isInLiveSelection = (idx: number) => mainMode === "align" && isSelecting && selectionStartIdx !== null && selectionHoverIdx !== null && idx >= Math.min(selectionStartIdx, selectionHoverIdx) && idx <= Math.max(selectionStartIdx, selectionHoverIdx);
+    const isInLiveSelection = (idx: number) => (
+        mainMode === "align" &&
+        isSelecting &&
+        selectionStartIdx !== null &&
+        selectionHoverIdx !== null &&
+        idx >= Math.min(selectionStartIdx, selectionHoverIdx) &&
+        idx <= Math.max(selectionStartIdx, selectionHoverIdx)
+    );
 
     useEffect(() => {
         if (!isSelecting) return;

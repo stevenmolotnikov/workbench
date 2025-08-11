@@ -11,7 +11,7 @@ interface TokenAreaProps {
 }
 
 // Token styling constants
-const TOKEN_STYLES = {
+const tokenStyles = {
     base: "text-sm whitespace-pre-wrap select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
     filled: "!bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
@@ -67,17 +67,17 @@ export function TokenArea({
         const ablated = isAblated(idx);
         const looped = isLooped(idx);
         return cn(
-            TOKEN_STYLES.base,
+            tokenStyles.base,
             // priority: ablate > loop > mode visuals
-            ablated && TOKEN_STYLES.ablate,
-            !ablated && looped && TOKEN_STYLES.loop,
+            ablated && tokenStyles.ablate,
+            !ablated && looped && tokenStyles.loop,
             // Connect mode visuals
-            mainMode === "connect" && isConnected && TOKEN_STYLES.filled,
-            mainMode === "connect" && isDropHover && TOKEN_STYLES.highlight,
+            mainMode === "connect" && isConnected && tokenStyles.filled,
+            mainMode === "connect" && isDropHover && tokenStyles.highlight,
             // Align mode visuals
-            mainMode === "align" && isInAlignGroup && TOKEN_STYLES.filled,
-            mainMode === "align" && !isInAlignGroup && isInLiveSelection(idx) && TOKEN_STYLES.highlight,
-            TOKEN_STYLES.hover,
+            mainMode === "align" && isInAlignGroup && tokenStyles.filled,
+            mainMode === "align" && !isInAlignGroup && isInLiveSelection(idx) && tokenStyles.highlight,
+            tokenStyles.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
             "cursor-pointer",
         );
