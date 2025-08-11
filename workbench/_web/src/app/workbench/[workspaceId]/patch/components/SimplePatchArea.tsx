@@ -1,12 +1,26 @@
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
 import PatchControls from "./PatchControls";
+import PatchProvider, { usePatch } from "./PatchProvider";
+import { TokenArea } from "./TokenArea";
+import { useWorkspace } from "@/stores/useWorkspace";
+import ConnectionsProvider from "./ConnectionsProvider";
 
 export default function SimplePatchArea() {
-    const [source, setSource] = useState("");
-    const [destination, setDestination] = useState("");
 
-    const [isEditing, setIsEditing] = useState(true);
+    return (
+        <PatchProvider>
+            <SimplePatchContent />
+        </PatchProvider>
+    )
+}
+
+const SimplePatchContent = () => {
+    const { selectedModel } = useWorkspace();
+    const { sourceText, destText, setSourceText, setDestText, isEditing, setIsEditing } = usePatch();
+
+    if (!selectedModel) {
+        return <div>No model selected</div>;
+    }
 
     return (
         <div className="flex flex-col p-2 gap-2">
@@ -16,22 +30,28 @@ export default function SimplePatchArea() {
                 isEditing ? (
                     <div className="flex flex-col gap-2">
                         <Textarea
-                            value={source}
-                            onChange={(e) => setSource(e.target.value)}
+                            value={sourceText}
+                            onChange={(e) => setSourceText(e.target.value)}
                             className="h-48"
                             placeholder="Source" />
                         <Textarea
-                            value={destination}
-                            onChange={(e) => setDestination(e.target.value)}
+                            value={destText}
+                            onChange={(e) => setDestText(e.target.value)}
                             className="h-48"
                             placeholder="Destination"
                         />
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-2">
-                        <p>{source}</p>
-                        <p>{destination}</p>
-                    </div>
+                    <ConnectionsProvider>
+                        <div className="flex flex-col gap-2">
+                            <div className="border rounded-md py-1 px-3 h-48">
+                                <TokenArea side="source" />
+                            </div>
+                            <div className="border rounded-md py-1 px-3 h-48">
+                                <TokenArea side="destination" />
+                            </div>
+                        </div>
+                    </ConnectionsProvider>
                 )}
 
         </div>

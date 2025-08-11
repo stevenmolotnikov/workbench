@@ -1,6 +1,9 @@
+import { encodeText } from "@/actions/tokenize";
 import { Button } from "@/components/ui/button";
 import { GitCompareArrows, Pencil, Route } from "lucide-react";
 import { useState } from "react";
+import { usePatch } from "./PatchProvider";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 interface PatchControlsProps {
     isEditing: boolean;
@@ -8,24 +11,42 @@ interface PatchControlsProps {
 }
 
 export default function PatchControls({ isEditing, setIsEditing }: PatchControlsProps) {
+    const { selectedModel } = useWorkspace();
+    const { sourceText, destText, setSourceTokenData, setDestTokenData } = usePatch();
 
-    const [isAligning, setIsAligning] = useState(false);
+    if (!selectedModel) {
+        return <div>No model selected</div>;
+    }
+
+    const handleTokenize = async () => {
+        const sourceTokens = await encodeText(sourceText, selectedModel.name);
+        const destTokens = await encodeText(destText, selectedModel.name);
+        setSourceTokenData(sourceTokens);
+        setDestTokenData(destTokens);
+        setIsEditing(false);
+    }
 
     return (
         <div className="flex items-center gap-2">
             <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsAligning(!isAligning)}
+                // onClick={() => setIsAligning(!isAligning)}
             >
                 <GitCompareArrows />
             </Button>
             <Button
                 variant="outline"
-                size="icon"
-                onClick={() => setIsEditing(!isEditing)}
+                size="sm"
+                onClick={() => {
+                    if (isEditing) {
+                        handleTokenize();
+                    } else {
+                        setIsEditing(!isEditing);
+                    }
+                }}  
             >
-                <Pencil />
+                {isEditing ? "Tokenize" : "Edit"}
             </Button>
             {/* <Button
                 variant="outline"
