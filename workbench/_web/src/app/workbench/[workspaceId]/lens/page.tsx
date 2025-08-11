@@ -1,56 +1,25 @@
 "use client";
 
-import { use } from "react";
-import InteractiveDisplay from "./components/InteractiveDisplay";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getChartsForSidebar } from "@/lib/queries/chartQueries";
 
-import { ChartDisplay } from "@/components/charts/ChartDisplay";
+export default function LegacyLensRedirect() {
+    const { workspaceId } = useParams<{ workspaceId: string }>();
+    const router = useRouter();
 
-import {
-    ResizableHandle,
-    ResizablePanel,
-    ResizablePanelGroup,
-} from "@/components/ui/resizable"
+    const { data: charts } = useQuery({
+        queryKey: ["chartsForSidebar", workspaceId],
+        queryFn: () => getChartsForSidebar(workspaceId),
+        enabled: !!workspaceId,
+    });
 
-import { useWorkspace } from "@/stores/useWorkspace";
-import useModels from "@/hooks/useModels";
-import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
-import { ToolTabs } from "../components/ToolTabs";
-import ChartCardsSidebar from "../components/ChartCardsSidebar";
+    useEffect(() => {
+        if (charts && charts.length > 0) {
+            router.replace(`/workbench/${workspaceId}/${charts[0].id}`);
+        }
+    }, [charts, router, workspaceId]);
 
-export default function Workbench() {
-    const { annotationsOpen } = useWorkspace();
-
-    // Ensure a selected model exists
-    useModels();
-
-    return (
-        <div className="flex flex-1 min-h-0">
-            {/* Main content */}
-            <ResizablePanelGroup
-                direction="horizontal"
-                className="flex flex-1 min-h-0 h-full"
-            >
-                <ResizablePanel className="h-full" defaultSize={20} minSize={15}>
-                    <ChartCardsSidebar />
-                </ResizablePanel>
-                <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={annotationsOpen ? 30 : 35} minSize={25}>
-                    <ToolTabs />
-                    <InteractiveDisplay />
-                </ResizablePanel>
-                <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel defaultSize={annotationsOpen ? 40 : 45} minSize={30}>
-                    <ChartDisplay />
-                </ResizablePanel>
-                {annotationsOpen && (
-                    <>
-                        <ResizableHandle className="w-[0.8px]" />
-                        <ResizablePanel defaultSize={10} minSize={15}>
-                            <AnnotationsDisplay />
-                        </ResizablePanel>
-                    </>
-                )}
-            </ResizablePanelGroup>
-        </div>
-    );
+    return null;
 }

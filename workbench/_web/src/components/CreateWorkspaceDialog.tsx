@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCreateWorkspace } from "@/lib/api/workspaceApi";
+import { useCreateLensChartPair } from "@/lib/api/chartApi";
 import { useRouter } from "next/navigation";
 
 interface CreateWorkspaceDialogProps {
@@ -25,6 +26,7 @@ export function CreateWorkspaceDialog({ userId }: CreateWorkspaceDialogProps) {
     const [name, setName] = useState("");
     const router = useRouter();
     const createWorkspaceMutation = useCreateWorkspace();
+    const createLensPair = useCreateLensChartPair();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,9 +37,20 @@ export function CreateWorkspaceDialog({ userId }: CreateWorkspaceDialogProps) {
                 userId,
                 name: name.trim(),
             });
+
+            // Create a default lens chart + config and navigate to it
+            const result = await createLensPair.mutateAsync({
+                workspaceId: newWorkspace.id,
+                defaultConfig: {
+                    prompt: "",
+                    model: "",
+                    token: { idx: 0, id: 0, text: "", targetIds: [] },
+                },
+            });
+
             setOpen(false);
             setName("");
-            router.push(`/workbench/${newWorkspace.id}/lens`);
+            router.push(`/workbench/${newWorkspace.id}/${result.chart.id}`);
         } catch (error) {
             console.error("Failed to create workspace:", error);
             // You might want to show a toast notification here

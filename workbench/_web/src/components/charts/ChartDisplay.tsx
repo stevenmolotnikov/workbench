@@ -1,6 +1,6 @@
 import { useWorkspace } from "@/stores/useWorkspace";
 import { Loader2, PanelRight, PanelRightClose } from "lucide-react";
-import { getLensCharts } from "@/lib/queries/chartQueries";
+import { getLensCharts, getChartById } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef } from "react";
@@ -12,27 +12,38 @@ import { Button } from "../ui/button";
 
 export function ChartDisplay() {
     const { activeTab, setActiveTab, setAnnotationsOpen, annotationsOpen } = useWorkspace();
-    const { workspaceId } = useParams();
+    const params = useParams<{ workspaceId?: string; chartId?: string }>();
+    const workspaceId = params?.workspaceId as string | undefined;
+    const chartIdParam = params?.chartId as string | undefined;
 
-    const { data: lensCharts, isLoading, isSuccess } = useQuery({
+    // If a chartId is present in the URL, fetch that single chart; otherwise, fallback to the legacy lensCharts list
+    const { data: singleChart, isLoading: isLoadingSingle } = useQuery({
+        queryKey: ["chartById", chartIdParam],
+        queryFn: () => getChartById(chartIdParam as string),
+        enabled: !!chartIdParam,
+    });
+
+    const { data: lensCharts, isLoading: isLoadingList, isSuccess } = useQuery({
         queryKey: ["lensCharts", workspaceId],
         queryFn: () => getLensCharts(workspaceId as string),
+        enabled: !chartIdParam && !!workspaceId,
     });
 
     const activeChart = useMemo(() => {
+        if (chartIdParam) return singleChart || null;
         return lensCharts?.find(c => c.id === activeTab) || null;
-    }, [lensCharts, activeTab]);
+    }, [singleChart, lensCharts, activeTab, chartIdParam]);
 
-    // On load, set to the first chart
+    // On load for legacy list route, set to the first chart
     const initial = useRef(true);
     useEffect(() => {
-        if (isSuccess && initial.current && lensCharts.length > 0) {
+        if (!chartIdParam && isSuccess && initial.current && lensCharts && lensCharts.length > 0) {
             setActiveTab(lensCharts[0].id);
             initial.current = false;
         }
-    }, [isSuccess, lensCharts, setActiveTab]);
+    }, [chartIdParam, isSuccess, lensCharts, setActiveTab]);
 
-    if (isLoading) return (
+    if ((chartIdParam && isLoadingSingle) || (!chartIdParam && isLoadingList)) return (
         <div className="flex-1 flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
