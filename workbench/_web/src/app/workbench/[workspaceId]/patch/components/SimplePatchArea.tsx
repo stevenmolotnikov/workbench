@@ -16,7 +16,7 @@ export default function SimplePatchArea() {
 
 const SimplePatchContent = () => {
     const { selectedModel } = useWorkspace();
-    const { sourceText, destText, setSourceText, setDestText, isEditing, setIsEditing } = usePatch();
+    const { sourceText, destText, setSourceText, setDestText, mainMode } = usePatch();
 
     if (!selectedModel) {
         return <div>No model selected</div>;
@@ -24,10 +24,10 @@ const SimplePatchContent = () => {
 
     return (
         <div className="flex flex-col p-2 gap-2">
-            <PatchControls isEditing={isEditing} setIsEditing={setIsEditing} />
+            <PatchControls />
 
             {
-                isEditing ? (
+                mainMode === "edit" ? (
                     <div className="flex flex-col gap-2">
                         <Textarea
                             value={sourceText}

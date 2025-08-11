@@ -13,7 +13,7 @@ interface TokenAreaProps {
 const TOKEN_STYLES = {
     base: "text-sm whitespace-pre-wrap select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
-    filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
+    filled: "!bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
     hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
 } as const;
 
@@ -35,8 +35,8 @@ const fix = (text: string) => {
 export function TokenArea({
     side
 }: TokenAreaProps) {
-    const { sourceTokenData, destTokenData } = usePatch();
-    const { startConnection, enterToken, endConnection, drag, clearHover } = useConnections();
+    const { sourceTokenData, destTokenData, mainMode } = usePatch();
+    const { connections, startConnection, enterToken, endConnection, drag, clearHover } = useConnections();
 
     const tokenData = side === "source" ? sourceTokenData : destTokenData;
 
@@ -45,14 +45,22 @@ export function TokenArea({
         idx: number,
     ) => {
         const isDropHover = drag.isDragging && drag.startSide === "source" && side === "destination" && drag.hoverIdx === idx;
+        const isConnected = (side === "source" && connections.some(c => c.sourceIdx === idx)) || (side === "destination" && connections.some(c => c.destIdx === idx));
         return cn(
             TOKEN_STYLES.base,
-            isDropHover ? TOKEN_STYLES.highlight : "bg-transparent",
+            isConnected && TOKEN_STYLES.filled,
+            isDropHover && TOKEN_STYLES.highlight,
             TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
             "cursor-pointer",
         );
     };
+
+    const handleMouseDown = (idx: number) => {
+        if (mainMode === "connect") {
+            startConnection(side, idx);
+        }
+    }
 
     return (
         <div
@@ -73,7 +81,7 @@ export function TokenArea({
                             data-token-side={side}
                             data-token-id={idx}
                             className={styles}
-                            onMouseDown={() => startConnection(side, idx)}
+                            onMouseDown={() => handleMouseDown(idx)}
                             onMouseEnter={() => enterToken(side, idx)}
                             onMouseLeave={() => side === "destination" && clearHover()}
                             onMouseUp={() => endConnection(side, idx)}

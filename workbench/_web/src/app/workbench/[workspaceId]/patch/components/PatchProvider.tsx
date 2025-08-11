@@ -3,6 +3,10 @@
 import React, { createContext, useContext, useState } from "react";
 import type { Token } from "@/types/models";
 
+
+export type PatchMainMode = "edit" | "connect" | "align";
+export type PatchSubMode = "loop" | "ablate";
+
 interface PatchState {
     // Text prompts
     sourceText: string;
@@ -11,19 +15,21 @@ interface PatchState {
     sourceTokenData: Token[];
     destTokenData: Token[];
 
-    // Edit mode
-    isEditing: boolean;
-}       
+    // Mode
+    mainMode: PatchMainMode;
+    subMode: PatchSubMode | null;
+}
 
 interface PatchActions {
     setSourceText: (text: string) => void;
     setDestText: (text: string) => void;
     setSourceTokenData: (tokenData: Token[]) => void;
     setDestTokenData: (tokenData: Token[]) => void;
-    setIsEditing: (isEditing: boolean) => void;
+    setMainMode: (mode: PatchMainMode) => void;
+    setSubMode: (mode: PatchSubMode | null) => void;
 }
 
-const PatchContext = createContext<PatchState & PatchActions | null>(null);
+const PatchContext = createContext<(PatchState & PatchActions) | null>(null);
 
 export function usePatch(): PatchState & PatchActions {
     const ctx = useContext(PatchContext);
@@ -40,13 +46,15 @@ export default function PatchProvider({ children }: { children: React.ReactNode 
     const [sourceTokenData, setSourceTokenData] = useState<Token[]>([]);
     const [destTokenData, setDestTokenData] = useState<Token[]>([]);
 
-    // Edit view
-    const [isEditing, setIsEditing] = useState(true);
+    // Mode
+    const [mainMode, setMainMode] = useState<PatchMainMode>("edit");
+    const [subMode, setSubMode] = useState<PatchSubMode | null>(null);
 
-    const value = {
+    const value: PatchState & PatchActions = {
         sourceText,
         destText,
-        isEditing,
+        mainMode,
+        subMode,
         sourceTokenData,
         destTokenData,
 
@@ -54,7 +62,8 @@ export default function PatchProvider({ children }: { children: React.ReactNode 
         setDestText,
         setSourceTokenData,
         setDestTokenData,
-        setIsEditing,
+        setMainMode,
+        setSubMode,
     };
 
     return (
