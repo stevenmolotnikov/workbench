@@ -4,6 +4,33 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  // If auth is disabled, return a mock client
+  if (process.env.DISABLE_AUTH === 'true') {
+    return {
+      auth: {
+        getUser: async () => ({
+          data: {
+            user: {
+              id: 'local-dev-user',
+              email: 'dev@localhost',
+              app_metadata: {},
+              user_metadata: {},
+              aud: 'authenticated',
+              created_at: new Date().toISOString(),
+            }
+          },
+          error: null
+        }),
+        signOut: async () => ({ error: null }),
+      },
+      // Pass through other methods as needed
+      from: () => ({}),
+      storage: {
+        from: () => ({})
+      }
+    } as any
+  }
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
