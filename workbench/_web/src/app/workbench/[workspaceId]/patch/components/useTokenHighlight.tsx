@@ -7,10 +7,20 @@ import type { RangeGroup } from "./PatchProvider";
 export function useTokenHighlight(side: "source" | "destination") {
     const {
         mainMode,
+        subMode,
         sourceAlignedIdxs,
         destAlignedIdxs,
         setSourceAlignedIdxs,
         setDestAlignedIdxs,
+        // ablate/loop state
+        sourceAblateIdxs,
+        destAblateIdxs,
+        sourceLoopIdxs,
+        destLoopIdxs,
+        setSourceAblateIdxs,
+        setDestAblateIdxs,
+        setSourceLoopIdxs,
+        setDestLoopIdxs,
     } = usePatch();
 
     const indicesToGroups = (idxs: Set<number>): RangeGroup[] => {
@@ -48,22 +58,23 @@ export function useTokenHighlight(side: "source" | "destination") {
         return false;
     };
 
-    const addAlignedRange = (start: number, end: number) => {
+    const addRange = (
+        setter: (updater: (prev: Set<number>) => Set<number>) => void,
+        start: number,
+        end: number
+    ) => {
         const lo = Math.min(start, end);
         const hi = Math.max(start, end);
-        if (side === "source") {
-            setSourceAlignedIdxs((prev) => {
-                const next = new Set(prev);
-                for (let i = lo; i <= hi; i++) next.add(i);
-                return next;
-            });
-        } else {
-            setDestAlignedIdxs((prev) => {
-                const next = new Set(prev);
-                for (let i = lo; i <= hi; i++) next.add(i);
-                return next;
-            });
-        }
+        setter((prev) => {
+            const next = new Set(prev);
+            for (let i = lo; i <= hi; i++) next.add(i);
+            return next;
+        });
+    };
+
+    const addAlignedRange = (start: number, end: number) => {
+        if (side === "source") addRange(setSourceAlignedIdxs, start, end);
+        else addRange(setDestAlignedIdxs, start, end);
     };
 
     const toggleAligned = (idx: number) => {
@@ -84,26 +95,73 @@ export function useTokenHighlight(side: "source" | "destination") {
         }
     };
 
+    const addAblateRange = (start: number, end: number) => {
+        if (side === "source") addRange(setSourceAblateIdxs, start, end);
+        else addRange(setDestAblateIdxs, start, end);
+    };
+
+    const toggleAblate = (idx: number) => {
+        if (side === "source") {
+            setSourceAblateIdxs((prev) => {
+                const next = new Set(prev);
+                if (next.has(idx)) next.delete(idx);
+                else next.add(idx);
+                return next;
+            });
+        } else {
+            setDestAblateIdxs((prev) => {
+                const next = new Set(prev);
+                if (next.has(idx)) next.delete(idx);
+                else next.add(idx);
+                return next;
+            });
+        }
+    };
+
+    const toggleLoop = (idx: number) => {
+        if (side === "source") {
+            setSourceLoopIdxs((prev) => {
+                const next = new Set(prev);
+                if (next.has(idx)) next.delete(idx);
+                else next.add(idx);
+                return next;
+            });
+        } else {
+            setDestLoopIdxs((prev) => {
+                const next = new Set(prev);
+                if (next.has(idx)) next.delete(idx);
+                else next.add(idx);
+                return next;
+            });
+        }
+    };
+
     const finalizeSelection = (endIdx: number | null) => {
         if (!(mainMode === "align" && isSelecting && selectionStartIdx !== null)) return;
         const start = selectionStartIdx;
         const end = endIdx ?? selectionHoverIdx ?? selectionStartIdx;
         if (end === null) return;
-        addAlignedRange(start, end);
+        if (subMode === "ablate") {
+            addAblateRange(start, end);
+        } else {
+            addAlignedRange(start, end);
+        }
         setIsSelecting(false);
         setSelectionStartIdx(null);
         setSelectionHoverIdx(null);
     };
 
-    const onHighlightEnd = (idx: number) => {
-        if (selectionStartIdx !== null && selectionStartIdx === idx && selectionHoverIdx === idx) {
-            const isInGroup = isIdxInAnyGroup(idx);
-            if (isInGroup) {
-                toggleAligned(idx);
-                setIsSelecting(false);
-                setSelectionStartIdx(null);
-                setSelectionHoverIdx(null);
-                return;
+    const onSelectionEnd = (idx: number) => {
+        if (subMode !== "ablate") {
+            if (selectionStartIdx !== null && selectionStartIdx === idx && selectionHoverIdx === idx) {
+                const isInGroup = isIdxInAnyGroup(idx);
+                if (isInGroup) {
+                    toggleAligned(idx);
+                    setIsSelecting(false);
+                    setSelectionStartIdx(null);
+                    setSelectionHoverIdx(null);
+                    return;
+                }
             }
         }
         finalizeSelection(idx);
@@ -117,7 +175,11 @@ export function useTokenHighlight(side: "source" | "destination") {
         window.addEventListener("mouseup", onUp);
         return () => window.removeEventListener("mouseup", onUp);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isSelecting, selectionHoverIdx, mainMode, side]);
+    }, [isSelecting, selectionHoverIdx, mainMode, side, subMode]);
+
+    // read-only helpers for styling
+    const isAblated = (idx: number) => (side === "source" ? sourceAblateIdxs.has(idx) : destAblateIdxs.has(idx));
+    const isLooped = (idx: number) => (side === "source" ? sourceLoopIdxs.has(idx) : destLoopIdxs.has(idx));
 
     return {
         isSelecting,
@@ -126,7 +188,13 @@ export function useTokenHighlight(side: "source" | "destination") {
         setSelectionStartIdx,
         setSelectionHoverIdx,
         isIdxInAnyGroup,
-        onHighlightEnd,
+        onSelectionEnd,
+        // token options helpers
+        isAblated,
+        isLooped,
+        toggleAblate,
+        toggleLoop,
+        subMode,
     } as const;
 }
 
