@@ -170,3 +170,23 @@ export const getChartsForSidebar = async (workspaceId: string): Promise<ToolType
         annotationCount: Number(r.annotationCount ?? 0),
     }));
 };
+
+// Return minimal chart info for search/embedding in editor
+export type BasicChart = {
+    id: string;
+    name: string | null;
+    type: "line" | "heatmap" | null;
+};
+
+export const getChartsBasic = async (workspaceId: string): Promise<BasicChart[]> => {
+    const rows = await db
+        .select({
+            id: charts.id,
+            name: charts.name,
+            type: charts.type,
+        })
+        .from(charts)
+        .where(eq(charts.workspaceId, workspaceId));
+
+    return rows.map((r) => ({ id: r.id, name: (r.name ?? null) as string | null, type: (r.type as "line" | "heatmap" | null) }));
+};

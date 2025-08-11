@@ -23,6 +23,9 @@ import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 
 import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { ToolbarPlugin } from './plugins/ToolbarPlugin';
+import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
+import { ChartEmbedNode, INSERT_CHART_EMBED_COMMAND, $createChartEmbedNode } from './nodes/ChartEmbedNode';
+import { createCommand } from 'lexical';
 
 const theme = {
     ltr: 'ltr',
@@ -79,6 +82,7 @@ export function Editor() {
             QuoteNode,
             CodeNode,
             LinkNode,
+            ChartEmbedNode,
         ],
         editorState: document?.content || undefined,
         onError: (error: Error) => {
@@ -155,6 +159,7 @@ export function Editor() {
                             <LinkPlugin />
                             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                             <AutoFocusPlugin />
+                            <SlashCommandPlugin />
                         </div>
                     </div>
                 </div>
