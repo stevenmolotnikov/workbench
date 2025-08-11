@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartLine, Grid3x3, RotateCcw } from "lucide-react";
+import { ChartLine, CornerDownLeft, CornerDownRight, Grid3x3, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
@@ -32,7 +32,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     // Workspace display state
     const [showTokenArea, setShowTokenArea] = useState(false);
-    const [isSelectingToken, setIsSelectingToken] = useState(false);
 
     const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
@@ -106,14 +105,12 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const handleTokenClick = async (idx: number) => {
         // Skip if the token is already selected
-        if (config.token.idx === idx || !isSelectingToken) return;
+        if (config.token.idx === idx) return;
 
         setConfig({
             ...config,
             token: { idx, id: 0, text: "", targetIds: [] },
         });
-
-        setIsSelectingToken(false);
 
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
@@ -167,18 +164,27 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                             config={config}
                             handleTokenClick={handleTokenClick}
                             tokenData={tokenData}
-                            isSelectingToken={isSelectingToken}
                         />
                     </div>
                 )}
                 <Button
-                    variant="outline"
-                    size="sm"
+                    size="icon"
+                    variant={showTokenArea ? "outline" : "default"}
                     id="tokenize-button"
-                    onClick={handleTokenize}
+                    onClick={() => {
+                        if (showTokenArea) {
+                            handleClear();
+                        } else {
+                            handleTokenize();
+                        }
+                    }}
                     className="absolute bottom-2 right-2"
                 >
-                    Tokenize
+                    {showTokenArea ? (
+                        <X className="w-4 h-4" />
+                    ) : (
+                        <CornerDownLeft className="w-4 h-4" />
+                    )}
                 </Button>
 
             </div>
@@ -207,40 +213,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                             predictions={predictions}
                         />
                     </div>
-
-                    {/* <div className="flex gap-2 ml-4">
-                        {!isSelectingToken ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setIsSelectingToken(true);
-                                }}
-                                className="text-xs"
-                            >
-                                Reselect
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setIsSelectingToken(false);
-                                }}
-                                className="text-xs"
-                            >
-                                Cancel
-                            </Button>
-                        )}
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={handleClear}
-                            className="text-xs"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                        </Button>
-                    </div> */}
                 </div>
             )}
         </div>

@@ -159,7 +159,7 @@ export default function ChartCardsSidebar() {
                                     aria-label="Delete chart"
                                     title={!canDelete ? "At least one chart is required" : "Delete chart"}
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3 w-3" />
                                 </button>
                             </div>
                         </Card>

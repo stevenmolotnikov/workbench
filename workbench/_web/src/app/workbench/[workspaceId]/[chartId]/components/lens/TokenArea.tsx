@@ -8,7 +8,6 @@ interface TokenAreaProps {
     config: LensConfigData;
     handleTokenClick: (idx: number) => void;
     tokenData: Token[];
-    isSelectingToken: boolean;
 }
 
 // Token styling constants
@@ -38,7 +37,6 @@ export function TokenArea({
     config,
     handleTokenClick,
     tokenData,
-    isSelectingToken,
 }: TokenAreaProps) {
     const getTokenStyle = (
         token: Token,
@@ -56,9 +54,9 @@ export function TokenArea({
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
-            (!isFilled && isSelectingToken) && TOKEN_STYLES.hover,
+            (!isFilled) && TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
-            isSelectingToken && "cursor-pointer",
+            "cursor-pointer",
         );
     };
 
