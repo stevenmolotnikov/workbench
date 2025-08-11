@@ -1,10 +1,34 @@
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any */
 import { config } from 'dotenv';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import path from 'node:path';
 
-config({ path: '.env' }); // or .env.local
+config({ path: '.env' });
 
-const connectionString = process.env.DATABASE_URL!;
+const wantsSQLite =
+  (process.env.DATABASE_DIALECT || '').toLowerCase() === 'sqlite' ||
+  (process.env.USE_SQLITE || '').toLowerCase() === 'true' ||
+  (process.env.DATABASE_URL || '').startsWith('file:');
 
-const client = postgres(connectionString, { prepare: false })
-export const db = drizzle({ client });
+let database: any;
+
+if (wantsSQLite) {
+  const Database = require('better-sqlite3');
+  const { drizzle } = require('drizzle-orm/better-sqlite3');
+
+  const sqliteUrl = process.env.LOCAL_SQLITE_URL || process.env.DATABASE_URL || '';
+  const sqlitePath = sqliteUrl.startsWith('file:')
+    ? sqliteUrl.replace('file:', '')
+    : sqliteUrl || path.resolve(process.cwd(), '../../scripts', 'test.db');
+
+  const client = new Database(sqlitePath);
+  database = drizzle(client);
+} else {
+  const { drizzle } = require('drizzle-orm/postgres-js');
+  const postgres = require('postgres');
+
+  const connectionString = process.env.DATABASE_URL!;
+  const client = postgres(connectionString, { prepare: false });
+  database = drizzle({ client });
+}
+
+export const db = database;
