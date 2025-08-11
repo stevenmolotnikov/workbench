@@ -53,7 +53,7 @@ export function WorkspaceList({ userId }: WorkspaceListProps) {
                         return (
                             <Link
                                 key={workspace.id}
-                                href={`/workbench/${workspace.id}/lens`}
+                                href={`/workbench/${workspace.id}`}
                                 className="block p-4 border rounded hover:bg-muted/50 transition-colors"
                             >
                                 <div className="flex justify-between items-start">

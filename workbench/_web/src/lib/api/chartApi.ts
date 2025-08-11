@@ -124,6 +124,7 @@ export const useDeleteChart = () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["hasLinkedConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
         },
     });
 };
@@ -141,6 +142,7 @@ export const useCreateLensChartPair = () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
             // Set active to the new chart id
             setActiveTab(chart.id);
         },

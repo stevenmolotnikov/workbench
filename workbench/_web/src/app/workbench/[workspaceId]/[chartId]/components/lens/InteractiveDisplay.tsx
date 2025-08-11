@@ -13,7 +13,7 @@ export default function InteractiveDisplay() {
         queryKey: ["chartConfig", workspaceId, activeTab],
         queryFn: () => getConfigForChart(activeTab as string),
         enabled: !!selectedModel && !!activeTab,
-        staleTime: 0, // WHAT DOES THIS DO?
+        staleTime: 0,
     });
 
     if (!activeTab) {
@@ -40,7 +40,8 @@ export default function InteractiveDisplay() {
             </div>
 
             <div className="p-2">
-                <CompletionCard initialConfig={config} />
+                {/* Assume lens config here; unified page will gate by config.type */}
+                <CompletionCard initialConfig={config as any} />
             </div>
         </div>
     );

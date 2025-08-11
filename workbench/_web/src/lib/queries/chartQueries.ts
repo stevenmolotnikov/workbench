@@ -16,6 +16,12 @@ export const getChartData = async (chartId: string): Promise<ChartData> => {
     return chart?.data as ChartData;
 };
 
+// Fetch a single chart by id including its type and data
+export const getChartById = async (chartId: string): Promise<Chart | null> => {
+    const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
+    return (chart ?? null) as Chart | null;
+};
+
 export const getLensCharts = async (workspaceId: string): Promise<Chart[]> => {
     const chartsData = await db
         .select()
@@ -46,7 +52,7 @@ export const deleteChart = async (chartId: string): Promise<void> => {
     await db.delete(charts).where(eq(charts.id, chartId));
 };
 
-export const getConfigForChart = async (chartId: string): Promise<LensConfig | null> => {
+export const getConfigForChart = async (chartId: string): Promise<Config | null> => {
     const rows = await db
         .select()
         .from(configs)
@@ -54,7 +60,7 @@ export const getConfigForChart = async (chartId: string): Promise<LensConfig | n
         .where(eq(chartConfigLinks.chartId, chartId))
         .limit(1);
     if (rows.length === 0) return null;
-    return rows[0].configs as LensConfig;
+    return rows[0].configs as Config;
 };
 
 // Create a new chart and config at once. Used in the ChartDisplay.

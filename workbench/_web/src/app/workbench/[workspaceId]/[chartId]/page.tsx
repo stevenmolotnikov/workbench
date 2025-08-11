@@ -1,31 +1,45 @@
 "use client";
 
-import { use } from "react";
-import InteractiveDisplay from "./components/InteractiveDisplay";
-
-import { ChartDisplay } from "@/components/charts/ChartDisplay";
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
-} from "@/components/ui/resizable"
+} from "@/components/ui/resizable";
 
 import { useWorkspace } from "@/stores/useWorkspace";
 import useModels from "@/hooks/useModels";
 import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
-import { ToolTabs } from "../components/ToolTabs";
 import ChartCardsSidebar from "../components/ChartCardsSidebar";
+import InteractiveDisplay from "./components/lens/InteractiveDisplay";
+import SimplePatchArea from "./components/patch/SimplePatchArea";
+import { ChartDisplay } from "@/components/charts/ChartDisplay";
+import { getConfigForChart } from "@/lib/queries/chartQueries";
 
-export default function Workbench() {
-    const { annotationsOpen } = useWorkspace();
+export default function ChartPage() {
+    const { annotationsOpen, setActiveTab } = useWorkspace();
+    const { chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     // Ensure a selected model exists
     useModels();
 
+    useEffect(() => {
+        if (chartId) setActiveTab(chartId);
+    }, [chartId, setActiveTab]);
+
+    const { data: config } = useQuery({
+        queryKey: ["chartConfig", chartId],
+        queryFn: () => getConfigForChart(chartId),
+        enabled: !!chartId,
+    });
+
+    const isLens = config?.type === "lens";
+
     return (
         <div className="flex flex-1 min-h-0">
-            {/* Main content */}
             <ResizablePanelGroup
                 direction="horizontal"
                 className="flex flex-1 min-h-0 h-full"
@@ -35,8 +49,7 @@ export default function Workbench() {
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={annotationsOpen ? 30 : 35} minSize={25}>
-                    <ToolTabs />
-                    <InteractiveDisplay />
+                    {isLens ? <InteractiveDisplay /> : <SimplePatchArea />}
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel defaultSize={annotationsOpen ? 40 : 45} minSize={30}>

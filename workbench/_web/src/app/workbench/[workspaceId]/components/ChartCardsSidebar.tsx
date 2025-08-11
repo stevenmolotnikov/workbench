@@ -2,14 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getChartsForSidebar, type ToolTypedChart } from "@/lib/queries/chartQueries";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { Grid3X3, ChartLine, Search, ReplaceAll } from "lucide-react";
+import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2 } from "lucide-react";
 import { useWorkspace } from "@/stores/useWorkspace";
-import { useCreateLensChartPair, useCreatePatchChartPair } from "@/lib/api/chartApi";
+import { useCreateLensChartPair, useCreatePatchChartPair, useDeleteChart } from "@/lib/api/chartApi";
 
 export default function ChartCardsSidebar() {
     const { workspaceId } = useParams();
+    const router = useRouter();
     const { activeTab, setActiveTab, selectedModel } = useWorkspace();
 
     const { data: charts, isLoading } = useQuery<ToolTypedChart[]>({
@@ -19,9 +20,15 @@ export default function ChartCardsSidebar() {
 
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
     const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
+    const { mutate: deleteChart, isPending: isDeleting } = useDeleteChart();
+
+    const navigateToChart = (chartId: string) => {
+        setActiveTab(chartId);
+        router.push(`/workbench/${workspaceId}/${chartId}`);
+    };
 
     const handleChartClick = (chart: ToolTypedChart) => {
-        setActiveTab(chart.id);
+        navigateToChart(chart.id);
     };
 
     const handleCreate = (toolType: "lens" | "patch") => {
@@ -33,6 +40,8 @@ export default function ChartCardsSidebar() {
                     model: selectedModel?.name || "",
                     token: { idx: 0, id: 0, text: "", targetIds: [] },
                 },
+            }, {
+                onSuccess: ({ chart }) => navigateToChart(chart.id)
             });
         } else {
             createPatchPair({
@@ -47,8 +56,23 @@ export default function ChartCardsSidebar() {
                     incorrectId: undefined,
                     patchTokens: false,
                 },
+            }, {
+                onSuccess: ({ chart }) => navigateToChart(chart.id)
             });
         }
+    };
+
+    const handleDelete = (e: React.MouseEvent, chartId: string) => {
+        e.stopPropagation();
+        if (!charts || charts.length <= 1) return;
+        // Choose next chart to focus
+        const remaining = charts.filter(c => c.id !== chartId);
+        const nextId = remaining[0]?.id;
+        deleteChart(chartId, {
+            onSuccess: () => {
+                if (nextId) navigateToChart(nextId);
+            }
+        });
     };
 
     if (!charts) return null;
@@ -100,6 +124,7 @@ export default function ChartCardsSidebar() {
                 {charts.map((chart) => {
                     const isSelected = chart.id === activeTab;
                     const createdAt = chart.createdAt ? new Date(chart.createdAt).toLocaleDateString() : "";
+                    const canDelete = charts.length > 1;
                     return (
                         <Card
                             key={chart.id}
@@ -127,6 +152,15 @@ export default function ChartCardsSidebar() {
                                         {renderChartTypeMini(chart.chartType)}
                                     </div>
                                 </div>
+                                <button
+                                    className={`p-1 rounded hover:bg-muted ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
+                                    onClick={(e) => handleDelete(e, chart.id)}
+                                    disabled={!canDelete || isDeleting}
+                                    aria-label="Delete chart"
+                                    title={!canDelete ? "At least one chart is required" : "Delete chart"}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
                             </div>
                         </Card>
                     );
