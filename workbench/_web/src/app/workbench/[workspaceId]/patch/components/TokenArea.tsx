@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { Token } from "@/types/models";
 import { usePatch } from "./PatchProvider";
+import { useTokenHighlight } from "./useTokenHighlight";
 import { useConnections } from "./ConnectionsProvider";
 
 interface TokenAreaProps {
@@ -36,31 +37,70 @@ export function TokenArea({
     side
 }: TokenAreaProps) {
     const { sourceTokenData, destTokenData, mainMode } = usePatch();
+    const {
+        isSelecting,
+        isInLiveSelection,
+        isIdxInAnyGroup,
+        setIsSelecting,
+        setSelectionStartIdx,
+        setSelectionHoverIdx,
+        onHighlightEnd,
+    } = useTokenHighlight(side);
     const { connections, startConnection, enterToken, endConnection, drag, clearHover } = useConnections();
 
-    const tokenData = side === "source" ? sourceTokenData : destTokenData;
+    const onMouseLeave = () => {
+        if (mainMode === "connect" && side === "destination") {
+            clearHover();
+        }
+    };
 
-    const getTokenStyle = (
-        token: Token,
-        idx: number,
-    ) => {
+    const getTokenStyle = (token: Token, idx: number) => {
         const isDropHover = drag.isDragging && drag.startSide === "source" && side === "destination" && drag.hoverIdx === idx;
         const isConnected = (side === "source" && connections.some(c => c.sourceIdx === idx)) || (side === "destination" && connections.some(c => c.destIdx === idx));
+        const isInAlignGroup = mainMode === "align" && isIdxInAnyGroup(idx);
         return cn(
             TOKEN_STYLES.base,
-            isConnected && TOKEN_STYLES.filled,
-            isDropHover && TOKEN_STYLES.highlight,
+            // Connect mode visuals
+            mainMode === "connect" && isConnected && TOKEN_STYLES.filled,
+            mainMode === "connect" && isDropHover && TOKEN_STYLES.highlight,
+            // Align mode visuals
+            mainMode === "align" && isInAlignGroup && TOKEN_STYLES.filled,
+            mainMode === "align" && !isInAlignGroup && isInLiveSelection(idx) && TOKEN_STYLES.highlight,
             TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
             "cursor-pointer",
         );
     };
 
-    const handleMouseDown = (idx: number) => {
+    const onMouseDown = (idx: number) => {
         if (mainMode === "connect") {
             startConnection(side, idx);
+            return;
         }
-    }
+        if (mainMode === "align") {
+            setIsSelecting(true);
+            setSelectionStartIdx(idx);
+            setSelectionHoverIdx(idx);
+        }
+    };
+
+    const onMouseEnter = (idx: number) => {
+        if (mainMode === "connect") {
+            enterToken(side, idx);
+        } else if (mainMode === "align" && isSelecting) {
+            setSelectionHoverIdx(idx);
+        }
+    };
+
+    const onMouseUp = (idx: number) => {
+        if (mainMode === "connect") {
+            endConnection(side, idx);
+        } else if (mainMode === "align") {
+            onHighlightEnd(idx);
+        }
+    };
+
+    const tokenData = side === "source" ? sourceTokenData : destTokenData;
 
     return (
         <div
@@ -81,10 +121,10 @@ export function TokenArea({
                             data-token-side={side}
                             data-token-id={idx}
                             className={styles}
-                            onMouseDown={() => handleMouseDown(idx)}
-                            onMouseEnter={() => enterToken(side, idx)}
-                            onMouseLeave={() => side === "destination" && clearHover()}
-                            onMouseUp={() => endConnection(side, idx)}
+                            onMouseDown={() => onMouseDown(idx)}
+                            onMouseEnter={() => onMouseEnter(idx)}
+                            onMouseLeave={() => onMouseLeave()}
+                            onMouseUp={() => onMouseUp(idx)}
                         >
                             {result}
                         </span>
