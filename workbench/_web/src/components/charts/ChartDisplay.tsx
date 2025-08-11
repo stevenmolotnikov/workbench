@@ -1,6 +1,6 @@
 import { useWorkspace } from "@/stores/useWorkspace";
 import { Copy, Loader2, PanelRight, PanelRightClose } from "lucide-react";
-import { getLensCharts, getChartById } from "@/lib/queries/chartQueries";
+import { getChartById } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useCallback } from "react";
@@ -19,32 +19,14 @@ export function ChartDisplay() {
     const workspaceId = params?.workspaceId as string | undefined;
     const chartIdParam = params?.chartId as string | undefined;
 
-    // If a chartId is present in the URL, fetch that single chart; otherwise, fallback to the legacy lensCharts list
+    // Fetch the single chart by id
     const { data: singleChart, isLoading: isLoadingSingle } = useQuery({
         queryKey: ["chartById", chartIdParam],
         queryFn: () => getChartById(chartIdParam as string),
         enabled: !!chartIdParam,
     });
 
-    const { data: lensCharts, isLoading: isLoadingList, isSuccess } = useQuery({
-        queryKey: ["lensCharts", workspaceId],
-        queryFn: () => getLensCharts(workspaceId as string),
-        enabled: !chartIdParam && !!workspaceId,
-    });
-
-    const activeChart = useMemo(() => {
-        if (chartIdParam) return singleChart || null;
-        return lensCharts?.find(c => c.id === activeTab) || null;
-    }, [singleChart, lensCharts, activeTab, chartIdParam]);
-
-    // On load for legacy list route, set to the first chart
-    const initial = useRef(true);
-    useEffect(() => {
-        if (!chartIdParam && isSuccess && initial.current && lensCharts && lensCharts.length > 0) {
-            setActiveTab(lensCharts[0].id);
-            initial.current = false;
-        }
-    }, [chartIdParam, isSuccess, lensCharts, setActiveTab]);
+    const activeChart = useMemo(() => singleChart || null, [singleChart]);
 
     const captureRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,7 +53,7 @@ export function ChartDisplay() {
         }
     }, []);
 
-    if ((chartIdParam && isLoadingSingle) || (!chartIdParam && isLoadingList)) return (
+    if (isLoadingSingle) return (
         <div className="flex-1 flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>

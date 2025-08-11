@@ -40,6 +40,12 @@ export const useLensLine = () => {
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 
             });
+            // Ensure the single-chart view refreshes as well
+            if (variables?.lensRequest?.chartId) {
+                queryClient.invalidateQueries({
+                    queryKey: ["chartById", variables.lensRequest.chartId],
+                });
+            }
             queryClient.invalidateQueries({ 
                 queryKey: ["unlinkedCharts"] 
             });
@@ -86,6 +92,12 @@ export const useLensGrid = () => {
             queryClient.invalidateQueries({ 
                 queryKey: ["lensCharts"] 
             });
+            // Ensure the single-chart view refreshes as well
+            if (variables?.lensRequest?.chartId) {
+                queryClient.invalidateQueries({
+                    queryKey: ["chartById", variables.lensRequest.chartId],
+                });
+            }
             queryClient.invalidateQueries({ 
                 queryKey: ["unlinkedCharts"] 
             });
