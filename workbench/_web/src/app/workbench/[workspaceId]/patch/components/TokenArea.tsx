@@ -11,11 +11,13 @@ interface TokenAreaProps {
 }
 
 // Token styling constants
-const TOKEN_STYLES = {
+const tokenStyles = {
     base: "text-sm whitespace-pre-wrap select-none !box-border relative",
     highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
     filled: "!bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
     hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
+    ablate: "!bg-red-400/70 after:absolute after:inset-0 after:border after:border-red-400/70",
+    loop: "!bg-yellow-300/70 after:absolute after:inset-0 after:border after:border-yellow-300/70",
 } as const;
 
 const fix = (text: string) => {
@@ -36,7 +38,7 @@ const fix = (text: string) => {
 export function TokenArea({
     side
 }: TokenAreaProps) {
-    const { sourceTokenData, destTokenData, mainMode } = usePatch();
+    const { sourceTokenData, destTokenData, mainMode, subMode } = usePatch();
     const {
         isSelecting,
         isInLiveSelection,
@@ -44,7 +46,11 @@ export function TokenArea({
         setIsSelecting,
         setSelectionStartIdx,
         setSelectionHoverIdx,
-        onHighlightEnd,
+        onSelectionEnd,
+        isAblated,
+        isLooped,
+        toggleAblate,
+        toggleLoop,
     } = useTokenHighlight(side);
     const { connections, startConnection, enterToken, endConnection, drag, clearHover } = useConnections();
 
@@ -58,15 +64,20 @@ export function TokenArea({
         const isDropHover = drag.isDragging && drag.startSide === "source" && side === "destination" && drag.hoverIdx === idx;
         const isConnected = (side === "source" && connections.some(c => c.sourceIdx === idx)) || (side === "destination" && connections.some(c => c.destIdx === idx));
         const isInAlignGroup = mainMode === "align" && isIdxInAnyGroup(idx);
+        const ablated = isAblated(idx);
+        const looped = isLooped(idx);
         return cn(
-            TOKEN_STYLES.base,
+            tokenStyles.base,
+            // priority: ablate > loop > mode visuals
+            ablated && tokenStyles.ablate,
+            !ablated && looped && tokenStyles.loop,
             // Connect mode visuals
-            mainMode === "connect" && isConnected && TOKEN_STYLES.filled,
-            mainMode === "connect" && isDropHover && TOKEN_STYLES.highlight,
+            mainMode === "connect" && isConnected && tokenStyles.filled,
+            mainMode === "connect" && isDropHover && tokenStyles.highlight,
             // Align mode visuals
-            mainMode === "align" && isInAlignGroup && TOKEN_STYLES.filled,
-            mainMode === "align" && !isInAlignGroup && isInLiveSelection(idx) && TOKEN_STYLES.highlight,
-            TOKEN_STYLES.hover,
+            mainMode === "align" && isInAlignGroup && tokenStyles.filled,
+            mainMode === "align" && !isInAlignGroup && isInLiveSelection(idx) && tokenStyles.highlight,
+            tokenStyles.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
             "cursor-pointer",
         );
@@ -74,6 +85,14 @@ export function TokenArea({
 
     const onMouseDown = (idx: number) => {
         if (mainMode === "connect") {
+            if (subMode === "ablate") {
+                toggleAblate(idx);
+                return;
+            }
+            if (subMode === "loop") {
+                toggleLoop(idx);
+                return;
+            }
             startConnection(side, idx);
             return;
         }
@@ -96,7 +115,7 @@ export function TokenArea({
         if (mainMode === "connect") {
             endConnection(side, idx);
         } else if (mainMode === "align") {
-            onHighlightEnd(idx);
+            onSelectionEnd(idx);
         }
     };
 

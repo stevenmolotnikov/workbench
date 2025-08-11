@@ -27,6 +27,12 @@ interface PatchState {
     // Alignment highlighted indices and derived groups
     sourceAlignedIdxs: Set<number>;
     destAlignedIdxs: Set<number>;
+
+    // Token options
+    sourceAblateIdxs: Set<number>;
+    destAblateIdxs: Set<number>;
+    sourceLoopIdxs: Set<number>;
+    destLoopIdxs: Set<number>;
 }
 
 interface PatchActions {
@@ -38,6 +44,11 @@ interface PatchActions {
     setSubMode: (mode: PatchSubMode | null) => void;
     setSourceAlignedIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
     setDestAlignedIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
+
+    setSourceAblateIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
+    setDestAblateIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
+    setSourceLoopIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
+    setDestLoopIdxs: React.Dispatch<React.SetStateAction<Set<number>>>;
 }
 
 const PatchContext = createContext<(PatchState & PatchActions) | null>(null);
@@ -65,6 +76,12 @@ export default function PatchProvider({ children }: { children: React.ReactNode 
     const [sourceAlignedIdxs, setSourceAlignedIdxs] = useState<Set<number>>(new Set());
     const [destAlignedIdxs, setDestAlignedIdxs] = useState<Set<number>>(new Set());
 
+    // Token options state
+    const [sourceAblateIdxs, setSourceAblateIdxs] = useState<Set<number>>(new Set());
+    const [destAblateIdxs, setDestAblateIdxs] = useState<Set<number>>(new Set());
+    const [sourceLoopIdxs, setSourceLoopIdxs] = useState<Set<number>>(new Set());
+    const [destLoopIdxs, setDestLoopIdxs] = useState<Set<number>>(new Set());
+
     const value: PatchState & PatchActions = {
         sourceText,
         destText,
@@ -74,6 +91,10 @@ export default function PatchProvider({ children }: { children: React.ReactNode 
         destTokenData,
         sourceAlignedIdxs,
         destAlignedIdxs,
+        sourceAblateIdxs,
+        destAblateIdxs,
+        sourceLoopIdxs,
+        destLoopIdxs,
 
         setSourceText,
         setDestText,
@@ -83,6 +104,10 @@ export default function PatchProvider({ children }: { children: React.ReactNode 
         setSubMode,
         setSourceAlignedIdxs,
         setDestAlignedIdxs,
+        setSourceAblateIdxs,
+        setDestAblateIdxs,
+        setSourceLoopIdxs,
+        setDestLoopIdxs,
     };
 
     // When entering align mode with no existing highlights, compute initial suggestions
