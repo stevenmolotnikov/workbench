@@ -67,6 +67,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     };
 
     const handleTokenize = async () => {
+        console.log("CONFIG", config);
         const tokens = await encodeText(config.prompt, config.model);
         setTokenData(tokens);
         setShowTokenArea(true);

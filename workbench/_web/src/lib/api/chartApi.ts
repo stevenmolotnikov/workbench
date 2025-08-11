@@ -1,6 +1,6 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart, createLensChartPair, createPatchChartPair } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart, createLensChartPair, createPatchChartPair, updateChartName } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
@@ -111,18 +111,15 @@ export const useLensGrid = () => {
     });
 }
 
-export const useCreateChart = () => {
+export const useUpdateChartName = () => {
     const queryClient = useQueryClient();
-    const { setActiveTab } = useWorkspace();
 
     return useMutation({
-        mutationFn: async ({ chart }: { chart: NewChart }) => {
-            return await createChart(chart);
+        mutationFn: async ({ chartId, name }: { chartId: string; name: string }) => {
+            return await updateChartName(chartId, name);
         },
-        onSuccess: (newChart) => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"]});
-            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"]});
-            setActiveTab(newChart.id);
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["chartById"] });
         },
     });
 };
@@ -143,7 +140,6 @@ export const useDeleteChart = () => {
 
 export const useCreateLensChartPair = () => {
     const queryClient = useQueryClient();
-    const { setActiveTab } = useWorkspace();
 
     return useMutation({
         mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: LensConfigData }) => {
@@ -155,15 +151,12 @@ export const useCreateLensChartPair = () => {
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
-            // Set active to the new chart id
-            setActiveTab(chart.id);
         },
     });
 };
 
 export const useCreatePatchChartPair = () => {
     const queryClient = useQueryClient();
-    const { setActiveTab } = useWorkspace();
 
     return useMutation({
         mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: PatchingConfig }) => {
@@ -175,8 +168,6 @@ export const useCreatePatchChartPair = () => {
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
-            // Set active to the new chart id
-            setActiveTab(chart.id);
         },
     });
 };

@@ -1,5 +1,5 @@
 {
-  "id": "7ec7b969-82a8-45ba-97bd-0c465960c04d",
+  "id": "0a19a536-82f7-4cdd-b575-1e5b6cf803ff",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -131,6 +131,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Untitled Chart'"
         },
         "data": {
           "name": "data",

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useWorkspace } from "@/stores/useWorkspace";
 import { getAnnotations } from "@/lib/queries/annotationQueries";
 import { useCreateAnnotation, useDeleteAnnotation } from "@/lib/api/annotationsApi";
 import { Button } from "@/components/ui/button";
@@ -13,31 +12,32 @@ import { Card } from "@/components/ui/card";
 import { X, CircleDot, Layers, Grid3X3 } from "lucide-react";
 import type { LineAnnotation, HeatmapAnnotation, AnnotationData } from "@/types/annotations";
 import { NewAnnotation } from "@/db/schema";
+import { useParams } from "next/navigation";
 
 export function AnnotationsDisplay() {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
-    const { activeTab } = useWorkspace();
+    const { chartId } = useParams<{ chartId: string }>();  
     const [annotationText, setAnnotationText] = useState("");
 
     const { mutate: createAnnotation, isPending: isCreating } = useCreateAnnotation();
     const { mutate: deleteAnnotation } = useDeleteAnnotation();
 
     const { data: annotations = [] } = useQuery({
-        queryKey: ["annotations", activeTab],
-        queryFn: () => getAnnotations(activeTab as string),
-        enabled: !!activeTab,
+        queryKey: ["annotations", chartId],
+        queryFn: () => getAnnotations(chartId as string),
+        enabled: !!chartId,
     });
 
     useEffect(() => {
         setPendingAnnotation(null);
         setAnnotationText("");
-    }, [activeTab, setPendingAnnotation]);
+    }, [chartId, setPendingAnnotation]);
 
     const handleSaveAnnotation = () => {
-        if (!pendingAnnotation || !annotationText.trim() || !activeTab) return;
+        if (!pendingAnnotation || !annotationText.trim() || !chartId) return;
 
         const newAnnotation: NewAnnotation = {
-            chartId: activeTab,
+            chartId: chartId,
             type: pendingAnnotation.type,
             data: {
                 ...pendingAnnotation,
@@ -60,8 +60,7 @@ export function AnnotationsDisplay() {
     };
 
     const handleDeleteAnnotation = (id: string) => {
-        if (!activeTab) return;
-        deleteAnnotation({ id, chartId: activeTab });
+        deleteAnnotation({ id, chartId: chartId });
     };
 
     const formatAnnotationDetails = (type: string, data: AnnotationData) => {

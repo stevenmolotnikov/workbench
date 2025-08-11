@@ -6,7 +6,7 @@ import { LineAnnotation } from '@/types/annotations'
 import { useAnnotations } from '@/stores/useAnnotations';
 import { useQuery } from '@tanstack/react-query';
 import { getAnnotations } from '@/lib/queries/annotationQueries';
-import { useWorkspace } from '@/stores/useWorkspace';
+import { useParams } from 'next/navigation';
 
 export const useLineAnnotationLayer = () => {
     const { pendingAnnotation, setPendingAnnotation } = useAnnotations();
@@ -61,7 +61,7 @@ interface Segment {
 
 // Custom line layer that renders segments with different colors
 export const LineAnnotationLayer = ({ series, lineGenerator }: any) => {
-    const { activeTab: chartId } = useWorkspace();
+    const { chartId } = useParams<{ chartId: string }>();
 
     const { data: allAnnotations } = useQuery({
         queryKey: ["annotations", chartId],

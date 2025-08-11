@@ -1,10 +1,10 @@
 import React, { createContext, useContext, ReactNode, useRef } from "react";
 import { useHeatmapControls } from "./HeatmapControlsProvider";
 import { useAnnotations } from "@/stores/useAnnotations";
-import { useWorkspace } from "@/stores/useWorkspace";
 import { useCallback, useEffect, useState } from "react";
 import { getCellFromPosition } from "./heatmap-geometry";
 import useSelectionRect from "./useSelectionRect";
+import { useParams } from "next/navigation";
 
 interface SelectionRect {
     startX: number
@@ -42,8 +42,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
     const [isSelecting, setIsSelecting] = useState(false)
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
 
-    const { activeTab: chartId } = useWorkspace();
-
+    const { chartId } = useParams<{ chartId: string }>();
 
     useSelectionRect({ canvasRef, data, chartId, selectionRect })
 
@@ -80,8 +79,6 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
 
     // Handle click from Nivo canvas
     const handleCellClick = useCallback((cell: any) => {
-        if (!chartId) return
-
         // Extract row and column indices from the cell data
         const rowIndex = data.rows.findIndex(r => r.id === cell.serieId)
         const colIndexXValue = cell.data.x
@@ -125,7 +122,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
             })
             setIsSelecting(false)
         }
-    }, [selectionRect, data.rows, chartId, setPendingAnnotation, isZoomSelecting, onZoomComplete])
+    }, [selectionRect, data.rows, setPendingAnnotation, isZoomSelecting, onZoomComplete])
 
     // Handle mouse move on the container (for selection preview)
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {

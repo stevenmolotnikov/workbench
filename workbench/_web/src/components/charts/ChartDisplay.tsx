@@ -13,6 +13,7 @@ import { Button } from "../ui/button";
 import { toBlob } from "html-to-image";
 import { toast } from "sonner";
 import { BorderBeam } from "../magicui/border-beam";
+import { HeatmapChart } from "@/db/schema";
 
 export function ChartDisplay() {
     const { annotationsOpen, setAnnotationsOpen, jobStatus } = useWorkspace();
@@ -74,7 +75,7 @@ export function ChartDisplay() {
             </div>
 
             {activeChart && activeChart.type === "heatmap" && (activeChart.data !== null) ? (
-                <HeatmapCard captureRef={captureRef} data={activeChart.data as HeatmapData} />
+                <HeatmapCard captureRef={captureRef} chart={activeChart as HeatmapChart} />
             ) : activeChart && activeChart.data !== null ? (
                 <LineCard captureRef={captureRef} data={activeChart.data as LineGraphData} />
             ) : (

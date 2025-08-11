@@ -1,5 +1,5 @@
 import { boolean, jsonb, pgTable, varchar, uuid, timestamp } from "drizzle-orm/pg-core";
-import type { ConfigData, ChartData } from "@/types/charts";
+import type { ConfigData, ChartData, HeatmapData } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfigData } from "@/types/lens";
 
@@ -19,6 +19,7 @@ export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
+    name: varchar("name", { length: 256 }).notNull().default("Untitled Chart"),
     data: jsonb("data").$type<ChartData>(),
     type: varchar("type", { enum: chartTypes, length: 32 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -72,6 +73,10 @@ export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
 export type Annotation = typeof annotations.$inferSelect;
 export type NewAnnotation = typeof annotations.$inferInsert;
+
+export type HeatmapChart = Omit<Chart, 'data'> & {
+    data: HeatmapData;
+};
 
 // Specific chart config types
 export type LensConfig = Omit<Config, 'data'> & {

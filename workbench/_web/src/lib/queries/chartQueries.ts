@@ -11,6 +11,10 @@ export const setChartData = async (chartId: string, chartData: ChartData, chartT
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
 };
 
+export const updateChartName = async (chartId: string, name: string) => {
+    await db.update(charts).set({ name }).where(eq(charts.id, chartId));
+};
+
 export const getChartData = async (chartId: string): Promise<ChartData> => {
     const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
     return chart?.data as ChartData;

@@ -1,22 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addConfig, deleteConfig, setConfig } from "@/lib/queries/configQueries";
+import { deleteConfig, setConfig } from "@/lib/queries/configQueries";
 import { NewConfig } from "@/db/schema";
-
-export const useCreateChartConfig = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({ config }: { config: NewConfig }) => {
-            await addConfig(config);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-        },
-        onError: (error) => {
-            console.error("Error generating completion:", error);
-        },
-    });
-};
 
 export const useDeleteChartConfig = () => {
     const queryClient = useQueryClient();

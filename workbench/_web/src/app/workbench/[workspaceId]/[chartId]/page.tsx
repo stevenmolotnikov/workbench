@@ -21,15 +21,11 @@ import { getConfigForChart } from "@/lib/queries/chartQueries";
 import { ToolTabs } from "../components/ToolTabs";
 
 export default function ChartPage() {
-    const { annotationsOpen, setActiveTab } = useWorkspace();
+    const { annotationsOpen } = useWorkspace();
     const { chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     // Ensure a selected model exists
     useModels();
-
-    useEffect(() => {
-        if (chartId) setActiveTab(chartId);
-    }, [chartId, setActiveTab]);
 
     const { data: config } = useQuery({
         queryKey: ["chartConfig", chartId],

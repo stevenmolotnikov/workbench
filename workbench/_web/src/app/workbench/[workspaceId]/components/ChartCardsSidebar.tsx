@@ -9,9 +9,9 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import { useCreateLensChartPair, useCreatePatchChartPair, useDeleteChart } from "@/lib/api/chartApi";
 
 export default function ChartCardsSidebar() {
-    const { workspaceId } = useParams();
+    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
     const router = useRouter();
-    const { activeTab, setActiveTab, selectedModel } = useWorkspace();
+    const { selectedModel } = useWorkspace();
 
     const { data: charts, isLoading } = useQuery<ToolTypedChart[]>({
         queryKey: ["chartsForSidebar", workspaceId],
@@ -23,7 +23,6 @@ export default function ChartCardsSidebar() {
     const { mutate: deleteChart, isPending: isDeleting } = useDeleteChart();
 
     const navigateToChart = (chartId: string) => {
-        setActiveTab(chartId);
         router.push(`/workbench/${workspaceId}/${chartId}`);
     };
 
@@ -122,7 +121,7 @@ export default function ChartCardsSidebar() {
                     <div className="text-xs text-muted-foreground px-2 py-6 text-center">No charts yet. Create one to get started.</div>
                 )}
                 {charts.map((chart) => {
-                    const isSelected = chart.id === activeTab;
+                    const isSelected = chart.id === chartId;
                     const createdAt = chart.createdAt ? new Date(chart.createdAt).toLocaleDateString() : "";
                     const canDelete = charts.length > 1;
                     return (

@@ -1,6 +1,5 @@
 import { usePathname, useRouter, useParams } from "next/navigation";
 import { FileText, ReplaceAll, Search } from "lucide-react";
-import { useWorkspace } from "@/stores/useWorkspace";
 import { useQuery } from "@tanstack/react-query";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 
@@ -12,13 +11,12 @@ const tools = [
 export function ToolTabs() {
     const pathname = usePathname();
     const router = useRouter();
-    const { workspaceId } = useParams<{ workspaceId: string }>();
-    const { activeTab } = useWorkspace();
+    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
 
     const { data: config } = useQuery({
-        queryKey: ["chartConfig", activeTab],
-        queryFn: () => getConfigForChart(activeTab as string),
-        enabled: !!activeTab,
+        queryKey: ["chartConfig", chartId],
+        queryFn: () => getConfigForChart(chartId as string),
+        enabled: !!chartId,
     });
 
     // Determine active tool: prefer config.type when available, else fallback to pathname

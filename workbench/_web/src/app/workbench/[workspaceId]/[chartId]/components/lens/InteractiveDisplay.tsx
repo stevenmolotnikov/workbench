@@ -6,23 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 
 export default function InteractiveDisplay() {
-    const { selectedModel, activeTab } = useWorkspace();
-    const { workspaceId } = useParams<{ workspaceId: string }>();
+    const { selectedModel } = useWorkspace();
+    const { workspaceId, chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     const { data: config } = useQuery({
-        queryKey: ["chartConfig", workspaceId, activeTab],
-        queryFn: () => getConfigForChart(activeTab as string),
-        enabled: !!selectedModel && !!activeTab,
-        staleTime: 0,
+        queryKey: ["chartConfig", workspaceId, chartId],
+        queryFn: () => getConfigForChart(chartId),
+        enabled: !!selectedModel && !!chartId,
     });
-
-    if (!activeTab) {
-        return (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-                Select a chart to edit its config
-            </div>
-        );
-    }
 
     if (!config) {
         return (
