@@ -1,9 +1,8 @@
 "use server";
 
 import { db } from "@/db/client";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { annotations, charts, type Annotation, type NewAnnotation, type Chart } from "@/db/schema";
-import { AnnotationData, HeatmapAnnotation } from "@/types/annotations";
 
 export const getAnnotations = async (chartId: string): Promise<Annotation[]> => {
     const result = await db.select().from(annotations).where(eq(annotations.chartId, chartId));

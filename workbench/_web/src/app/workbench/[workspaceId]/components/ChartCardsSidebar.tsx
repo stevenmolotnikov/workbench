@@ -4,34 +4,51 @@ import { useQuery } from "@tanstack/react-query";
 import { getChartsForSidebar, type ToolTypedChart } from "@/lib/queries/chartQueries";
 import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2 } from "lucide-react";
+import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2, FileText } from "lucide-react";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { useCreateLensChartPair, useCreatePatchChartPair, useDeleteChart } from "@/lib/api/chartApi";
+import { useCreateDocument, useGetDocumentsForWorkspace } from "@/lib/api/documentApi";
+import { Document } from "@/db/schema";
 
 export default function ChartCardsSidebar() {
-    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
+    const params = useParams<{ workspaceId: string, chartId?: string, overviewId?: string }>();
+    const workspaceId = params.workspaceId;
+    const currentId = params.chartId || params.overviewId;
     const router = useRouter();
     const { selectedModel } = useWorkspace();
 
-    const { data: charts, isLoading } = useQuery<ToolTypedChart[]>({
+    const { data: charts, isLoading: chartsLoading } = useQuery<ToolTypedChart[]>({
         queryKey: ["chartsForSidebar", workspaceId],
         queryFn: () => getChartsForSidebar(workspaceId as string),
     });
 
+    const { data: documents, isLoading: docsLoading } = useGetDocumentsForWorkspace(workspaceId as string);
+    
+    const isLoading = chartsLoading || docsLoading;
+
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
     const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
     const { mutate: deleteChart, isPending: isDeleting } = useDeleteChart();
+    const { mutate: createDocument, isPending: isCreatingOverview } = useCreateDocument();
 
     const navigateToChart = (chartId: string) => {
         router.push(`/workbench/${workspaceId}/${chartId}`);
+    };
+
+    const navigateToOverview = (documentId: string) => {
+        router.push(`/workbench/${workspaceId}/overview/${documentId}`);
     };
 
     const handleChartClick = (chart: ToolTypedChart) => {
         navigateToChart(chart.id);
     };
 
-    const handleCreate = (toolType: "lens" | "patch") => {
-        if (toolType === "lens") {
+    const handleCreate = (toolType: "lens" | "patch" | "overview") => {
+        if (toolType === "overview") {
+            createDocument(workspaceId as string, {
+                onSuccess: (document) => navigateToOverview(document.id)
+            });
+        } else if (toolType === "lens") {
             createLensPair({
                 workspaceId: workspaceId as string,
                 defaultConfig: {
@@ -74,7 +91,19 @@ export default function ChartCardsSidebar() {
         });
     };
 
-    if (!charts) return null;
+    if (!charts && !documents) return null;
+
+    // Combine charts and documents, sorted by creation date
+    type SidebarItem = (ToolTypedChart & { itemType: "chart" }) | (Document & { itemType: "document" });
+    
+    const allItems: SidebarItem[] = [
+        ...(charts || []).map(chart => ({ ...chart, itemType: "chart" as const })),
+        ...(documents || []).map(doc => ({ ...doc, itemType: "document" as const }))
+    ].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Most recent first
+    });
 
     const formatToolType = (toolType: ToolTypedChart["toolType"]) => {
         if (!toolType) return "Unknown";
@@ -115,15 +144,47 @@ export default function ChartCardsSidebar() {
             </div>
             <div className="p-2 space-y-2 overflow-auto">
                 {isLoading && (
-                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">Loading charts…</div>
+                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">Loading...</div>
                 )}
-                {charts.length === 0 && !isLoading && (
-                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">No charts yet. Create one to get started.</div>
+                {allItems.length === 0 && !isLoading && (
+                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">No content yet. Create a chart or overview to get started.</div>
                 )}
-                {charts.map((chart) => {
-                    const isSelected = chart.id === chartId;
-                    const createdAt = chart.createdAt ? new Date(chart.createdAt).toLocaleDateString() : "";
-                    const canDelete = charts.length > 1;
+                {allItems.map((item) => {
+                    const isSelected = item.id === currentId;
+                    const createdAt = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "";
+                    
+                    if (item.itemType === "document") {
+                        return (
+                            <Card
+                                key={item.id}
+                                className={`p-3 cursor-pointer rounded transition-all ${isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                                onClick={() => navigateToOverview(item.id)}
+                            >
+                                <div className="flex items-start gap-2">
+                                    <div className="mt-1">
+                                        <FileText className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-sm font-medium">
+                                                Overview
+                                            </span>
+                                            {createdAt && (
+                                                <span className="text-xs text-muted-foreground">{createdAt}</span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground break-words">
+                                            Document
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    }
+                    
+                    // It's a chart
+                    const chart = item as ToolTypedChart;
+                    const canDelete = (charts?.length || 0) > 1;
                     return (
                         <Card
                             key={chart.id}
@@ -165,20 +226,27 @@ export default function ChartCardsSidebar() {
                     );
                 })}
                 <div className="flex flex-row gap-2">
-                <button 
-                    className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
-                    onClick={() => handleCreate("patch")}
-                    disabled={isCreatingPatch}
-                >
-                    <span>+ Patch</span>
-                </button>
-                <button 
-                    className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
-                    onClick={() => handleCreate("lens")}
-                    disabled={isCreatingLens}
-                >
-                    <span>+ Lens</span>
-                </button>
+                    <button
+                        className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                        onClick={() => handleCreate("patch")}
+                        disabled={isCreatingPatch}
+                    >
+                        <span>+ Patch</span>
+                    </button>
+                    <button
+                        className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                        onClick={() => handleCreate("lens")}
+                        disabled={isCreatingLens}
+                    >
+                        <span>+ Lens</span>
+                    </button>
+                    <button
+                        className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                        onClick={() => handleCreate("overview")}
+                        disabled={isCreatingOverview}
+                    >
+                        <span>+ Overview</span>
+                    </button>
                 </div>
             </div>
         </div>
