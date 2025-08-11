@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, type RefObject } from "react";
 import { LineGraphData } from "@/types/charts";
 import { Line } from "./Line";
 import { RangeSelector } from "../RangeSelector";
@@ -10,10 +10,11 @@ type RangeWithId = {
 };
 
 interface LineCardProps {
-    data: LineGraphData
+    data: LineGraphData;
+    captureRef?: RefObject<HTMLDivElement>;
 }
 
-export const LineCard = ({ data }: LineCardProps) => {
+export const LineCard = ({ data, captureRef }: LineCardProps) => {
     const [title, setTitle] = useState("");
     const [isEditingTitle, setIsEditingTitle] = useState(false);
 
@@ -113,7 +114,7 @@ export const LineCard = ({ data }: LineCardProps) => {
                     />
                 </div>
             </div>
-            <div className="flex h-[90%] w-full">
+            <div className="flex h-[90%] w-full" ref={captureRef}>
                 <Line 
                     data={filteredData}
                     yRange={yRange}

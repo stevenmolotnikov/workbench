@@ -1,17 +1,20 @@
 import { useWorkspace } from "@/stores/useWorkspace";
-import { Loader2, PanelRight, PanelRightClose } from "lucide-react";
+import { Copy, Loader2, PanelRight, PanelRightClose } from "lucide-react";
 import { getLensCharts, getChartById } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useCallback } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 
 import { HeatmapCard } from "./heatmap/HeatmapCard";
 import { LineCard } from "./line/LineCard";
+import CodeExport from "@/app/workbench/[workspaceId]/components/CodeExport";
 import { Button } from "../ui/button";
+import { toBlob } from "html-to-image";
+import { toast } from "sonner";
 
 export function ChartDisplay() {
-    const { activeTab, setActiveTab, setAnnotationsOpen, annotationsOpen } = useWorkspace();
+    const { activeTab, setActiveTab, annotationsOpen, setAnnotationsOpen } = useWorkspace();
     const params = useParams<{ workspaceId?: string; chartId?: string }>();
     const workspaceId = params?.workspaceId as string | undefined;
     const chartIdParam = params?.chartId as string | undefined;
@@ -43,6 +46,31 @@ export function ChartDisplay() {
         }
     }, [chartIdParam, isSuccess, lensCharts, setActiveTab]);
 
+    const captureRef = useRef<HTMLDivElement | null>(null);
+
+    const handleCopyPng = useCallback(async () => {
+        if (!captureRef.current) return;
+        try {
+            const blob = await toBlob(captureRef.current, {
+                cacheBust: true,
+                backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--background") || "#ffffff",
+                pixelRatio: 2,
+            });
+            if (!blob) return;
+            type ClipboardItemCtor = new (items: Record<string, Blob>) => ClipboardItem;
+            const ClipboardItemClass = (globalThis as unknown as { ClipboardItem?: ClipboardItemCtor }).ClipboardItem;
+            if (!ClipboardItemClass) {
+                console.error("Clipboard image write is not supported in this browser.");
+                return;
+            }
+            const item = new ClipboardItemClass({ "image/png": blob });
+            await navigator.clipboard.write([item as unknown as ClipboardItem]);
+            toast.success("Copied to clipboard");
+        } catch (err) {
+            console.error("Failed to copy PNG", err);
+        }
+    }, []);
+
     if ((chartIdParam && isLoadingSingle) || (!chartIdParam && isLoadingList)) return (
         <div className="flex-1 flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -52,17 +80,21 @@ export function ChartDisplay() {
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
             <div className="px-2 py-2 flex items-center bg-background justify-end h-12 border-b">
-                <Button variant="ghost" size="icon" className="h-8 w-8 flex items-center justify-center" onClick={() => {
-                    setAnnotationsOpen(!annotationsOpen);
-                }}>
-                    {annotationsOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center gap-2">
+                    <CodeExport chartId={activeChart?.id} chartType={activeChart?.type} />
+                    <Button variant="outline" size="sm" onClick={handleCopyPng}><Copy className="h-4 w-4" /> Copy</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 flex items-center justify-center" onClick={() => {
+                        setAnnotationsOpen(!annotationsOpen);
+                    }}>
+                        {annotationsOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
 
             {activeChart && activeChart.type === "heatmap" && (activeChart.data !== null) ? (
-                <HeatmapCard data={activeChart.data as HeatmapData} />
+                <HeatmapCard captureRef={captureRef} data={activeChart.data as HeatmapData} />
             ) : activeChart && activeChart.data !== null ? (
-                <LineCard data={activeChart.data as LineGraphData} />
+                <LineCard captureRef={captureRef} data={activeChart.data as LineGraphData} />
             ) : (
                 <div className="flex-1 flex h-full items-center justify-center">
                     <div className="text-muted-foreground">No chart selected</div>

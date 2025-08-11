@@ -18,6 +18,7 @@ import InteractiveDisplay from "./components/lens/InteractiveDisplay";
 import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
+import { ToolTabs } from "../components/ToolTabs";
 
 export default function ChartPage() {
     const { annotationsOpen, setActiveTab } = useWorkspace();
@@ -49,6 +50,7 @@ export default function ChartPage() {
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={annotationsOpen ? 30 : 35} minSize={25}>
+                    <ToolTabs />
                     {isLens ? <InteractiveDisplay /> : <SimplePatchArea />}
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
