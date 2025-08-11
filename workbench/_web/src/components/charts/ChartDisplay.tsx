@@ -3,7 +3,7 @@ import { Copy, Loader2, PanelRight, PanelRightClose } from "lucide-react";
 import { getChartById } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { HeatmapData, LineGraphData } from "@/types/charts";
 
 import { HeatmapCard } from "./heatmap/HeatmapCard";
@@ -12,11 +12,11 @@ import CodeExport from "@/app/workbench/[workspaceId]/components/CodeExport";
 import { Button } from "../ui/button";
 import { toBlob } from "html-to-image";
 import { toast } from "sonner";
+import { BorderBeam } from "../magicui/border-beam";
 
 export function ChartDisplay() {
-    const { activeTab, setActiveTab, annotationsOpen, setAnnotationsOpen } = useWorkspace();
+    const { annotationsOpen, setAnnotationsOpen, jobStatus } = useWorkspace();
     const params = useParams<{ workspaceId?: string; chartId?: string }>();
-    const workspaceId = params?.workspaceId as string | undefined;
     const chartIdParam = params?.chartId as string | undefined;
 
     // Fetch the single chart by id
@@ -78,8 +78,11 @@ export function ChartDisplay() {
             ) : activeChart && activeChart.data !== null ? (
                 <LineCard captureRef={captureRef} data={activeChart.data as LineGraphData} />
             ) : (
-                <div className="flex-1 flex h-full items-center justify-center">
-                    <div className="text-muted-foreground">No chart selected</div>
+                <div className="flex-1 flex h-full items-center relative justify-center border m-2 border-dashed rounded">
+                    {jobStatus !== "idle" && <BorderBeam duration={5}
+                        size={300}
+                        className="from-transparent bg-primary to-transparent" />}
+                    <div className="text-muted-foreground">No chart data</div>
                 </div>
             )}
         </div>

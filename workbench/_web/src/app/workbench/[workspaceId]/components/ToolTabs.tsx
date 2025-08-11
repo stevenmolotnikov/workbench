@@ -34,7 +34,7 @@ export function ToolTabs() {
                 </button>
             </div>
             <div className="flex items-center gap-1">
-                <button onClick={() => router.push(`/workbench/${workspaceId}/overview`)} className="flex border rounded items-center gap-2 px-3 py-1 text-foreground transition-colors">
+                <button onClick={() => router.push(`/workbench/${workspaceId}/overview`)} className="flex border text-xs h-8 rounded items-center gap-2 px-3 py-1 text-foreground transition-colors">
                     <FileText className="h-4 w-4" />
                     Overview
                 </button>
