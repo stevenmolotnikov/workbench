@@ -23,12 +23,12 @@ export default function OverviewPage() {
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={50} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={45} minSize={25}>
                     <ToolTabs />
                     <Editor />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel defaultSize={40} minSize={30}>
+                <ResizablePanel defaultSize={45} minSize={30}>
                     <ChartDisplay />
                 </ResizablePanel>
             </ResizablePanelGroup>

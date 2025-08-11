@@ -1,9 +1,9 @@
 "use server";
 
 import { db } from "@/db/client";
-import { documents, Document, NewDocument } from "@/db/schema";
+import { documents, Document } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { EditorJSData } from "@/types/editor";
+import { SerializedEditorState } from "lexical";
 
 export const getDocumentById = async (documentId: string): Promise<Document | null> => {
     const [document] = await db
@@ -23,17 +23,17 @@ export const getDocumentByWorkspaceId = async (workspaceId: string): Promise<Doc
     return document ?? null;
 };
 
-export const upsertDocument = async (workspaceId: string, content: EditorJSData): Promise<Document> => {
+export const upsertDocument = async (workspaceId: string, content: SerializedEditorState): Promise<Document> => {
     const [document] = await db
         .insert(documents)
         .values({
             workspaceId,
-            content: content as any,
+            content: content,
         })
         .onConflictDoUpdate({
             target: documents.workspaceId,
             set: {
-                content: content as any,
+                content: content,
             },
         })
         .returning();
@@ -51,30 +51,46 @@ export const getDocumentsForWorkspace = async (workspaceId: string): Promise<Doc
 };
 
 export const createDocument = async (workspaceId: string): Promise<Document> => {
-    const initialContent: EditorJSData = {
-        time: Date.now(),
-        blocks: [
-            {
-                id: "initial-block",
-                type: "paragraph",
-                data: {
-                    text: "Start writing your overview here..."
+    const initialContent = {
+        root: {
+            children: [
+                {
+                    children: [
+                        {
+                            detail: 0,
+                            format: 0,
+                            mode: "normal",
+                            style: "",
+                            text: "Start writing your overview here...",
+                            type: "text",
+                            version: 1
+                        }
+                    ],
+                    direction: "ltr",
+                    format: "",
+                    indent: 0,
+                    type: "paragraph",
+                    version: 1
                 }
-            }
-        ],
-        version: "2.28.0"
-    };
+            ],
+            direction: "ltr",
+            format: "",
+            indent: 0,
+            type: "root",
+            version: 1
+        }
+    } as SerializedEditorState;
 
     const [document] = await db
         .insert(documents)
         .values({
             workspaceId,
-            content: initialContent as any,
+            content: initialContent,
         })
         .onConflictDoUpdate({
             target: documents.workspaceId,
             set: {
-                content: initialContent as any,
+                content: initialContent,
             },
         })
         .returning();

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDocumentById, getDocumentByWorkspaceId, upsertDocument, createDocument, getDocumentsForWorkspace } from "@/lib/queries/documentQueries";
-import { EditorJSData } from "@/types/editor";
+import { SerializedEditorState } from "lexical";
 
 export const useGetDocument = (documentId: string) => {
     return useQuery({
@@ -30,7 +30,7 @@ export const useSaveDocument = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ workspaceId, content }: { workspaceId: string; content: EditorJSData }) => {
+        mutationFn: async ({ workspaceId, content }: { workspaceId: string; content: SerializedEditorState }) => {
             return await upsertDocument(workspaceId, content);
         },
         onSuccess: (_, variables) => {
