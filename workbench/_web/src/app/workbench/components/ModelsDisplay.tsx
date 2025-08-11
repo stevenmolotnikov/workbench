@@ -15,7 +15,7 @@ export function ModelsDisplay() {
 
     if (isLoading) {
         return (
-            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+            <div className="mb-6 p-4 border rounded bg-gray-50">
                 <h2 className="text-lg font-semibold mb-2">Available Models</h2>
                 <div className="text-sm text-gray-500">Loading models...</div>
             </div>
@@ -24,7 +24,7 @@ export function ModelsDisplay() {
 
     if (error) {
         return (
-            <div className="mb-6 p-4 border rounded-lg bg-destructive/10 border-destructive/20">
+            <div className="mb-6 p-4 border rounded bg-destructive/10 border-destructive/20">
                 <h2 className="text-lg font-semibold mb-2 text-destructive">Available Models</h2>
                 <div className="text-sm text-destructive/80">Error loading models: {error.message}</div>
             </div>
@@ -32,7 +32,7 @@ export function ModelsDisplay() {
     }
 
     return (
-        <div className="mb-6 p-4 border rounded-lg bg-primary/10 border-primary/20">
+        <div className="mb-6 p-4 border rounded bg-primary/10 border-primary/20">
             <h2 className="text-lg font-semibold mb-3 text-primary">Available Models</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

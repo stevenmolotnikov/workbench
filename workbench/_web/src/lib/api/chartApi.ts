@@ -1,8 +1,9 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart, createLensChartPair } from "@/lib/queries/chartQueries";
+import { setChartData, createChart, deleteChart, createLensChartPair, createPatchChartPair } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
+import { PatchingConfig } from "@/types/patching";
 import { NewChart } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { LineGraphData, HeatmapData } from "@/types/charts"
@@ -140,6 +141,26 @@ export const useCreateLensChartPair = () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
             queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
+            // Set active to the new chart id
+            setActiveTab(chart.id);
+        },
+    });
+};
+
+export const useCreatePatchChartPair = () => {
+    const queryClient = useQueryClient();
+    const { setActiveTab } = useWorkspace();
+
+    return useMutation({
+        mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: PatchingConfig }) => {
+            return await createPatchChartPair(workspaceId, defaultConfig);
+        },
+        onSuccess: ({ chart }) => {
+            // Refresh charts and configs
+            queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
             // Set active to the new chart id
             setActiveTab(chart.id);
         },

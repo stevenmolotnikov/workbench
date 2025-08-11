@@ -25,7 +25,7 @@ function ContentComponent({
     }
 
     return (
-        <div className="bg-card border w-full h-full p-4 rounded-lg">
+        <div className="bg-card border w-full h-full p-4 rounded">
             {renderTextWithBackticks(content as string)}
         </div>
     );

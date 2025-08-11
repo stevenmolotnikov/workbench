@@ -204,7 +204,7 @@ export function TutorialsSidebar({ onClose }: TutorialsSidebarProps) {
                             Learn about the interface with interactive tutorials.
                         </p>
                         <div
-                            className="flex flex-row justify-between items-center border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors duration-200"
+                            className="flex flex-row justify-between items-center border rounded p-3 cursor-pointer hover:bg-muted/50 transition-colors duration-200"
                             onClick={handleTourClick}
                         >
                             <div>

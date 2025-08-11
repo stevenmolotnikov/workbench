@@ -34,7 +34,6 @@ export default function Workbench() {
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={annotationsOpen ? 30 : 35} minSize={25}>
                     <ToolTabs />
-                    {/* <PatchingWorkbench /> */}
                     <SimplePatchArea />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />

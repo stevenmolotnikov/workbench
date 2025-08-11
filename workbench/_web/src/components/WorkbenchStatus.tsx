@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/stores/useWorkspace";
 
 export function WorkbenchStatus() {
-    const { data: models = [], isLoading, isError } = useQuery({
+    const { isLoading, isError } = useQuery({
         queryKey: ['models'],
         queryFn: getModels,
         refetchInterval: 120000,

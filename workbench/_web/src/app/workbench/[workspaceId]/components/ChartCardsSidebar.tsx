@@ -4,10 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { getChartsForSidebar, type ToolTypedChart } from "@/lib/queries/chartQueries";
 import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Grid3X3, ChartLine, Plus, Search, ReplaceAll } from "lucide-react";
+import { Grid3X3, ChartLine, Search, ReplaceAll } from "lucide-react";
 import { useWorkspace } from "@/stores/useWorkspace";
-import { useCreateLensChartPair } from "@/lib/api/chartApi";
+import { useCreateLensChartPair, useCreatePatchChartPair } from "@/lib/api/chartApi";
 
 export default function ChartCardsSidebar() {
     const { workspaceId } = useParams();
@@ -18,17 +17,38 @@ export default function ChartCardsSidebar() {
         queryFn: () => getChartsForSidebar(workspaceId as string),
     });
 
-    const { mutate: createPair, isPending: isCreating } = useCreateLensChartPair();
+    const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
+    const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
 
-    const handleCreate = () => {
-        createPair({
-            workspaceId: workspaceId as string,
-            defaultConfig: {
-                prompt: "",
-                model: selectedModel?.name || "",
-                token: { idx: 0, id: 0, text: "", targetIds: [] },
-            },
-        });
+    const handleChartClick = (chart: ToolTypedChart) => {
+        setActiveTab(chart.id);
+    };
+
+    const handleCreate = (toolType: "lens" | "patch") => {
+        if (toolType === "lens") {
+            createLensPair({
+                workspaceId: workspaceId as string,
+                defaultConfig: {
+                    prompt: "",
+                    model: selectedModel?.name || "",
+                    token: { idx: 0, id: 0, text: "", targetIds: [] },
+                },
+            });
+        } else {
+            createPatchPair({
+                workspaceId: workspaceId as string,
+                defaultConfig: {
+                    edits: [],
+                    model: selectedModel?.name || "",
+                    source: "",
+                    destination: "",
+                    submodule: "attn",
+                    correctId: 0,
+                    incorrectId: undefined,
+                    patchTokens: false,
+                },
+            });
+        }
     };
 
     if (!charts) return null;
@@ -67,11 +87,8 @@ export default function ChartCardsSidebar() {
 
     return (
         <div className="flex h-full flex-col overflow-hidden">
-            <div className="h-12 px-3 py-2 border-b flex items-center justify-between">
+            <div className="h-12 px-3 py-2 border-b flex items-center">
                 <span className="text-sm font-medium">Charts</span>
-                <Button size="sm" variant="ghost" onClick={handleCreate} disabled={isCreating}>
-                    <Plus className="h-4 w-4 mr-1" /> New
-                </Button>
             </div>
             <div className="p-2 space-y-2 overflow-auto">
                 {isLoading && (
@@ -86,8 +103,8 @@ export default function ChartCardsSidebar() {
                     return (
                         <Card
                             key={chart.id}
-                            className={`p-3 cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-muted/50"}`}
-                            onClick={() => setActiveTab(chart.id)}
+                            className={`p-3 cursor-pointer rounded transition-all ${isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                            onClick={() => handleChartClick(chart)}
                         >
                             <div className="flex items-start gap-2">
                                 <div className="mt-1">
@@ -114,6 +131,22 @@ export default function ChartCardsSidebar() {
                         </Card>
                     );
                 })}
+                <div className="flex flex-row gap-2">
+                <button 
+                    className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                    onClick={() => handleCreate("patch")}
+                    disabled={isCreatingPatch}
+                >
+                    <span>+ Patch</span>
+                </button>
+                <button 
+                    className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                    onClick={() => handleCreate("lens")}
+                    disabled={isCreatingLens}
+                >
+                    <span>+ Lens</span>
+                </button>
+                </div>
             </div>
         </div>
     );

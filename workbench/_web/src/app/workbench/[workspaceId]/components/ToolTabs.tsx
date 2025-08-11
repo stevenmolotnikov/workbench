@@ -33,7 +33,7 @@ export function ToolTabs() {
         <div className="flex items-center justify-between border-b h-12 px-2 py-2">
             <div key={activeTool?.name} className="relative group">
                 <button
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-md transition-colors group-hover:bg-muted/50 bg-muted text-foreground"
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors group-hover:bg-muted/50 bg-muted text-foreground"
                 >
                     {activeTool?.icon}
                     {activeTool?.name}

@@ -44,10 +44,10 @@ const SimplePatchContent = () => {
                 ) : (
                     <ConnectionsProvider>
                         <div className="flex flex-col gap-2">
-                            <div className="border rounded-md py-1 px-3 h-48">
+                            <div className="border rounded py-1 px-3 h-48">
                                 <TokenArea side="source" />
                             </div>
-                            <div className="border rounded-md py-1 px-3 h-48">
+                            <div className="border rounded py-1 px-3 h-48">
                                 <TokenArea side="destination" />
                             </div>
                         </div>

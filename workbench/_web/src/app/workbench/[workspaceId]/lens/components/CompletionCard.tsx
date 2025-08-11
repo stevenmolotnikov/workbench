@@ -160,7 +160,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                     <div
                         className={cn(
                             "flex w-full h-24 px-3 py-2 border overflow-y-auto",
-                            showTokenArea ? "rounded-t-lg" : "rounded-lg"
+                            showTokenArea ? "rounded-t-lg" : "rounded"
                         )}
                     >
                         <TokenArea

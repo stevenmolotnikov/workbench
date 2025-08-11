@@ -2,8 +2,9 @@
 
 import { ChartData } from "@/types/charts";
 import { db } from "@/db/client";
-import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, annotations } from "@/db/schema";
+import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
+import { PatchingConfig } from "@/types/patching";
 import { eq, and, asc, notExists, or, desc, sql } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
@@ -74,6 +75,26 @@ export const createLensChartPair = async (
     });
     
     return { chart: newChart as Chart, config: newConfig as LensConfig };
+};
+
+// Create a new patch chart and config pair
+export const createPatchChartPair = async (
+    workspaceId: string,
+    defaultConfig: PatchingConfig
+): Promise<{ chart: Chart; config: Config }> => {
+    const [newChart] = await db.insert(charts).values({ workspaceId }).returning();
+    const [newConfig] = await db
+        .insert(configs)
+        .values({ workspaceId, type: "patch", data: defaultConfig })
+        .returning();
+    
+    // Create the link between chart and config
+    await db.insert(chartConfigLinks).values({
+        chartId: newChart.id,
+        configId: newConfig.id,
+    });
+    
+    return { chart: newChart as Chart, config: newConfig as Config };
 };
 
 export const getAllChartsByType = async (workspaceId?: string): Promise<Record<string, Chart[]>> => {

@@ -708,7 +708,7 @@ export default function LensTransformer({
     }, [highlightedComponents, theme, showFlowOnHover, rowMode, dimensions]);
 
     return (
-        <div className="flex items-cener justify-center rounded-lg relative">
+        <div className="flex items-cener justify-center rounded relative">
             {/* Embed component - fixed width */}
             <div className="flex-shrink-0">
                 <EmbedComponent
