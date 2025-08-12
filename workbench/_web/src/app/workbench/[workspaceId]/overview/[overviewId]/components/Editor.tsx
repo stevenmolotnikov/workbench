@@ -23,8 +23,8 @@ import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
-import { FileText, Save } from 'lucide-react';
 import { DragDropChartPlugin } from './plugins/DragDropChartPlugin';
+import { FileText, Save } from 'lucide-react';
 
 const theme = {
     ltr: 'ltr',
@@ -146,21 +146,29 @@ export function Editor() {
                     {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
                 </Button>
             </div>
+
             <LexicalComposer initialConfig={initialConfig}>
-                <div className="flex-1 overflow-auto relative p-4">
-                    <RichTextPlugin
-                        contentEditable={
-                            <ContentEditable className="outline-none min-h-[400px]" />
-                        }
-                        placeholder={<Placeholder />}
-                        ErrorBoundary={LexicalErrorBoundary}
-                    />
-                    <OnChangePlugin onChange={onChange} />
-                    <HistoryPlugin />
-                    <ListPlugin />
-                    <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-                    <AutoFocusPlugin />
-                    <SlashCommandPlugin />
+                <div className="flex flex-col flex-1 min-h-0">
+                    {/* Toolbar removed; rely on Markdown shortcuts */}
+                    <div className="flex-1 overflow-auto">
+                        <div className="relative max-w-4xl mx-auto p-4">
+                            <RichTextPlugin
+                                contentEditable={
+                                    <ContentEditable className="outline-none min-h-[400px]" />
+                                }
+                                placeholder={<Placeholder />}
+                                ErrorBoundary={LexicalErrorBoundary}
+                            />
+                            <OnChangePlugin onChange={onChange} />
+                            <HistoryPlugin />
+                            <ListPlugin />
+                            {/* <LinkPlugin /> */}
+                            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+                            <AutoFocusPlugin />
+                            <SlashCommandPlugin />
+                            <DragDropChartPlugin />
+                        </div>
+                    </div>
                 </div>
             </LexicalComposer>
         </div>
