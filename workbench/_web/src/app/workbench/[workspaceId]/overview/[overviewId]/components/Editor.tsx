@@ -24,6 +24,7 @@ import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
 import { FileText, Save } from 'lucide-react';
+import { DragDropChartPlugin } from './plugins/DragDropChartPlugin';
 
 const theme = {
     ltr: 'ltr',
