@@ -39,6 +39,13 @@ export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 export type Annotation = typeof annotations.$inferSelect;
 export type NewAnnotation = typeof annotations.$inferInsert;
 
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+
+export type HeatmapChart = Omit<Chart, 'data'> & {
+    data: HeatmapData;
+};
+
 // Specific chart config types
 export type LensConfig = Omit<Config, 'data'> & {
     data: LensConfigData;

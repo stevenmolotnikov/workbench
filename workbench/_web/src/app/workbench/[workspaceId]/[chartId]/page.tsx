@@ -21,15 +21,11 @@ import { getConfigForChart } from "@/lib/queries/chartQueries";
 import { ToolTabs } from "../components/ToolTabs";
 
 export default function ChartPage() {
-    const { annotationsOpen, setActiveTab } = useWorkspace();
+    const { annotationsOpen } = useWorkspace();
     const { chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     // Ensure a selected model exists
     useModels();
-
-    useEffect(() => {
-        if (chartId) setActiveTab(chartId);
-    }, [chartId, setActiveTab]);
 
     const { data: config } = useQuery({
         queryKey: ["chartConfig", chartId],
@@ -45,11 +41,11 @@ export default function ChartPage() {
                 direction="horizontal"
                 className="flex flex-1 min-h-0 h-full"
             >
-                <ResizablePanel className="h-full" defaultSize={20} minSize={15}>
+                <ResizablePanel className="h-full" defaultSize={10} minSize={15}>
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={annotationsOpen ? 30 : 35} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={35} minSize={25}>
                     <ToolTabs />
                     {isLens ? <InteractiveDisplay /> : <SimplePatchArea />}
                 </ResizablePanel>
@@ -60,7 +56,7 @@ export default function ChartPage() {
                 {annotationsOpen && (
                     <>
                         <ResizableHandle className="w-[0.8px]" />
-                        <ResizablePanel defaultSize={10} minSize={15}>
+                        <ResizablePanel defaultSize={15} minSize={15}>
                             <AnnotationsDisplay />
                         </ResizablePanel>
                     </>

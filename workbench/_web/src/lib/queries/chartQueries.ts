@@ -1,6 +1,6 @@
 "use server";
 
-import { ChartData } from "@/types/charts";
+import type { ChartData, ToolTypedChart, BasicChart, BasicChartWithTool } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
@@ -9,6 +9,10 @@ import { eq, and, asc, desc, sql } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
+};
+
+export const updateChartName = async (chartId: string, name: string) => {
+    await db.update(charts).set({ name }).where(eq(charts.id, chartId));
 };
 
 export const getChartData = async (chartId: string): Promise<ChartData> => {
@@ -132,15 +136,22 @@ export const getAllChartsByType = async (workspaceId?: string): Promise<Record<s
     return chartsByType;
 };
 
-// Minimal chart info for sidebar cards with config type and annotation count
-export type ToolTypedChart = {
-    id: string;
-    chartType: "line" | "heatmap" | null;
-    toolType: "lens" | "patch" | null;
-    createdAt: Date;
-    annotationCount: number;
+// Save or update a chart thumbnail url
+export const upsertChartThumbnail = async (chartId: string, url: string) => {
+    await db.update(charts).set({ thumbnailUrl: url }).where(eq(charts.id, chartId));
+    return { chartId, url };
 };
 
+export const getChartThumbnail = async (chartId: string): Promise<string | null> => {
+    const rows = await db
+        .select({ thumbnailUrl: charts.thumbnailUrl })
+        .from(charts)
+        .where(eq(charts.id, chartId))
+        .limit(1);
+    return rows.length > 0 ? ((rows[0].thumbnailUrl ?? null) as string | null) : null;
+};
+
+// Minimal chart info for sidebar cards with config type and annotation count
 export const getChartsForSidebar = async (workspaceId: string): Promise<ToolTypedChart[]> => {
     const rows = await db
         .select({
@@ -149,6 +160,7 @@ export const getChartsForSidebar = async (workspaceId: string): Promise<ToolType
             createdAt: charts.createdAt,
             toolType: configs.type,
             annotationCount: sql<number>`count(${annotations.id})`,
+            thumbnailUrl: charts.thumbnailUrl,
         })
         .from(charts)
         .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
@@ -164,5 +176,49 @@ export const getChartsForSidebar = async (workspaceId: string): Promise<ToolType
         toolType: (r.toolType as "lens" | "patch" | null) ?? null,
         createdAt: r.createdAt as Date,
         annotationCount: Number(r.annotationCount ?? 0),
-    }));
+        thumbnailUrl: (r.thumbnailUrl ?? null) as string | null,
+    } as ToolTypedChart));
+};
+
+export const getChartsBasic = async (workspaceId: string): Promise<BasicChart[]> => {
+    const rows = await db
+        .select({
+            id: charts.id,
+            name: charts.name,
+            type: charts.type,
+        })
+        .from(charts)
+        .where(eq(charts.workspaceId, workspaceId));
+
+    return rows.map((r) => ({ id: r.id, name: (r.name ?? null) as string | null, type: (r.type as "line" | "heatmap" | null) }));
+};
+
+export const getChartsBasicWithToolType = async (workspaceId: string): Promise<BasicChartWithTool[]> => {
+    const rows = await db
+        .select({
+            id: charts.id,
+            name: charts.name,
+            chartType: charts.type,
+            toolType: configs.type,
+        })
+        .from(charts)
+        .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
+        .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
+        .where(eq(charts.workspaceId, workspaceId))
+        .orderBy(desc(charts.createdAt));
+
+    // If a chart is linked to multiple configs, prefer the most recent join row as ordered above
+    const seen = new Set<string>();
+    const results: BasicChartWithTool[] = [];
+    for (const r of rows) {
+        if (seen.has(r.id)) continue;
+        seen.add(r.id);
+        results.push({
+            id: r.id,
+            name: (r.name ?? null) as string | null,
+            chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
+            toolType: (r.toolType as "lens" | "patch" | null) ?? null,
+        });
+    }
+    return results;
 };

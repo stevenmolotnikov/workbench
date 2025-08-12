@@ -38,3 +38,29 @@ export interface LineGraphData {
 
 export type ChartData = LineGraphData | HeatmapData;
 export type ConfigData = LensConfigData | PatchingConfig;
+
+// Shared chart/type metadata used across UI and queries
+export type ChartType = "line" | "heatmap";
+export type ToolType = "lens" | "patch";
+
+export type BasicChart = {
+    id: string;
+    name: string | null;
+    type: ChartType | null;
+};
+
+export type BasicChartWithTool = {
+    id: string;
+    name: string | null;
+    chartType: ChartType | null;
+    toolType: ToolType | null;
+};
+
+export type ToolTypedChart = {
+    id: string;
+    chartType: ChartType | null;
+    toolType: ToolType | null;
+    createdAt: Date;
+    annotationCount: number;
+    thumbnailUrl?: string | null;
+};

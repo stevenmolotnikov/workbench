@@ -1,24 +1,21 @@
-import { useWorkspace } from "@/stores/useWorkspace";
 import { useParams } from "next/navigation";
 import { LensConfigData } from "@/types/lens";
 import { useLensGrid, useLensLine } from "@/lib/api/chartApi";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 
 export const useLensCharts = ({config, configId}: {config: LensConfigData, configId: string}) => {
-    const { activeTab } = useWorkspace();
-    const { workspaceId } = useParams();
+
+    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
 
     const { mutateAsync: createHeatmap } = useLensGrid();
     const { mutateAsync: updateChartConfig } = useUpdateChartConfig();
     const { mutateAsync: createLineChart } = useLensLine();
 
     const handleCreateHeatmap = async () => {
-        if (!activeTab) return;
-
         const data = await createHeatmap({
             lensRequest: {
                 completion: config,
-                chartId: activeTab,
+                chartId: chartId,
             },
             configId: configId,
         });
@@ -36,12 +33,10 @@ export const useLensCharts = ({config, configId}: {config: LensConfigData, confi
     };
 
     const handleCreateLineChart = async () => {
-        if (!activeTab) return;
-
         const data = await createLineChart({
             lensRequest: {
                 completion: config,
-                chartId: activeTab,
+                chartId: chartId,
             },
             configId: configId,
         });

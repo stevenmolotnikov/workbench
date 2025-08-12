@@ -4,6 +4,9 @@ import { useAnnotations } from "@/stores/useAnnotations";
 import { Button } from "@/components/ui/button";
 import { RangeSelector } from "../RangeSelector";
 import { Search, RotateCcw } from "lucide-react";
+import { useUpdateChartName } from "@/lib/api/chartApi";
+import { useWorkspace } from "@/stores/useWorkspace";
+import { HeatmapChart } from "@/db/schema";
 
 
 type Range = [number, number];
@@ -59,11 +62,14 @@ export const useHeatmapControls = () => {
 };
 
 interface HeatmapControlsProviderProps {
-    data: HeatmapData;
+    chart: HeatmapChart;
     children: ReactNode;
 }
 
-export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = ({ data, children }) => {
+export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = ({ chart, children }) => {
+
+    const data = chart.data;
+
     // Calculate bounds
     const bounds = useMemo(() => {
         const xMax = data.rows.length && data.rows[0].data.length ? data.rows[0].data.length - 1 : 100;
@@ -203,8 +209,15 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
         setXStepInput(1);
     };
 
-    const [title, setTitle] = useState("");
+    const [title, setTitle] = useState(chart.name);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
+
+    const { mutate: updateChartName } = useUpdateChartName();
+
+    const handleTitleInputUnfocus = () => {
+        setIsEditingTitle(false);
+        updateChartName({ chartId: chart.id, name: title });
+    };
 
 
     const contextValue: HeatmapControlsContextValue = {
@@ -236,7 +249,7 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        onBlur={() => setIsEditingTitle(false)}
+                        onBlur={handleTitleInputUnfocus}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 setIsEditingTitle(false);
