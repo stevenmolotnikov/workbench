@@ -4,6 +4,7 @@ import {
     configs as sqliteConfigs,
     chartConfigLinks as sqliteChartConfigLinks,
     annotations as sqliteAnnotations,
+    documents as sqliteDocuments,
 } from './schema.sqlite';
 import {
     workspaces as pgWorkspaces,
@@ -11,8 +12,10 @@ import {
     configs as pgConfigs,
     chartConfigLinks as pgChartConfigLinks,
     annotations as pgAnnotations,
+    documents as pgDocuments,
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
+import type { HeatmapData } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
@@ -22,6 +25,7 @@ export const charts = isLocal ? sqliteCharts : pgCharts;
 export const configs = isLocal ? sqliteConfigs : pgConfigs;
 export const chartConfigLinks = isLocal ? sqliteChartConfigLinks : pgChartConfigLinks;
 export const annotations = isLocal ? sqliteAnnotations : pgAnnotations;
+export const documents = isLocal ? sqliteDocuments : pgDocuments;
 
 // Generate types from schema
 export type Workspace = typeof workspaces.$inferSelect;

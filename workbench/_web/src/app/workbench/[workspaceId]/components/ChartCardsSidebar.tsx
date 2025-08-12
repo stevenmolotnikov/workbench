@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getChartsForSidebar, type ToolTypedChart } from "@/lib/queries/chartQueries";
+import { getChartsForSidebar } from "@/lib/queries/chartQueries";
+import { ToolTypedChart } from "@/types/charts";
 import { useParams, useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2, FileText } from "lucide-react";

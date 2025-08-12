@@ -19,7 +19,9 @@ export const charts = pgTable("charts", {
     id: uuid("id").primaryKey().defaultRandom(),
     workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
 
+    name: varchar("name", { length: 256 }).notNull().default("Untitled Chart"),
     data: jsonb("data").$type<ChartData>(),
+    thumbnailUrl: varchar("thumbnail_url", { length: 2048 }),
     type: varchar("type", { enum: chartTypes, length: 32 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -55,6 +57,14 @@ export const annotations = pgTable("annotations", {
 
     data: jsonb("data").$type<AnnotationData>().notNull(),
     type: varchar("type", { enum: annotationTypes, length: 32 }).notNull(),
+});
+
+export const documents = pgTable("documents", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull().unique(),
+    
+    content: jsonb("content").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 // Generate types from schema

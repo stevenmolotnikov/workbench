@@ -25,7 +25,10 @@ export const chartTypes = [
 export const charts = sqliteTable("charts", {
     id: text("id").primaryKey().$defaultFn(generateUUID),
     workspaceId: text("workspace_id").notNull(),
+
+    name: text("name").notNull().default("Untitled Chart"),
     data: text("data", { mode: 'json' }), // JSON stored as text in SQLite
+    thumbnailUrl: text("thumbnail_url"),
     type: text("type"),
     createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
 });
@@ -59,6 +62,13 @@ export const annotations = sqliteTable("annotations", {
     chartId: text("chart_id").notNull(),
     data: text("data", { mode: 'json' }).notNull(), // JSON stored as text in SQLite
     type: text("type").notNull(),
+});
+
+export const documents = sqliteTable("documents", {
+    id: text("id").primaryKey().$defaultFn(generateUUID),
+    workspaceId: text("workspace_id").notNull(),
+    content: text("content", { mode: 'json' }).notNull(), // JSON stored as text in SQLite
+    createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
 });
 
 // Generate types from schema
