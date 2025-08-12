@@ -8,7 +8,6 @@ import {
 
 import ChartCardsSidebar from "../../components/ChartCardsSidebar";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
-import { ToolTabs } from "../../components/ToolTabs";
 import { Editor } from "./components/Editor";
 
 export default function OverviewPage() {

@@ -28,13 +28,7 @@ export function SlashCommandPlugin() {
   });
 
   const [queryString, setQueryString] = useState<string | null>(null);
-  const menuRectRef = useRef<{ top: number; left: number; height: number } | null>(null);
-  const prevQueryStringRef = useRef<string | null>(null);
-  const menuContainerRef = useRef<HTMLDivElement | null>(null);
-
-  const resetMenuPosition = () => {
-    menuRectRef.current = null;
-  };
+  
 
   const options = useMemo(() => {
     if (queryString === null) return [] as ChartOption[];
@@ -45,41 +39,18 @@ export function SlashCommandPlugin() {
       .map((c) => new ChartOption(c));
   }, [charts, queryString]);
 
-  // Clear/freeze lifecycle: reset cache only when menu opens or closes, not on every keystroke
-  useEffect(() => {
-    const prev = prevQueryStringRef.current;
-    // Menu just opened
-    if (prev === null && queryString !== null) {
-      resetMenuPosition();
-    }
-    // Menu just closed
-    if (prev !== null && queryString === null) {
-      resetMenuPosition();
-    }
-    prevQueryStringRef.current = queryString;
-  }, [queryString]);
+  // Stable rect while menu is open to avoid reflow/reposition on interactions
+  const menuRectRef = useRef<{ top: number; left: number; height: number } | null>(null);
 
-  // Clear cache when user explicitly closes via Escape or clicks outside
+  // Close the portal on document resize to avoid stale positioning
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && menuContainerRef.current) {
-        resetMenuPosition();
-      }
+    function handleResize() {
+      setQueryString(null);
+      menuRectRef.current = null;
     }
-    function handleMouseDown(e: MouseEvent) {
-      const container = menuContainerRef.current;
-      if (!container) return;
-      if (e.target instanceof Node && container.contains(e.target)) {
-        return;
-      }
-      // Clicked outside of the menu
-      resetMenuPosition();
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -109,11 +80,12 @@ export function SlashCommandPlugin() {
       onQueryChange={setQueryString}
       triggerFn={triggerFn}
       options={options}
+      onClose={() => {
+        menuRectRef.current = null;
+      }}
       onSelectOption={(option, _nodeToReplace, closeMenu) => {
         if (!(option instanceof ChartOption)) return;
         closeMenu();
-        // Clear cached position when menu closes
-        resetMenuPosition();
         editor.update(() => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
@@ -130,44 +102,27 @@ export function SlashCommandPlugin() {
         });
       }}
       menuRenderFn={(anchorElementRef, { selectedIndex, selectOptionAndCleanUp, setHighlightedIndex }) => {
-        // If menu is not open or there are no options, clear cache and don't render
+        // If menu is not open or there are no options, don't render
         if (!anchorElementRef.current || options.length === 0) {
-          resetMenuPosition();
+          menuRectRef.current = null;
           return null;
         }
         
-        // Get fresh position from anchor
+        // Compute position directly from the current caret rect once per open
         const rect = anchorElementRef.current.getBoundingClientRect();
-
-        // If we have a cached rect but the caret jumped significantly, treat as a new session and reset cache
-        const cached = menuRectRef.current;
-        if (
-          cached &&
-          (Math.abs(rect.top - cached.top) > Math.max(12, cached.height) || Math.abs(rect.left - cached.left) > 24)
-        ) {
-          resetMenuPosition();
-        }
-        
-        // Only cache valid positions (not 0,0)
         if (!menuRectRef.current && rect.top > 0 && rect.left >= 0) {
           menuRectRef.current = { top: rect.top, left: rect.left, height: rect.height };
         }
-        
-        // Use cached position if available and valid, otherwise use current
-        const stableRect = (menuRectRef.current && menuRectRef.current.top > 0) ? menuRectRef.current : rect;
-        
-        // If still invalid position, don't render
+        const stableRect = menuRectRef.current ?? rect;
         if (stableRect.top === 0 && stableRect.left === 0) {
           return null;
         }
-        
         const menuTop = stableRect.top + stableRect.height + 4;
         const menuLeft = stableRect.left;
         return ReactDOM.createPortal(
           <div
             className="z-50 bg-popover text-popover-foreground border rounded-md shadow-md p-1 max-h-60 overflow-auto min-w-[260px]"
             style={{ position: "fixed", top: menuTop, left: menuLeft }}
-            ref={menuContainerRef}
             onMouseDown={(e) => e.preventDefault()}
           >
             {options.map((opt, i) => {

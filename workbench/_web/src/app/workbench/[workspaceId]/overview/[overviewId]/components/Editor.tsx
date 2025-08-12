@@ -144,27 +144,22 @@ export function Editor() {
                     <Save className="h-4 w-4" />
                     {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
                 </Button>
-
             </div>
             <LexicalComposer initialConfig={initialConfig}>
-                <div className="flex flex-col flex-1 min-h-0">
-                    <div className="flex-1 overflow-auto">
-                        <div className="relative max-w-4xl mx-auto p-4">
-                            <RichTextPlugin
-                                contentEditable={
-                                    <ContentEditable className="outline-none min-h-[400px]" />
-                                }
-                                placeholder={<Placeholder />}
-                                ErrorBoundary={LexicalErrorBoundary}
-                            />
-                            <OnChangePlugin onChange={onChange} />
-                            <HistoryPlugin />
-                            <ListPlugin />
-                            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-                            <AutoFocusPlugin />
-                            <SlashCommandPlugin />
-                        </div>
-                    </div>
+                <div className="flex-1 overflow-auto relative p-4">
+                    <RichTextPlugin
+                        contentEditable={
+                            <ContentEditable className="outline-none min-h-[400px]" />
+                        }
+                        placeholder={<Placeholder />}
+                        ErrorBoundary={LexicalErrorBoundary}
+                    />
+                    <OnChangePlugin onChange={onChange} />
+                    <HistoryPlugin />
+                    <ListPlugin />
+                    <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+                    <AutoFocusPlugin />
+                    <SlashCommandPlugin />
                 </div>
             </LexicalComposer>
         </div>
