@@ -2,10 +2,10 @@
 
 import type { ChartData, ToolTypedChart, BasicChart, BasicChartWithTool } from "@/types/charts";
 import { db } from "@/db/client";
-import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, Config, annotations } from "@/db/schema";
+import { charts, configs, chartConfigLinks, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
-import { eq, and, asc, desc, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
@@ -15,41 +15,9 @@ export const updateChartName = async (chartId: string, name: string) => {
     await db.update(charts).set({ name }).where(eq(charts.id, chartId));
 };
 
-export const getChartData = async (chartId: string): Promise<ChartData> => {
-    const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
-    return chart?.data as ChartData;
-};
-
-// Fetch a single chart by id including its type and data
 export const getChartById = async (chartId: string): Promise<Chart | null> => {
     const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
     return (chart ?? null) as Chart | null;
-};
-
-export const getLensCharts = async (workspaceId: string): Promise<Chart[]> => {
-    const chartsData = await db
-        .select()
-        .from(charts)
-        .innerJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
-        .innerJoin(configs, eq(chartConfigLinks.configId, configs.id))
-        .where(and(eq(charts.workspaceId, workspaceId), eq(configs.type, "lens")));
-
-    return chartsData.map(({ charts }) => charts);
-};
-
-export const getLensConfigs = async (workspaceId: string): Promise<LensConfig[]> => {
-    const configsData = await db
-        .select()
-        .from(configs)
-        .where(and(eq(configs.workspaceId, workspaceId), eq(configs.type, "lens")))
-        .orderBy(asc(configs.createdAt));
-
-    return configsData as LensConfig[];
-};
-
-export const createChart = async (chart: NewChart): Promise<Chart> => {
-    const [createdChart] = await db.insert(charts).values(chart).returning();
-    return createdChart;
 };
 
 export const deleteChart = async (chartId: string): Promise<void> => {
@@ -221,4 +189,15 @@ export const getChartsBasicWithToolType = async (workspaceId: string): Promise<B
         });
     }
     return results;
+};
+
+export const getMostRecentChartForWorkspace = async (workspaceId: string): Promise<Chart | null> => {
+    const [chart] = await db
+        .select()
+        .from(charts)
+        .where(eq(charts.workspaceId, workspaceId))
+        .orderBy(desc(charts.createdAt))
+        .limit(1);
+    
+    return (chart ?? null) as Chart | null;
 };

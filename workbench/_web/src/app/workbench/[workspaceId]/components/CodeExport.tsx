@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 
@@ -27,8 +26,6 @@ type Props = {
   chartId?: string;
   chartType?: "line" | "heatmap" | null;
 };
-
-// Generators moved to a separate file for maintainability
 
 export function CodeExport({ chartId, chartType }: Props) {
   const params = useParams<{ chartId?: string }>();

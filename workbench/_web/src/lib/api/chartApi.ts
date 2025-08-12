@@ -1,10 +1,9 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, createChart, deleteChart, createLensChartPair, createPatchChartPair, updateChartName } from "@/lib/queries/chartQueries";
+import { setChartData, deleteChart, createLensChartPair, createPatchChartPair, updateChartName } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
-import { NewChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { LineGraphData, HeatmapData } from "@/types/charts"
 

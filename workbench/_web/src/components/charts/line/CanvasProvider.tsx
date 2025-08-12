@@ -83,7 +83,6 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
                 className="absolute inset-0 size-full pointer-events-none z-10"
             />
             <CanvasContext.Provider value={contextValue}>
-
                 {children}
             </CanvasContext.Provider>
         </div>

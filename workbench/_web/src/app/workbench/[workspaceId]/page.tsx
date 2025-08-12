@@ -1,15 +1,21 @@
+"use client";
+
 import { redirect } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceById } from "@/lib/queries/workspaceQueries";
 import { useParams } from "next/navigation";
+import { getMostRecentChartForWorkspace } from "@/lib/queries/chartQueries";
 
-// export default function Page() {
-//     const { workspaceId } = useParams();
-//     const { data: workspace } = useQuery({ queryKey: ["workspace", workspaceId], queryFn: () => getWorkspaceById(workspaceId as string) });
+export default function Page() {
+    const { workspaceId } = useParams();
+    const { data: chart, isLoading } = useQuery({ queryKey: ["chart", workspaceId], queryFn: () => getMostRecentChartForWorkspace(workspaceId as string) });
 
-//     if (process.env.NEXT_PUBLIC_LOCAL === "true") {
-//         redirect("/workbench");
-//     } else {
-//         redirect("/login");
-//     }
-// }
+    if (chart) {
+        redirect(`/workbench/${workspaceId}/${chart.id}`);
+    }
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
+
+    return <div>No chart found</div>;
+}
