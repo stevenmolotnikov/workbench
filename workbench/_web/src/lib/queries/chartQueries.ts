@@ -1,6 +1,6 @@
 "use server";
 
-import type { ChartData, ToolTypedChart, BasicChart, BasicChartWithTool } from "@/types/charts";
+import type { ChartData, ChartMetadata } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
@@ -119,76 +119,31 @@ export const getChartThumbnail = async (chartId: string): Promise<string | null>
     return rows.length > 0 ? ((rows[0].thumbnailUrl ?? null) as string | null) : null;
 };
 
-// Minimal chart info for sidebar cards with config type and annotation count
-export const getChartsForSidebar = async (workspaceId: string): Promise<ToolTypedChart[]> => {
+export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetadata[]> => {
     const rows = await db
         .select({
             id: charts.id,
+            name: charts.name,
             chartType: charts.type,
             createdAt: charts.createdAt,
             toolType: configs.type,
-            annotationCount: sql<number>`count(${annotations.id})`,
             thumbnailUrl: charts.thumbnailUrl,
         })
         .from(charts)
         .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
         .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
-        .leftJoin(annotations, eq(annotations.chartId, charts.id))
         .where(eq(charts.workspaceId, workspaceId))
         .groupBy(charts.id, charts.createdAt, charts.type, configs.type)
         .orderBy(desc(charts.createdAt));
 
     return rows.map((r) => ({
         id: r.id,
+        name: r.name,
         chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
         toolType: (r.toolType as "lens" | "patch" | null) ?? null,
         createdAt: r.createdAt as Date,
-        annotationCount: Number(r.annotationCount ?? 0),
         thumbnailUrl: (r.thumbnailUrl ?? null) as string | null,
-    } as ToolTypedChart));
-};
-
-export const getChartsBasic = async (workspaceId: string): Promise<BasicChart[]> => {
-    const rows = await db
-        .select({
-            id: charts.id,
-            name: charts.name,
-            type: charts.type,
-        })
-        .from(charts)
-        .where(eq(charts.workspaceId, workspaceId));
-
-    return rows.map((r) => ({ id: r.id, name: (r.name ?? null) as string | null, type: (r.type as "line" | "heatmap" | null) }));
-};
-
-export const getChartsBasicWithToolType = async (workspaceId: string): Promise<BasicChartWithTool[]> => {
-    const rows = await db
-        .select({
-            id: charts.id,
-            name: charts.name,
-            chartType: charts.type,
-            toolType: configs.type,
-        })
-        .from(charts)
-        .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
-        .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
-        .where(eq(charts.workspaceId, workspaceId))
-        .orderBy(desc(charts.createdAt));
-
-    // If a chart is linked to multiple configs, prefer the most recent join row as ordered above
-    const seen = new Set<string>();
-    const results: BasicChartWithTool[] = [];
-    for (const r of rows) {
-        if (seen.has(r.id)) continue;
-        seen.add(r.id);
-        results.push({
-            id: r.id,
-            name: (r.name ?? null) as string | null,
-            chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
-            toolType: (r.toolType as "lens" | "patch" | null) ?? null,
-        });
-    }
-    return results;
+    } as ChartMetadata));
 };
 
 export const getMostRecentChartForWorkspace = async (workspaceId: string): Promise<Chart | null> => {

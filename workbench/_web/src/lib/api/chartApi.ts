@@ -1,11 +1,17 @@
 import config from "@/lib/config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { setChartData, deleteChart, createLensChartPair, createPatchChartPair, updateChartName } from "@/lib/queries/chartQueries";
+import {
+    setChartData,
+    deleteChart,
+    createLensChartPair,
+    createPatchChartPair,
+    updateChartName,
+} from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
 import { useCapture } from "@/components/providers/CaptureProvider";
-import { LineGraphData, HeatmapData } from "@/types/charts"
+import { LineGraphData, HeatmapData } from "@/types/charts";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
@@ -16,29 +22,37 @@ const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: s
         });
 
         if (!response.ok) throw new Error("Failed to start lens computation");
-        const {job_id: jobId} = await response.json();
-        const result = await sseService.listenToSSE<LineGraphData>(config.endpoints.listenLensLine + `/${jobId}`);
+        const { job_id: jobId } = await response.json();
+        const result = await sseService.listenToSSE<LineGraphData>(
+            config.endpoints.listenLensLine + `/${jobId}`
+        );
         return { data: result };
     } catch (error) {
         console.error("Error fetching logit lens data:", error);
         throw error;
     }
-}
+};
 
 export const useLensLine = () => {
     const queryClient = useQueryClient();
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
-        mutationFn: async ({lensRequest, configId}: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
+        mutationFn: async ({
+            lensRequest,
+            configId,
+        }: {
+            lensRequest: { completion: LensConfigData; chartId: string };
+            configId: string;
+        }) => {
             const response = await getLensLine(lensRequest);
             await setChartData(lensRequest.chartId, response.data, "line");
             return response.data;
         },
         onSuccess: (data, variables) => {
             // Invalidate queries to refresh the UI with updated data
-            queryClient.invalidateQueries({ 
-                queryKey: ["lensCharts"] 
+            queryClient.invalidateQueries({
+                queryKey: ["lensCharts"],
             });
             // Ensure the single-chart view refreshes as well
             if (variables?.lensRequest?.chartId) {
@@ -48,11 +62,11 @@ export const useLensLine = () => {
                 // trigger thumbnail capture via provider
                 void captureChartThumbnail(variables.lensRequest.chartId);
             }
-            queryClient.invalidateQueries({ 
-                queryKey: ["unlinkedCharts"] 
+            queryClient.invalidateQueries({
+                queryKey: ["unlinkedCharts"],
             });
-            queryClient.invalidateQueries({ 
-                queryKey: ["hasLinkedConfig"] 
+            queryClient.invalidateQueries({
+                queryKey: ["hasLinkedConfig"],
             });
         },
         onError: (error, variables) => {
@@ -61,7 +75,7 @@ export const useLensLine = () => {
     });
 };
 
-const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {    
+const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
         const response = await fetch(config.getApiUrl(config.endpoints.getLensGrid), {
             method: "POST",
@@ -70,30 +84,37 @@ const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: s
         });
 
         if (!response.ok) throw new Error("Failed to start grid lens computation");
-        const {job_id: jobId} = await response.json();
-        const result = await sseService.listenToSSE<HeatmapData>(config.endpoints.listenLensGrid + `/${jobId}`);
+        const { job_id: jobId } = await response.json();
+        const result = await sseService.listenToSSE<HeatmapData>(
+            config.endpoints.listenLensGrid + `/${jobId}`
+        );
         return { data: result };
     } catch (error) {
         console.error("Error fetching grid lens data:", error);
         throw error;
     }
-}
-
+};
 
 export const useLensGrid = () => {
     const queryClient = useQueryClient();
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
-        mutationFn: async ({ lensRequest, configId }: { lensRequest: {completion: LensConfigData; chartId: string}; configId: string }) => {
+        mutationFn: async ({
+            lensRequest,
+            configId,
+        }: {
+            lensRequest: { completion: LensConfigData; chartId: string };
+            configId: string;
+        }) => {
             const response = await getLensGrid(lensRequest);
             await setChartData(lensRequest.chartId, response.data, "heatmap");
             return response.data;
         },
         onSuccess: (data, variables) => {
             // Invalidate queries to refresh the UI with updated data
-            queryClient.invalidateQueries({ 
-                queryKey: ["lensCharts"] 
+            queryClient.invalidateQueries({
+                queryKey: ["lensCharts"],
             });
             // Ensure the single-chart view refreshes as well
             if (variables?.lensRequest?.chartId) {
@@ -103,18 +124,18 @@ export const useLensGrid = () => {
                 // trigger thumbnail capture via provider
                 void captureChartThumbnail(variables.lensRequest.chartId);
             }
-            queryClient.invalidateQueries({ 
-                queryKey: ["unlinkedCharts"] 
+            queryClient.invalidateQueries({
+                queryKey: ["unlinkedCharts"],
             });
-            queryClient.invalidateQueries({ 
-                queryKey: ["hasLinkedConfig"] 
+            queryClient.invalidateQueries({
+                queryKey: ["hasLinkedConfig"],
             });
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
         },
     });
-}
+};
 
 export const useUpdateChartName = () => {
     const queryClient = useQueryClient();
@@ -146,9 +167,21 @@ export const useDeleteChart = () => {
 export const useCreateLensChartPair = () => {
     const queryClient = useQueryClient();
 
+    const defaultConfig = {
+        prompt: "",
+        model: "",
+        token: { idx: 0, id: 0, text: "", targetIds: [] },
+    } as LensConfigData;
+
     return useMutation({
-        mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: LensConfigData }) => {
-            return await createLensChartPair(workspaceId, defaultConfig);
+        mutationFn: async ({
+            workspaceId,
+            config = defaultConfig,
+        }: {
+            workspaceId: string;
+            config?: LensConfigData;
+        }) => {
+            return await createLensChartPair(workspaceId, config);
         },
         onSuccess: ({ chart }) => {
             // Refresh charts and configs
@@ -163,9 +196,26 @@ export const useCreateLensChartPair = () => {
 export const useCreatePatchChartPair = () => {
     const queryClient = useQueryClient();
 
+    const defaultConfig = {
+        edits: [],
+        model: "",
+        source: "",
+        destination: "",
+        submodule: "attn",
+        correctId: 0,
+        incorrectId: undefined,
+        patchTokens: false,
+    } as PatchingConfig;
+
     return useMutation({
-        mutationFn: async ({ workspaceId, defaultConfig }: { workspaceId: string; defaultConfig: PatchingConfig }) => {
-            return await createPatchChartPair(workspaceId, defaultConfig);
+        mutationFn: async ({
+            workspaceId,
+            config = defaultConfig,
+        }: {
+            workspaceId: string;
+            config?: PatchingConfig;
+        }) => {
+            return await createPatchChartPair(workspaceId, config);
         },
         onSuccess: ({ chart }) => {
             // Refresh charts and configs
