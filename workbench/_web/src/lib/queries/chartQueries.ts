@@ -1,6 +1,6 @@
 "use server";
 
-import { ChartData } from "@/types/charts";
+import type { ChartData, ToolTypedChart, BasicChart, BasicChartWithTool } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
@@ -137,14 +137,6 @@ export const getAllChartsByType = async (workspaceId?: string): Promise<Record<s
 };
 
 // Minimal chart info for sidebar cards with config type and annotation count
-export type ToolTypedChart = {
-    id: string;
-    chartType: "line" | "heatmap" | null;
-    toolType: "lens" | "patch" | null;
-    createdAt: Date;
-    annotationCount: number;
-};
-
 export const getChartsForSidebar = async (workspaceId: string): Promise<ToolTypedChart[]> => {
     const rows = await db
         .select({
@@ -171,13 +163,6 @@ export const getChartsForSidebar = async (workspaceId: string): Promise<ToolType
     }));
 };
 
-// Return minimal chart info for search/embedding in editor
-export type BasicChart = {
-    id: string;
-    name: string | null;
-    type: "line" | "heatmap" | null;
-};
-
 export const getChartsBasic = async (workspaceId: string): Promise<BasicChart[]> => {
     const rows = await db
         .select({
@@ -189,4 +174,34 @@ export const getChartsBasic = async (workspaceId: string): Promise<BasicChart[]>
         .where(eq(charts.workspaceId, workspaceId));
 
     return rows.map((r) => ({ id: r.id, name: (r.name ?? null) as string | null, type: (r.type as "line" | "heatmap" | null) }));
+};
+
+export const getChartsBasicWithToolType = async (workspaceId: string): Promise<BasicChartWithTool[]> => {
+    const rows = await db
+        .select({
+            id: charts.id,
+            name: charts.name,
+            chartType: charts.type,
+            toolType: configs.type,
+        })
+        .from(charts)
+        .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
+        .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
+        .where(eq(charts.workspaceId, workspaceId))
+        .orderBy(desc(charts.createdAt));
+
+    // If a chart is linked to multiple configs, prefer the most recent join row as ordered above
+    const seen = new Set<string>();
+    const results: BasicChartWithTool[] = [];
+    for (const r of rows) {
+        if (seen.has(r.id)) continue;
+        seen.add(r.id);
+        results.push({
+            id: r.id,
+            name: (r.name ?? null) as string | null,
+            chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
+            toolType: (r.toolType as "lens" | "patch" | null) ?? null,
+        });
+    }
+    return results;
 };

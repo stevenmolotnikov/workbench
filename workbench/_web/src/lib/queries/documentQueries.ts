@@ -50,36 +50,113 @@ export const getDocumentsForWorkspace = async (workspaceId: string): Promise<Doc
     return docs;
 };
 
+// Default content with headings and paragraphs; cast to SerializedEditorState to satisfy types
+const defaultInitialContent = {
+    root: {
+        type: "root",
+        version: 1,
+        format: "",
+        indent: 0,
+        direction: "ltr",
+        children: [
+            {
+                type: "heading",
+                tag: "h1",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [
+                    {
+                        type: "text",
+                        version: 1,
+                        text: "Overview",
+                        detail: 0,
+                        format: 0,
+                        mode: "normal",
+                        style: "",
+                    },
+                ],
+            },
+            {
+                type: "paragraph",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [
+                    {
+                        type: "text",
+                        version: 1,
+                        text: "This is your overview.",
+                        detail: 0,
+                        format: 0,
+                        mode: "normal",
+                        style: "",
+                    },
+                ],
+            },
+            {
+                type: "heading",
+                tag: "h2",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [
+                    {
+                        type: "text",
+                        version: 1,
+                        text: "Getting Started",
+                        detail: 0,
+                        format: 0,
+                        mode: "normal",
+                        style: "",
+                    },
+                ],
+            },
+            {
+                type: "paragraph",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [
+                    {
+                        type: "text",
+                        version: 1,
+                        text: "- Type markdown, it autoformats",
+                        detail: 0,
+                        format: 0,
+                        mode: "normal",
+                        style: "",
+                    },
+                ],
+            },
+            {
+                type: "paragraph",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [
+                    {
+                        type: "text",
+                        version: 1,
+                        text: "- Use '/' to insert charts",
+                        detail: 0,
+                        format: 0,
+                        mode: "normal",
+                        style: "",
+                    },
+                ],
+            },
+        ],
+    },
+} as unknown as SerializedEditorState;
+
 export const createDocument = async (workspaceId: string): Promise<Document> => {
-    const initialContent = {
-        root: {
-            children: [
-                {
-                    children: [
-                        {
-                            detail: 0,
-                            format: 0,
-                            mode: "normal",
-                            style: "",
-                            text: "Start writing your overview here...",
-                            type: "text",
-                            version: 1
-                        }
-                    ],
-                    direction: "ltr",
-                    format: "",
-                    indent: 0,
-                    type: "paragraph",
-                    version: 1
-                }
-            ],
-            direction: "ltr",
-            format: "",
-            indent: 0,
-            type: "root",
-            version: 1
-        }
-    } as SerializedEditorState;
+    const initialContent = defaultInitialContent;
 
     const [document] = await db
         .insert(documents)

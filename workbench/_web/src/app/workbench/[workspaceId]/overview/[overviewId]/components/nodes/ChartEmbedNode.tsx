@@ -3,11 +3,15 @@
 import { DecoratorNode, LexicalEditor, NodeKey, SerializedLexicalNode, Spread } from "lexical";
 import * as React from "react";
 import { LineGraphData, HeatmapData } from "@/types/charts";
-import { BasicChart, getChartById } from "@/lib/queries/chartQueries";
+import { getChartById } from "@/lib/queries/chartQueries";
+import type { BasicChart } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
 import { StaticLine } from "@/components/charts/line/StaticLine";
 import { StaticHeatmap } from "@/components/charts/heatmap/StaticHeatmap";
 import { Card } from "@/components/ui/card";
+import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+// no-op
 
 // Command payload and command export
 import { createCommand } from "lexical";
@@ -63,8 +67,8 @@ export class ChartEmbedNode extends DecoratorNode<JSX.Element> {
     return false;
   }
 
-  decorate(editor: LexicalEditor, config: any): JSX.Element {
-    return <ChartEmbedComponent chartId={this.__chartId} chartType={this.__chartType} />;
+  decorate(editor: LexicalEditor, config: unknown): JSX.Element {
+    return <ChartEmbedComponent nodeKey={this.getKey()} chartId={this.__chartId} chartType={this.__chartType} />;
   }
 }
 
@@ -73,22 +77,29 @@ export function $createChartEmbedNode(payload: ChartEmbedPayload): ChartEmbedNod
 }
 
 // React renderer that fetches chart and renders a static version
-function ChartEmbedComponent({ chartId, chartType }: { chartId: string; chartType: "line" | "heatmap" | null }) {
+function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey; chartId: string; chartType: "line" | "heatmap" | null }) {
+  const [editor] = useLexicalComposerContext();
+  const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
   const { data: chart } = useQuery({ queryKey: ["chartById", chartId], queryFn: () => getChartById(chartId) });
 
-  if (!chart) {
-    return (
-      <Card className="p-3 text-sm text-muted-foreground">Loading chart…</Card>
-    );
-  }
-
-  const name = chart.name ?? "Untitled";
-  const type = chart.type ?? chartType;
+  const name = (chart?.name ?? "Untitled");
+  const type = (chart?.type ?? chartType);
 
   return (
-    <Card className="p-3">
+    <Card
+      className={`p-3 cursor-pointer ${isSelected ? "border-primary ring-1 ring-primary" : ""}`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelected(true);
+        editor.focus();
+      }}
+      tabIndex={0}
+    >
       <div className="text-xs text-muted-foreground mb-2">{name}</div>
-      {type === "line" && chart.data ? (
+      {!chart ? (
+        <div className="text-sm text-muted-foreground">Loading chart…</div>
+      ) : type === "line" && chart.data ? (
         <StaticLine data={chart.data as LineGraphData} />
       ) : type === "heatmap" && chart.data ? (
         <StaticHeatmap data={chart.data as HeatmapData} />

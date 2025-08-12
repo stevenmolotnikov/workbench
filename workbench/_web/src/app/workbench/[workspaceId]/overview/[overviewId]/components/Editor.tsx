@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useGetDocument, useSaveDocument } from '@/lib/api/documentApi';
 
 import { EditorState, SerializedEditorState } from 'lexical';
-import { $createHeadingNode, HeadingNode, QuoteNode } from '@lexical/rich-text';
+import { HeadingNode, QuoteNode } from '@lexical/rich-text';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { CodeNode } from '@lexical/code';
 import { LinkNode } from '@lexical/link';
@@ -15,17 +15,14 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { ListPlugin } from '@lexical/react/LexicalListPlugin';
-import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import { TRANSFORMERS } from '@lexical/markdown';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 
 import { OnChangePlugin } from './plugins/OnChangePlugin';
-import { ToolbarPlugin } from './plugins/ToolbarPlugin';
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
-import { ChartEmbedNode, INSERT_CHART_EMBED_COMMAND, $createChartEmbedNode } from './nodes/ChartEmbedNode';
-import { createCommand } from 'lexical';
+import { ChartEmbedNode } from './nodes/ChartEmbedNode';
 
 const theme = {
     ltr: 'ltr',
@@ -145,7 +142,7 @@ export function Editor() {
             
             <LexicalComposer initialConfig={initialConfig}>
                 <div className="flex flex-col flex-1 min-h-0">
-                    <ToolbarPlugin />
+                    {/* Toolbar removed; rely on Markdown shortcuts */}
                     <div className="flex-1 overflow-auto">
                         <div className="relative max-w-4xl mx-auto p-4">
                             <RichTextPlugin
@@ -158,7 +155,7 @@ export function Editor() {
                             <OnChangePlugin onChange={onChange} />
                             <HistoryPlugin />
                             <ListPlugin />
-                            <LinkPlugin />
+                            {/* <LinkPlugin /> */}
                             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                             <AutoFocusPlugin />
                             <SlashCommandPlugin />
