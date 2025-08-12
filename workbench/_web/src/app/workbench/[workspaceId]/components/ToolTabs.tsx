@@ -26,10 +26,10 @@ export function ToolTabs() {
     return (
         <div className="flex items-center justify-between border-b h-12 px-2 py-2">
             <div className="relative group">
-                <button className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors group-hover:bg-muted/50 bg-muted text-foreground">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
                     {activeTool?.icon}
                     {activeTool?.name || ""}
-                </button>
+                </div>
             </div>
         </div>
     )

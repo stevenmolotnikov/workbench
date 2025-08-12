@@ -24,7 +24,6 @@ export default function OverviewPage() {
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={45} minSize={25}>
-                    <ToolTabs />
                     <Editor />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />

@@ -87,7 +87,7 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
 
   return (
     <Card
-      className={`p-3 cursor-pointer ${isSelected ? "border-primary ring-1 ring-primary" : ""}`}
+      className={`p-3 rounded cursor-pointer ${isSelected ? "border-primary ring-1 ring-primary" : ""}`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

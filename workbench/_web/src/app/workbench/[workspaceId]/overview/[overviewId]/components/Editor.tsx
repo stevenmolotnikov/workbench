@@ -23,6 +23,7 @@ import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
+import { FileText, Save } from 'lucide-react';
 
 const theme = {
     ltr: 'ltr',
@@ -64,7 +65,7 @@ export function Editor() {
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const editorStateRef = useRef<EditorState | null>(null);
-    
+
     const { workspaceId, overviewId } = useParams<{ workspaceId: string; overviewId: string }>();
     const { data: document, isLoading } = useGetDocument(overviewId);
     const { mutate: saveDocument } = useSaveDocument();
@@ -96,11 +97,11 @@ export function Editor() {
 
     const handleSave = async () => {
         if (!editorStateRef.current) return;
-        
+
         setIsSaving(true);
         try {
             const content: SerializedEditorState = editorStateRef.current.toJSON();
-            
+
             saveDocument(
                 { workspaceId, content },
                 {
@@ -129,20 +130,24 @@ export function Editor() {
 
     return (
         <div className="h-full w-full flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b">
-                <h2 className="text-lg font-semibold">Document Editor</h2>
-                <Button 
+            <div className="flex items-center justify-between border-b h-12 px-2 py-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
+                    <FileText className="h-4 w-4" />
+                    Editor
+                </div>
+                <Button
                     onClick={handleSave}
+                    variant="outline"
                     disabled={isSaving || !hasChanges}
                     size="sm"
                 >
+                    <Save className="h-4 w-4" />
                     {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
                 </Button>
+
             </div>
-            
             <LexicalComposer initialConfig={initialConfig}>
                 <div className="flex flex-col flex-1 min-h-0">
-                    {/* Toolbar removed; rely on Markdown shortcuts */}
                     <div className="flex-1 overflow-auto">
                         <div className="relative max-w-4xl mx-auto p-4">
                             <RichTextPlugin
@@ -155,7 +160,6 @@ export function Editor() {
                             <OnChangePlugin onChange={onChange} />
                             <HistoryPlugin />
                             <ListPlugin />
-                            {/* <LinkPlugin /> */}
                             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                             <AutoFocusPlugin />
                             <SlashCommandPlugin />
