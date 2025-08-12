@@ -6,8 +6,8 @@ import { LineGraphData, HeatmapData } from "@/types/charts";
 import { getChartById } from "@/lib/queries/chartQueries";
 import type { BasicChart } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
-import { StaticLine } from "@/components/charts/line/StaticLine";
-import { StaticHeatmap } from "@/components/charts/heatmap/StaticHeatmap";
+import { Line } from "@/components/charts/line/Line";
+import { Heatmap } from "@/components/charts/heatmap/Heatmap";
 import { Card } from "@/components/ui/card";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -100,9 +100,13 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
       {!chart ? (
         <div className="text-sm text-muted-foreground">Loading chart…</div>
       ) : type === "line" && chart.data ? (
-        <StaticLine data={chart.data as LineGraphData} />
+        <div className="w-full h-96">
+          <Line data={chart.data as LineGraphData} />
+        </div>
       ) : type === "heatmap" && chart.data ? (
-        <StaticHeatmap data={chart.data as HeatmapData} />
+        <div className="w-full h-96">
+          <Heatmap data={chart.data as HeatmapData} />
+        </div>
       ) : (
         <div className="text-sm text-muted-foreground">No data available</div>
       )}

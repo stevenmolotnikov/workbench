@@ -5,6 +5,7 @@ import type React from "react";
 import { UserDropdown } from "@/components/UserDropdown";
 
 import { WorkbenchStatus } from "@/components/WorkbenchStatus";
+import { CaptureProvider } from "@/components/providers/CaptureProvider";
 
 export default function WorkbenchLayout({
     children,
@@ -33,7 +34,9 @@ export default function WorkbenchLayout({
                     <UserDropdown />
                 </nav>
             </header>
-            {children}
+            <CaptureProvider>
+                {children}
+            </CaptureProvider>
         </div>
     );
 }

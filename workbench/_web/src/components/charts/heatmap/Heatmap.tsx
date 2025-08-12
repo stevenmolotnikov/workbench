@@ -2,23 +2,28 @@
 
 import { useMemo } from 'react'
 import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
-import { heatmapTheme, heatmapMargin } from '../theming'
+import { heatmapMargin, heatmapTheme } from '../theming'
 import { resolveThemeCssVars } from '@/lib/utils'
-import { useCanvas } from './CanvasProvider';
-import { useHeatmapControls } from './HeatmapControlsProvider';
+import { Margin } from '@nivo/core';
+import { HeatmapCell, HeatmapData } from '@/types/charts';
 
 
-export function Heatmap() {
+interface HeatmapProps {
+    data: HeatmapData;
+    margin?: Margin;
+    onClick?: (cell: HeatmapCell) => void;  
+}
+
+
+export function Heatmap({ data, margin = heatmapMargin, onClick = () => {} }: HeatmapProps) {
     // Resolve all CSS variables in the theme to concrete colors for Canvas compatibility
     const resolvedTheme = useMemo(() => resolveThemeCssVars(heatmapTheme), [])
-    const { handleCellClick } = useCanvas()
-    const { filteredData: data } = useHeatmapControls()
 
     return (
 
         <ResponsiveHeatMapCanvas
             data={data.rows}
-            margin={heatmapMargin}
+            margin={margin}
             valueFormat=">-.2f"
             axisTop={null}
             axisBottom={{
@@ -49,7 +54,7 @@ export function Heatmap() {
             inactiveOpacity={1}
             theme={resolvedTheme}
             animate={false}
-            onClick={handleCellClick}
+            onClick={onClick}
             legends={[
                 {
                     anchor: 'right',

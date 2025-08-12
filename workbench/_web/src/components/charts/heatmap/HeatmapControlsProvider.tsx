@@ -219,7 +219,6 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
         updateChartName({ chartId: chart.id, name: title });
     };
 
-
     const contextValue: HeatmapControlsContextValue = {
         // Range State
         xRanges,

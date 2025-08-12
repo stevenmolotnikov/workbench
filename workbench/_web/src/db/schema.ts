@@ -15,7 +15,7 @@ import {
     documents as pgDocuments,
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
-import type { HeatmapData } from '@/types/charts';
+import type { HeatmapData, LineGraphData } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
@@ -48,6 +48,10 @@ export type NewDocument = typeof documents.$inferInsert;
 
 export type HeatmapChart = Omit<Chart, 'data'> & {
     data: HeatmapData;
+};
+
+export type LineChart = Omit<Chart, 'data'> & {
+    data: LineGraphData;
 };
 
 // Specific chart config types
