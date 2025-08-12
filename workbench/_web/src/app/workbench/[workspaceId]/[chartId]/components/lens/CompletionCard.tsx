@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 import { LensConfig } from "@/db/schema";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -29,6 +30,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { tokenData, setTokenData } = useLensWorkspace();
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
+    const { selectedModel } = useWorkspace();
 
     // Workspace display state
     const [showTokenArea, setShowTokenArea] = useState(false);
@@ -40,8 +42,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const configId = initialConfig.id;
 
-    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ config, configId });
-
+    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
 
     const init = useRef(false);
     useEffect(() => {
@@ -53,7 +54,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     // If targetIds already exist, run with the initial config
     const handleInit = async () => {
-        const tokens = await encodeText(config.prompt, config.model);
+        const tokens = await encodeText(config.prompt, selectedModel.name);
         setTokenData(tokens);
         setShowTokenArea(true);
         await runPredictions(config);
@@ -67,20 +68,20 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     };
 
     const handleTokenize = async () => {
-        console.log("CONFIG", config);
-        const tokens = await encodeText(config.prompt, config.model);
+        const tokens = await encodeText(config.prompt, selectedModel.name);
         setTokenData(tokens);
         setShowTokenArea(true);
 
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
             ...config,
+            model: selectedModel.name,
             token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
         }
 
         // Run predictions
         await runPredictions(temporaryConfig);
-        await handleCreateHeatmap();
+        await handleCreateHeatmap(temporaryConfig);
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -197,13 +198,13 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                     <div className="flex gap-2 items-start flex-1">
                         <Button
                             size="icon"
-                            onClick={handleCreateHeatmap}
+                            onClick={() => handleCreateHeatmap(config)}
                         >
                             <Grid3x3 className="w-4 h-4" />
                         </Button>
                         <Button
                             size="icon"
-                            onClick={handleCreateLineChart}
+                            onClick={() => handleCreateLineChart(config)}
                             disabled={config.token.targetIds.length === 0}
                         >
                             <ChartLine className="w-4 h-4" />

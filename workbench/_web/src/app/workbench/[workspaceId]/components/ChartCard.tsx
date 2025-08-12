@@ -66,7 +66,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
             );
         }
         return (
-            <div className="relative w-12 h-8 overflow-hidden rounded border">
+            <div className="relative w-14 h-14 overflow-hidden rounded border">
                 <Image
                     src={url}
                     alt="chart thumbnail"

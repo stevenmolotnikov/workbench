@@ -3,15 +3,14 @@ import { LensConfigData } from "@/types/lens";
 import { useLensGrid, useLensLine } from "@/lib/api/chartApi";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 
-export const useLensCharts = ({config, configId}: {config: LensConfigData, configId: string}) => {
-
+export const useLensCharts = ({ configId }: { configId: string }) => {
     const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
 
     const { mutateAsync: createHeatmap } = useLensGrid();
     const { mutateAsync: updateChartConfig } = useUpdateChartConfig();
     const { mutateAsync: createLineChart } = useLensLine();
 
-    const handleCreateHeatmap = async () => {
+    const handleCreateHeatmap = async (config: LensConfigData) => {
         const data = await createHeatmap({
             lensRequest: {
                 completion: config,
@@ -32,7 +31,7 @@ export const useLensCharts = ({config, configId}: {config: LensConfigData, confi
         return data;
     };
 
-    const handleCreateLineChart = async () => {
+    const handleCreateLineChart = async (config: LensConfigData) => {
         const data = await createLineChart({
             lensRequest: {
                 completion: config,

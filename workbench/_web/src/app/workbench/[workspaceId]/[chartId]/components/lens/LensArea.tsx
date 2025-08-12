@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 
-export default function InteractiveDisplay() {
+export default function LensArea() {
     const { selectedModel } = useWorkspace();
     const { workspaceId, chartId } = useParams<{ workspaceId: string; chartId: string }>();
 

@@ -14,7 +14,7 @@ export default function WorkbenchLayout({
 }>) {
     return (
         <div className="flex flex-col h-screen">
-            <header className="border-b px-4 py-2 flex items-center justify-between">
+            <header className="border-b p-2 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <img
                         src="/images/NDIF.png"

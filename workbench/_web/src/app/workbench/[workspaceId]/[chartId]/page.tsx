@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -14,11 +13,12 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import useModels from "@/hooks/useModels";
 import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 import ChartCardsSidebar from "../components/ChartCardsSidebar";
-import InteractiveDisplay from "./components/lens/InteractiveDisplay";
+import LensArea from "./components/lens/LensArea";
 import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 import { ToolTabs } from "../components/ToolTabs";
+import { Loader2 } from "lucide-react";
 
 export default function ChartPage() {
     const { annotationsOpen } = useWorkspace();
@@ -27,7 +27,7 @@ export default function ChartPage() {
     // Ensure a selected model exists
     useModels();
 
-    const { data: config } = useQuery({
+    const { data: config, isLoading: isConfigLoading } = useQuery({
         queryKey: ["chartConfig", chartId],
         queryFn: () => getConfigForChart(chartId),
         enabled: !!chartId,
@@ -47,7 +47,14 @@ export default function ChartPage() {
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={35} minSize={25}>
                     <ToolTabs />
-                    {isLens ? <InteractiveDisplay /> : <SimplePatchArea />}
+
+                    {
+                        isConfigLoading ?
+                            <div className="flex flex-1 items-center p-4 justify-center">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            </div> :
+                            isLens ? <LensArea /> : <SimplePatchArea />
+                    }
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel defaultSize={annotationsOpen ? 40 : 45} minSize={30}>
