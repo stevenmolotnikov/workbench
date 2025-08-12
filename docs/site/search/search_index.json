@@ -1,1 +1,0 @@
-{"config":{"lang":["en"],"separator":"[\\s\\-]+","pipeline":["stopWordFilter"]},"docs":[{"location":"","title":"NDIF Workbench","text":""},{"location":"#getting-started","title":"Getting started","text":"<p>Install uv and bun.</p> <pre><code>uv venv\nuv sync --extra local\n\n# Within the new environment\nbash scripts/api.sh\nbash scripts/web.sh\n</code></pre>"}]}
