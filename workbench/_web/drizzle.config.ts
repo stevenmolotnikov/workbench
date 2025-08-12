@@ -3,20 +3,24 @@ import { defineConfig } from 'drizzle-kit';
 
 config({ path: '.env' });
 
-const wantsSQLite =
-  (process.env.DATABASE_DIALECT || '').toLowerCase() === 'sqlite' ||
-  (process.env.USE_SQLITE || '').toLowerCase() === 'true' ||
-  (process.env.DATABASE_URL || '').startsWith('file:');
+const localConfig = {
+  schema: './src/db/schema.sqlite.ts',
+  out: './sqlite-migrations',
+  dialect: 'sqlite' as const,
+  dbCredentials: {
+    url: process.env.LOCAL_SQLITE_URL!,
+  },
+}
 
-export default defineConfig({
-  schema: './src/db/schema.ts',
-  out: './migrations',
-  dialect: wantsSQLite ? 'sqlite' : 'postgresql',
-  dbCredentials: wantsSQLite
-    ? {
-        url: process.env.DATABASE_URL || process.env.LOCAL_SQLITE_URL || 'file:../../scripts/test.db',
-      }
-    : {
-        url: process.env.DATABASE_URL!,
-      },
-});
+const supabaseConfig = {
+  schema: './src/db/schema.pg.ts',
+  out: './pg-migrations',
+  dialect: 'postgresql' as const,
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+}
+
+const dbConfig = process.env.NEXT_PUBLIC_LOCAL === 'true' ? localConfig : supabaseConfig;
+
+export default defineConfig(dbConfig);

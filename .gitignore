@@ -60,3 +60,5 @@ __pycache__
 cdk.out
 
 /nnsight
+
+test.db

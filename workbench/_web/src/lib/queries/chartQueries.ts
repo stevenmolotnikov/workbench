@@ -5,7 +5,7 @@ import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, NewChart, Chart, LensConfig, Config, annotations } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
-import { eq, and, asc, notExists, or, desc, sql } from "drizzle-orm";
+import { eq, and, asc, desc, sql } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));

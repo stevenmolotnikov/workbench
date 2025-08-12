@@ -75,6 +75,9 @@ export default function ChartCardsSidebar() {
         });
     };
 
+    console.log("IS LOCAL", process.env.NEXT_PUBLIC_LOCAL);
+    console.log("CHART", charts);
+
     if (!charts) return null;
 
     const formatToolType = (toolType: ToolTypedChart["toolType"]) => {

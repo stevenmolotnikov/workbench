@@ -4,8 +4,8 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
-  // If auth is disabled, return a mock client
-  if (process.env.DISABLE_AUTH === 'true') {
+  // If local return a mock client
+  if (process.env.NEXT_PUBLIC_LOCAL === 'true') {
     return {
       auth: {
         getUser: async () => ({
