@@ -1,3 +1,4 @@
 site_name: NDIF Workbench
+docs_dir: src
 theme:
   name: material
