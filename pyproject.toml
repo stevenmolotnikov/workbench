@@ -7,7 +7,17 @@ dependencies = [
     "fastapi>=0.115.6",
     "python-dotenv>=1.0.1",
     "nnsight>=0.4.7",
+    # Required for .uv_sync on Modal image
     "modal>=0.65.66",
+]
+
+[project.optional-dependencies]
+local = [
+    "uvicorn>=0.33.0",
+]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.16",
     "uvicorn>=0.33.0",
 ]
 
