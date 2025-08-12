@@ -7,9 +7,7 @@ import {
 } from "@/components/ui/resizable";
 
 import ChartCardsSidebar from "../../components/ChartCardsSidebar";
-import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { Editor } from "./components/Editor";
-import { AnnotationsDisplay } from "./components/AnnotationsDisplay";
 
 export default function OverviewPage() {
 
@@ -23,13 +21,8 @@ export default function OverviewPage() {
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={45} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={90} minSize={25}>
                     <Editor />
-                </ResizablePanel>
-                <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel defaultSize={45} minSize={30}>
-                    <AnnotationsDisplay />
-                    {/* <ChartDisplay /> */}
                 </ResizablePanel>
             </ResizablePanelGroup>
         </div>
