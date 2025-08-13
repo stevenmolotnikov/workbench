@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
-import { useExecuteSelected } from "@/lib/api/modelsApi";
+import { useExecuteSelected, useGenerate } from "@/lib/api/modelsApi";
 import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
 
@@ -20,6 +20,7 @@ import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 import { LensConfig } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
+import GenerateButton from "./GenerateButton";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -113,7 +114,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
             ...config,
             token: { idx, id: 0, text: "", targetIds: [] }
         }
-        
+
         setConfig(temporaryConfig);
 
         // Run predictions
@@ -165,25 +166,32 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         />
                     </div>
                 )}
-                <Button
-                    size="icon"
-                    variant={showTokenArea ? "outline" : "default"}
-                    id="tokenize-button"
-                    onClick={() => {
-                        if (showTokenArea) {
-                            handleClear();
-                        } else {
-                            handleTokenize();
-                        }
-                    }}
-                    className="absolute bottom-2 right-2"
-                >
-                    {showTokenArea ? (
-                        <X className="w-4 h-4" />
-                    ) : (
-                        <CornerDownLeft className="w-4 h-4" />
-                    )}
-                </Button>
+                <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                    {showTokenArea && <GenerateButton
+                        prompt={config.prompt}
+                        setPredictions={setPredictions}
+                        config={config}
+                        setConfig={setConfig}
+                    />}
+                    <Button
+                        size="icon"
+                        variant={showTokenArea ? "outline" : "default"}
+                        id="tokenize-button"
+                        onClick={() => {
+                            if (showTokenArea) {
+                                handleClear();
+                            } else {
+                                handleTokenize();
+                            }
+                        }}
+                    >
+                        {showTokenArea ? (
+                            <X className="w-4 h-4" />
+                        ) : (
+                            <CornerDownLeft className="w-4 h-4" />
+                        )}
+                    </Button>
+                </div>
 
             </div>
 

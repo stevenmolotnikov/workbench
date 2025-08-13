@@ -11,6 +11,9 @@ const config = {
 
         getExecuteSelected: '/models/get-execute-selected',
         listenExecuteSelected: '/models/listen-execute-selected',
+
+        getGenerate: '/models/generate',
+        listenGenerate: '/models/listen-generate',
         
         models: '/models/',
         encode: '/models/encode',

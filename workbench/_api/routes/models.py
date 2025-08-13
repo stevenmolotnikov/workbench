@@ -24,15 +24,15 @@ def _execute_selected(
     model = state.get_model(execute_request.model)
 
     with model.trace(execute_request.prompt, remote=state.remote):
-        logits_BLD = model.lm_head.output
+        logits_BLV = model.lm_head.output
 
-        logits_LD = logits_BLD[0, idxs, :].softmax(dim=-1)
-        values_LD_indices_LD = t.sort(logits_LD, dim=-1, descending=True)
+        logits_LV = logits_BLV[0, idxs, :].softmax(dim=-1)
+        values_LV_indices_LV = t.sort(logits_LV, dim=-1, descending=True)
 
-        values_LD = values_LD_indices_LD[0].save()
-        indices_LD = values_LD_indices_LD[1].save()
+        values_LV = values_LV_indices_LV[0].save()
+        indices_LV = values_LV_indices_LV[1].save()
 
-    return values_LD, indices_LD
+    return values_LV, indices_LV
 
 
 class Prediction(BaseModel):
@@ -46,7 +46,7 @@ async def process_execute_selected_background(
     execute_request: LensCompletion,
     state: AppState,
 ) -> list[Prediction]:
-    values_LD, indices_LD = await asyncio.to_thread(
+    values_LV, indices_LV = await asyncio.to_thread(
         _execute_selected, execute_request, state
     )
 
@@ -55,7 +55,7 @@ async def process_execute_selected_background(
     predictions = []
 
     for idx_values, idx_indices, token_index in zip(
-        values_LD, indices_LD, idxs
+        values_LV, indices_LV, idxs
     ):
         # Round values to 2 decimal places
         idx_values = t.round(idx_values * 100) / 100
@@ -133,3 +133,79 @@ async def decode(
         return {"texts": tok.batch_decode(decode_request.token_ids)}
     else:
         return {"text": tok.decode(decode_request.token_ids)}
+
+
+class Completion(BaseModel):
+    prompt: str
+    max_new_tokens: int
+    model: str
+
+
+class GenerationResponse(BaseModel):
+    completion: list[Token]
+    last_token_prediction: Prediction
+
+
+async def generate_text(completion_request: Completion, state: AppState):
+    def _generate_text(completion_request: Completion, state: AppState):
+        model = state.get_model(completion_request.model)
+
+        with model.generate(
+            completion_request.prompt,
+            max_new_tokens=completion_request.max_new_tokens,
+            remote=state.remote,
+        ):
+            logits = []
+            with model.lm_head.all():
+                logits.append(model.lm_head.output)
+
+            probs_V = logits[0][0, -1, :].softmax(dim=-1)
+            values_V_indices_V = t.sort(probs_V, dim=-1, descending=True)
+            values_V = values_V_indices_V[0].save()
+            indices_V = values_V_indices_V[1].save()
+
+            new_token_ids = model.generator.output.save()
+
+        return values_V, indices_V, new_token_ids[0]
+
+    values_V, indices_V, new_token_ids = await asyncio.to_thread(
+        _generate_text, completion_request, state
+    )
+
+    tok = state[completion_request.model].tokenizer
+    new_token_text = tok.batch_decode(new_token_ids)
+    tokens = [
+        Token(idx=i, id=id, text=text, targetIds=[])
+        for i, (id, text) in enumerate(zip(new_token_ids, new_token_text))
+    ]
+
+    # Round values to 2 decimal places
+    idx_values = t.round(values_V * 100) / 100
+    nonzero = idx_values > 0
+
+    nonzero_values = idx_values[nonzero].tolist()
+    nonzero_indices = indices_V[nonzero].tolist()
+    nonzero_texts = tok.batch_decode(nonzero_indices)
+
+    last_token_prediction = Prediction(
+        idx=new_token_ids[-1],
+        ids=nonzero_indices,
+        probs=nonzero_values,
+        texts=nonzero_texts,
+    ).model_dump()
+
+    return GenerationResponse(
+        completion=tokens, last_token_prediction=last_token_prediction
+    ).model_dump()
+
+
+@router.post("/generate")
+async def generate(
+    generate_request: Completion, state: AppState = Depends(get_state)
+):
+    return jobs.create_job(generate_text, generate_request, state)
+
+
+@router.get("/listen-generate/{job_id}")
+async def listen_generate(job_id: str):
+    return jobs.get_job(job_id)
