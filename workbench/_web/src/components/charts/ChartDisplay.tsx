@@ -1,5 +1,5 @@
 import { useWorkspace } from "@/stores/useWorkspace";
-import { Copy, Loader2, PanelRight, PanelRightClose } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { getChartById } from "@/lib/queries/chartQueries";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
@@ -14,7 +14,7 @@ import { HeatmapChart, LineChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
 
 export function ChartDisplay() {
-    const { annotationsOpen, setAnnotationsOpen, jobStatus } = useWorkspace();
+    const { jobStatus } = useWorkspace();
     const { chartId } = useParams<{ chartId: string }>();
 
     const { captureRef, handleCopyPng } = useCapture();
@@ -47,11 +47,6 @@ export function ChartDisplay() {
                 <div className="flex items-center gap-2">
                     <CodeExport chartId={chart?.id} chartType={chart?.type as ("line"|"heatmap"|null|undefined)} />
                     <Button variant="outline" size="sm" onClick={onCopyPng}><Copy className="h-4 w-4" /> Copy</Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex items-center justify-center" onClick={() => {
-                        setAnnotationsOpen(!annotationsOpen);
-                    }}>
-                        {annotationsOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRight className="h-4 w-4" />}
-                    </Button>
                 </div>
             </div>
 

@@ -9,15 +9,13 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import { useWorkspace } from "@/stores/useWorkspace";
 import useModels from "@/hooks/useModels";
-import { AnnotationsDisplay } from "../components/AnnotationsDisplay";
 import ChartCardsSidebar from "../components/ChartCardsSidebar";
 import LensArea from "./components/lens/LensArea";
 import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
-import { Loader2, Search, ReplaceAll } from "lucide-react";
+import { Loader2, Search, ReplaceAll, X } from "lucide-react";
 
 
 const tools = [
@@ -27,7 +25,6 @@ const tools = [
 
 
 export default function ChartPage() {
-    const { annotationsOpen } = useWorkspace();
     const { chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     // Ensure a selected model exists
@@ -49,11 +46,11 @@ export default function ChartPage() {
                 direction="horizontal"
                 className="flex flex-1 min-h-0 h-full"
             >
-                <ResizablePanel className="h-full" defaultSize={10} minSize={15}>
+                <ResizablePanel className="h-full" defaultSize={20} minSize={10}>
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={35} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={40} minSize={25}>
                     <div className="flex items-center justify-between border-b h-12 px-2 py-2">
                         <div className="relative group">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
@@ -71,17 +68,9 @@ export default function ChartPage() {
                     }
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel defaultSize={annotationsOpen ? 40 : 45} minSize={30}>
+                <ResizablePanel defaultSize={40} minSize={30}>
                     <ChartDisplay />
                 </ResizablePanel>
-                {annotationsOpen && (
-                    <>
-                        <ResizableHandle className="w-[0.8px]" />
-                        <ResizablePanel defaultSize={15} minSize={15}>
-                            <AnnotationsDisplay />
-                        </ResizablePanel>
-                    </>
-                )}
             </ResizablePanelGroup>
         </div>
     );

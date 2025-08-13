@@ -1,8 +1,7 @@
 import React, { type RefObject } from "react";
 import { Heatmap } from "./Heatmap";
-import { HeatmapData } from "@/types/charts";
 import { HeatmapControlsProvider, useHeatmapControls } from "./HeatmapControlsProvider";
-import { CanvasProvider, useCanvas } from "./CanvasProvider";
+import { CanvasProvider } from "./CanvasProvider";
 import { HeatmapChart } from "@/db/schema";
 
 interface HeatmapCardProps {
@@ -27,9 +26,8 @@ export const HeatmapCard = ({ chart, captureRef }: HeatmapCardProps) => {
 
 const HeatmapCardContent = () => {
     const { filteredData: data } = useHeatmapControls()
-    const { handleCellClick } = useCanvas()
-    
+
     return (
-        <Heatmap data={data} onClick={handleCellClick} />
+        <Heatmap data={data} />
     );
 };

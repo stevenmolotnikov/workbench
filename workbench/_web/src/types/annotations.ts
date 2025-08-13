@@ -1,15 +1,11 @@
-export interface BaseAnnotation {
-    text: string;
-}
-
-export interface LineAnnotation extends BaseAnnotation { 
+export interface LineAnnotation { 
     type: "line";
     lineId: string;
     layerStart: number;
     layerEnd?: number;
 }
 
-export interface HeatmapAnnotation extends BaseAnnotation { 
+export interface HeatmapAnnotation { 
     type: "heatmap";
     cellIds: string[];
 }

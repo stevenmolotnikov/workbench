@@ -2,12 +2,10 @@ import React, { createContext, useContext, useState, useMemo, ReactNode } from "
 import { LineChart } from "@/db/schema";
 import { LineGraphData } from "@/types/charts";
 import { RangeSelector } from "../RangeSelector";
+import ChartTitle from "../ChartTitle";
 
 type Range = [number, number];
-type RangeWithId = {
-    id: string;
-    range: Range;
-};
+// Using simple Range state; map to/from RangeSelector's array shape inline
 
 interface LineControlsContextValue {
     // Range State
@@ -34,15 +32,8 @@ export const LineControlsProvider: React.FC<LineControlsProviderProps> = ({ char
 
     const { data } = chart;
 
-    const [title, setTitle] = useState("");
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
-
-    const [xRanges, setXRanges] = useState<RangeWithId[]>([]);
-    const [yRanges, setYRanges] = useState<RangeWithId[]>([]);
-
-    // Extract single range from array format
-    const xRange = xRanges.length > 0 ? xRanges[0].range : undefined;
-    const yRange = yRanges.length > 0 ? yRanges[0].range : undefined;
+    const [xRange, setXRange] = useState<Range | undefined>(undefined);
+    const [yRange, setYRange] = useState<Range | undefined>(undefined);
 
     // Calculate the bounds from the data
     const bounds = useMemo(() => {
@@ -95,35 +86,19 @@ export const LineControlsProvider: React.FC<LineControlsProviderProps> = ({ char
     return (
         <LineControlsContext.Provider value={contextValue}>
             <div className="flex h-[10%] gap-2 p-4 lg:p-8 justify-between">
-                {isEditingTitle ? (
-                    <input
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        onBlur={() => setIsEditingTitle(false)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                setIsEditingTitle(false);
-                            }
-                        }}
-                        placeholder="Untitled Chart"
-                        className="text-xl font-bold p-0 m-0 border-primary border overflow-clip rounded bg-transparent w-64"
-                        autoFocus
-                    />
-                ) : (
-                    <h1
-                        className="text-xl font-bold cursor-pointer border rounded border-transparent w-64 overflow-clip items-center flex hover:border-border transition-opacity p-0 m-0"
-                        onClick={() => setIsEditingTitle(true)}
-                    >
-                        {title || "Untitled Chart"}
-                    </h1>
-                )}
-
+                <ChartTitle chart={chart} />
                 <div className="flex items-center gap-2">
                     <RangeSelector
                         min={bounds.xMin}
                         max={bounds.xMax}
-                        ranges={xRanges}
-                        onRangesChange={setXRanges}
+                        ranges={xRange ? [{ id: "x", range: xRange }] : []}
+                        onRangesChange={(ranges) => {
+                            if (ranges.length === 0) {
+                                setXRange(undefined);
+                            } else {
+                                setXRange([ranges[0].range[0], ranges[0].range[1]]);
+                            }
+                        }}
                         maxRanges={1}
                         axisLabel="X Range"
                     />
@@ -131,8 +106,14 @@ export const LineControlsProvider: React.FC<LineControlsProviderProps> = ({ char
                     <RangeSelector
                         min={0}
                         max={1}
-                        ranges={yRanges}
-                        onRangesChange={setYRanges}
+                        ranges={yRange ? [{ id: "y", range: yRange }] : []}
+                        onRangesChange={(ranges) => {
+                            if (ranges.length === 0) {
+                                setYRange(undefined);
+                            } else {
+                                setYRange([ranges[0].range[0], ranges[0].range[1]]);
+                            }
+                        }}
                         maxRanges={1}
                         axisLabel="Y Range"
                         step={0.01}

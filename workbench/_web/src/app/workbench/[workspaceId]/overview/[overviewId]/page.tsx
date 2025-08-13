@@ -17,11 +17,11 @@ export default function OverviewPage() {
                 direction="horizontal"
                 className="flex flex-1 min-h-0 h-full"
             >
-                <ResizablePanel className="h-full" defaultSize={10} minSize={15}>
+                <ResizablePanel className="h-full" defaultSize={20} minSize={15}>
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={90} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={80} minSize={25}>
                     <Editor />
                 </ResizablePanel>
             </ResizablePanelGroup>
