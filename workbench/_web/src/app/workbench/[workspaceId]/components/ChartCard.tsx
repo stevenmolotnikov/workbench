@@ -28,12 +28,6 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         navigateToChart(metadata.id);
     };
 
-    // const formatToolType = (toolType: ChartMetadata["toolType"]) => {
-    //     if (!toolType) return "Unknown";
-    //     return toolType === "lens" ? "Lens" : toolType === "patch" ? "Patch" : toolType;
-    // };
-
-
     const renderChartTypeMini = (chartType: ChartMetadata["chartType"]) => {
         if (chartType === "line") return (
             <span className="inline-flex items-center gap-1">
@@ -56,17 +50,14 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
     };
 
     const Thumbnail = ({ url }: { url: string | null | undefined }) => {
-
         const style = cn(
             "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r",
             isSelected && "border-primary"
         )
 
-        if (!url) {
+        if (!url || process.env.NEXT_PUBLIC_LOCAL === "true") {
             return (
-                <div className={style}>
-
-                </div>
+                <div className={style}/>
             );
         }
         const version = metadata.updatedAt ? new Date(metadata.updatedAt).getTime() : undefined;

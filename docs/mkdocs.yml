@@ -1,4 +1,23 @@
 site_name: NDIF Workbench
 docs_dir: src
 theme:
-  name: material
+    name: material
+    features:
+        # Allows copying code blocks
+        - content.code.copy
+        # Allows selecting code blocks
+        - content.code.select
+        # Shows the current path in the sidebar
+        - navigation.path
+        # Shows sections in the sidebar
+        - navigation.sections
+        # Shows sections expanded by default
+        - navigation.expand
+        # Enables annotations in code blocks
+        - content.code.annotate
+        # Enable content tabs
+        - content.tabs.link
+    palette:
+        primary: black
+    logo: images/logo.png
+    favicon: images/favicon.ico
