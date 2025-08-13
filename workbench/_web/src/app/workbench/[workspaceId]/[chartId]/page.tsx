@@ -17,8 +17,14 @@ import LensArea from "./components/lens/LensArea";
 import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
-import { ToolTabs } from "../components/ToolTabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, ReplaceAll } from "lucide-react";
+
+
+const tools = [
+    { name: "Lens", key: "lens", icon: <Search className="h-4 w-4" /> },
+    { name: "Patch", key: "patch", icon: <ReplaceAll className="h-4 w-4" /> },
+];
+
 
 export default function ChartPage() {
     const { annotationsOpen } = useWorkspace();
@@ -35,6 +41,8 @@ export default function ChartPage() {
 
     const isLens = config?.type === "lens";
 
+    const activeTool = tools.find(t => t.key === config?.type);
+
     return (
         <div className="flex flex-1 min-h-0">
             <ResizablePanelGroup
@@ -46,8 +54,14 @@ export default function ChartPage() {
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={35} minSize={25}>
-                    <ToolTabs />
-
+                    <div className="flex items-center justify-between border-b h-12 px-2 py-2">
+                        <div className="relative group">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
+                                {activeTool?.icon}
+                                {activeTool?.name || ""}
+                            </div>
+                        </div>
+                    </div>
                     {
                         isConfigLoading ?
                             <div className="flex flex-1 items-center p-4 justify-center">

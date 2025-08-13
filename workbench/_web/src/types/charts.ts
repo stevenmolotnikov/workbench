@@ -47,6 +47,6 @@ export type ChartMetadata = {
     name: string | null;
     chartType: ChartType | null;
     toolType: ToolType | null;
-    createdAt: Date;
+    updatedAt: Date;
     thumbnailUrl?: string | null;
 };

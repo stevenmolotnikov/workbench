@@ -31,6 +31,7 @@ export const charts = sqliteTable("charts", {
     thumbnailUrl: text("thumbnail_url"),
     type: text("type"),
     createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
+    updatedAt: integer("updated_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull().$onUpdate(() => new Date()),
 });
 
 export const configTypes = [

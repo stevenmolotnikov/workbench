@@ -68,7 +68,7 @@ const listenToSSE = <T>(url: string): Promise<T> => {
     let result: T | null = null;
     const { setJobStatus } = useWorkspace.getState();
     
-    const { onCancel } = createEventSource(
+    createEventSource(
       url,
       (data: unknown) => {
         const sseData = data as SSEData<T>;

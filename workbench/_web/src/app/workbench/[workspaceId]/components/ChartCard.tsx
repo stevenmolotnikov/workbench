@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ChartMetadata } from "@/types/charts";
+import { cn } from "@/lib/utils";
 
 export type ChartCardProps = {
     metadata: ChartMetadata;
@@ -17,7 +18,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
 
     const isSelected = chartId === metadata.id;
     const router = useRouter();
-    const createdAt = metadata.createdAt ? new Date(metadata.createdAt).toLocaleDateString() : "";
+    const updatedAt = metadata.updatedAt ? new Date(metadata.updatedAt).toLocaleDateString() : "";
 
     const navigateToChart = (chartId: string) => {
         router.push(`/workbench/${workspaceId}/${chartId}`);
@@ -32,11 +33,6 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         return toolType === "lens" ? "Lens" : toolType === "patch" ? "Patch" : toolType;
     };
 
-    const renderToolIcon = (toolType: ChartMetadata["toolType"]) => {
-        if (toolType === "lens") return <Search className="h-4 w-4" />;
-        if (toolType === "patch") return <ReplaceAll className="h-4 w-4" />;
-        return <Search className="h-4 w-4 opacity-50" />;
-    };
 
     const renderChartTypeMini = (chartType: ChartMetadata["chartType"]) => {
         if (chartType === "line") return (
@@ -60,19 +56,29 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
     };
 
     const Thumbnail = ({ url }: { url: string | null | undefined }) => {
+
+        const style = cn(
+            "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r",
+            isSelected && "border-primary"
+        )
+
         if (!url) {
             return (
-                <div className="w-12 h-8 rounded bg-muted flex items-center justify-center text-[10px] text-muted-foreground">img</div>
+                <div className={style}>
+
+                </div>
             );
         }
+        const version = metadata.updatedAt ? new Date(metadata.updatedAt).getTime() : undefined;
+        const versionedUrl = version ? `${url}${url.includes("?") ? "&" : "?"}v=${version}` : url;
         return (
-            <div className="relative w-14 h-14 overflow-hidden rounded border">
+            <div className={style}>
                 <Image
-                    src={url}
+                    src={versionedUrl}
                     alt="chart thumbnail"
                     fill
                     sizes="48px"
-                    style={{ objectFit: "cover" }}
+                    style={{ objectFit: "cover", objectPosition: "bottom" }}
                     loading="lazy"
                     placeholder="empty"
                 />
@@ -81,9 +87,11 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
     };
 
     return (
-        <Card
-            key={metadata.id}
-            className={`p-3 cursor-pointer rounded transition-all ${isSelected ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+        <div
+            className={cn(
+                "flex items-center border h-24 rounded",
+                isSelected && "border-primary"
+            )}
             onClick={() => handleChartClick(metadata)}
             draggable
             onDragStart={(e) => {
@@ -96,33 +104,38 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                 } catch { }
             }}
         >
-            <div className="flex items-start gap-2">
-                <Thumbnail url={metadata.thumbnailUrl} />
-                <div className="mt-1">
-                    {renderToolIcon(metadata.toolType)}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium capitalize">
-                            {formatToolType(metadata.toolType)}
-                        </span>
-                        {createdAt && (
-                            <span className="text-xs text-muted-foreground">{createdAt}</span>
-                        )}
+            <Thumbnail url={metadata.thumbnailUrl} />
+            <div
+                key={metadata.id}
+                className={cn(
+                    "p-3 cursor-pointer transition-all h-full w-[65%]",
+                    isSelected ? "bg-primary/5" : "hover:bg-muted/50"
+                )}
+            >
+                <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium capitalize">
+                                {formatToolType(metadata.toolType)}
+                            </span>
+                            {updatedAt && (
+                                <span className="text-xs text-muted-foreground">{updatedAt}</span>
+                            )}
+                        </div>
+                        <div className="text-xs text-muted-foreground break-words flex items-center gap-2">
+                            {renderChartTypeMini(metadata.chartType)}
+                        </div>
                     </div>
-                    <div className="text-xs text-muted-foreground break-words flex items-center gap-2">
-                        {renderChartTypeMini(metadata.chartType)}
-                    </div>
+                    <button
+                        className={`p-1 rounded hover:bg-muted ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
+                        onClick={(e) => handleDelete(e, metadata.id)}
+                        disabled={!canDelete}
+                        aria-label="Delete chart"
+                    >
+                        <Trash2 className="h-3 w-3" />
+                    </button>
                 </div>
-                <button
-                    className={`p-1 rounded hover:bg-muted ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
-                    onClick={(e) => handleDelete(e, metadata.id)}
-                    disabled={!canDelete}
-                    aria-label="Delete chart"
-                >
-                    <Trash2 className="h-3 w-3" />
-                </button>
             </div>
-        </Card>
+        </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartLine, CornerDownLeft, CornerDownRight, Grid3x3, X } from "lucide-react";
+import { ChartLine, CornerDownLeft, Grid3x3, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
@@ -37,7 +37,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
-
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const configId = initialConfig.id;
@@ -109,16 +108,13 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         // Skip if the token is already selected
         if (config.token.idx === idx) return;
 
-        setConfig({
-            ...config,
-            token: { idx, id: 0, text: "", targetIds: [] },
-        });
-
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
             ...config,
             token: { idx, id: 0, text: "", targetIds: [] }
         }
+        
+        setConfig(temporaryConfig);
 
         // Run predictions
         await runPredictions(temporaryConfig);

@@ -68,6 +68,7 @@ export function CaptureProvider({ children }: CaptureProviderProps) {
           getComputedStyle(document.documentElement).getPropertyValue("--background") || "#ffffff",
         pixelRatio: 1,
         width: Math.min(el.clientWidth, 480),
+        height: Math.min(el.clientHeight, 480),
       });
       if (!blob) return;
       const workspaceId = params?.workspaceId as string;

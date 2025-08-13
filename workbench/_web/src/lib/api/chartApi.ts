@@ -55,18 +55,13 @@ export const useLensLine = () => {
                 queryKey: ["lensCharts"],
             });
             // Ensure the single-chart view refreshes as well
-            if (variables?.lensRequest?.chartId) {
-                queryClient.invalidateQueries({
-                    queryKey: ["chartById", variables.lensRequest.chartId],
-                });
-                // trigger thumbnail capture via provider
-                void captureChartThumbnail(variables.lensRequest.chartId);
-            }
             queryClient.invalidateQueries({
-                queryKey: ["unlinkedCharts"],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["hasLinkedConfig"],
+                queryKey: ["chartById", variables.lensRequest.chartId],
+            }).then(() => {
+
+                setTimeout(() => {
+                    captureChartThumbnail(variables.lensRequest.chartId);
+                }, 500);
             });
         },
         onError: (error, variables) => {
@@ -117,18 +112,14 @@ export const useLensGrid = () => {
                 queryKey: ["lensCharts"],
             });
             // Ensure the single-chart view refreshes as well
-            if (variables?.lensRequest?.chartId) {
-                queryClient.invalidateQueries({
-                    queryKey: ["chartById", variables.lensRequest.chartId],
-                });
-                // trigger thumbnail capture via provider
-                void captureChartThumbnail(variables.lensRequest.chartId);
-            }
             queryClient.invalidateQueries({
-                queryKey: ["unlinkedCharts"],
-            });
-            queryClient.invalidateQueries({
-                queryKey: ["hasLinkedConfig"],
+                queryKey: ["chartById", variables.lensRequest.chartId],
+            }).then(() => {
+                
+                // Wait for chart to rerender before capturing thumbnail
+                setTimeout(() => {
+                    captureChartThumbnail(variables.lensRequest.chartId);
+                }, 500);
             });
         },
         onError: (error, variables) => {
@@ -157,8 +148,6 @@ export const useDeleteChart = () => {
         mutationFn: (chartId: string) => deleteChart(chartId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["hasLinkedConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
         },
     });
@@ -186,7 +175,6 @@ export const useCreateLensChartPair = () => {
         onSuccess: ({ chart }) => {
             // Refresh charts and configs
             queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
         },
@@ -220,7 +208,6 @@ export const useCreatePatchChartPair = () => {
         onSuccess: ({ chart }) => {
             // Refresh charts and configs
             queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["unlinkedCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
         },

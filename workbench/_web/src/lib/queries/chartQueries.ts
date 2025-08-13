@@ -125,7 +125,7 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
             id: charts.id,
             name: charts.name,
             chartType: charts.type,
-            createdAt: charts.createdAt,
+            updatedAt: charts.updatedAt,
             toolType: configs.type,
             thumbnailUrl: charts.thumbnailUrl,
         })
@@ -133,15 +133,15 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
         .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
         .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
         .where(eq(charts.workspaceId, workspaceId))
-        .groupBy(charts.id, charts.createdAt, charts.type, configs.type)
-        .orderBy(desc(charts.createdAt));
+        .groupBy(charts.id, charts.updatedAt, charts.type, configs.type)
+        .orderBy(desc(charts.updatedAt));
 
     return rows.map((r) => ({
         id: r.id,
         name: r.name,
         chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
         toolType: (r.toolType as "lens" | "patch" | null) ?? null,
-        createdAt: r.createdAt as Date,
+        updatedAt: r.updatedAt as Date,
         thumbnailUrl: (r.thumbnailUrl ?? null) as string | null,
     } as ChartMetadata));
 };
@@ -151,7 +151,7 @@ export const getMostRecentChartForWorkspace = async (workspaceId: string): Promi
         .select()
         .from(charts)
         .where(eq(charts.workspaceId, workspaceId))
-        .orderBy(desc(charts.createdAt))
+        .orderBy(desc(charts.updatedAt))
         .limit(1);
     
     return (chart ?? null) as Chart | null;

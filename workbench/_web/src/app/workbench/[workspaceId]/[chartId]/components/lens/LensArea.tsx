@@ -4,6 +4,7 @@ import { CompletionCard } from "./CompletionCard";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
+import { LensConfig } from "@/db/schema";
 
 export default function LensArea() {
     const { selectedModel } = useWorkspace();
@@ -32,7 +33,7 @@ export default function LensArea() {
 
             <div className="p-2">
                 {/* Assume lens config here; unified page will gate by config.type */}
-                <CompletionCard initialConfig={config as any} />
+                <CompletionCard initialConfig={config as LensConfig} />
             </div>
         </div>
     );
