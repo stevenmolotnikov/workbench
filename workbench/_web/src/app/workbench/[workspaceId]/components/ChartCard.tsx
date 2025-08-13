@@ -18,7 +18,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
 
     const isSelected = chartId === metadata.id;
     const router = useRouter();
-    const updatedAt = metadata.updatedAt ? new Date(metadata.updatedAt).toLocaleDateString() : "";
+    const updatedAt = metadata.updatedAt ? new Date(metadata.updatedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : "";
 
     const navigateToChart = (chartId: string) => {
         router.push(`/workbench/${workspaceId}/${chartId}`);
@@ -28,10 +28,10 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         navigateToChart(metadata.id);
     };
 
-    const formatToolType = (toolType: ChartMetadata["toolType"]) => {
-        if (!toolType) return "Unknown";
-        return toolType === "lens" ? "Lens" : toolType === "patch" ? "Patch" : toolType;
-    };
+    // const formatToolType = (toolType: ChartMetadata["toolType"]) => {
+    //     if (!toolType) return "Unknown";
+    //     return toolType === "lens" ? "Lens" : toolType === "patch" ? "Patch" : toolType;
+    // };
 
 
     const renderChartTypeMini = (chartType: ChartMetadata["chartType"]) => {
@@ -116,14 +116,21 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-medium capitalize">
-                                {formatToolType(metadata.toolType)}
+                                {/* {formatToolType(metadata.toolType)} */}
+                                {metadata.name ? (metadata.name.length > 12 ? `${metadata.name.slice(0, 12)}...` : metadata.name) : 'Untitled'}
                             </span>
+
+                        </div>
+                        <div className="text-xs text-muted-foreground break-words flex items-center gap-2">
+
+                            {renderChartTypeMini(metadata.chartType)}
+                            {updatedAt && renderChartTypeMini(metadata.chartType) && (
+                                <span className="text-xs text-muted-foreground">•</span>
+                            )}
+
                             {updatedAt && (
                                 <span className="text-xs text-muted-foreground">{updatedAt}</span>
                             )}
-                        </div>
-                        <div className="text-xs text-muted-foreground break-words flex items-center gap-2">
-                            {renderChartTypeMini(metadata.chartType)}
                         </div>
                     </div>
                     <button

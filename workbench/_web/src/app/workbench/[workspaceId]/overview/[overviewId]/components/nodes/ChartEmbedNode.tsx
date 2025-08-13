@@ -1,21 +1,22 @@
 "use client";
 
-import { DecoratorNode, LexicalEditor, NodeKey, SerializedLexicalNode, Spread } from "lexical";
+import { DecoratorNode, LexicalEditor, NodeKey, SerializedLexicalNode, Spread, $getNodeByKey, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, COMMAND_PRIORITY_LOW } from "lexical";
 import * as React from "react";
 import { LineGraphData, HeatmapData } from "@/types/charts";
 import { getChartById } from "@/lib/queries/chartQueries";
-import type { BasicChart } from "@/types/charts";
+import type { ChartMetadata } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
 import { Line } from "@/components/charts/line/Line";
 import { Heatmap } from "@/components/charts/heatmap/Heatmap";
 import { Card } from "@/components/ui/card";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { mergeRegister } from "@lexical/utils";
 // no-op
 
 // Command payload and command export
 import { createCommand } from "lexical";
-export const INSERT_CHART_EMBED_COMMAND = createCommand<{ chart: BasicChart }>("INSERT_CHART_EMBED_COMMAND");
+export const INSERT_CHART_EMBED_COMMAND = createCommand<{ chart: ChartMetadata }>("INSERT_CHART_EMBED_COMMAND");
 
 // Node payload
 export type ChartEmbedPayload = {
@@ -81,6 +82,45 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
   const [editor] = useLexicalComposerContext();
   const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
   const { data: chart } = useQuery({ queryKey: ["chartById", chartId], queryFn: () => getChartById(chartId) });
+
+  React.useEffect(() => {
+    return mergeRegister(
+      editor.registerCommand(
+        KEY_BACKSPACE_COMMAND,
+        (event) => {
+          if (isSelected) {
+            event?.preventDefault();
+            editor.update(() => {
+              const node = $getNodeByKey(nodeKey);
+              if (node) {
+                node.remove();
+              }
+            });
+            return true;
+          }
+          return false;
+        },
+        COMMAND_PRIORITY_LOW
+      ),
+      editor.registerCommand(
+        KEY_DELETE_COMMAND,
+        (event) => {
+          if (isSelected) {
+            event?.preventDefault();
+            editor.update(() => {
+              const node = $getNodeByKey(nodeKey);
+              if (node) {
+                node.remove();
+              }
+            });
+            return true;
+          }
+          return false;
+        },
+        COMMAND_PRIORITY_LOW
+      )
+    );
+  }, [editor, isSelected, nodeKey]);
 
   const name = (chart?.name ?? "Untitled");
   const type = (chart?.type ?? chartType);
