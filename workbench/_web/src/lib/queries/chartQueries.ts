@@ -104,21 +104,6 @@ export const getAllChartsByType = async (workspaceId?: string): Promise<Record<s
     return chartsByType;
 };
 
-// Save or update a chart thumbnail url
-export const upsertChartThumbnail = async (chartId: string, url: string) => {
-    await db.update(charts).set({ thumbnailUrl: url }).where(eq(charts.id, chartId));
-    return { chartId, url };
-};
-
-export const getChartThumbnail = async (chartId: string): Promise<string | null> => {
-    const rows = await db
-        .select({ thumbnailUrl: charts.thumbnailUrl })
-        .from(charts)
-        .where(eq(charts.id, chartId))
-        .limit(1);
-    return rows.length > 0 ? ((rows[0].thumbnailUrl ?? null) as string | null) : null;
-};
-
 export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetadata[]> => {
     const rows = await db
         .select({
@@ -127,7 +112,6 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
             chartType: charts.type,
             updatedAt: charts.updatedAt,
             toolType: configs.type,
-            thumbnailUrl: charts.thumbnailUrl,
         })
         .from(charts)
         .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
@@ -142,7 +126,6 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
         chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
         toolType: (r.toolType as "lens" | "patch" | null) ?? null,
         updatedAt: r.updatedAt as Date,
-        thumbnailUrl: (r.thumbnailUrl ?? null) as string | null,
     } as ChartMetadata));
 };
 

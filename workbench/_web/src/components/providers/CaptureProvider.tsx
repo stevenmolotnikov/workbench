@@ -5,8 +5,7 @@ import { toBlob } from "html-to-image";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { getThumbnailPath, uploadThumbnailPublic } from "@/lib/supabase/client";
-import { saveChartThumbnailUrl } from "@/actions/thumbnails";
+import { uploadThumbnailPublic } from "@/lib/supabase/client";
 
 interface CaptureContextValue {
   captureRef: React.RefObject<HTMLDivElement>;
@@ -72,9 +71,9 @@ export function CaptureProvider({ children }: CaptureProviderProps) {
       });
       if (!blob) return;
       const workspaceId = params?.workspaceId as string;
-      const path = getThumbnailPath(workspaceId, chartId);
-      const publicUrl = await uploadThumbnailPublic(blob, path);
-      await saveChartThumbnailUrl(chartId, publicUrl);
+      const path = `${workspaceId}/${chartId}.png`;
+      await uploadThumbnailPublic(blob, path);
+      // Invalidate sidebar images
       await queryClient.invalidateQueries({ queryKey: ["chartsForSidebar", workspaceId] });
     } catch (e) {
       console.error("Thumbnail upload failed", e);

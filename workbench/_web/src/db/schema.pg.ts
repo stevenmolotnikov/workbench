@@ -21,7 +21,6 @@ export const charts = pgTable("charts", {
 
     name: varchar("name", { length: 256 }).notNull().default("Untitled Chart"),
     data: jsonb("data").$type<ChartData>(),
-    thumbnailUrl: varchar("thumbnail_url", { length: 2048 }),
     type: varchar("type", { enum: chartTypes, length: 32 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull().$onUpdate(() => new Date()),

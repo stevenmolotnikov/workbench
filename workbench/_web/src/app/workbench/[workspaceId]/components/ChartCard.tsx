@@ -1,8 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { Card } from "@/components/ui/card";
-import { Grid3X3, ChartLine, Search, ReplaceAll, Trash2 } from "lucide-react";
+import { Grid3X3, ChartLine, Trash2, Copy } from "lucide-react";
 import Image from "next/image";
 import { ChartMetadata } from "@/types/charts";
 import { cn } from "@/lib/utils";
@@ -49,17 +48,19 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         );
     };
 
-    const Thumbnail = ({ url }: { url: string | null | undefined }) => {
+    const Thumbnail = () => {
         const style = cn(
             "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r",
             isSelected && "border-primary"
         )
 
-        if (!url || process.env.NEXT_PUBLIC_LOCAL === "true") {
+        if (process.env.NEXT_PUBLIC_LOCAL === "true") {
             return (
                 <div className={style}/>
             );
         }
+
+        const url = `${process.env.NEXT_PUBLIC_THUMBNAILS_BUCKET_URL}/storage/v1/object/public/thumbnails/${workspaceId}/${metadata.id}.png`
         const version = metadata.updatedAt ? new Date(metadata.updatedAt).getTime() : undefined;
         const versionedUrl = version ? `${url}${url.includes("?") ? "&" : "?"}v=${version}` : url;
         return (
@@ -95,7 +96,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                 } catch { }
             }}
         >
-            <Thumbnail url={metadata.thumbnailUrl} />
+            <Thumbnail />
             <div
                 key={metadata.id}
                 className={cn(
@@ -132,6 +133,12 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                     >
                         <Trash2 className="h-3 w-3" />
                     </button>
+                    {/* <button
+                        className={`p-1 rounded hover:bg-muted`}
+                        onClick={(e) => handleCopy(e, metadata.id)}
+                    >
+                        <Copy className="h-3 w-3" />
+                    </button> */}
                 </div>
             </div>
         </div>
