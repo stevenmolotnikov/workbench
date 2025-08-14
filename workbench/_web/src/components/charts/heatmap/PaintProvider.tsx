@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useHeatmapControls } from "./HeatmapControlsProvider";
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,12 +35,10 @@ export const PaintProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         enabled: !!chartId,
     })
 
-    const [highlightedCellIds, setHighlightedCellIds] = useState<Set<string>>(new Set())
     const [pendingAdditions, setPendingAdditions] = useState<Set<string>>(new Set())
-    const pendingTimerRef = useRef<number | null>(null)
     const dragStartRef = useRef<{ x: number; y: number } | null>(null)
 
-    useEffect(() => {
+    const highlightedCellIds = useMemo<Set<string>>(() => {
         const next = new Set<string>()
         for (const ann of allAnnotations) {
             if (ann.type !== 'heatmap') continue
@@ -48,7 +46,7 @@ export const PaintProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             hm.cellIds.forEach(id => next.add(id))
         }
         pendingAdditions.forEach(id => next.add(id))
-        setHighlightedCellIds(next)
+        return next
     }, [allAnnotations, pendingAdditions])
 
     // Resize canvas for DPR
@@ -122,40 +120,7 @@ export const PaintProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             }
         }
 
-        const onUp = (ev: MouseEvent) => {
-            const start = dragStartRef.current
-            if (start) {
-                const dx = ev.clientX - start.x
-                const dy = ev.clientY - start.y
-                const click = dx * dx + dy * dy < 16
-                if (click) {
-                    const r = paintCanvasRef.current?.getBoundingClientRect()
-                    if (r) {
-                        const mx = ev.clientX - r.left
-                        const my = ev.clientY - r.top
-                        const c = getCellFromPosition(paintCanvasRef, data, mx, my)
-                        if (c) {
-                            const id = `${chartId}-${c.row}-${c.col}`
-                            if (pendingAdditions.has(id)) {
-                                setPendingAdditions(prev => {
-                                    const next = new Set(prev)
-                                    next.delete(id)
-                                    return next
-                                })
-                            } else if (highlightedCellIds.has(id)) {
-                                // remove from existing
-                                const existing = allAnnotations.find(a => a.type === 'heatmap')
-                                if (existing) {
-                                    const current = new Set<string>(((existing.data as HeatmapAnnotation).cellIds) ?? [])
-                                    current.delete(id)
-                                    void updateAnnotation({ id: existing.id, chartId: chartId!, data: { type: 'heatmap', cellIds: Array.from(current) } })
-                                    queryClient.invalidateQueries({ queryKey: ["annotations", chartId] })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        const onUp = (_ev: MouseEvent) => {
             debouncedFlush()
 
             window.removeEventListener('mousemove', onMove)
@@ -164,7 +129,7 @@ export const PaintProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)
-    }, [isZoomSelecting, data, chartId, highlightedCellIds, pendingAdditions, allAnnotations, updateAnnotation, queryClient, debouncedFlush])
+    }, [isZoomSelecting, data, chartId, highlightedCellIds, debouncedFlush])
 
 
     useEffect(() => {

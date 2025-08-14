@@ -29,6 +29,7 @@ export const ZoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { filteredData: data, isZoomSelecting, handleZoomComplete } = useHeatmapControls()
 
     const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
+    const selectionRef = useRef<SelectionRect | null>(null)
     const rafRef = useRef<number | null>(null)
 
     useEffect(() => {
@@ -88,7 +89,9 @@ export const ZoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const y = e.clientY - rect.top
         const cell = getCellFromPosition(zoomCanvasRef, data, x, y)
         if (!cell) return
-        setSelectionRect({ startX: cell.col, startY: cell.row, endX: cell.col, endY: cell.row })
+        const start = { startX: cell.col, startY: cell.row, endX: cell.col, endY: cell.row }
+        selectionRef.current = start
+        setSelectionRect(start)
 
         const onMove = (ev: MouseEvent) => {
             const r = zoomCanvasRef.current?.getBoundingClientRect()
@@ -97,11 +100,15 @@ export const ZoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const my = ev.clientY - r.top
             const c = getCellFromPosition(zoomCanvasRef, data, mx, my)
             if (!c) return
-            setSelectionRect(prev => prev ? { ...prev, endX: c.col, endY: c.row } : null)
+            setSelectionRect(prev => {
+                const next = prev ? { ...prev, endX: c.col, endY: c.row } : null
+                selectionRef.current = next
+                return next
+            })
         }
 
         const onUp = () => {
-            const final = selectionRect
+            const final = selectionRef.current
             if (final) {
                 handleZoomComplete?.({
                     minRow: Math.min(final.startY, final.endY),
@@ -110,6 +117,7 @@ export const ZoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     maxCol: Math.max(final.startX, final.endX),
                 })
             }
+            selectionRef.current = null
             setSelectionRect(null)
             window.removeEventListener('mousemove', onMove)
             window.removeEventListener('mouseup', onUp)
@@ -117,7 +125,7 @@ export const ZoomProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)
-    }, [isZoomSelecting, data, handleZoomComplete, selectionRect])
+    }, [isZoomSelecting, data, handleZoomComplete])
 
     return (
         <div ref={containerRef} className="size-full relative" onMouseDown={onMouseDown}>

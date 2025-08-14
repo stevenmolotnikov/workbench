@@ -31,7 +31,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { tokenData, setTokenData } = useLensWorkspace();
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
-    const { selectedModel } = useWorkspace();
+    const { selectedModel, currentChartType, setCurrentChartType } = useWorkspace();
 
     // Workspace display state
     const [showTokenArea, setShowTokenArea] = useState(false);
@@ -45,6 +45,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
 
     const init = useRef(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     useEffect(() => {
         if (init.current) return;
         if ("token" in config && config.token.targetIds.length > 0) {
@@ -138,6 +139,15 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         setTokenData([]);
         setShowTokenArea(false);
         setPredictions([]);
+        
+        // Focus the textarea and place cursor at the end after state updates
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                const length = textareaRef.current.value.length;
+                textareaRef.current.setSelectionRange(length, length);
+            }
+        }, 0);
     }
 
     return (
@@ -146,6 +156,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
             <div className="flex size-full relative">
                 {!showTokenArea ? (
                     <Textarea
+                        ref={textareaRef}
                         value={config.prompt}
                         onChange={handlePromptChange}
                         onKeyDown={handleKeyDown}
@@ -155,9 +166,10 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 ) : (
                     <div
                         className={cn(
-                            "flex w-full h-24 px-3 py-2 border overflow-y-auto",
+                            "flex w-full h-24 px-3 py-2 border overflow-y-auto cursor-pointer",
                             showTokenArea ? "rounded-t-lg" : "rounded"
                         )}
+                        onClick={handleClear}
                     >
                         <TokenArea
                             config={config}
@@ -173,24 +185,16 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         config={config}
                         setConfig={setConfig}
                     />}
-                    <Button
+                    {!showTokenArea && <Button
                         size="icon"
                         variant={showTokenArea ? "outline" : "default"}
                         id="tokenize-button"
                         onClick={() => {
-                            if (showTokenArea) {
-                                handleClear();
-                            } else {
-                                handleTokenize();
-                            }
+                            handleTokenize();
                         }}
                     >
-                        {showTokenArea ? (
-                            <X className="w-4 h-4" />
-                        ) : (
-                            <CornerDownLeft className="w-4 h-4" />
-                        )}
-                    </Button>
+                        <CornerDownLeft className="w-4 h-4" />
+                    </Button>}
                 </div>
 
             </div>
@@ -203,6 +207,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         <Button
                             size="icon"
                             onClick={() => handleCreateHeatmap(config)}
+                            variant={currentChartType === "heatmap" ? "default" : "outline"}
                         >
                             <Grid3x3 className="w-4 h-4" />
                         </Button>
@@ -210,6 +215,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                             size="icon"
                             onClick={() => handleCreateLineChart(config)}
                             disabled={config.token.targetIds.length === 0}
+                            variant={currentChartType === "line" ? "default" : "outline"}
                         >
                             <ChartLine className="w-4 h-4" />
                         </Button>

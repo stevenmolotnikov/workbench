@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { Token } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 interface TokenAreaProps {
     config: LensConfigData;
@@ -13,9 +14,9 @@ interface TokenAreaProps {
 // Token styling constants
 const TOKEN_STYLES = {
     base: "text-sm whitespace-pre-wrap select-none !box-border relative",
-    highlight: "bg-primary/30 after:absolute after:inset-0 after:border after:border-primary/30",
-    filled: "bg-primary/70 after:absolute after:inset-0 after:border after:border-primary/30",
-    hover: "hover:bg-primary/20 hover:after:absolute hover:after:inset-0 hover:after:border hover:after:border-primary/30",
+    highlight: "bg-primary/30 ring-1 ring-primary/30 ring-inset",
+    filled: "bg-primary/70 ring-1 ring-primary/30 ring-inset",
+    hover: "hover:bg-primary/20 hover:ring-1 hover:ring-primary/30 hover:ring-inset",
 } as const;
 
 const fix = (text: string) => {
@@ -38,6 +39,8 @@ export function TokenArea({
     handleTokenClick,
     tokenData,
 }: TokenAreaProps) {
+    const { currentChartType } = useWorkspace();
+
     const getTokenStyle = (
         token: Token,
         idx: number,
@@ -45,8 +48,8 @@ export function TokenArea({
         const isFilled = config.token.targetIds.length > 0;
 
         let backgroundStyle = "";
-        if (config.token.idx === idx) {
-            backgroundStyle = isFilled ? TOKEN_STYLES.filled : TOKEN_STYLES.highlight;
+        if (config.token.idx === idx && currentChartType === "line") {
+            backgroundStyle = (isFilled) ? TOKEN_STYLES.filled : TOKEN_STYLES.highlight;
         } else {
             backgroundStyle = "bg-transparent";
         }
@@ -54,7 +57,7 @@ export function TokenArea({
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
-            (!isFilled) && TOKEN_STYLES.hover,
+            TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
             "cursor-pointer",
         );

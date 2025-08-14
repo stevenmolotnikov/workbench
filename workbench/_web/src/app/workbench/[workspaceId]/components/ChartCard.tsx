@@ -60,7 +60,8 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
             );
         }
 
-        const url = `${process.env.NEXT_PUBLIC_THUMBNAILS_BUCKET_URL}/storage/v1/object/public/thumbnails/${workspaceId}/${metadata.id}.png`
+        const url = `${process.env.NEXT_PUBLIC_THUMBNAILS_BUCKET_URL}/${workspaceId}/${metadata.id}.png`
+        console.log(url)
         const version = metadata.updatedAt ? new Date(metadata.updatedAt).getTime() : undefined;
         const versionedUrl = version ? `${url}${url.includes("?") ? "&" : "?"}v=${version}` : url;
         return (
