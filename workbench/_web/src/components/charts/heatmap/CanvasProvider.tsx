@@ -1,16 +1,24 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useHeatmapData } from "./HeatmapDataProvider";
 import { heatmapMargin as margin } from "../theming";
-import { getCellDimensions } from "./heatmap-geometry";
 import { HeatmapBounds } from "@/types/charts";
 import { useDpr } from "../useDpr";
-import { getCellFromPosition } from "./heatmap-geometry";
+import { getCellFromPosition, getCellDimensions } from "./heatmap-geometry";
 
 interface CanvasContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>
     rafRef: React.MutableRefObject<number | null>
     draw: (bounds: HeatmapBounds) => void
     clear: () => void
+}
+
+interface Tooltip {
+    visible: boolean
+    left: number
+    top: number
+    xVal: string | number
+    yVal: number | null
+    color: string
 }
 
 const CanvasContext = createContext<CanvasContextValue | null>(null)
@@ -28,6 +36,8 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // DPR/resize handling
     useDpr(selectionCanvasRef)
+
+    // DRAWING
 
     const clear = useCallback(() => {
         const canvas = selectionCanvasRef.current
@@ -69,8 +79,9 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clear,
     }
 
-    // Tooltip state and handlers
-    const [tooltip, setTooltip] = useState<{ visible: boolean; left: number; top: number; xVal: string | number; yVal: number | null; color: string }>(
+    // TOOLTIP DRAWING
+
+    const [tooltip, setTooltip] = useState<Tooltip>(
         { visible: false, left: 0, top: 0, xVal: "", yVal: null, color: "transparent" }
     )
 

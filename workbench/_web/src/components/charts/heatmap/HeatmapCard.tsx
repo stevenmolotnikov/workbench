@@ -29,8 +29,9 @@ export const HeatmapCard = ({ chart, captureRef }: HeatmapCardProps) => {
 };
 
 const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
-    const { bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
-    const { zoomIntoActiveSelection, clearSelection, activeSelection } = useSelection()
+    const { filteredData: data, bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
+    const { zoomIntoActiveSelection, clearSelection, activeSelection, onMouseDown } = useSelection()
+    const { selectionCanvasRef } = useCanvasProvider()
 
     // Handle reset: clear selection and reset ranges/step
     const handleReset = async () => {
@@ -77,23 +78,14 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
             </div>
 
             <div className="flex h-[90%] w-full" ref={captureRef}>
-                <HeatmapWithCanvas />
+                <div className="size-full relative" onMouseDown={onMouseDown}>
+                    <canvas
+                        ref={selectionCanvasRef}
+                        className="absolute inset-0 size-full pointer-events-auto z-20"
+                    />
+                    <Heatmap data={data} />
+                </div>
             </div>
         </>
-    )
-}
-
-const HeatmapWithCanvas = () => {
-    const { onMouseDown } = useSelection()
-    const { selectionCanvasRef } = useCanvasProvider()
-
-    return (
-        <div className="size-full relative" onMouseDown={onMouseDown}>
-            <canvas
-                ref={selectionCanvasRef}
-                className="absolute inset-0 size-full pointer-events-auto z-20"
-            />
-            <Heatmap />
-        </div>
     )
 }

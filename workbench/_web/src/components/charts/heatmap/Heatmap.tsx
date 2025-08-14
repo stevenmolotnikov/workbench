@@ -5,16 +5,16 @@ import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
 import { heatmapMargin, heatmapTheme } from '../theming'
 import { resolveThemeCssVars } from '@/lib/utils'
 import { Margin } from '@nivo/core';
-import { useHeatmapData } from './HeatmapDataProvider';
+import { HeatmapData } from '@/types/charts';
 
 
 interface HeatmapProps {
+    data: HeatmapData
     margin?: Margin;
 }
 
 
-export function Heatmap({ margin = heatmapMargin }: HeatmapProps) {
-    const { filteredData: data } = useHeatmapData()
+export function Heatmap({ data, margin = heatmapMargin }: HeatmapProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(heatmapTheme), [])
 
     return (
