@@ -16,6 +16,7 @@ import {
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
 import type { HeatmapData, LineGraphData } from '@/types/charts';
+import type { HeatmapAnnotationData } from '@/types/annotations';
 
 // Conditionally export the appropriate schema based on environment
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
@@ -45,6 +46,10 @@ export type NewAnnotation = typeof annotations.$inferInsert;
 
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
+
+export type HeatmapAnnotation = Omit<Annotation, 'data'> & {
+    data: HeatmapAnnotationData;
+};
 
 export type HeatmapChart = Omit<Chart, 'data'> & {
     data: HeatmapData;

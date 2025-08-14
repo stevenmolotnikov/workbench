@@ -5,9 +5,14 @@ export interface LineAnnotation {
     layerEnd?: number;
 }
 
-export interface HeatmapAnnotation { 
+export interface HeatmapAnnotationData { 
     type: "heatmap";
-    cellIds: string[];
+    bounds: {
+        minRow: number;
+        maxRow: number;
+        minCol: number;
+        maxCol: number;
+    };
 }
 
-export type AnnotationData = LineAnnotation | HeatmapAnnotation;
+export type AnnotationData = LineAnnotation | HeatmapAnnotationData;

@@ -25,8 +25,8 @@ export const useUpdateChartConfig = () => {
         mutationFn: async ({ configId, config }: { configId: string; config: NewConfig }) => {
             await setConfig(configId, config);
         },
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["configs", variables.config.workspaceId, variables.config.chartId] });
             console.log("Successfully updated chart config");
         },
         onError: (error) => {

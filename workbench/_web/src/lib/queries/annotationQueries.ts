@@ -2,12 +2,12 @@
 
 import { db } from "@/db/client";
 import { eq } from "drizzle-orm";
-import { annotations, charts, type Annotation, type NewAnnotation, type Chart } from "@/db/schema";
+import { annotations, charts, type Annotation, type NewAnnotation, type Chart, type HeatmapAnnotation } from "@/db/schema";
 import type { AnnotationData } from "@/types/annotations";
 
-export const getAnnotations = async (chartId: string): Promise<Annotation[]> => {
+export const getHeatmapAnnotation = async (chartId: string): Promise<HeatmapAnnotation | null> => {
     const result = await db.select().from(annotations).where(eq(annotations.chartId, chartId));
-    return result;
+    return result[0] || null;
 }
 
 export const createAnnotation = async (newAnnotation: NewAnnotation): Promise<Annotation> => {
@@ -35,8 +35,8 @@ export const getAllAnnotationsForWorkspace = async (workspaceId: string): Promis
         .innerJoin(charts, eq(annotations.chartId, charts.id))
         .where(eq(charts.workspaceId, workspaceId));
     
-    return result.map(({ annotations, charts }) => ({
-        ...annotations,
-        chart: charts
+    return result.map((row: { annotations: Annotation; charts: Chart }) => ({
+        ...row.annotations,
+        chart: row.charts
     }));
 }

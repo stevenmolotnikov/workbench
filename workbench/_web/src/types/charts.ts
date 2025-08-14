@@ -12,14 +12,8 @@ export interface HeatmapRow {
     data: HeatmapCell[];
 }
 
-export interface HeatmapHighlight {
-    x: number;
-    y: number;
-}
-
 export interface HeatmapData {
     rows: HeatmapRow[];
-    highlights?: HeatmapHighlight[];
 }
 
 export interface Position {

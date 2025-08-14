@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useHeatmapControls } from "./HeatmapControlsProvider";
-import { usePaint } from "./PaintProvider";
+import { useSelection } from "./SelectionProvider";
 import { getCellFromPosition } from "./heatmap-geometry";
 
-interface TooltipContextValue {}
+type TooltipContextValue = object;
 
 const TooltipContext = createContext<TooltipContextValue | null>(null)
 
@@ -16,7 +16,7 @@ export const useHeatmapTooltip = () => {
 export const TooltipProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const { filteredData: data } = useHeatmapControls()
-    const { paintCanvasRef } = usePaint()
+    const { selectionCanvasRef } = useSelection()
 
     const [tooltip, setTooltip] = useState<{ visible: boolean; left: number; top: number; xVal: string | number; yVal: number | null; color: string }>(
         { visible: false, left: 0, top: 0, xVal: "", yVal: null, color: "transparent" }
@@ -30,11 +30,11 @@ export const TooltipProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const handleMove = useCallback((e: MouseEvent) => {
-        const canvasRect = paintCanvasRef.current?.getBoundingClientRect()
+        const canvasRect = selectionCanvasRef.current?.getBoundingClientRect()
         if (!canvasRect) return setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
         const x = e.clientX - canvasRect.left
         const y = e.clientY - canvasRect.top
-        const cell = getCellFromPosition(paintCanvasRef, data, x, y)
+        const cell = getCellFromPosition(selectionCanvasRef, data, x, y)
         if (!cell) {
             setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
             return
@@ -47,7 +47,7 @@ export const TooltipProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const left = contRect ? e.clientX - contRect.left + 12 : x + 12
         const top = contRect ? e.clientY - contRect.top - 12 : y - 12
         setTooltip({ visible: true, left, top, xVal, yVal, color })
-    }, [paintCanvasRef, data])
+    }, [selectionCanvasRef, data])
 
     const handleLeave = useCallback(() => {
         setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)

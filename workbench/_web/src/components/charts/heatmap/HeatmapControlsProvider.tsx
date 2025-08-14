@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback, useRef } from "react";
 import { HeatmapData } from "@/types/charts";
 import { Button } from "@/components/ui/button";
-import { Crop, RotateCcw, Eraser } from "lucide-react";
-import { useDeleteAnnotation } from "@/lib/api/annotationsApi";
+import { Crop, RotateCcw } from "lucide-react";
+import { useCreateAnnotation, useDeleteAnnotation, useUpdateAnnotation } from "@/lib/api/annotationsApi";
 import { useQuery } from "@tanstack/react-query";
-import { getAnnotations } from "@/lib/queries/annotationQueries";
-import type { Annotation } from "@/db/schema";
-import { HeatmapChart } from "@/db/schema";
+import { getHeatmapAnnotation } from "@/lib/queries/annotationQueries";
+import { useDebouncedCallback } from "use-debounce";
+import { HeatmapAnnotation, HeatmapChart } from "@/db/schema";
 import ChartTitle from "../ChartTitle";
 
 type Range = [number, number];
@@ -36,11 +36,11 @@ interface HeatmapControlsContextValue {
     bounds: Bounds;
     filteredData: HeatmapData;
 
-    // Zoom State
-    isZoomSelecting: boolean;
-    setIsZoomSelecting: (selecting: boolean) => void;
-    toggleZoomSelecting: (next?: boolean) => void;
-    handleZoomComplete: (bounds: ZoomBounds) => void;
+    // Selection (provided by SelectionProvider, persisted here)
+    activeSelection: ZoomBounds | null;
+    setActiveSelection: (bounds: ZoomBounds | null) => void;
+    clearSelection: () => Promise<void>;
+    zoomIntoActiveSelection: () => Promise<void>;
 }
 
 const HeatmapControlsContext = createContext<HeatmapControlsContextValue | null>(null);
@@ -61,12 +61,14 @@ interface HeatmapControlsProviderProps {
 export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = ({ chart, children }) => {
 
     const data = chart.data;
-    const { data: allAnnotations = [] } = useQuery<Annotation[]>({
+    const { data: annotation, isSuccess } = useQuery<HeatmapAnnotation | null>({
         queryKey: ["annotations", chart.id],
-        queryFn: () => getAnnotations(chart.id),
+        queryFn: () => getHeatmapAnnotation(chart.id),
         enabled: !!chart.id,
     })
     const { mutateAsync: deleteAnnotation } = useDeleteAnnotation()
+    const { mutateAsync: createAnnotation } = useCreateAnnotation()
+    const { mutateAsync: updateAnnotation } = useUpdateAnnotation()
 
     // Calculate bounds
     const bounds = useMemo(() => {
@@ -150,13 +152,54 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
         };
     }, [data, xRange, yRange, xStep]);
 
+    const [activeSelection, setActiveSelectionState] = useState<ZoomBounds | null>(null)
 
-    // ZOOM STATE
+    // Initialize active selection from existing DB annotation (if present)
+    useEffect(() => {
+        if (isSuccess && annotation) {
+            setActiveSelectionState(annotation.data.bounds)
+        }
+    }, [annotation, isSuccess])
 
-    // Zoom State
-    const [isZoomSelecting, setIsZoomSelecting] = useState(false);
+    const debouncedPersist = useDebouncedCallback(async () => {
+        if (!activeSelection) return
+        const payload = { type: 'heatmap' as const, bounds: { ...activeSelection } }
+        if (annotation) {
+            await updateAnnotation({ id: annotation.id, chartId: chart.id, data: payload })
+        } else {
+            await createAnnotation({ chartId: chart.id, type: 'heatmap', data: payload })
+        }
+    }, 3000)
 
-    const computeNewRanges = (zoomBounds: ZoomBounds) => {
+    // Cancel pending persist on unmount
+    useEffect(() => {
+        return () => {
+            debouncedPersist.cancel()
+        }
+    }, [debouncedPersist])
+
+    // Exposed setter that persists when selection is set
+    const setActiveSelection = useCallback((bounds: ZoomBounds | null) => {
+        setActiveSelectionState(bounds)
+        if (bounds) {
+            debouncedPersist()
+        } else {
+            debouncedPersist.cancel()
+        }
+    }, [debouncedPersist])
+
+    const clearSelection = useCallback(async () => {
+        debouncedPersist.cancel()
+        const existing = annotation
+        setActiveSelection(null)
+        if (existing) {
+            await deleteAnnotation({ id: existing.id, chartId: chart.id })
+        }
+    }, [annotation, deleteAnnotation, chart.id, debouncedPersist, setActiveSelection])
+
+    const zoomIntoActiveSelection = useCallback(async () => {
+        if (!activeSelection) return
+        const zoomBounds = activeSelection
         const hasX = xRange[0] !== 0 && xRange[1] !== 0;
         const hasY = yRange[0] !== 0 && yRange[1] !== 0;
 
@@ -171,45 +214,27 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
         const currentX = hasX ? xRange : [bounds.xMin, bounds.xMax] as Range;
         const currentY = hasY ? yRange : [bounds.yMin, bounds.yMax] as Range;
 
-        const newX: Range = [
+        await clearSelection()
+
+        setXRange([
             Math.max(currentX[0], Math.min(absMinCol, absMaxCol)),
             Math.min(currentX[1], Math.max(absMinCol, absMaxCol))
-        ];
-        const newY: Range = [
+        ])
+        setYRange([
             Math.max(currentY[0], Math.min(absMinRow, absMaxRow)),
             Math.min(currentY[1], Math.max(absMinRow, absMaxRow))
-        ];
+        ])
+    }, [clearSelection, bounds.xMin, bounds.xMax, bounds.yMin, bounds.yMax, xRange, yRange, activeSelection])
 
-        return {
-            newX,
-            newY
-        }
-    }
-
-    // Handle zoom completion
-    const handleZoomComplete = (zoomBounds: ZoomBounds) => {
-        const { newX, newY } = computeNewRanges(zoomBounds);
-
-        setXRange(newX);
-        setYRange(newY);
-
-        setIsZoomSelecting(false);
-    };
-
-    const toggleZoomSelecting = (next?: boolean) => {
-        const value = typeof next === "boolean" ? next : !isZoomSelecting;
-        setIsZoomSelecting(value);
-    };
-
-    // Handle reset
-    const handleReset = () => {
-        setIsZoomSelecting(false);
+    // Handle reset: clear selection and reset ranges/step
+    const handleReset = useCallback(async () => {
+        await clearSelection()
         setXRange([bounds.xMin, bounds.xMax]);
         const start = Math.max(bounds.yMin, bounds.yMax - 9);
         const end = bounds.yMax;
         setYRange([start, end]);
         setXStep(defaultXStep);
-    };
+    }, [clearSelection, bounds.xMin, bounds.xMax, bounds.yMin, bounds.yMax, defaultXStep])
 
     const contextValue: HeatmapControlsContextValue = {
         // Range State
@@ -222,11 +247,11 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
         bounds,
         filteredData,
 
-        // Zoom State
-        isZoomSelecting,
-        setIsZoomSelecting,
-        toggleZoomSelecting,
-        handleZoomComplete,
+        // Selection
+        activeSelection,
+        setActiveSelection,
+        clearSelection,
+        zoomIntoActiveSelection,
     };
 
     return (
@@ -256,35 +281,18 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
                     </div>
 
                     <Button
-                        variant={isZoomSelecting ? "default" : "outline"}
+                        variant={activeSelection ? "default" : "outline"}
                         size="sm"
                         className="h-8 w-8"
-                        onClick={() => toggleZoomSelecting()}
-                        aria-pressed={isZoomSelecting}
-
-                        title={isZoomSelecting ? "Exit zoom selection" : "Enter zoom selection"}
+                        onClick={() => { void zoomIntoActiveSelection() }}
+                        disabled={!activeSelection}
+                        title={activeSelection ? "Zoom into selection and clear annotation" : "Draw a selection on the chart first"}
                     >
                         <Crop className="w-4 h-4" />
                     </Button>
 
-                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset ranges">
+                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={() => { void handleReset() }} title="Reset zoom and clear selection">
                         <RotateCcw className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8"
-                        onClick={async () => {
-                            // delete all heatmap annotations; no confirmation
-                            const toDelete = allAnnotations.filter(a => a.type === 'heatmap')
-                            for (const ann of toDelete) {
-                                await deleteAnnotation({ id: ann.id, chartId: chart.id })
-                            }
-                        }}
-                        title="Clear all annotations"
-                    >
-                        <Eraser className="w-4 h-4" />
                     </Button>
                 </div>
             </div>

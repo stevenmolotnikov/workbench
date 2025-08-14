@@ -11,7 +11,7 @@ export default function LensArea() {
     const { workspaceId, chartId } = useParams<{ workspaceId: string; chartId: string }>();
 
     const { data: config } = useQuery({
-        queryKey: ["chartConfig", workspaceId, chartId],
+        queryKey: ["configs", workspaceId, chartId],
         queryFn: () => getConfigForChart(chartId),
         enabled: !!selectedModel && !!chartId,
     });
