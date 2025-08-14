@@ -1,5 +1,5 @@
 import { boolean, jsonb, pgTable, varchar, uuid, timestamp } from "drizzle-orm/pg-core";
-import type { ConfigData, ChartData } from "@/types/charts";
+import type { ConfigData, ChartData, ChartView } from "@/types/charts";
 import type { AnnotationData } from "@/types/annotations";
 import type { LensConfigData } from "@/types/lens";
 
@@ -21,6 +21,8 @@ export const charts = pgTable("charts", {
 
     name: varchar("name", { length: 256 }).notNull().default("Untitled Chart"),
     data: jsonb("data").$type<ChartData>(),
+    view: jsonb("view").$type<ChartView>(),
+    
     type: varchar("type", { enum: chartTypes, length: 32 }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull().$onUpdate(() => new Date()),
@@ -42,8 +44,9 @@ export const configs = pgTable("configs", {
 
 export const chartConfigLinks = pgTable("chart_config_links", {
     id: uuid("id").primaryKey().defaultRandom(),
-    chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull(),
-    configId: uuid("config_id").references(() => configs.id, { onDelete: "cascade" }).notNull(),
+    // NOTE: Unique key will constrain a 1:1 relationship. We can change this later if needed.
+    chartId: uuid("chart_id").references(() => charts.id, { onDelete: "cascade" }).notNull().unique(),
+    configId: uuid("config_id").references(() => configs.id, { onDelete: "cascade" }).notNull().unique(),
 });
 
 export const annotationTypes = [

@@ -1,3 +1,5 @@
+import { HeatmapBounds } from "./charts";
+
 export interface LineAnnotation { 
     type: "line";
     lineId: string;
@@ -7,12 +9,7 @@ export interface LineAnnotation {
 
 export interface HeatmapAnnotationData { 
     type: "heatmap";
-    bounds: {
-        minRow: number;
-        maxRow: number;
-        minCol: number;
-        maxCol: number;
-    };
+    bounds: HeatmapBounds;
 }
 
 export type AnnotationData = LineAnnotation | HeatmapAnnotationData;

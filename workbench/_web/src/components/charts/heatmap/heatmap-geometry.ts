@@ -8,8 +8,9 @@ const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: 
     }
 
     const canvas = canvasRef.current;
-    const width = canvas.offsetWidth;
-    const height = canvas.offsetHeight;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
 
     const gridWidth = width - margin.left - margin.right;
     const gridHeight = height - margin.top - margin.bottom;
@@ -40,8 +41,8 @@ const getCellFromPosition = (
     const dims = getCellDimensions(canvasRef, data);
     if (!dims) return null;
 
-    const gridX = x - margin.left;
-    const gridY = y - margin.top;
+    const gridX = Math.max(0, x - margin.left);
+    const gridY = Math.max(0, y - margin.top);
 
     if (gridX < 0 || gridY < 0 || gridX >= dims.gridWidth || gridY >= dims.gridHeight) {
         return null;

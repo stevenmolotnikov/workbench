@@ -1,24 +1,29 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useHeatmapControls } from "./HeatmapControlsProvider";
-import { useSelection } from "./SelectionProvider";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getCellFromPosition } from "./heatmap-geometry";
+import { useHeatmapData } from "./HeatmapDataProvider";
+import { useCanvasProvider } from "./CanvasProvider";
 
-type TooltipContextValue = object;
 
-const TooltipContext = createContext<TooltipContextValue | null>(null)
-
-export const useHeatmapTooltip = () => {
-    const ctx = useContext(TooltipContext)
-    if (!ctx) throw new Error("useHeatmapTooltip must be used within a TooltipProvider")
-    return ctx
+interface Tooltip {
+    visible: boolean
+    left: number
+    top: number
+    xVal: string | number
+    yVal: number | null
+    color: string
 }
 
-export const TooltipProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const { filteredData: data } = useHeatmapControls()
-    const { selectionCanvasRef } = useSelection()
+interface TooltipLayerProps {
+    children: React.ReactNode   
+}
 
-    const [tooltip, setTooltip] = useState<{ visible: boolean; left: number; top: number; xVal: string | number; yVal: number | null; color: string }>(
+
+export const TooltipLayer: React.FC<TooltipLayerProps> = ({ children }) => {
+    const { filteredData: data } = useHeatmapData()
+    const containerRef = useRef<HTMLDivElement>(null)
+    const { selectionCanvasRef } = useCanvasProvider()
+
+    const [tooltip, setTooltip] = useState<Tooltip>(
         { visible: false, left: 0, top: 0, xVal: "", yVal: null, color: "transparent" }
     )
 
@@ -76,9 +81,7 @@ export const TooltipProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     </div>
                 </div>
             )}
-            <TooltipContext.Provider value={{}}>
-                {children}
-            </TooltipContext.Provider>
+            {children}
         </div>
     )
 }

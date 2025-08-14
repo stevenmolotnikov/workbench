@@ -1,18 +1,22 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useHeatmapControls } from "./HeatmapControlsProvider";
-import { heatmapMargin as margin } from "../theming";
-import { getCellDimensions, getCellFromPosition } from "./heatmap-geometry";
-import { useDpr } from "../useDpr";
- 
-interface SelectionRect {
-    startX: number
-    startY: number
-    endX: number
-    endY: number
-}
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
+import { getCellFromPosition } from "./heatmap-geometry";
+import { HeatmapBounds } from "@/types/charts";
+import { useDeleteAnnotation, useCreateAnnotation, useUpdateAnnotation } from "@/lib/api/annotationsApi";
+import { useUpdateChartView } from "@/lib/api/chartApi";
+import { useQuery } from "@tanstack/react-query";
+import { getHeatmapAnnotation } from "@/lib/queries/annotationQueries";
+import { useDebouncedCallback } from "use-debounce";
+import { useCanvasProvider } from "./CanvasProvider";
+import { HeatmapAnnotation, HeatmapChart } from "@/db/schema";
+import { useHeatmapData } from "./HeatmapDataProvider";
+
+type Range = [number, number];
 
 interface SelectionContextValue {
-    selectionCanvasRef: React.RefObject<HTMLCanvasElement>
+    clearSelection: () => Promise<void>
+    onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
+    zoomIntoActiveSelection: () => Promise<void>
+    activeSelection: HeatmapBounds | null
 }
 
 const SelectionContext = createContext<SelectionContextValue | null>(null)
@@ -23,54 +27,84 @@ export const useSelection = () => {
     return ctx
 }
 
-export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const selectionCanvasRef = useRef<HTMLCanvasElement>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
-    const { filteredData: data, setActiveSelection, activeSelection } = useHeatmapControls()
-    const selectionRef = useRef<SelectionRect | null>(null)
-    const rafRef = useRef<number | null>(null)
+interface SelectionProviderProps {
+    chart: HeatmapChart
+    children: ReactNode
+}
 
-    // DPR/resize handling
-    useDpr(selectionCanvasRef)
+export const SelectionProvider = ({ chart, children }: SelectionProviderProps) => {
+    const { filteredData: data, bounds, xStep, xRange, yRange, setXRange, setYRange } = useHeatmapData()
+    const { selectionCanvasRef, rafRef, draw, clear } = useCanvasProvider()
 
-    // Selection drawing state (drag in progress)
-    const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null)
+    const [activeSelection, setActiveSelectionState] = useState<HeatmapBounds | null>(null)
 
-    const draw = useCallback(() => {
-        const canvas = selectionCanvasRef.current
-        const ctx = canvas?.getContext('2d')
-        if (!canvas || !ctx) return
-        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight)
-        const dims = getCellDimensions(selectionCanvasRef, data)
-        if (!dims) return
-        const drawBounds = (b: { minRow: number; maxRow: number; minCol: number; maxCol: number }) => {
-            const x = margin.left + b.minCol * dims.cellWidth
-            const y = margin.top + b.minRow * dims.cellHeight
-            const w = (b.maxCol - b.minCol + 1) * dims.cellWidth
-            const h = (b.maxRow - b.minRow + 1) * dims.cellHeight
-            ctx.fillStyle = 'rgba(239,68,68,0.25)'
-            ctx.strokeStyle = '#ef4444'
-            ctx.lineWidth = 2
-            ctx.fillRect(x, y, w, h)
-            ctx.strokeRect(x, y, w, h)
-        }
-        if (selectionRect) {
-            const bounds = {
-                minCol: Math.min(selectionRect.startX, selectionRect.endX),
-                maxCol: Math.max(selectionRect.startX, selectionRect.endX),
-                minRow: Math.min(selectionRect.startY, selectionRect.endY),
-                maxRow: Math.max(selectionRect.startY, selectionRect.endY),
-            }
-            drawBounds(bounds)
-        } else if (activeSelection) {
-            drawBounds(activeSelection)
-        }
-    }, [selectionRect, data, activeSelection])
+    const { mutateAsync: deleteAnnotation } = useDeleteAnnotation()
+    const { mutateAsync: createAnnotation } = useCreateAnnotation()
+    const { mutateAsync: updateAnnotation } = useUpdateAnnotation()
+    const { mutateAsync: updateChartView } = useUpdateChartView()
 
+    const { data: annotation, isSuccess: isAnnotationSuccess } = useQuery<HeatmapAnnotation | null>({
+        queryKey: ["annotations", chart.id],
+        queryFn: () => getHeatmapAnnotation(chart.id),
+        enabled: !!chart.id,
+    })
+
+    // Initialize active selection from existing DB annotation (if present)
     useEffect(() => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current)
-        rafRef.current = requestAnimationFrame(() => draw())
-    }, [draw])
+        if (isAnnotationSuccess && annotation) {
+            setActiveSelectionState(annotation.data.bounds)
+        }
+    }, [annotation, isAnnotationSuccess])
+
+    const persistAnnotation = useDebouncedCallback(async () => {
+        if (!activeSelection) return
+        const payload = { type: 'heatmap' as const, bounds: { ...activeSelection } }
+        if (annotation) {
+            await updateAnnotation({ id: annotation.id, chartId: chart.id, data: payload })
+        } else {
+            await createAnnotation({ chartId: chart.id, type: 'heatmap', data: payload })
+        }
+    }, 5000)
+
+    const persistChartView = useDebouncedCallback(async () => {
+        const viewBounds = {
+            minCol: Math.max(bounds.minCol, xRange[0]),
+            maxCol: Math.min(bounds.maxCol, xRange[1]),
+            minRow: Math.max(bounds.minRow, yRange[0]),
+            maxRow: Math.min(bounds.maxRow, yRange[1]),
+        }
+        await updateChartView({ chartId: chart.id, view: { bounds: viewBounds, xStep: xStep } })
+    }, 3000)
+
+    // Cancel pending persist on unmount
+    useEffect(() => {
+        return () => {
+            persistAnnotation.cancel()
+            persistChartView.cancel()
+        }
+    }, [persistAnnotation, persistChartView])
+
+    // Exposed setter that persists when selection is set
+    const setActiveSelection = useCallback((bounds: HeatmapBounds | null) => {
+        setActiveSelectionState(bounds)
+        if (bounds) {
+            persistAnnotation()
+        } else {
+            persistAnnotation.cancel()
+        }
+    }, [persistAnnotation])
+
+    const clearSelection = useCallback(async () => {
+        persistAnnotation.cancel()
+        const existing = annotation
+        setActiveSelection(null)
+        if (existing) {
+            await deleteAnnotation({ id: existing.id, chartId: chart.id })
+        }
+    }, [annotation, deleteAnnotation, chart.id, persistAnnotation, setActiveSelection])
+
+    const selectionRef = useRef<HeatmapBounds | null>(null)
+    const [selectionRect, setSelectionRect] = useState<HeatmapBounds | null>(null)
 
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const rect = selectionCanvasRef.current?.getBoundingClientRect()
@@ -79,7 +113,7 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const y = e.clientY - rect.top
         const cell = getCellFromPosition(selectionCanvasRef, data, x, y)
         if (!cell) return
-        const start = { startX: cell.col, startY: cell.row, endX: cell.col, endY: cell.row }
+        const start = { minCol: cell.col, minRow: cell.row, maxCol: cell.col, maxRow: cell.row }
         selectionRef.current = start
         setSelectionRect(start)
 
@@ -91,7 +125,7 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const c = getCellFromPosition(selectionCanvasRef, data, mx, my)
             if (!c) return
             setSelectionRect(prev => {
-                const next = prev ? { ...prev, endX: c.col, endY: c.row } : null
+                const next = prev ? { ...prev, maxCol: c.col, maxRow: c.row } : null
                 selectionRef.current = next
                 return next
             })
@@ -101,10 +135,10 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const final = selectionRef.current
             if (final) {
                 const bounds = {
-                    minRow: Math.min(final.startY, final.endY),
-                    maxRow: Math.max(final.startY, final.endY),
-                    minCol: Math.min(final.startX, final.endX),
-                    maxCol: Math.max(final.startX, final.endX),
+                    minRow: Math.min(final.minRow, final.maxRow),
+                    maxRow: Math.max(final.minRow, final.maxRow),
+                    minCol: Math.min(final.minCol, final.maxCol),
+                    maxCol: Math.max(final.minCol, final.maxCol),
                 }
                 // Notify controls provider for persistence/toolbar behavior
                 setActiveSelection(bounds)
@@ -119,16 +153,61 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         window.addEventListener('mouseup', onUp)
     }, [data, setActiveSelection])
 
+    const zoomIntoActiveSelection = useCallback(async () => {
+        if (!activeSelection) return
+        const zoomBounds = activeSelection
+        const hasX = xRange[0] !== 0 && xRange[1] !== 0;
+        const hasY = yRange[0] !== 0 && yRange[1] !== 0;
+
+        const xOffset = 0;
+        const yOffset = hasY ? Math.floor(yRange[0]) : 0;
+
+        const absMinCol = Math.max(bounds.minCol, Math.min(bounds.maxCol, xOffset + zoomBounds.minCol));
+        const absMaxCol = Math.max(bounds.minCol, Math.min(bounds.maxCol, xOffset + zoomBounds.maxCol));
+        const absMinRow = Math.max(bounds.minRow, Math.min(bounds.maxRow, yOffset + zoomBounds.minRow));
+        const absMaxRow = Math.max(bounds.minRow, Math.min(bounds.maxRow, yOffset + zoomBounds.maxRow));
+
+        const currentX = hasX ? xRange : [bounds.minCol, bounds.maxCol] as Range;
+        const currentY = hasY ? yRange : [bounds.minRow, bounds.maxRow] as Range;
+
+        await clearSelection()
+        clear()
+
+        setXRange([
+            Math.max(currentX[0], Math.min(absMinCol, absMaxCol)),
+            Math.min(currentX[1], Math.max(absMinCol, absMaxCol))
+        ])
+        setYRange([
+            Math.max(currentY[0], Math.min(absMinRow, absMaxRow)),
+            Math.min(currentY[1], Math.max(absMinRow, absMaxRow))
+        ])
+        persistChartView()
+    }, [clearSelection, clear, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, activeSelection, persistChartView])
+
+
+    useEffect(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        rafRef.current = requestAnimationFrame(() => {
+            if (selectionRect) {
+                draw(selectionRect)
+            } else if (activeSelection) {
+                draw(activeSelection)
+            } else {
+                clear()
+            }
+        })
+    }, [draw, clear, selectionRect, activeSelection])
+
+    const contextValue: SelectionContextValue = {
+        clearSelection,
+        onMouseDown,
+        zoomIntoActiveSelection,
+        activeSelection,
+    }
 
     return (
-        <div ref={containerRef} className="size-full relative" onMouseDown={onMouseDown}>
-            <canvas
-                ref={selectionCanvasRef}
-                className="absolute inset-0 size-full pointer-events-auto z-20"
-            />
-            <SelectionContext.Provider value={{ selectionCanvasRef }}>
-                {children}
-            </SelectionContext.Provider>
-        </div>
+        <SelectionContext.Provider value={contextValue}>
+            {children}
+        </SelectionContext.Provider>
     )
 }

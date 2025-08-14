@@ -1,11 +1,11 @@
 "use server";
 
-import type { ChartData, ChartMetadata } from "@/types/charts";
+import type { ChartData, ChartMetadata, ChartView } from "@/types/charts";
 import { db } from "@/db/client";
-import { charts, configs, chartConfigLinks, Chart, LensConfig, Config, annotations } from "@/db/schema";
+import { charts, configs, chartConfigLinks, Chart, LensConfig, Config } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
@@ -18,6 +18,15 @@ export const updateChartName = async (chartId: string, name: string) => {
 export const getChartById = async (chartId: string): Promise<Chart | null> => {
     const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
     return (chart ?? null) as Chart | null;
+};
+
+export const getChartView = async (chartId: string): Promise<ChartView | null> => {
+    const [chart] = await db.select().from(charts).where(eq(charts.id, chartId));
+    return (chart?.view ?? null) as ChartView | null;
+};
+
+export const updateChartView = async (chartId: string, view: ChartView) => {
+    await db.update(charts).set({ view }).where(eq(charts.id, chartId));
 };
 
 export const deleteChart = async (chartId: string): Promise<void> => {

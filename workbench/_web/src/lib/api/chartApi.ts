@@ -6,12 +6,13 @@ import {
     createLensChartPair,
     createPatchChartPair,
     updateChartName,
+    updateChartView,
 } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
 import { useCapture } from "@/components/providers/CaptureProvider";
-import { LineGraphData, HeatmapData } from "@/types/charts";
+import { LineGraphData, HeatmapData, ChartData, ChartView } from "@/types/charts";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
@@ -134,6 +135,19 @@ export const useUpdateChartName = () => {
     return useMutation({
         mutationFn: async ({ chartId, name }: { chartId: string; name: string }) => {
             return await updateChartName(chartId, name);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["chartById"] });
+        },
+    });
+};
+
+export const useUpdateChartView = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ chartId, view }: { chartId: string; view: ChartView }) => {
+            return await updateChartView(chartId, view);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["chartById"] });

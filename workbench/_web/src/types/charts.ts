@@ -12,6 +12,18 @@ export interface HeatmapRow {
     data: HeatmapCell[];
 }
 
+export interface HeatmapBounds {
+    minRow: number;
+    maxRow: number;
+    minCol: number;
+    maxCol: number;
+}
+
+export interface HeatmapView { 
+    bounds: HeatmapBounds;
+    xStep: number;
+}
+
 export interface HeatmapData {
     rows: HeatmapRow[];
 }
@@ -31,6 +43,7 @@ export interface LineGraphData {
 }
 
 export type ChartData = LineGraphData | HeatmapData;
+export type ChartView = HeatmapView;
 export type ConfigData = LensConfigData | PatchingConfig;
 
 export type ChartType = "line" | "heatmap";

@@ -28,6 +28,8 @@ export const charts = sqliteTable("charts", {
 
     name: text("name").notNull().default("Untitled Chart"),
     data: text("data", { mode: 'json' }), // JSON stored as text in SQLite
+    view: text("view", { mode: 'json' }), // JSON stored as text in SQLite
+    
     type: text("type"),
     createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
     updatedAt: integer("updated_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull().$onUpdate(() => new Date()),
