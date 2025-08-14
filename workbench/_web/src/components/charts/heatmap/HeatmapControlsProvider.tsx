@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode } from "react";
 import { HeatmapData } from "@/types/charts";
 import { Button } from "@/components/ui/button";
-import { Crop, RotateCcw } from "lucide-react";
+import { Crop, RotateCcw, Eraser } from "lucide-react";
+import { useDeleteAnnotation } from "@/lib/api/annotationsApi";
+import { useQuery } from "@tanstack/react-query";
+import { getAnnotations } from "@/lib/queries/annotationQueries";
+import type { Annotation } from "@/db/schema";
 import { HeatmapChart } from "@/db/schema";
 import ChartTitle from "../ChartTitle";
 
@@ -57,6 +61,12 @@ interface HeatmapControlsProviderProps {
 export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = ({ chart, children }) => {
 
     const data = chart.data;
+    const { data: allAnnotations = [] } = useQuery<Annotation[]>({
+        queryKey: ["annotations", chart.id],
+        queryFn: () => getAnnotations(chart.id),
+        enabled: !!chart.id,
+    })
+    const { mutateAsync: deleteAnnotation } = useDeleteAnnotation()
 
     // Calculate bounds
     const bounds = useMemo(() => {
@@ -259,6 +269,22 @@ export const HeatmapControlsProvider: React.FC<HeatmapControlsProviderProps> = (
 
                     <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset ranges">
                         <RotateCcw className="w-4 h-4" />
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8"
+                        onClick={async () => {
+                            // delete all heatmap annotations; no confirmation
+                            const toDelete = allAnnotations.filter(a => a.type === 'heatmap')
+                            for (const ann of toDelete) {
+                                await deleteAnnotation({ id: ann.id, chartId: chart.id })
+                            }
+                        }}
+                        title="Clear all annotations"
+                    >
+                        <Eraser className="w-4 h-4" />
                     </Button>
                 </div>
             </div>

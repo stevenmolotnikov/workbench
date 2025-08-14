@@ -50,7 +50,7 @@ export default function ChartPage() {
                     <ChartCardsSidebar />
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={40} minSize={25}>
+                <ResizablePanel className="h-full" defaultSize={30} minSize={25}>
                     <div className="flex items-center justify-between border-b h-12 px-2 py-2">
                         <div className="relative group">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
@@ -68,7 +68,7 @@ export default function ChartPage() {
                     }
                 </ResizablePanel>
                 <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel defaultSize={40} minSize={30}>
+                <ResizablePanel defaultSize={50} minSize={30}>
                     <ChartDisplay />
                 </ResizablePanel>
             </ResizablePanelGroup>

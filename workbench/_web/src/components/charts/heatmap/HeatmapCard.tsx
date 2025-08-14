@@ -1,7 +1,9 @@
 import React, { type RefObject } from "react";
 import { Heatmap } from "./Heatmap";
 import { HeatmapControlsProvider, useHeatmapControls } from "./HeatmapControlsProvider";
-import { CanvasProvider } from "./CanvasProvider";
+import { PaintProvider } from "./PaintProvider";
+import { ZoomProvider } from "./ZoomProvider";
+import { TooltipProvider } from "./TooltipProvider";
 import { HeatmapChart } from "@/db/schema";
 
 interface HeatmapCardProps {
@@ -14,9 +16,15 @@ export const HeatmapCard = ({ chart, captureRef }: HeatmapCardProps) => {
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
             <HeatmapControlsProvider chart={chart}>
                 <div className="flex h-[90%] w-full" ref={captureRef}>
-                    <CanvasProvider>
-                        <HeatmapCardContent />
-                    </CanvasProvider>
+
+                    <PaintProvider>
+                        <TooltipProvider>
+                            <ZoomProvider>
+                                <HeatmapCardContent />
+                            </ZoomProvider>
+                        </TooltipProvider>
+                    </PaintProvider>
+
                 </div>
             </HeatmapControlsProvider>
         </div>

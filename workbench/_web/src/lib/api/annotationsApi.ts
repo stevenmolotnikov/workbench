@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createAnnotation, deleteAnnotation } from "@/lib/queries/annotationQueries";
+import { createAnnotation, deleteAnnotation, updateAnnotation } from "@/lib/queries/annotationQueries";
 import { NewAnnotation } from "@/db/schema";
+import type { AnnotationData } from "@/types/annotations";
 
 export const useCreateAnnotation = () => {
     const queryClient = useQueryClient();
@@ -34,6 +35,24 @@ export const useDeleteAnnotation = () => {
         },
         onError: (error) => {
             console.error("Error deleting annotation:", error);
+        },
+    });
+};
+
+export const useUpdateAnnotation = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({ id, chartId, data }: { id: string, chartId: string, data: AnnotationData }) => {
+            const annotation = await updateAnnotation(id, data);
+            return annotation;
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ["annotations", variables.chartId] });
+            console.log("Successfully updated annotation");
+        },
+        onError: (error) => {
+            console.error("Error updating annotation:", error);
         },
     });
 };
