@@ -1,8 +1,7 @@
-import React, { useCallback, type RefObject } from "react";
+import { type RefObject } from "react";
 import { Heatmap } from "./Heatmap";
 import { HeatmapDataProvider, useHeatmapData } from "./HeatmapDataProvider";
 import { SelectionProvider, useSelection } from "./SelectionProvider";
-import { TooltipLayer } from "./TooltipLayer";
 import { HeatmapChart } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
@@ -20,9 +19,7 @@ export const HeatmapCard = ({ chart, captureRef }: HeatmapCardProps) => {
             <HeatmapDataProvider chart={chart}>
                 <CanvasProvider>
                     <SelectionProvider chart={chart}>
-                        <TooltipLayer>
-                            <HeatmapCardContent chart={chart} captureRef={captureRef} />
-                        </TooltipLayer>
+                        <HeatmapCardContent chart={chart} captureRef={captureRef} />
                     </SelectionProvider>
 
                 </CanvasProvider>

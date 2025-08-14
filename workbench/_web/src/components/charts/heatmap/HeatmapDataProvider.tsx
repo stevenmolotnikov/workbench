@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback } from "react";
 import { HeatmapData, HeatmapBounds, HeatmapView } from "@/types/charts";
 
 import { HeatmapChart } from "@/db/schema";

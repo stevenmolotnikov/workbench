@@ -1,9 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useHeatmapData } from "./HeatmapDataProvider";
 import { heatmapMargin as margin } from "../theming";
 import { getCellDimensions } from "./heatmap-geometry";
 import { HeatmapBounds } from "@/types/charts";
 import { useDpr } from "../useDpr";
+import { getCellFromPosition } from "./heatmap-geometry";
 
 interface CanvasContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>
@@ -61,8 +62,6 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ctx.strokeRect(sx, sy, sw, sh)
     }, [data])
 
-    // Consumers call draw/clear explicitly
-
     const contextValue: CanvasContextValue = {
         selectionCanvasRef,
         rafRef,
@@ -70,18 +69,65 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         clear,
     }
 
+    // Tooltip state and handlers
+    const [tooltip, setTooltip] = useState<{ visible: boolean; left: number; top: number; xVal: string | number; yVal: number | null; color: string }>(
+        { visible: false, left: 0, top: 0, xVal: "", yVal: null, color: "transparent" }
+    )
+
+    const valueToBlue = (value: number | null) => {
+        if (value === null || Number.isNaN(value)) return "#cccccc"
+        const v = Math.max(0, Math.min(1, value))
+        const lightness = 90 - v * 60
+        return `hsl(217 91% ${lightness}%)`
+    }
+
+    const handleMove = useCallback((e: MouseEvent) => {
+        const canvasRect = selectionCanvasRef.current?.getBoundingClientRect()
+        if (!canvasRect) return setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+        const x = e.clientX - canvasRect.left
+        const y = e.clientY - canvasRect.top
+        const cell = getCellFromPosition(selectionCanvasRef, data, x, y)
+        if (!cell) {
+            setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+            return
+        }
+        const firstRow = data.rows[0]
+        const xVal = firstRow?.data[cell.col]?.x ?? ""
+        const yVal = data.rows[cell.row]?.data[cell.col]?.y ?? null
+        const color = valueToBlue(typeof yVal === 'number' ? yVal : null)
+        const left = e.clientX + 12
+        const top = e.clientY - 12
+        setTooltip({ visible: true, left, top, xVal, yVal, color })
+    }, [selectionCanvasRef, data])
+
+    const handleLeave = useCallback(() => {
+        setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+    }, [])
+
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMove)
+        window.addEventListener('mouseleave', handleLeave)
+        return () => {
+            window.removeEventListener('mousemove', handleMove)
+            window.removeEventListener('mouseleave', handleLeave)
+        }
+    }, [handleMove, handleLeave])
+
     return (
         <CanvasContext.Provider value={contextValue}>
+            {tooltip.visible && (
+                <div
+                    className="fixed z-30 px-2 py-1 rounded shadow bg-background border text-sm pointer-events-none"
+                    style={{ left: tooltip.left, top: tooltip.top }}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: tooltip.color }} />
+                        <span>x: {String(tooltip.xVal)}</span>
+                        <span>y: {tooltip.yVal === null ? '—' : tooltip.yVal.toFixed(2)}</span>
+                    </div>
+                </div>
+            )}
             {children}
         </CanvasContext.Provider>
-        // <div className="size-full relative" onMouseDown={onMouseDown}>
-        //     <canvas
-        //         ref={selectionCanvasRef}
-        //         className="absolute inset-0 size-full pointer-events-auto z-20"
-        //     />
-        //     <CanvasContext.Provider value={contextValue}>
-        //         {children}
-        //     </CanvasContext.Provider>
-        // </div>
     )
 }
