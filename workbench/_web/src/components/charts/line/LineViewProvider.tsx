@@ -7,9 +7,6 @@ interface LineViewContextValue {
     rafRef: React.MutableRefObject<number | null>;
     drawRectPx: (x0: number, y0: number, x1: number, y1: number) => void;
     clear: () => void;
-    highlightedLines: Set<string>;
-    toggleLineHighlight: (lineId: string) => void;
-    clearHighlightedLines: () => void;
 }
 
 const LineViewContext = createContext<LineViewContextValue | null>(null);
@@ -29,22 +26,9 @@ interface LineViewProviderProps {
 export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) => {
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
-    const [highlightedLines, setHighlightedLines] = useState<Set<string>>(new Set());
 
     // DPR + resize handling
     useDpr(selectionCanvasRef);
-
-    const toggleLineHighlight = useCallback((lineId: string) => {
-        setHighlightedLines(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(lineId)) newSet.delete(lineId); else newSet.add(lineId);
-            return newSet;
-        });
-    }, []);
-
-    const clearHighlightedLines = useCallback(() => {
-        setHighlightedLines(new Set());
-    }, []);
 
     // Drawing helpers
     const clear = useCallback(() => {
@@ -80,9 +64,6 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         rafRef,
         drawRectPx,
         clear,
-        highlightedLines,
-        toggleLineHighlight,
-        clearHighlightedLines,
     };
 
     return (

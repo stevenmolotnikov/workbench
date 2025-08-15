@@ -27,9 +27,10 @@ export interface HeatmapBounds {
     maxCol: number;
 }
 
-export interface HeatmapView { 
+export interface HeatmapViewData { 
     bounds: HeatmapBounds;
     xStep: number;
+    annotation: HeatmapBounds
 }
 
 export type Range = [number, number];
@@ -59,15 +60,16 @@ export interface SelectionBounds {
     yMax: number;
 }
 
-export interface LineView {
+export interface LineViewData {
     bounds: SelectionBounds;
     selectedLineIds: string[];
+    annotation: SelectionBounds;
 }
 
 // Combined Types
 
 export type ChartData = LineGraphData | HeatmapData;
-export type ChartView = HeatmapView | LineView;
+export type ChartView = HeatmapViewData | LineViewData;
 export type ConfigData = LensConfigData | PatchingConfig;
 
 export type ChartType = "line" | "heatmap";

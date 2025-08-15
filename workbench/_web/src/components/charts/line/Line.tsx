@@ -14,7 +14,7 @@ interface LineProps {
     onLegendClick?: (lineId: string) => void;
     margin?: Margin;
     yRange?: [number, number];
-    highlightedLines?: Set<string>;
+    highlightedLineIds?: Set<string>;
     onMouseDown?: PointOrSliceMouseHandler<ChartLine>;
     onMouseMove?: PointOrSliceMouseHandler<ChartLine>;
     onMouseUp?: PointOrSliceMouseHandler<ChartLine>;
@@ -26,7 +26,7 @@ export function Line({
     margin = lineMargin,
     onLegendClick = () => { },
     yRange = [0, 1],
-    highlightedLines = new Set<string>(),
+    highlightedLineIds = new Set<string>(),
     onMouseDown,
     onMouseMove,
     onMouseUp,
@@ -39,14 +39,14 @@ export function Line({
     };
 
     const colorFn = useMemo(() => {
-        const hasHighlighted = highlightedLines.size > 0;
+        const hasHighlighted = highlightedLineIds.size > 0;
         return (line: { id: string }) => {
             const lineIndex = data.lines.findIndex(l => l.id === line.id);
             const baseColor = lineColors[lineIndex % lineColors.length];
-            if (!hasHighlighted || highlightedLines.has(line.id)) return baseColor;
+            if (!hasHighlighted || highlightedLineIds.has(line.id)) return baseColor;
             return '#d3d3d3';
         };
-    }, [data.lines, highlightedLines]);
+    }, [data.lines, highlightedLineIds]);
 
     return (
         <div className="h-full flex flex-col">
@@ -55,8 +55,8 @@ export function Line({
             >
                 {data.lines.map((line, index) => {
                     const color = lineColors[index % lineColors.length];
-                    const isHighlighted = highlightedLines.has(line.id);
-                    const hasAnyHighlighted = highlightedLines.size > 0;
+                    const isHighlighted = highlightedLineIds.has(line.id);
+                    const hasAnyHighlighted = highlightedLineIds.size > 0;
 
                     return (
                         <button
@@ -117,8 +117,11 @@ export function Line({
                     animate={false}
                     enableSlices={"x"}
                     enableGridY={true}
-                    enablePoints={true}
+                    enablePoints={false}
                     onMouseDown={onMouseDown}
+                    onClick={(datum, event) => {
+                        console.log("clicked", datum, event);
+                    }}
                     onMouseMove={onMouseMove}
                     onMouseUp={onMouseUp}
                     onMouseLeave={onMouseLeave}

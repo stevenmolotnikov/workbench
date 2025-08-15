@@ -28,7 +28,6 @@ export const charts = sqliteTable("charts", {
 
     name: text("name").notNull().default("Untitled Chart"),
     data: text("data", { mode: 'json' }), // JSON stored as text in SQLite
-    view: text("view", { mode: 'json' }), // JSON stored as text in SQLite
     
     type: text("type"),
     createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
@@ -54,16 +53,10 @@ export const chartConfigLinks = sqliteTable("chart_config_links", {
     configId: text("config_id").notNull(),
 });
 
-export const annotationTypes = [
-    "line",
-    "heatmap",
-] as const;
-
-export const annotations = sqliteTable("annotations", {
+export const views = sqliteTable("views", {
     id: text("id").primaryKey().$defaultFn(generateUUID),
     chartId: text("chart_id").notNull(),
     data: text("data", { mode: 'json' }).notNull(), // JSON stored as text in SQLite
-    type: text("type").notNull(),
 });
 
 export const documents = sqliteTable("documents", {
@@ -86,8 +79,8 @@ export type NewConfig = typeof configs.$inferInsert;
 export type ChartConfigLink = typeof chartConfigLinks.$inferSelect;
 export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
-export type Annotation = typeof annotations.$inferSelect;
-export type NewAnnotation = typeof annotations.$inferInsert;
+export type View = typeof views.$inferSelect;
+export type NewView = typeof views.$inferInsert;
 
 // Specific chart config types
 export type LensConfig = Omit<Config, 'data'> & {

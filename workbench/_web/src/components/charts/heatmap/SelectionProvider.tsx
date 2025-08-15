@@ -1,14 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { getCellFromPosition } from "./heatmap-geometry";
-import { HeatmapBounds, Range } from "@/types/charts";
-import { useDeleteAnnotation, useCreateAnnotation, useUpdateAnnotation } from "@/lib/api/annotationsApi";
-import { useUpdateChartView } from "@/lib/api/chartApi";
-import { useQuery } from "@tanstack/react-query";
-import { getHeatmapAnnotation } from "@/lib/queries/annotationQueries";
+import { HeatmapBounds, Range, HeatmapViewData } from "@/types/charts";
+import { useDeleteView } from "@/lib/api/viewApi";
 import { useDebouncedCallback } from "use-debounce";
 import { useCanvasProvider } from "./CanvasProvider";
-import { HeatmapAnnotation, HeatmapChart } from "@/db/schema";
+import { HeatmapChart } from "@/db/schema";
 import { useHeatmapData } from "./HeatmapDataProvider";
+import { useView } from "../ViewProvider";
 
 interface SelectionContextValue {
     clearSelection: () => Promise<void>
@@ -33,73 +31,46 @@ interface SelectionProviderProps {
 export const SelectionProvider = ({ chart, children }: SelectionProviderProps) => {
     const { filteredData: data, bounds, xStep, xRange, yRange, setXRange, setYRange } = useHeatmapData()
     const { selectionCanvasRef, rafRef, draw, clear } = useCanvasProvider()
+    const { mutateAsync: deleteView } = useDeleteView()
+    const { view, isViewSuccess, persistView, cancelPersistView } = useView()
 
     const [activeSelection, setActiveSelectionState] = useState<HeatmapBounds | null>(null)
 
-    const { mutateAsync: deleteAnnotation } = useDeleteAnnotation()
-    const { mutateAsync: createAnnotation } = useCreateAnnotation()
-    const { mutateAsync: updateAnnotation } = useUpdateAnnotation()
-    const { mutateAsync: updateChartView } = useUpdateChartView()
-
-    const { data: annotation, isSuccess: isAnnotationSuccess } = useQuery<HeatmapAnnotation | null>({
-        queryKey: ["annotations", chart.id],
-        queryFn: () => getHeatmapAnnotation(chart.id),
-        enabled: !!chart.id,
-    })
-
-    // Initialize active selection from existing DB annotation (if present)
+    // Initialize active selection from existing DB view (if present)
     useEffect(() => {
-        if (isAnnotationSuccess && annotation) {
-            setActiveSelectionState(annotation.data.bounds)
+        if (isViewSuccess && view) {
+            setActiveSelectionState(view.data.annotation)
         }
-    }, [annotation, isAnnotationSuccess])
+    }, [view, isViewSuccess])
 
-    const persistAnnotation = useDebouncedCallback(async () => {
+    const updateView = useCallback(async () => {
         if (!activeSelection) return
-        const payload = { type: 'heatmap' as const, bounds: { ...activeSelection } }
-        if (annotation) {
-            await updateAnnotation({ id: annotation.id, chartId: chart.id, data: payload })
-        } else {
-            await createAnnotation({ chartId: chart.id, type: 'heatmap', data: payload })
-        }
-    }, 5000)
-
-    const persistChartView = useDebouncedCallback(async () => {
         const viewBounds = {
             minCol: Math.max(bounds.minCol, xRange[0]),
             maxCol: Math.min(bounds.maxCol, xRange[1]),
             minRow: Math.max(bounds.minRow, yRange[0]),
             maxRow: Math.min(bounds.maxRow, yRange[1]),
         }
-        await updateChartView({ chartId: chart.id, view: { bounds: viewBounds, xStep: xStep } })
-    }, 3000)
-
-    // Cancel pending persist on unmount
-    useEffect(() => {
-        return () => {
-            persistAnnotation.cancel()
-            persistChartView.cancel()
-        }
-    }, [persistAnnotation, persistChartView])
+        const payload: HeatmapViewData = { bounds: viewBounds, xStep: xStep, annotation: activeSelection }
+        persistView(payload)
+    }, [persistView, activeSelection, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, xStep])
 
     // Exposed setter that persists when selection is set
     const setActiveSelection = useCallback((bounds: HeatmapBounds | null) => {
         setActiveSelectionState(bounds)
         if (bounds) {
-            persistAnnotation()
+            updateView()
         } else {
-            persistAnnotation.cancel()
+            cancelPersistView()
         }
-    }, [persistAnnotation])
+    }, [cancelPersistView, updateView])
 
     const clearSelection = useCallback(async () => {
-        persistAnnotation.cancel()
-        const existing = annotation
         setActiveSelection(null)
-        if (existing) {
-            await deleteAnnotation({ id: existing.id, chartId: chart.id })
+        if (view) {
+            await deleteView({ id: view.id, chartId: chart.id })
         }
-    }, [annotation, deleteAnnotation, chart.id, persistAnnotation, setActiveSelection])
+    }, [view, deleteView, chart.id, setActiveSelection])
 
     const selectionRef = useRef<HeatmapBounds | null>(null)
     const [selectionRect, setSelectionRect] = useState<HeatmapBounds | null>(null)
@@ -179,8 +150,8 @@ export const SelectionProvider = ({ chart, children }: SelectionProviderProps) =
             Math.max(currentY[0], Math.min(absMinRow, absMaxRow)),
             Math.min(currentY[1], Math.max(absMinRow, absMaxRow))
         ])
-        persistChartView()
-    }, [clearSelection, clear, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, activeSelection, persistChartView])
+        updateView()
+    }, [clearSelection, clear, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, activeSelection, updateView])
 
 
     useEffect(() => {

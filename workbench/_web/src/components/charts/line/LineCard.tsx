@@ -7,6 +7,7 @@ import ChartTitle from "../ChartTitle";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
 import { LineInteractionProvider, useLineInteraction } from "@/components/charts/line/LineInteractionProvider";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 interface LineCardProps {
     chart: LineChart;
@@ -30,13 +31,14 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
     const { bounds, setXRange, setYRange, data, yRange } = useLineData();
     const { activeSelection, zoomIntoActiveSelection, clearSelection, handleMouseDown, handleMouseMove, handleMouseUp, handleMouseLeave } = useLineInteraction();
-    const { selectionCanvasRef, highlightedLines, toggleLineHighlight, clearHighlightedLines } = useLineView();
+    const { selectionCanvasRef } = useLineView();
+    const { highlightedLineIds, toggleLineHighlight, clearHighlightedLineIds } = useLensWorkspace();
 
     const handleReset = async () => {
         await clearSelection();
         setXRange([bounds.xMin, bounds.xMax]);
         setYRange([0, 1]);
-        clearHighlightedLines();
+        clearHighlightedLineIds();
     };
 
     return (
@@ -69,7 +71,7 @@ const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
                         data={data}
                         yRange={yRange}
                         onLegendClick={toggleLineHighlight}
-                        highlightedLines={highlightedLines}
+                        highlightedLineIds={highlightedLineIds}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}

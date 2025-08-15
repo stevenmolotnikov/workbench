@@ -3,7 +3,7 @@ import {
     charts as sqliteCharts,
     configs as sqliteConfigs,
     chartConfigLinks as sqliteChartConfigLinks,
-    annotations as sqliteAnnotations,
+    views as sqliteViews,
     documents as sqliteDocuments,
 } from './schema.sqlite';
 import {
@@ -11,12 +11,11 @@ import {
     charts as pgCharts,
     configs as pgConfigs,
     chartConfigLinks as pgChartConfigLinks,
-    annotations as pgAnnotations,
+    views as pgViews,
     documents as pgDocuments,
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
-import type { HeatmapData, LineGraphData } from '@/types/charts';
-import type { HeatmapAnnotationData } from '@/types/annotations';
+import type { HeatmapData, HeatmapViewData, LineViewData, LineGraphData } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
 const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
@@ -25,8 +24,8 @@ export const workspaces = isLocal ? sqliteWorkspaces : pgWorkspaces;
 export const charts = isLocal ? sqliteCharts : pgCharts;
 export const configs = isLocal ? sqliteConfigs : pgConfigs;
 export const chartConfigLinks = isLocal ? sqliteChartConfigLinks : pgChartConfigLinks;
-export const annotations = isLocal ? sqliteAnnotations : pgAnnotations;
 export const documents = isLocal ? sqliteDocuments : pgDocuments;
+export const views = isLocal ? sqliteViews : pgViews;
 
 // Generate types from schema
 export type Workspace = typeof workspaces.$inferSelect;
@@ -41,14 +40,18 @@ export type NewConfig = typeof configs.$inferInsert;
 export type ChartConfigLink = typeof chartConfigLinks.$inferSelect;
 export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
-export type Annotation = typeof annotations.$inferSelect;
-export type NewAnnotation = typeof annotations.$inferInsert;
-
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 
-export type HeatmapAnnotation = Omit<Annotation, 'data'> & {
-    data: HeatmapAnnotationData;
+export type View = typeof views.$inferSelect;
+export type NewView = typeof views.$inferInsert;
+
+export type HeatmapView = Omit<View, 'data'> & {
+    data: HeatmapViewData;
+};
+
+export type LineView = Omit<View, 'data'> & {
+    data: LineViewData;
 };
 
 export type HeatmapChart = Omit<Chart, 'data'> & {
