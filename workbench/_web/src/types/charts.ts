@@ -46,6 +46,8 @@ export type ChartData = LineGraphData | HeatmapData;
 export type ChartView = HeatmapView;
 export type ConfigData = LensConfigData | PatchingConfig;
 
+export type Range = [number, number];
+
 export type ChartType = "line" | "heatmap";
 export type ToolType = "lens" | "patch";
 

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { getCellFromPosition } from "./heatmap-geometry";
-import { HeatmapBounds } from "@/types/charts";
+import { HeatmapBounds, Range } from "@/types/charts";
 import { useDeleteAnnotation, useCreateAnnotation, useUpdateAnnotation } from "@/lib/api/annotationsApi";
 import { useUpdateChartView } from "@/lib/api/chartApi";
 import { useQuery } from "@tanstack/react-query";
@@ -9,8 +9,6 @@ import { useDebouncedCallback } from "use-debounce";
 import { useCanvasProvider } from "./CanvasProvider";
 import { HeatmapAnnotation, HeatmapChart } from "@/db/schema";
 import { useHeatmapData } from "./HeatmapDataProvider";
-
-type Range = [number, number];
 
 interface SelectionContextValue {
     clearSelection: () => Promise<void>

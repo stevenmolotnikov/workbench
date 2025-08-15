@@ -95,8 +95,27 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handleMove = useCallback((e: MouseEvent) => {
         const canvasRect = selectionCanvasRef.current?.getBoundingClientRect()
         if (!canvasRect) return setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+
         const x = e.clientX - canvasRect.left
         const y = e.clientY - canvasRect.top
+
+        // Get cell dimensions to calculate effective grid bounds
+        const dims = getCellDimensions(selectionCanvasRef, data)
+        if (!dims) {
+            return setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+        }
+
+        // Check if cursor is within the grid area (excluding margins)
+        const withinGrid = (
+            x >= margin.left &&
+            x < margin.left + dims.gridWidth &&
+            y >= margin.top &&
+            y < margin.top + dims.gridHeight
+        )
+        if (!withinGrid) {
+            return setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
+        }
+
         const cell = getCellFromPosition(selectionCanvasRef, data, x, y)
         if (!cell) {
             setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
@@ -116,11 +135,13 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [])
 
     useEffect(() => {
-        window.addEventListener('mousemove', handleMove)
-        window.addEventListener('mouseleave', handleLeave)
+        const canvasElement = selectionCanvasRef.current
+        if (!canvasElement) return
+        canvasElement.addEventListener('mousemove', handleMove)
+        canvasElement.addEventListener('mouseleave', handleLeave)
         return () => {
-            window.removeEventListener('mousemove', handleMove)
-            window.removeEventListener('mouseleave', handleLeave)
+            canvasElement.removeEventListener('mousemove', handleMove)
+            canvasElement.removeEventListener('mouseleave', handleLeave)
         }
     }, [handleMove, handleLeave])
 

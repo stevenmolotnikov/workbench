@@ -1,11 +1,9 @@
 import { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback } from "react";
-import { HeatmapData, HeatmapBounds, HeatmapView } from "@/types/charts";
+import { HeatmapData, HeatmapBounds, HeatmapView, Range } from "@/types/charts";
 
 import { HeatmapChart } from "@/db/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getChartView } from "@/lib/queries/chartQueries";
-
-type Range = [number, number];
 
 
 interface HeatmapDataContextValue {
