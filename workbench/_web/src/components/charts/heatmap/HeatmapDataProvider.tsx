@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback } from "react";
-import { HeatmapData, HeatmapBounds, HeatmapView, Range } from "@/types/charts";
-
-import { HeatmapChart } from "@/db/schema";
-import { useQuery } from "@tanstack/react-query";
-import { getChartView } from "@/lib/queries/chartQueries";
+import { HeatmapData, HeatmapBounds, Range } from "@/types/charts";
+import { HeatmapChart, HeatmapView } from "@/db/schema";
+import { useHeatmapView } from "../ViewProvider";
 
 
 interface HeatmapDataContextValue {
@@ -20,7 +18,6 @@ interface HeatmapDataContextValue {
     // Computed Values
     bounds: HeatmapBounds;
     filteredData: HeatmapData;
-
 }
 
 const HeatmapDataContext = createContext<HeatmapDataContextValue | null>(null);
@@ -40,11 +37,7 @@ interface HeatmapDataProviderProps {
 
 export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart, children }) => {
     const data = chart.data
-    const { data: chartView, isSuccess: isChartViewSuccess } = useQuery<HeatmapView | null>({
-        queryKey: ["chartView", chart.id],
-        queryFn: () => getChartView(chart.id),
-        enabled: !!chart.id,
-    })
+    const { view, isViewSuccess } = useHeatmapView()
 
     // Calculate bounds
     const bounds = useMemo(() => {
@@ -84,12 +77,13 @@ export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart,
 
     // This should only run on loading a stored chart
     useEffect(() => {
-        if (isChartViewSuccess && chartView) {
-            setXRange([chartView.bounds.minCol, chartView.bounds.maxCol])
-            setYRange([chartView.bounds.minRow, chartView.bounds.maxRow])
-            setXStep(chartView.xStep)
+        if (isViewSuccess && view) {
+            const hv = view as HeatmapView
+            setXRange([hv.data.bounds.minCol, hv.data.bounds.maxCol])
+            setYRange([hv.data.bounds.minRow, hv.data.bounds.maxRow])
+            setXStep(hv.data.xStep)
         }
-    }, [chartView, isChartViewSuccess])
+    }, [view, isViewSuccess])
 
     const handleStepChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const val = Number(e.target.value);

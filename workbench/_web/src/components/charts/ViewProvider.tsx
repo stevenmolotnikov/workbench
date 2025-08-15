@@ -1,6 +1,6 @@
-import { View } from "@/db/schema"
+import { HeatmapView, LineView, View } from "@/db/schema"
 import { createContext, ReactNode, useCallback, useContext } from "react"
-import { ChartView } from "@/types/charts"
+import { ChartType, ChartView } from "@/types/charts"
 import { useDebouncedCallback } from "use-debounce"
 import { useCreateView, useUpdateView } from "@/lib/api/viewApi"
 import { getView } from "@/lib/queries/viewQueries"
@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query"
 
 interface ViewContextValue {
     view: View | null
+    chartType: ChartType | null
     isViewSuccess: boolean
     persistView: (view: ChartView) => void
     cancelPersistView: () => void
@@ -15,10 +16,16 @@ interface ViewContextValue {
 
 const ViewContext = createContext<ViewContextValue | null>(null)
 
-export const useView = () => {
+export const useHeatmapView = () => {
     const ctx = useContext(ViewContext)
-    if (!ctx) throw new Error("useView must be used within a ViewProvider")
-    return ctx
+    if (!ctx) throw new Error("useHeatmapView must be used within a ViewProvider")
+    return { ...ctx, view: ctx.view as HeatmapView | null }
+}
+
+export const useLineView = () => {
+    const ctx = useContext(ViewContext)
+    if (!ctx) throw new Error("useLineView must be used within a ViewProvider")
+    return { ...ctx, view: ctx.view as LineView | null }
 }
 
 interface ViewProviderProps {
@@ -31,11 +38,13 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
     const { mutateAsync: updateView } = useUpdateView()
     const { mutateAsync: createView } = useCreateView()
 
-    const { data: view, isSuccess: isViewSuccess } = useQuery<View | null>({
+    const { data, isSuccess: isViewSuccess } = useQuery<{view: View, chartType: ChartType} | null>({
         queryKey: ["views", chartId],
         queryFn: () => getView(chartId),
         enabled: !!chartId,
     })
+    const view: View | null = data?.view ?? null
+    const chartType: ChartType | null = data?.chartType ?? null
 
     const _persistView = useDebouncedCallback(async (viewData: ChartView) => {
         // Skip if query is not ready yet
@@ -59,6 +68,7 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
 
     const contextValue: ViewContextValue = {
         view,
+        chartType,
         isViewSuccess,
         persistView,
         cancelPersistView,

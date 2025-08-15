@@ -3,9 +3,11 @@ import Select, {
     MultiValue,
     type FilterOptionOption,
     type StylesConfig,
+    MultiValueProps
 } from "react-select";
 import { LensConfigData } from "@/types/lens";
 import { Prediction } from "@/types/models";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 interface PredictionBadgesProps {
     config: LensConfigData;
@@ -91,6 +93,35 @@ export const PredictionBadges = ({
         );
     };
 
+    const {highlightedLineIds} = useLensWorkspace()
+
+    const formattedSelectStyles = useMemo(() => {
+        return {
+            ...selectStyles,
+            multiValue: (base: MultiValueProps<TokenOption>, { data }: { data: TokenOption }) => {
+                // Example: if the token has a high probability (>0.5), use a different border color
+
+                const isHighlighted = highlightedLineIds.has(data.label);
+
+                return {
+                    ...base,
+                    backgroundColor: isHighlighted 
+                        ? "hsl(var(--accent))" 
+                        : "hsl(var(--muted))",
+                    border: isHighlighted 
+                        ? "1px solid hsl(var(--primary))" 
+                        : "1px solid hsl(var(--input))",
+                    margin: 0,
+                    alignItems: "center",
+                    minHeight: "1.25rem",
+                    borderRadius: "0.375rem",
+                    paddingLeft: 2,
+                    paddingRight: 2,
+                };
+            },
+        }
+    }, [highlightedLineIds])
+
     if (!currentTokenPrediction) {
         return (
             <div>
@@ -109,7 +140,7 @@ export const PredictionBadges = ({
                 value={selectedOptions}
                 onChange={handleChange}
                 filterOption={filterOption}
-                styles={selectStyles}
+                styles={formattedSelectStyles}
                 placeholder="Select tokens…"
                 closeMenuOnSelect={false}
                 formatOptionLabel={(option: TokenOption) => (
@@ -119,7 +150,7 @@ export const PredictionBadges = ({
                     </div>
                 )}
                 components={{
-                    DropdownIndicator: () => null,
+                    // DropdownIndicator: () => null,
                     IndicatorSeparator: () => null
                 }}
                 onKeyDown={(e) => {
@@ -187,17 +218,6 @@ const selectStyles: StylesConfig<TokenOption, true> = {
         color: "hsl(var(--foreground))",
         lineHeight: "1rem",
     }),
-    multiValue: (base) => ({
-        ...base,
-        backgroundColor: "hsl(var(--muted))",
-        border: "1px solid hsl(var(--input))",
-        margin: 0,
-        alignItems: "center",
-        minHeight: "1.25rem",
-        borderRadius: "0.375rem",
-        paddingLeft: 2,
-        paddingRight: 2,
-    }),
     multiValueLabel: (base) => ({
         ...base,
         color: "hsl(var(--muted-foreground))",
@@ -218,16 +238,33 @@ const selectStyles: StylesConfig<TokenOption, true> = {
     indicatorsContainer: (base) => ({
         ...base,
         padding: 0,
+        gap: 2,
         alignItems: "center",
     }),
     clearIndicator: (base) => ({
         ...base,
         color: "hsl(var(--muted-foreground))",
         padding: 0,
-        height: ".75rem",
-        width: ".75rem",
+        height: "1rem",
+        width: "1rem",
         display: "flex",
         alignItems: "center",
+        cursor: "pointer",
+        justifyContent: "center",
+        alignSelf: "center",
+        ':hover': {
+            color: "hsl(var(--foreground))",
+        },
+    }),
+    dropdownIndicator: (base) => ({
+        ...base,
+        color: "hsl(var(--muted-foreground))",
+        padding: 0,
+        height: "1rem",
+        width: "1rem",
+        display: "flex",
+        alignItems: "center",
+        cursor: "pointer",
         justifyContent: "center",
         alignSelf: "center",
         ':hover': {

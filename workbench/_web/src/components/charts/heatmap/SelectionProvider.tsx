@@ -2,11 +2,10 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { getCellFromPosition } from "./heatmap-geometry";
 import { HeatmapBounds, Range, HeatmapViewData } from "@/types/charts";
 import { useDeleteView } from "@/lib/api/viewApi";
-import { useDebouncedCallback } from "use-debounce";
 import { useCanvasProvider } from "./CanvasProvider";
-import { HeatmapChart } from "@/db/schema";
+import { HeatmapChart, HeatmapView } from "@/db/schema";
 import { useHeatmapData } from "./HeatmapDataProvider";
-import { useView } from "../ViewProvider";
+import { useHeatmapView } from "../ViewProvider";
 
 interface SelectionContextValue {
     clearSelection: () => Promise<void>
@@ -32,34 +31,35 @@ export const SelectionProvider = ({ chart, children }: SelectionProviderProps) =
     const { filteredData: data, bounds, xStep, xRange, yRange, setXRange, setYRange } = useHeatmapData()
     const { selectionCanvasRef, rafRef, draw, clear } = useCanvasProvider()
     const { mutateAsync: deleteView } = useDeleteView()
-    const { view, isViewSuccess, persistView, cancelPersistView } = useView()
+    const { view, isViewSuccess, persistView, cancelPersistView } = useHeatmapView()
 
     const [activeSelection, setActiveSelectionState] = useState<HeatmapBounds | null>(null)
 
     // Initialize active selection from existing DB view (if present)
     useEffect(() => {
         if (isViewSuccess && view) {
-            setActiveSelectionState(view.data.annotation)
+            const hv = view as HeatmapView
+            setActiveSelectionState(hv.data.annotation)
         }
     }, [view, isViewSuccess])
 
-    const updateView = useCallback(async () => {
-        if (!activeSelection) return
-        const viewBounds = {
+    const updateView = useCallback((selection: HeatmapBounds | null, overrideBounds?: HeatmapBounds) => {
+        if (!selection) return
+        const viewBounds: HeatmapBounds = overrideBounds ?? {
             minCol: Math.max(bounds.minCol, xRange[0]),
             maxCol: Math.min(bounds.maxCol, xRange[1]),
             minRow: Math.max(bounds.minRow, yRange[0]),
             maxRow: Math.min(bounds.maxRow, yRange[1]),
         }
-        const payload: HeatmapViewData = { bounds: viewBounds, xStep: xStep, annotation: activeSelection }
+        const payload: HeatmapViewData = { bounds: viewBounds, xStep: xStep, annotation: selection }
         persistView(payload)
-    }, [persistView, activeSelection, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, xStep])
+    }, [persistView, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, xStep])
 
     // Exposed setter that persists when selection is set
     const setActiveSelection = useCallback((bounds: HeatmapBounds | null) => {
         setActiveSelectionState(bounds)
         if (bounds) {
-            updateView()
+            updateView(bounds)
         } else {
             cancelPersistView()
         }
@@ -120,7 +120,7 @@ export const SelectionProvider = ({ chart, children }: SelectionProviderProps) =
 
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)
-    }, [data, setActiveSelection])
+    }, [data, setActiveSelection, selectionCanvasRef])
 
     const zoomIntoActiveSelection = useCallback(async () => {
         if (!activeSelection) return
@@ -139,19 +139,31 @@ export const SelectionProvider = ({ chart, children }: SelectionProviderProps) =
         const currentX = hasX ? xRange : [bounds.minCol, bounds.maxCol] as Range;
         const currentY = hasY ? yRange : [bounds.minRow, bounds.maxRow] as Range;
 
-        await clearSelection()
+        // Clear only the transient selection and canvas; do not delete the saved view
+        setActiveSelection(null)
         clear()
 
-        setXRange([
+        const nextXRange: Range = [
             Math.max(currentX[0], Math.min(absMinCol, absMaxCol)),
             Math.min(currentX[1], Math.max(absMinCol, absMaxCol))
-        ])
-        setYRange([
+        ]
+        const nextYRange: Range = [
             Math.max(currentY[0], Math.min(absMinRow, absMaxRow)),
             Math.min(currentY[1], Math.max(absMinRow, absMaxRow))
-        ])
-        updateView()
-    }, [clearSelection, clear, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, activeSelection, updateView])
+        ]
+
+        setXRange(nextXRange)
+        setYRange(nextYRange)
+
+        const nextBounds: HeatmapBounds = {
+            minCol: Math.max(bounds.minCol, nextXRange[0]),
+            maxCol: Math.min(bounds.maxCol, nextXRange[1]),
+            minRow: Math.max(bounds.minRow, nextYRange[0]),
+            maxRow: Math.min(bounds.maxRow, nextYRange[1]),
+        }
+
+        updateView(zoomBounds, nextBounds)
+    }, [setActiveSelection, clear, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, activeSelection, updateView, setXRange, setYRange])
 
 
     useEffect(() => {
@@ -165,7 +177,7 @@ export const SelectionProvider = ({ chart, children }: SelectionProviderProps) =
                 clear()
             }
         })
-    }, [draw, clear, selectionRect, activeSelection])
+    }, [draw, clear, selectionRect, activeSelection, rafRef])
 
     const contextValue: SelectionContextValue = {
         clearSelection,

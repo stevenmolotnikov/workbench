@@ -2,17 +2,23 @@
 
 import { db } from "@/db/client";
 import { eq } from "drizzle-orm";
-import { views, type View, type NewView, type HeatmapView } from "@/db/schema";
-import type { ChartView } from "@/types/charts";
+import { views, charts, type View, type NewView } from "@/db/schema";
+import type { ChartType, ChartView } from "@/types/charts";
 
-export const getHeatmapView = async (chartId: string): Promise<HeatmapView | null> => {
-    const result = await db.select().from(views).where(eq(views.chartId, chartId));
-    return result[0] || null;
-}
+export const getView = async (chartId: string): Promise<{view: View, chartType: ChartType} | null> => {
+    const result = await db
+        .select({
+            id: views.id,
+            chartId: views.chartId,
+            data: views.data,
+            chartType: charts.type,
+        })
+        .from(views)
+        .leftJoin(charts, eq(views.chartId, charts.id))
+        .where(eq(views.chartId, chartId));
 
-export const getView = async (chartId: string): Promise<View | null> => {
-    const result = await db.select().from(views).where(eq(views.chartId, chartId));
-    return result[0] || null;
+    if (!result[0]) return null
+    return { view: result[0], chartType: result[0].chartType as ChartType }
 }
 
 export const createView = async (newView: NewView): Promise<View> => {
