@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode } from "react";
 import { LineChart } from "@/db/schema";
-import { LineGraphData, Range } from "@/types/charts";
+import { LineGraphData, Range, SelectionBounds } from "@/types/charts";
 
 interface LineDataContextValue {
     // Range State
     data: LineGraphData;
-    xRange?: Range;
-    yRange?: Range;
-    setXRange: (r: Range | undefined) => void;
-    setYRange: (r: Range | undefined) => void;
-    bounds: { xMin: number; xMax: number; yMin: number; yMax: number };
+    xRange: Range;
+    yRange: Range;
+    setXRange: (r: Range) => void;
+    setYRange: (r: Range) => void;
+    bounds: SelectionBounds;
 }
 
 const LineDataContext = createContext<LineDataContextValue | null>(null);
@@ -28,11 +28,7 @@ interface LineDataProviderProps {
 }
 
 export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, children }) => {
-
     const { data } = chart;
-
-    const [xRange, setXRange] = useState<Range | undefined>(undefined);
-    const [yRange, setYRange] = useState<Range | undefined>([0, 1]);
 
     // Calculate the bounds from the data
     const bounds = useMemo(() => {
@@ -50,13 +46,17 @@ export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, child
 
         return {
             xMin: minX === Infinity ? 0 : minX,
-            xMax: maxX === -Infinity ? 100 : maxX,
+            xMax: maxX === -Infinity ? 12 : maxX,
             yMin: minY === Infinity ? 0 : minY,
             yMax: maxY === -Infinity ? 1 : maxY,
-        };
+        } as SelectionBounds;
     }, [data]);
 
+    const [xRange, setXRange] = useState<Range>([bounds.xMin, bounds.xMax]);
+    const [yRange, setYRange] = useState<Range>([0, 1]);
+
     // Filter the data based on X range only
+    // Y range truncates incorrectly ish
     const filteredData = useMemo(() => {
         if (!xRange) {
             return data;
@@ -75,7 +75,6 @@ export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, child
             }))
         };
     }, [data, xRange]);
-
 
     const contextValue: LineDataContextValue = {
         data: filteredData,

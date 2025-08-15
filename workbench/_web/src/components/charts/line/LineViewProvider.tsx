@@ -3,28 +3,28 @@ import { lineMargin as margin } from "../theming";
 import { useDpr } from "../useDpr";
 import useMesh from "./useMesh";
 
-interface CanvasContextValue {
+interface LineViewContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>;
     rafRef: React.MutableRefObject<number | null>;
     drawRectPx: (x0: number, y0: number, x1: number, y1: number) => void;
     clear: () => void;
 }
 
-const CanvasContext = createContext<CanvasContextValue | null>(null);
+const LineViewContext = createContext<LineViewContextValue | null>(null);
 
-export const useCanvas = () => {
-    const context = useContext(CanvasContext);
+export const useLineView = () => {
+    const context = useContext(LineViewContext);
     if (!context) {
-        throw new Error("useCanvas must be used within a CanvasProvider");
+        throw new Error("useLineView must be used within a LineViewProvider");
     }
     return context;
 };
 
-interface CanvasProviderProps {
+interface LineViewProviderProps {
     children: ReactNode;
 }
 
-export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
+export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
@@ -64,7 +64,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
         ctx.strokeRect(minX + 0.5, minY + 0.5, Math.max(0, maxX - minX - 1), Math.max(0, maxY - minY - 1));
     }, []);
 
-    const contextValue: CanvasContextValue = {
+    const contextValue: LineViewContextValue = {
         selectionCanvasRef,
         rafRef,
         drawRectPx,
@@ -84,9 +84,9 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({ children }) => {
                     </div>
                 </div>
             )}
-            <CanvasContext.Provider value={contextValue}>
+            <LineViewContext.Provider value={contextValue}>
                 {children}
-            </CanvasContext.Provider>
+            </LineViewContext.Provider>
         </div>
     );
 };

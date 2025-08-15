@@ -1,6 +1,8 @@
 import { LensConfigData } from "./lens";
 import { PatchingConfig } from "./patching";
 
+// Heatmap Data Types
+
 export interface HeatmapCell {
     x: string | number;
     y: number | null;
@@ -11,6 +13,12 @@ export interface HeatmapRow {
     id: string;
     data: HeatmapCell[];
 }
+
+export interface HeatmapData {
+    rows: HeatmapRow[];
+}
+
+// Heatmap View Types
 
 export interface HeatmapBounds {
     minRow: number;
@@ -24,9 +32,9 @@ export interface HeatmapView {
     xStep: number;
 }
 
-export interface HeatmapData {
-    rows: HeatmapRow[];
-}
+export type Range = [number, number];
+
+// Line Data Types
 
 export interface Position {
     x: number;
@@ -42,11 +50,25 @@ export interface LineGraphData {
     lines: Line[];
 }
 
-export type ChartData = LineGraphData | HeatmapData;
-export type ChartView = HeatmapView;
-export type ConfigData = LensConfigData | PatchingConfig;
+// Line View Types
 
-export type Range = [number, number];
+export interface SelectionBounds {
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
+}
+
+export interface LineView {
+    bounds: SelectionBounds;
+    selectedLineIds: string[];
+}
+
+// Combined Types
+
+export type ChartData = LineGraphData | HeatmapData;
+export type ChartView = HeatmapView | LineView;
+export type ConfigData = LensConfigData | PatchingConfig;
 
 export type ChartType = "line" | "heatmap";
 export type ToolType = "lens" | "patch";
