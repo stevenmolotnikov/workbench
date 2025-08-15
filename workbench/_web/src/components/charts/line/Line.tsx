@@ -21,19 +21,23 @@ interface LineProps {
     onMouseLeave?: PointOrSliceMouseHandler<ChartLine>;
 }
 
-export interface RangeSelection {
-    lineId: string;
-    ranges: Array<[number, number]>;
-}
-
-export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRange = [0, 1], highlightedLines = new Set<string>(), onMouseDown, onMouseMove, onMouseUp, onMouseLeave }: LineProps) {
+export function Line({
+    data,
+    margin = lineMargin,
+    onLegendClick = () => { },
+    yRange = [0, 1],
+    highlightedLines = new Set<string>(),
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    onMouseLeave
+}: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
     const handleLegendClick = (lineId: string) => {
         onLegendClick(lineId)
     };
 
-    // Create color mapping for lines
     const colorFn = useMemo(() => {
         const hasHighlighted = highlightedLines.size > 0;
         return (line: { id: string }) => {
@@ -45,9 +49,9 @@ export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRa
     }, [data.lines, highlightedLines]);
 
     return (
-        <div className="h-full">
+        <div className="h-full flex flex-col">
             <div
-                className="flex flex-row gap-3 justify-center h-[5%]"
+                className="flex flex-wrap gap-3 justify-center min-h-[5%] p-2"
             >
                 {data.lines.map((line, index) => {
                     const color = lineColors[index % lineColors.length];
@@ -58,23 +62,29 @@ export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRa
                         <button
                             key={line.id}
                             onClick={() => handleLegendClick(line.id)}
-                            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="flex items-center gap-2 px-2 py-1 h-6 transition-colors"
                             style={{
                                 opacity: hasAnyHighlighted && !isHighlighted ? 0.5 : 1
                             }}
                         >
                             <span
-                                className="w-3 h-3 rounded-full"
+                                className="w-3 h-1 rounded-full"
                                 style={{
                                     backgroundColor: hasAnyHighlighted && !isHighlighted ? '#d3d3d3' : color
                                 }}
                             />
-                            <span className="text-sm">{line.id}</span>
+                            <span
+                                className="text-xs"
+                                style={{
+                                    color: hasAnyHighlighted && !isHighlighted ? '#d3d3d3' : color
+                                }}>
+                                {line.id}
+                            </span>
                         </button>
                     );
                 })}
             </div>
-            <div className="h-[95%] select-none">
+            <div className="flex-1 select-none">
                 <ResponsiveLine
                     data={data.lines}
                     margin={margin}

@@ -30,12 +30,13 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
     const { bounds, setXRange, setYRange, data, yRange } = useLineData();
     const { activeSelection, zoomIntoActiveSelection, clearSelection, handleMouseDown, handleMouseMove, handleMouseUp, handleMouseLeave } = useLineInteraction();
-    const { selectionCanvasRef, highlightedLines, toggleLineHighlight } = useLineView();
+    const { selectionCanvasRef, highlightedLines, toggleLineHighlight, clearHighlightedLines } = useLineView();
 
     const handleReset = async () => {
         await clearSelection();
         setXRange([bounds.xMin, bounds.xMax]);
         setYRange([0, 1]);
+        clearHighlightedLines();
     };
 
     return (

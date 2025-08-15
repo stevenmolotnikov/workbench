@@ -9,6 +9,7 @@ interface LineViewContextValue {
     clear: () => void;
     highlightedLines: Set<string>;
     toggleLineHighlight: (lineId: string) => void;
+    clearHighlightedLines: () => void;
 }
 
 const LineViewContext = createContext<LineViewContextValue | null>(null);
@@ -39,6 +40,10 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
             if (newSet.has(lineId)) newSet.delete(lineId); else newSet.add(lineId);
             return newSet;
         });
+    }, []);
+
+    const clearHighlightedLines = useCallback(() => {
+        setHighlightedLines(new Set());
     }, []);
 
     // Drawing helpers
@@ -77,6 +82,7 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         clear,
         highlightedLines,
         toggleLineHighlight,
+        clearHighlightedLines,
     };
 
     return (

@@ -57,11 +57,11 @@ const baseTheme = {
         container: {
             background: 'hsl(var(--popover))',
             color: 'hsl(var(--popover-foreground))',
-            fontSize: 12,
+            fontSize: 10,
             fontFamily: fontFamily,
             borderRadius: 'calc(var(--radius) - 2px)',
             boxShadow: 'var(--shadow-lg)',
-            padding: '5px 9px'
+            padding: '5px 5px'
         },
     },
 }
