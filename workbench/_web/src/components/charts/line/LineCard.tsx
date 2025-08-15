@@ -6,7 +6,7 @@ import { CanvasProvider, useCanvas } from "./CanvasProvider";
 import ChartTitle from "../ChartTitle";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
-import { LineSelectionProvider, useLineSelection } from "@/components/charts/line/LineSelectionProvider";
+import { SelectionProvider, useSelection } from "@/components/charts/line/SelectionProvider";
 
 interface LineCardProps {
     chart: LineChart;
@@ -17,10 +17,10 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
     return (
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
             <LineDataProvider chart={chart}>
-                <CanvasProvider ref={captureRef}>
-                    <LineSelectionProvider>
+                <CanvasProvider>
+                    <SelectionProvider>
                         <LineCardWithSelection chart={chart} />
-                    </LineSelectionProvider>
+                    </SelectionProvider>
                 </CanvasProvider>
             </LineDataProvider>
         </div>
@@ -29,7 +29,7 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 
 const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
     const { bounds, setXRange, setYRange, data, yRange } = useLineData();
-    const { activeSelection, zoomIntoActiveSelection, clearSelection } = useLineSelection();
+    const { activeSelection, zoomIntoActiveSelection, clearSelection } = useSelection();
     const { selectionCanvasRef } = useCanvas();
 
     const handleReset = async () => {

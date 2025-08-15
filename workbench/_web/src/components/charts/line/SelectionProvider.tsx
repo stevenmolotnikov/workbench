@@ -4,21 +4,21 @@ import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
 import { Range } from "@/types/charts";
 
-interface LineSelectionContextValue {
+interface SelectionContextValue {
     activeSelection: { x0: number; y0: number; x1: number; y1: number } | null;
     zoomIntoActiveSelection: () => Promise<void>;
     clearSelection: () => Promise<void>;
 }
 
-const LineSelectionContext = createContext<LineSelectionContextValue | null>(null);
+const SelectionContext = createContext<SelectionContextValue | null>(null);
 
-export const useLineSelection = () => {
-    const ctx = useContext(LineSelectionContext);
-    if (!ctx) throw new Error("useLineSelection must be used within a LineSelectionProvider");
+export const useSelection = () => {
+    const ctx = useContext(SelectionContext);
+    if (!ctx) throw new Error("useSelection must be used within a SelectionProvider");
     return ctx;
 };
 
-export const LineSelectionProvider = ({ children }: { children: ReactNode }) => {
+export const SelectionProvider = ({ children }: { children: ReactNode }) => {
     const { selectionCanvasRef, rafRef, drawRectPx, clear } = useCanvas();
         const { bounds, xRange, yRange, setXRange, setYRange } = useLineData();
 
@@ -120,16 +120,16 @@ export const LineSelectionProvider = ({ children }: { children: ReactNode }) => 
         });
     }, [activeSelection, drawRectPx, clear, rafRef]);
 
-    const value: LineSelectionContextValue = {
+    const value: SelectionContextValue = {
         activeSelection,
         zoomIntoActiveSelection,
         clearSelection,
     };
 
     return (
-        <LineSelectionContext.Provider value={value}>
+        <SelectionContext.Provider value={value}>
             {children}
-        </LineSelectionContext.Provider>
+        </SelectionContext.Provider>
     );
 };
 
