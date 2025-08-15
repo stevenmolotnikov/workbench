@@ -29,8 +29,8 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 
 const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
     const { bounds, setXRange, setYRange, data, yRange } = useLineData();
-    const { activeSelection, zoomIntoActiveSelection, clearSelection, handleMouseDown } = useLineInteraction();
-    const { selectionCanvasRef } = useLineView();
+    const { activeSelection, zoomIntoActiveSelection, clearSelection, handleMouseDown, handleMouseMove, handleMouseUp, handleMouseLeave } = useLineInteraction();
+    const { selectionCanvasRef, highlightedLines, toggleLineHighlight } = useLineView();
 
     const handleReset = async () => {
         await clearSelection();
@@ -59,17 +59,24 @@ const LineCardWithSelection = ({ chart }: { chart: LineChart }) => {
                 </div>
             </div>
             <div className="flex h-[90%] w-full">
-                <div className="size-full relative" onMouseDown={handleMouseDown}>
+                <div className="size-full relative cursor-crosshair">
                     <canvas
                         ref={selectionCanvasRef}
-                        className="absolute inset-0 top-[5%] h-[95%]  w-full z-20 cursor-crosshair"
+                        className="absolute inset-0 top-[5%] h-[95%] pointer-events-none w-full z-10 "
                     />
                     <Line
                         data={data}
                         yRange={yRange}
+                        onLegendClick={toggleLineHighlight}
+                        highlightedLines={highlightedLines}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseLeave}
                     />
                 </div>
             </div>
+
         </div>
     );
 }

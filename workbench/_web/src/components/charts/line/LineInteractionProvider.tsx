@@ -3,12 +3,17 @@ import { useLineView } from "./LineViewProvider";
 import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
 import { SelectionBounds } from "@/types/charts";
+import type { PointOrSliceMouseHandler } from '@nivo/line'
+import type { Line as ChartLine } from '@/types/charts'
 
 interface LineInteractionContextValue {
     activeSelection: SelectionBounds | null;
     zoomIntoActiveSelection: () => Promise<void>;
     clearSelection: () => Promise<void>;
-    handleMouseDown: (e: MouseEvent) => void;
+    handleMouseDown: PointOrSliceMouseHandler<ChartLine>;
+    handleMouseMove: PointOrSliceMouseHandler<ChartLine>;
+    handleMouseUp: PointOrSliceMouseHandler<ChartLine>;
+    handleMouseLeave: PointOrSliceMouseHandler<ChartLine>;
 }
 
 const LineInteractionContext = createContext<LineInteractionContextValue | null>(null);
@@ -21,50 +26,96 @@ export const useLineInteraction = () => {
 
 export const LineInteractionProvider = ({ children }: { children: ReactNode }) => {
     const { selectionCanvasRef, rafRef, drawRectPx, clear } = useLineView();
-    const { bounds, setXRange, setYRange } = useLineData();
+    const { bounds, setXRange, setYRange, data } = useLineData();
 
     const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
     const selectionRef = useRef<SelectionBounds | null>(null);
+    const windowMouseUpAttachedRef = useRef<boolean>(false);
 
-    const handleMouseDown = useCallback((e: MouseEvent) => {
+    const uniqueSortedX = React.useMemo(() => {
+        const set = new Set<number>();
+        data.lines.forEach(line => {
+            line.data.forEach(p => set.add(p.x));
+        });
+        return Array.from(set).sort((a, b) => a - b);
+    }, [data]);
+
+    const snapPxToNearestX = useCallback((px: number): number => {
+        const canvas = selectionCanvasRef.current;
+        if (!canvas || uniqueSortedX.length === 0) return px;
+        const innerWidth = Math.max(1, canvas.clientWidth - margin.left - margin.right);
+        const xDomainMin = bounds.xMin;
+        const xDomainMax = bounds.xMax;
+        const domainSpan = Math.max(1e-9, xDomainMax - xDomainMin);
+        const xVal = xDomainMin + ((px - margin.left) / innerWidth) * domainSpan;
+        
+        let nearest = uniqueSortedX[0];
+        let bestDist = Math.abs(xVal - nearest);
+        for (let i = 1; i < uniqueSortedX.length; i++) {
+            const v = uniqueSortedX[i];
+            const d = Math.abs(xVal - v);
+            if (d < bestDist) {
+                nearest = v;
+                bestDist = d;
+            }
+        }
+        
+        const snappedPx = margin.left + ((nearest - xDomainMin) / domainSpan) * innerWidth;
+        return snappedPx;
+    }, [bounds.xMin, bounds.xMax, selectionCanvasRef, uniqueSortedX]);
+
+    const finalizeSelection = useCallback(() => {
+        if (selectionRef.current) {
+            setActiveSelection(selectionRef.current);
+        }
+        selectionRef.current = null;
+        windowMouseUpAttachedRef.current = false;
+    }, []);
+
+    const handleMouseDown: PointOrSliceMouseHandler<ChartLine> = useCallback((_datum, event) => {
         const rect = selectionCanvasRef.current?.getBoundingClientRect();
         if (!rect) return;
-        const startX = e.clientX - rect.left;
-        const startY = e.clientY - rect.top;
-
+        const startXRaw = event.clientX - rect.left;
+        const startY = event.clientY - rect.top;
+        const startX = snapPxToNearestX(startXRaw);
         const start = { xMin: startX, yMin: startY, xMax: startX, yMax: startY };
         selectionRef.current = start;
         setActiveSelection(start);
 
-        const onMove = (ev: MouseEvent) => {
-            const r = selectionCanvasRef.current?.getBoundingClientRect();
-            if (!r) return;
-            const mx = ev.clientX - r.left;
-            const my = ev.clientY - r.top;
-            const next = { xMin: startX, yMin: startY, xMax: mx, yMax: my };
-            selectionRef.current = next;
-            setActiveSelection(next);
-        };
+        if (!windowMouseUpAttachedRef.current) {
+            window.addEventListener('mouseup', finalizeSelection, { once: true });
+            windowMouseUpAttachedRef.current = true;
+        }
+    }, [selectionCanvasRef, finalizeSelection, snapPxToNearestX]);
 
-        const onUp = () => {
-            const final = selectionRef.current;
-            if (final) {
-                setActiveSelection(final);
-            }
-            selectionRef.current = null;
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-        };
+    const handleMouseMove: PointOrSliceMouseHandler<ChartLine> = useCallback((_datum, event) => {
+        if (!selectionRef.current) return;
+        const rect = selectionCanvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const mxRaw = event.clientX - rect.left;
+        const my = event.clientY - rect.top;
+        const mx = snapPxToNearestX(mxRaw);
+        const next = { xMin: selectionRef.current.xMin, yMin: selectionRef.current.yMin, xMax: mx, yMax: my };
+        selectionRef.current = next;
+        setActiveSelection(next);
+    }, [selectionCanvasRef, snapPxToNearestX]);
 
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
-    }, [selectionCanvasRef]);
+    const handleMouseUp: PointOrSliceMouseHandler<ChartLine> = useCallback((_datum, _event) => {
+        finalizeSelection();
+    }, [finalizeSelection]);
+
+    const handleMouseLeave: PointOrSliceMouseHandler<ChartLine> = useCallback((_datum, _event) => {
+        if (selectionRef.current && !windowMouseUpAttachedRef.current) {
+            window.addEventListener('mouseup', finalizeSelection, { once: true });
+            windowMouseUpAttachedRef.current = true;
+        }
+    }, [finalizeSelection]);
 
     const clearSelection = useCallback(async () => {
         setActiveSelection(null);
         clear();
-        // Here you can delete persisted annotation for line chart if desired
-        // await deleteAnnotation(...)
+        selectionRef.current = null;
+        windowMouseUpAttachedRef.current = false;
     }, [clear]);
 
     const zoomIntoActiveSelection = useCallback(async () => {
@@ -90,12 +141,8 @@ export const LineInteractionProvider = ({ children }: { children: ReactNode }) =
         await clearSelection();
         setXRange([Math.min(xMinData, xMaxData), Math.max(xMinData, xMaxData)]);
         setYRange([Math.min(yMinData, yMaxData), Math.max(yMinData, yMaxData)]);
-
-        // Here you can persist chart view if desired
-        // await updateChartView(...)
     }, [activeSelection, selectionCanvasRef, clearSelection, setXRange, setYRange, bounds.xMin, bounds.xMax, bounds.yMin, bounds.yMax]);
 
-    // draw selection
     useEffect(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
@@ -112,6 +159,9 @@ export const LineInteractionProvider = ({ children }: { children: ReactNode }) =
         zoomIntoActiveSelection,
         clearSelection,
         handleMouseDown,
+        handleMouseMove,
+        handleMouseUp,
+        handleMouseLeave,
     };
 
     return (

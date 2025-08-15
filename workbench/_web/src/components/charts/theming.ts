@@ -81,3 +81,16 @@ export const heatmapTheme = {
         }
     }
 }
+
+// Line color palette (Set1-like)
+export const lineColors = [
+    '#e41a1c', // red
+    '#377eb8', // blue
+    '#4daf4a', // green
+    '#984ea3', // purple
+    '#ff7f00', // orange
+    '#ffff33', // yellow
+    '#a65628', // brown
+    '#f781bf', // pink
+    '#999999', // gray
+]

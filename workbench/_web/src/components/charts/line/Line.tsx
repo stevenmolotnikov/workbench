@@ -1,9 +1,11 @@
 "use client";
 
 import type { LineGraphData } from "@/types/charts";
-import { ResponsiveLineCanvas } from '@nivo/line'
-import { lineMargin, lineTheme } from '../theming'
-import { useMemo, useState } from "react";
+import { ResponsiveLine } from '@nivo/line'
+import type { PointOrSliceMouseHandler } from '@nivo/line'
+import type { Line as ChartLine } from '@/types/charts'
+import { lineMargin, lineTheme, lineColors } from '../theming'
+import { useMemo } from "react";
 import { resolveThemeCssVars } from "@/lib/utils";
 import { Margin } from "@nivo/core";
 
@@ -12,6 +14,11 @@ interface LineProps {
     onLegendClick?: (lineId: string) => void;
     margin?: Margin;
     yRange?: [number, number];
+    highlightedLines?: Set<string>;
+    onMouseDown?: PointOrSliceMouseHandler<ChartLine>;
+    onMouseMove?: PointOrSliceMouseHandler<ChartLine>;
+    onMouseUp?: PointOrSliceMouseHandler<ChartLine>;
+    onMouseLeave?: PointOrSliceMouseHandler<ChartLine>;
 }
 
 export interface RangeSelection {
@@ -19,49 +26,21 @@ export interface RangeSelection {
     ranges: Array<[number, number]>;
 }
 
-// Define set1 color scheme colors from d3-scale-chromatic
-const SET1_COLORS = [
-    '#e41a1c', // red
-    '#377eb8', // blue
-    '#4daf4a', // green
-    '#984ea3', // purple
-    '#ff7f00', // orange
-    '#ffff33', // yellow
-    '#a65628', // brown
-    '#f781bf', // pink
-    '#999999', // gray
-];
-
-export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRange = [0, 1] }: LineProps) {
+export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRange = [0, 1], highlightedLines = new Set<string>(), onMouseDown, onMouseMove, onMouseUp, onMouseLeave }: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
-    const [highlightedLines, setHighlightedLines] = useState<Set<string>>(new Set())
 
     const handleLegendClick = (lineId: string) => {
-        setHighlightedLines(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(lineId)) {
-                newSet.delete(lineId);
-            } else {
-                newSet.add(lineId);
-            }
-            return newSet;
-        });
-        onLegendClick(lineId);
+        onLegendClick(lineId)
     };
 
     // Create color mapping for lines
-    const lineColors = useMemo(() => {
+    const colorFn = useMemo(() => {
         const hasHighlighted = highlightedLines.size > 0;
-        return (line: any) => {
+        return (line: { id: string }) => {
             const lineIndex = data.lines.findIndex(l => l.id === line.id);
-            const baseColor = SET1_COLORS[lineIndex % SET1_COLORS.length];
-
-            // If no lines are highlighted, show all with full color
-            // If some lines are highlighted, dim the non-highlighted ones
-            if (!hasHighlighted || highlightedLines.has(line.id)) {
-                return baseColor;
-            }
-            return '#d3d3d3'; // Light gray for non-highlighted lines
+            const baseColor = lineColors[lineIndex % lineColors.length];
+            if (!hasHighlighted || highlightedLines.has(line.id)) return baseColor;
+            return '#d3d3d3';
         };
     }, [data.lines, highlightedLines]);
 
@@ -71,7 +50,7 @@ export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRa
                 className="flex flex-row gap-3 justify-center h-[5%]"
             >
                 {data.lines.map((line, index) => {
-                    const color = SET1_COLORS[index % SET1_COLORS.length];
+                    const color = lineColors[index % lineColors.length];
                     const isHighlighted = highlightedLines.has(line.id);
                     const hasAnyHighlighted = highlightedLines.size > 0;
 
@@ -95,8 +74,8 @@ export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRa
                     );
                 })}
             </div>
-            <div className="h-[95%]">
-                <ResponsiveLineCanvas
+            <div className="h-[95%] select-none">
+                <ResponsiveLine
                     data={data.lines}
                     margin={margin}
                     yScale={{
@@ -121,12 +100,18 @@ export function Line({ data, margin = lineMargin, onLegendClick = () => { }, yRa
                         tickRotation: 0,
                     }}
                     theme={resolvedTheme}
-                    colors={lineColors}
+                    colors={colorFn}
                     enableGridX={false}
-                    isInteractive={false}
+                    isInteractive={true}
                     yFormat=">-.2f"
+                    animate={false}
+                    enableSlices={"x"}
                     enableGridY={true}
                     enablePoints={true}
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUp}
+                    onMouseLeave={onMouseLeave}
                 />
             </div>
         </div>

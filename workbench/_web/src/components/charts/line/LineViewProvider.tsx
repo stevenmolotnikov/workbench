@@ -1,13 +1,14 @@
-import React, { createContext, useCallback, useContext, useRef, ReactNode } from "react";
+import React, { createContext, useCallback, useContext, useRef, ReactNode, useState } from "react";
 import { lineMargin as margin } from "../theming";
 import { useDpr } from "../useDpr";
-import useMesh from "./useMesh";
 
 interface LineViewContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>;
     rafRef: React.MutableRefObject<number | null>;
     drawRectPx: (x0: number, y0: number, x1: number, y1: number) => void;
     clear: () => void;
+    highlightedLines: Set<string>;
+    toggleLineHighlight: (lineId: string) => void;
 }
 
 const LineViewContext = createContext<LineViewContextValue | null>(null);
@@ -25,15 +26,20 @@ interface LineViewProviderProps {
 }
 
 export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) => {
-    const containerRef = useRef<HTMLDivElement | null>(null);
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
+    const [highlightedLines, setHighlightedLines] = useState<Set<string>>(new Set());
 
     // DPR + resize handling
     useDpr(selectionCanvasRef);
 
-    // Use the mesh hook for Voronoi mesh and tooltip handling
-    const { tooltip } = useMesh({ selectionCanvasRef });
+    const toggleLineHighlight = useCallback((lineId: string) => {
+        setHighlightedLines(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(lineId)) newSet.delete(lineId); else newSet.add(lineId);
+            return newSet;
+        });
+    }, []);
 
     // Drawing helpers
     const clear = useCallback(() => {
@@ -69,24 +75,14 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         rafRef,
         drawRectPx,
         clear,
+        highlightedLines,
+        toggleLineHighlight,
     };
 
     return (
-        <div ref={containerRef} className="size-full relative">
-            {tooltip.visible && (
-                <div
-                    className="fixed z-30 px-2 py-1 rounded shadow bg-background border text-sm pointer-events-none"
-                    style={{ left: tooltip.left, top: tooltip.top }}
-                >
-                    <div className="flex items-center gap-2">
-                        <span>x: {String(tooltip.xVal)}</span>
-                        <span>y: {tooltip.yVal === null ? '—' : tooltip.yVal.toFixed(2)}</span>
-                    </div>
-                </div>
-            )}
-            <LineViewContext.Provider value={contextValue}>
-                {children}
-            </LineViewContext.Provider>
-        </div>
+
+        <LineViewContext.Provider value={contextValue}>
+            {children}
+        </LineViewContext.Provider>
     );
 };
