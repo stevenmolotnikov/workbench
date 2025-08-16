@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useRef, ReactNode, useState } from "react";
 import { lineMargin as margin } from "../theming";
 import { useDpr } from "../useDpr";
+import { SelectionBounds } from "@/types/charts";
 
 interface LineViewContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>;
@@ -10,6 +11,8 @@ interface LineViewContextValue {
     drawVerticalLinePx: (xPx: number) => void;
     clear: () => void;
     clearCrosshair: () => void;
+    activeSelection: SelectionBounds | null;
+    setActiveSelection: (selection: SelectionBounds | null) => void;
 }
 
 const LineViewContext = createContext<LineViewContextValue | null>(null);
@@ -30,6 +33,8 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const crosshairCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
+
+    const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
 
     // DPR + resize handling
     useDpr(selectionCanvasRef);
@@ -97,6 +102,8 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         drawVerticalLinePx,
         clear,
         clearCrosshair,
+        activeSelection,
+        setActiveSelection,
     };
 
     return (

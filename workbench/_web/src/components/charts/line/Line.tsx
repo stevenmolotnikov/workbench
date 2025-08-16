@@ -6,6 +6,7 @@ import { lineMargin, lineTheme, lineColors } from '../theming'
 import { useMemo } from "react";
 import { resolveThemeCssVars } from "@/lib/utils";
 import { Margin } from "@nivo/core";
+import { hslFromCssVar } from "@/lib/utils";
 
 interface LineProps {
     data: LineGraphData;
@@ -18,11 +19,10 @@ interface LineProps {
 export function Line({
     data,
     margin = lineMargin,
-    onLegendClick = () => { },
+    onLegendClick = () => {},
     yRange = [0, 1],
     highlightedLineIds = new Set<string>()
 }: LineProps) {
-
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
     const colorFn = useMemo(() => {
@@ -33,19 +33,9 @@ export function Line({
             const isHighlighted = highlightedLineIds.has(line.id);
             if (!hasHighlighted) return baseColor;
             if (isHighlighted) return baseColor;
-            return '#d3d3d3';
+            return hslFromCssVar('--border');
         };
-    }, [data.lines, highlightedLineIds]);
-
-    // const orderedLines = useMemo(() => {
-    //     const lines = data.lines.slice();
-    //     const nonHighlighted: typeof lines = [];
-    //     const highlighted: typeof lines = [];
-    //     for (const l of lines) {
-    //         (highlightedLineIds.has(l.id) ? highlighted : nonHighlighted).push(l);
-    //     }
-    //     return [...nonHighlighted, ...highlighted];
-    // }, [data.lines, highlightedLineIds]);
+    }, [data.lines, highlightedLineIds]);   
 
     return (
         <div className="h-full flex flex-col">
