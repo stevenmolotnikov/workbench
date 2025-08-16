@@ -1,24 +1,22 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, useEffect } from "react";
 import { useLineView } from "./LineViewProvider";
 import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
-export const useCrosshair = () => {
+
+interface UseCrosshairProps {
+    rafRef: React.MutableRefObject<number | null>;
+}
+
+export const useCrosshair = ({ rafRef}: UseCrosshairProps) => {
+    const { drawVerticalLinePx, clearCrosshair } = useLineView();
     const { selectionCanvasRef } = useLineView();
-    const { data, xRange, yRange } = useLineData();
+    const { data, xRange, yRange, uniqueSortedX } = useLineData();
     const { toggleLineHighlight } = useLensWorkspace();
 
     const [hoverXRaw, setHoverXRaw] = useState<number | null>(null);
     const [hoverYRaw, setHoverYRaw] = useState<number | null>(null);
-
-    const uniqueSortedX = React.useMemo(() => {
-        const set = new Set<number>();
-        data.lines.forEach(line => {
-            line.data.forEach(p => set.add(p.x));
-        });
-        return Array.from(set).sort((a, b) => a - b);
-    }, [data]);
 
     const nearestXValueFromPx = useCallback((px: number): number | null => {
         const canvas = selectionCanvasRef.current;
@@ -140,6 +138,17 @@ export const useCrosshair = () => {
         }
         return bestId;
     }, [hoverSnappedXValue, hoverYData, data.lines, yRange]);
+
+    useEffect(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            if (hoverSnappedXPx != null) {
+                drawVerticalLinePx(hoverSnappedXPx);
+            } else {
+                clearCrosshair();
+            }
+        });
+    }, [hoverSnappedXPx, drawVerticalLinePx, clearCrosshair, rafRef]);
 
     return {
         handleMouseMove,

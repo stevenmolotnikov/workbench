@@ -4,6 +4,9 @@ import { cn } from "@/lib/utils";
 
 export const TooltipAtX = ({ xValue, xPx, nearestLineId }: { xValue: number, xPx: number, nearestLineId?: string | null }) => {
     const { data } = useLineData();
+
+    
+
     // Position near the top, horizontally at snapped X in pixels
     return (
         <div

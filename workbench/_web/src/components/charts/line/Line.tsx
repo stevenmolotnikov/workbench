@@ -14,14 +14,26 @@ interface LineProps {
     margin?: Margin;
     yRange?: [number, number];
     highlightedLineIds?: Set<string>;
+    onMouseDown?: (e: React.MouseEvent) => void;
+    onMouseMove?: (e: React.MouseEvent) => void;
+    onMouseLeave?: () => void;
+    onClick?: (e: React.MouseEvent) => void;
+    crosshairCanvasRef?: React.RefObject<HTMLCanvasElement>;
+    selectionCanvasRef?: React.RefObject<HTMLCanvasElement>;
 }
 
 export function Line({
     data,
     margin = lineMargin,
-    onLegendClick = () => {},
+    onLegendClick = () => { },
     yRange = [0, 1],
-    highlightedLineIds = new Set<string>()
+    highlightedLineIds = new Set<string>(),
+    onMouseDown,
+    onMouseMove,
+    onMouseLeave,
+    onClick,
+    crosshairCanvasRef,
+    selectionCanvasRef,
 }: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
@@ -35,10 +47,10 @@ export function Line({
             if (isHighlighted) return baseColor;
             return hslFromCssVar('--border');
         };
-    }, [data.lines, highlightedLineIds]);   
+    }, [data.lines, highlightedLineIds]);
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="size-full flex flex-col">
             <div
                 className="flex flex-wrap gap-3 justify-center min-h-[5%] p-2"
             >
@@ -73,7 +85,21 @@ export function Line({
                     );
                 })}
             </div>
-            <div className="flex-1 select-none">
+
+            <div className="w-full relative cursor-crosshair h-[95%]"
+                onMouseDown={onMouseDown}
+                onMouseMove={onMouseMove}
+                onMouseLeave={onMouseLeave}
+                onClick={onClick}
+            >
+                <canvas
+                    ref={crosshairCanvasRef}
+                    className="absolute inset-0 size-full z-10 pointer-events-none"
+                />
+                <canvas
+                    ref={selectionCanvasRef}
+                    className="absolute inset-0 size-full z-20"
+                />
                 <ResponsiveLine
                     data={data.lines}
                     margin={margin}

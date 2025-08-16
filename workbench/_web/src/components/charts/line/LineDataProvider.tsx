@@ -5,6 +5,7 @@ import { LineGraphData, Range, SelectionBounds } from "@/types/charts";
 interface LineDataContextValue {
     // Range State
     data: LineGraphData;
+    uniqueSortedX: number[];
     xRange: Range;
     yRange: Range;
     setXRange: (r: Range) => void;
@@ -28,14 +29,14 @@ interface LineDataProviderProps {
 }
 
 export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, children }) => {
-    const { data } = chart;
+    const { data:rawData } = chart;
 
     // Calculate the bounds from the data
     const bounds = useMemo(() => {
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
 
-        data.lines.forEach(line => {
+        rawData.lines.forEach(line => {
             line.data.forEach(point => {
                 minX = Math.min(minX, point.x);
                 maxX = Math.max(maxX, point.x);
@@ -50,34 +51,43 @@ export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, child
             yMin: minY === Infinity ? 0 : minY,
             yMax: maxY === -Infinity ? 1 : maxY,
         } as SelectionBounds;
-    }, [data]);
+    }, [rawData]);
 
     const [xRange, setXRange] = useState<Range>([bounds.xMin, bounds.xMax]);
     const [yRange, setYRange] = useState<Range>([0, 1]);
 
     // Filter the data based on X range only
     // Y range truncates incorrectly ish
-    const filteredData = useMemo(() => {
+    const data = useMemo(() => {
         if (!xRange) {
-            return data;
+            return rawData;
         }
 
         const xMin = xRange[0];
         const xMax = xRange[1];
 
         return {
-            ...data,
-            lines: data.lines.map(line => ({
+            ...rawData,
+            lines: rawData.lines.map(line => ({
                 ...line,
                 data: line.data.filter(point =>
                     point.x >= xMin && point.x <= xMax
                 )
             }))
         };
-    }, [data, xRange]);
+    }, [rawData, xRange]);
+
+    const uniqueSortedX = React.useMemo(() => {
+        const set = new Set<number>();
+        data.lines.forEach(line => {
+            line.data.forEach(p => set.add(p.x));
+        });
+        return Array.from(set).sort((a, b) => a - b);
+    }, [data]);
 
     const contextValue: LineDataContextValue = {
-        data: filteredData,
+        data,
+        uniqueSortedX,
         xRange,
         yRange,
         setXRange,
