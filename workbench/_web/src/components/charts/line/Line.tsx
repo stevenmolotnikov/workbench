@@ -2,8 +2,6 @@
 
 import type { LineGraphData } from "@/types/charts";
 import { ResponsiveLine } from '@nivo/line'
-import type { PointOrSliceMouseHandler } from '@nivo/line'
-import type { Line as ChartLine } from '@/types/charts'
 import { lineMargin, lineTheme, lineColors } from '../theming'
 import { useMemo } from "react";
 import { resolveThemeCssVars } from "@/lib/utils";
@@ -15,10 +13,6 @@ interface LineProps {
     margin?: Margin;
     yRange?: [number, number];
     highlightedLineIds?: Set<string>;
-    onMouseDown?: PointOrSliceMouseHandler<ChartLine>;
-    onMouseMove?: PointOrSliceMouseHandler<ChartLine>;
-    onMouseUp?: PointOrSliceMouseHandler<ChartLine>;
-    onMouseLeave?: PointOrSliceMouseHandler<ChartLine>;
 }
 
 export function Line({
@@ -26,27 +20,32 @@ export function Line({
     margin = lineMargin,
     onLegendClick = () => { },
     yRange = [0, 1],
-    highlightedLineIds = new Set<string>(),
-    onMouseDown,
-    onMouseMove,
-    onMouseUp,
-    onMouseLeave
+    highlightedLineIds = new Set<string>()
 }: LineProps) {
-    const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
-    const handleLegendClick = (lineId: string) => {
-        onLegendClick(lineId)
-    };
+    const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
     const colorFn = useMemo(() => {
         const hasHighlighted = highlightedLineIds.size > 0;
         return (line: { id: string }) => {
             const lineIndex = data.lines.findIndex(l => l.id === line.id);
             const baseColor = lineColors[lineIndex % lineColors.length];
-            if (!hasHighlighted || highlightedLineIds.has(line.id)) return baseColor;
+            const isHighlighted = highlightedLineIds.has(line.id);
+            if (!hasHighlighted) return baseColor;
+            if (isHighlighted) return baseColor;
             return '#d3d3d3';
         };
     }, [data.lines, highlightedLineIds]);
+
+    // const orderedLines = useMemo(() => {
+    //     const lines = data.lines.slice();
+    //     const nonHighlighted: typeof lines = [];
+    //     const highlighted: typeof lines = [];
+    //     for (const l of lines) {
+    //         (highlightedLineIds.has(l.id) ? highlighted : nonHighlighted).push(l);
+    //     }
+    //     return [...nonHighlighted, ...highlighted];
+    // }, [data.lines, highlightedLineIds]);
 
     return (
         <div className="h-full flex flex-col">
@@ -61,7 +60,7 @@ export function Line({
                     return (
                         <button
                             key={line.id}
-                            onClick={() => handleLegendClick(line.id)}
+                            onClick={() => onLegendClick(line.id)}
                             className="flex items-center gap-2 px-2 py-1 h-6 transition-colors"
                             style={{
                                 opacity: hasAnyHighlighted && !isHighlighted ? 0.5 : 1
@@ -112,19 +111,15 @@ export function Line({
                     theme={resolvedTheme}
                     colors={colorFn}
                     enableGridX={false}
-                    isInteractive={true}
+                    isInteractive={false}
                     yFormat=">-.2f"
                     animate={false}
-                    enableSlices={"x"}
+                    crosshairType="x"
+                    enableSlices={false}
+                    useMesh={false}
                     enableGridY={true}
                     enablePoints={false}
-                    onMouseDown={onMouseDown}
-                    onClick={(datum, event) => {
-                        console.log("clicked", datum, event);
-                    }}
-                    onMouseMove={onMouseMove}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseLeave}
+                    pointBorderWidth={0}
                 />
             </div>
         </div>

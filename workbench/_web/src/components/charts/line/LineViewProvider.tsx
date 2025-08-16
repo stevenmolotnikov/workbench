@@ -4,9 +4,12 @@ import { useDpr } from "../useDpr";
 
 interface LineViewContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>;
+    crosshairCanvasRef: React.RefObject<HTMLCanvasElement>;
     rafRef: React.MutableRefObject<number | null>;
     drawRectPx: (x0: number, y0: number, x1: number, y1: number) => void;
+    drawVerticalLinePx: (xPx: number) => void;
     clear: () => void;
+    clearCrosshair: () => void;
 }
 
 const LineViewContext = createContext<LineViewContextValue | null>(null);
@@ -25,14 +28,23 @@ interface LineViewProviderProps {
 
 export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) => {
     const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const crosshairCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
 
     // DPR + resize handling
     useDpr(selectionCanvasRef);
+    useDpr(crosshairCanvasRef);
 
     // Drawing helpers
     const clear = useCallback(() => {
         const canvas = selectionCanvasRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (!canvas || !ctx) return;
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    }, []);
+
+    const clearCrosshair = useCallback(() => {
+        const canvas = crosshairCanvasRef.current;
         const ctx = canvas?.getContext("2d");
         if (!canvas || !ctx) return;
         ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
@@ -59,11 +71,32 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         ctx.strokeRect(minX + 0.5, minY + 0.5, Math.max(0, maxX - minX - 1), Math.max(0, maxY - minY - 1));
     }, []);
 
+    const drawVerticalLinePx = useCallback((xPx: number) => {
+        const canvas = crosshairCanvasRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (!canvas || !ctx) return;
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        ctx.save();
+        ctx.strokeStyle = "#9ca3af"; // gray-400
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        const y0 = margin.top;
+        const y1 = canvas.clientHeight - margin.bottom;
+        ctx.beginPath();
+        ctx.moveTo(xPx + 0.5, y0);
+        ctx.lineTo(xPx + 0.5, y1);
+        ctx.stroke();
+        ctx.restore();
+    }, []);
+
     const contextValue: LineViewContextValue = {
         selectionCanvasRef,
+        crosshairCanvasRef,
         rafRef,
         drawRectPx,
+        drawVerticalLinePx,
         clear,
+        clearCrosshair,
     };
 
     return (
