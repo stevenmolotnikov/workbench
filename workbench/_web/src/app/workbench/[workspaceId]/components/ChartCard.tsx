@@ -1,10 +1,19 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { Grid3X3, ChartLine, Trash2, Copy } from "lucide-react";
+import { Grid3X3, ChartLine, Trash2, Copy, MoreVertical } from "lucide-react";
 import Image from "next/image";
 import { ChartMetadata } from "@/types/charts";
 import { cn } from "@/lib/utils";
+import { ChartRenameDialog } from "./ChartRenameDialog";
+import { useCopyChart } from "@/lib/api/chartApi";
+import { toast } from "sonner";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 export type ChartCardProps = {
     metadata: ChartMetadata;
@@ -14,6 +23,7 @@ export type ChartCardProps = {
 
 export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCardProps) {
     const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
+    const copyChart = useCopyChart();
 
     const isSelected = chartId === metadata.id;
     const router = useRouter();
@@ -25,6 +35,18 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
 
     const handleChartClick = (metadata: ChartMetadata) => {
         navigateToChart(metadata.id);
+    };
+
+    const handleCopy = async (e: React.MouseEvent, chartId: string) => {
+        e.stopPropagation();
+        try {
+            const newChart = await copyChart.mutateAsync(chartId);
+            toast.success("Chart copied successfully");
+            navigateToChart(newChart.id);
+        } catch (error) {
+            console.error("Failed to copy chart:", error);
+            toast.error("Failed to copy chart");
+        }
     };
 
     const renderChartTypeMini = (chartType: ChartMetadata["chartType"]) => {
@@ -56,7 +78,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
 
         if (process.env.NEXT_PUBLIC_LOCAL === "true") {
             return (
-                <div className={style}/>
+                <div className={style} />
             );
         }
 
@@ -110,7 +132,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-medium capitalize">
                                 {/* {formatToolType(metadata.toolType)} */}
-                                {metadata.name ? (metadata.name.length > 12 ? `${metadata.name.slice(0, 12)}...` : metadata.name) : 'Untitled'}
+                                {metadata.name ? (metadata.name.length > 16 ? `${metadata.name.slice(0, 16)}...` : metadata.name) : 'Untitled'}
                             </span>
 
                         </div>
@@ -126,20 +148,38 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                             )}
                         </div>
                     </div>
-                    <button
-                        className={`p-1 rounded hover:bg-muted ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
-                        onClick={(e) => handleDelete(e, metadata.id)}
-                        disabled={!canDelete}
-                        aria-label="Delete chart"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </button>
-                    {/* <button
-                        className={`p-1 rounded hover:bg-muted`}
-                        onClick={(e) => handleCopy(e, metadata.id)}
-                    >
-                        <Copy className="h-3 w-3" />
-                    </button> */}
+                    <Popover>
+                        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-40 p-1" align="end">
+                            <button
+                                className="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm"
+                                onClick={(e) => handleCopy(e, metadata.id)}
+                            >
+                                <Copy className="h-3.5 w-3.5" />
+                                <span>Copy</span>
+                            </button>
+                            <ChartRenameDialog 
+                                chartId={metadata.id} 
+                                chartName={metadata.name || ''} 
+                                triggerClassName="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm"
+                            />
+                            <button
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm text-destructive ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(e, metadata.id);
+                                }}
+                                disabled={!canDelete}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span>Delete</span>
+                            </button>
+                        </PopoverContent>
+                    </Popover>
                 </div>
             </div>
         </div>

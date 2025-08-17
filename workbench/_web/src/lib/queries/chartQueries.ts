@@ -148,3 +148,52 @@ export const getMostRecentChartForWorkspace = async (workspaceId: string): Promi
     
     return (chart ?? null) as Chart | null;
 };
+
+export const copyChart = async (chartId: string): Promise<Chart> => {
+    // Get the original chart
+    const [originalChart] = await db.select().from(charts).where(eq(charts.id, chartId));
+    if (!originalChart) {
+        throw new Error("Chart not found");
+    }
+
+    // Get the config associated with the original chart
+    const [originalLink] = await db
+        .select()
+        .from(chartConfigLinks)
+        .where(eq(chartConfigLinks.chartId, chartId));
+    
+    const [originalConfig] = await db
+        .select()
+        .from(configs)
+        .where(eq(configs.id, originalLink.configId));
+    
+    // Create the new chart with copied data
+    const [newChart] = await db
+        .insert(charts)
+        .values({
+            workspaceId: originalChart.workspaceId,
+            name: `Copy of ${originalChart.name}`,
+            data: originalChart.data,
+            type: originalChart.type,
+            view: originalChart.view,
+        })
+        .returning();
+
+    // Copy the config and create a new link
+    const [newConfig] = await db
+        .insert(configs)
+        .values({
+            workspaceId: originalConfig.workspaceId,
+            type: originalConfig.type,
+            data: originalConfig.data,
+        })
+        .returning();
+    
+    // Create the link between new chart and new config
+    await db.insert(chartConfigLinks).values({
+        chartId: newChart.id,
+        configId: newConfig.id,
+    });
+
+    return newChart as Chart;
+};

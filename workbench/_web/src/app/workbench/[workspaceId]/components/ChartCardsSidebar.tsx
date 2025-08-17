@@ -72,16 +72,6 @@ export default function ChartCardsSidebar() {
         <div className="flex h-full flex-col overflow-hidden">
             <div className="h-12 px-3 py-2 border-b flex items-center justify-between">
                 <span className="text-sm font-medium">Charts</span>
-                <button
-                    className="inline-flex items-center gap-1 h-8 text-xs px-2 py-1 rounded border hover:bg-muted"
-                    onClick={handleOverviewClick}
-                    disabled={isCreatingOverview || isDocLoading}
-                    aria-label="Go to overview"
-                    title="Overview"
-                >
-                    <FileText className="h-3 w-3" />
-                    <span>Overview</span>
-                </button>
             </div>
             <div className="p-2 space-y-2 overflow-auto">
                 {isChartsLoading && (
@@ -101,20 +91,20 @@ export default function ChartCardsSidebar() {
                         />
                     );
                 })}
-                <div className="flex flex-row gap-2">
+                <div className="flex flex-row h-24 gap-2">
                     <button
-                        className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
-                        onClick={() => handleCreate("patch")}
+                        className="size-full flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                        onClick={() => handleCreate("lens")}
                         disabled={isCreatingPatch}
                     >
-                        <span>+ Patch</span>
+                        <span>+ Lens</span>
                     </button>
                     <button
-                        className="w-full h-16 flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
-                        onClick={() => handleCreate("lens")}
+                        className="size-full flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"
+                        onClick={handleOverviewClick}
                         disabled={isCreatingLens}
                     >
-                        <span>+ Lens</span>
+                        <span>+ Report</span>
                     </button>
                 </div>
             </div>

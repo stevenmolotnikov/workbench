@@ -32,12 +32,15 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 }
 
 const LineCardWithSelection = () => {
+    // Provider context hooks
     const { data, yRange } = useLineData();
-    const { highlightedLineIds, toggleLineHighlight } = useLensWorkspace();
     const { rafRef, lineCanvasRef } = useLineCanvas();
     const { handleMouseMove, handleMouseLeave } = useLineHover();
-    const { clearHighlightedLineIds } = useLensWorkspace();
 
+    // Interaction hooks
+    const { highlightedLineIds, toggleLineHighlight, clearHighlightedLineIds } = useLensWorkspace();
+    const { crosshairCanvasRef } = useCrosshair({ rafRef });
+    const { handleClick } = useLineClick();
     const {
         handleMouseDown,
         zoomIntoActiveSelection,
@@ -46,11 +49,7 @@ const LineCardWithSelection = () => {
         didDragRef,
     } = useSelection({ rafRef });
 
-    const { crosshairCanvasRef } = useCrosshair({ rafRef });
-
-    const { handleClick } = useLineClick();
-
-    const combinedHandleClick = (e: React.MouseEvent) => {
+    const onClick = (e: React.MouseEvent) => {
         if (didDragRef.current) {
             didDragRef.current = false;
             return;
@@ -77,7 +76,7 @@ const LineCardWithSelection = () => {
                     >
                         <Crop className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={() => { void handleReset() }} title="Reset zoom and clear selection">
+                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset zoom and clear selection">
                         <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>
@@ -91,7 +90,7 @@ const LineCardWithSelection = () => {
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
-                    onClick={combinedHandleClick}
+                    onClick={onClick}
                     lineCanvasRef={lineCanvasRef}
                     crosshairCanvasRef={crosshairCanvasRef}
                     useTooltip={true}

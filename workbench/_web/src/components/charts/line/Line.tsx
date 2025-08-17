@@ -27,7 +27,7 @@ interface LineProps {
 export function Line({
     data,
     margin = lineMargin,
-    onLegendClick = () => { },
+    onLegendClick = () => {},
     yRange = [0, 1],
     highlightedLineIds = new Set<string>(),
     onMouseDown,

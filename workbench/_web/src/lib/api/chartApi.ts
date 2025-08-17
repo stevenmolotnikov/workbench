@@ -7,6 +7,7 @@ import {
     createPatchChartPair,
     updateChartName,
     updateChartView,
+    copyChart,
 } from "@/lib/queries/chartQueries";
 import sseService from "@/lib/sseProvider";
 import { LensConfigData } from "@/types/lens";
@@ -223,6 +224,19 @@ export const useCreatePatchChartPair = () => {
             // Refresh charts and configs
             queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
+            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
+        },
+    });
+};
+
+export const useCopyChart = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (chartId: string) => copyChart(chartId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
         },
     });
