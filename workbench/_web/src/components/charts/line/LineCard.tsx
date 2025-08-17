@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
 import { useSelection } from "./useSelection";
 import { useCrosshair } from "./useCrosshair";
+import { useLineClick } from "./useLineClick";
 
 
 interface LineCardProps {
@@ -44,8 +45,9 @@ const LineCardWithSelection = () => {
     const {
         handleMouseMove,
         handleMouseLeave,
-        handleClick,
     } = useCrosshair({ rafRef });
+
+    const { handleClick } = useLineClick();
 
     const combinedHandleMouseLeave = () => {
         handleMouseLeave();
@@ -70,7 +72,6 @@ const LineCardWithSelection = () => {
     return (
         <div className="flex flex-col h-full w-full">
             <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-between">
-                {/* <ChartTitle chart={chart} /> */}
                 <div className="flex items-center gap-2">
                     <Button
                         variant={activeSelection ? "default" : "outline"}

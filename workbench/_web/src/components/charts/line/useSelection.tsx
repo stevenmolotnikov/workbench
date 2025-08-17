@@ -2,49 +2,26 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { useLineView } from "./LineViewProvider";
 import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
-import { Range, SelectionBounds } from "@/types/charts";
+import { SelectionBounds } from "@/types/charts";
+import { drawRectPx, clear } from "./draw";
 
 interface UseSelectionProps {
     rafRef: React.MutableRefObject<number | null>;
 }
 
 export const useSelection = ({ rafRef }: UseSelectionProps) => {
-    const { selectionCanvasRef, setActiveSelection, drawRectPx, clear, activeSelection } = useLineView();
-    const { setXRange, setYRange, xRange, yRange, bounds, uniqueSortedX } = useLineData();
+    const { selectionCanvasRef, setActiveSelection, activeSelection, getNearestX } = useLineView();
+    const { setXRange, setYRange, xRange, yRange, bounds } = useLineData();
 
     const selectionRef = useRef<SelectionBounds | null>(null);
     const didDragRef = useRef<boolean>(false);
-
-    const snapPxToNearestX = useCallback((px: number): number => {
-        const canvas = selectionCanvasRef.current;
-        if (!canvas || uniqueSortedX.length === 0) return px;
-        const innerWidth = Math.max(1, canvas.clientWidth - margin.left - margin.right);
-        const xDomainMin = xRange[0];
-        const xDomainMax = xRange[1];
-        const domainSpan = Math.max(1e-9, xDomainMax - xDomainMin);
-        const xVal = xDomainMin + ((px - margin.left) / innerWidth) * domainSpan;
-
-        let nearest = uniqueSortedX[0];
-        let bestDist = Math.abs(xVal - nearest);
-        for (let i = 1; i < uniqueSortedX.length; i++) {
-            const v = uniqueSortedX[i];
-            const d = Math.abs(xVal - v);
-            if (d < bestDist) {
-                nearest = v;
-                bestDist = d;
-            }
-        }
-
-        const snappedPx = margin.left + ((nearest - xDomainMin) / domainSpan) * innerWidth;
-        return snappedPx;
-    }, [xRange, selectionCanvasRef, uniqueSortedX]);
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         const rect = selectionCanvasRef.current?.getBoundingClientRect();
         if (!rect) return;
         const startXRaw = e.clientX - rect.left;
         const startY = e.clientY - rect.top;
-        const startX = snapPxToNearestX(startXRaw);
+        const startX = getNearestX(startXRaw, true);
         const start = { xMin: startX, yMin: startY, xMax: startX, yMax: startY };
         selectionRef.current = start;
         setActiveSelection(start);
@@ -58,7 +35,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
             if (!r) return;
             const mxRaw = ev.clientX - r.left;
             const my = ev.clientY - r.top;
-            const mx = snapPxToNearestX(mxRaw);
+            const mx = getNearestX(mxRaw, true);
             const next = { xMin: start.xMin, yMin: start.yMin, xMax: mx, yMax: my };
             selectionRef.current = next;
             setActiveSelection(next);
@@ -80,7 +57,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
 
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
-    }, [selectionCanvasRef, snapPxToNearestX, setActiveSelection]);
+    }, [selectionCanvasRef, getNearestX, setActiveSelection]);
 
     const clearSelection = useCallback(async () => {
         setActiveSelection(null);
@@ -127,9 +104,9 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
             if (activeSelection) {
-                drawRectPx(activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
+                drawRectPx(selectionCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
             } else {
-                clear();
+                clear(selectionCanvasRef);
             }
         });
     }, [activeSelection, drawRectPx, clear, rafRef]);
@@ -140,6 +117,6 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         zoomIntoActiveSelection,
         resetZoom,
         didDragRef,
-        snapPxToNearestX,
+        getNearestX,
     };
 };
