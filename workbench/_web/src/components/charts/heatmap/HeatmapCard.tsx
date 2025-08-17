@@ -78,7 +78,7 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
             </div>
 
             <div className="flex h-[90%] w-full" ref={captureRef}>
-                <div className="size-full relative" onMouseDown={onMouseDown}>
+                <div className="size-full relative cursor-crosshair" onMouseDown={onMouseDown}>
                     <canvas
                         ref={selectionCanvasRef}
                         className="absolute inset-0 size-full pointer-events-auto z-20"

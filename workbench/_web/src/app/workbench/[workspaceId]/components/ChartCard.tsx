@@ -156,7 +156,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                         </PopoverTrigger>
                         <PopoverContent className="w-40 p-1" align="end">
                             <button
-                                className="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm"
+                                className="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
                                 onClick={(e) => handleCopy(e, metadata.id)}
                             >
                                 <Copy className="h-3.5 w-3.5" />
@@ -165,10 +165,10 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                             <ChartRenameDialog 
                                 chartId={metadata.id} 
                                 chartName={metadata.name || ''} 
-                                triggerClassName="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm"
+                                triggerClassName="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
                             />
                             <button
-                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted rounded-sm text-destructive ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
+                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm text-destructive ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleDelete(e, metadata.id);

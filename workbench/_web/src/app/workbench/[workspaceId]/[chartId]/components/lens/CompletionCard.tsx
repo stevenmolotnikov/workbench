@@ -11,7 +11,7 @@ import type { LensConfigData } from "@/types/lens";
 
 import { PredictionBadges } from "./PredictionBadges";
 
-import { encodeText } from "@/actions/tokenize";
+import { encodeText } from "@/actions/tok";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 import { useParams } from "next/navigation";
 import { useLensCharts } from "@/hooks/useLensCharts";

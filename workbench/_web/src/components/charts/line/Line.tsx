@@ -89,7 +89,7 @@ export function Line({
                 })}
             </div>
 
-            <div className="w-full relative h-[95%]"
+            <div className="w-full cursor-crosshair relative h-[95%]"
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
                 onMouseLeave={onMouseLeave}

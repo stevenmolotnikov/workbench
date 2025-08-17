@@ -61,7 +61,7 @@ export const PredictionBadges = ({
         if (config.token.targetIds.length === 0 && currentTokenPrediction.ids.length > 0) {
             setConfig({
                 ...config,
-                token: { ...config.token, targetIds: [currentTokenPrediction.ids[0]] },
+                token: { ...config.token, targetIds: currentTokenPrediction.ids.slice(0, 3) },
             });
         }
     }, [currentTokenPrediction]);
@@ -114,7 +114,7 @@ export const PredictionBadges = ({
                     margin: 0,
                     alignItems: "center",
                     minHeight: "1.25rem",
-                    borderRadius: "0.375rem",
+                    borderRadius: "calc(var(--radius) - 4px)",
                     paddingLeft: 2,
                     paddingRight: 2,
                 };
@@ -198,7 +198,7 @@ const selectStyles: StylesConfig<TokenOption, true> = {
         position: "relative",
         paddingTop: 4,
         paddingBottom: 4,
-        paddingLeft: 6,
+        paddingLeft: 4,
         gap: 4,
         display: "flex",
         alignItems: "center",
