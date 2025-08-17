@@ -1,21 +1,21 @@
 import { useCallback } from "react";
 import { useLineData } from "./LineDataProvider";
-import { useLineView } from "./LineViewProvider";
+import { useLineCanvas } from "./LineCanvasProvider";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { lineMargin as margin } from "../theming";
 
 export const useLineClick = () => {
-    const { selectionCanvasRef, getNearestX } = useLineView();
+    const { lineCanvasRef, getNearestX } = useLineCanvas();
     const { data, yRange } = useLineData();
     const { toggleLineHighlight } = useLensWorkspace();
 
     const handleClick = useCallback((e: React.MouseEvent) => {
-        const rect = selectionCanvasRef.current?.getBoundingClientRect();
+        const rect = lineCanvasRef.current?.getBoundingClientRect();
         if (!rect) return;
         const xRaw = e.clientX - rect.left;
         const yRaw = e.clientY - rect.top;
         const snappedXVal = getNearestX(xRaw);
-        const canvas = selectionCanvasRef.current;
+        const canvas = lineCanvasRef.current;
         if (!canvas || snappedXVal == null) return;
         const innerHeight = Math.max(1, canvas.clientHeight - margin.top - margin.bottom);
         const curY = yRange as readonly [number, number];
@@ -32,7 +32,7 @@ export const useLineClick = () => {
             }
         }
         if (bestId) toggleLineHighlight(bestId);
-    }, [selectionCanvasRef, getNearestX, yRange, data.lines, toggleLineHighlight]);
+    }, [lineCanvasRef, getNearestX, yRange, data.lines, toggleLineHighlight]);
 
     return { handleClick };
 }

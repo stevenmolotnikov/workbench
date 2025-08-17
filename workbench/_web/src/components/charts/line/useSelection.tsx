@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import { useLineView } from "./LineViewProvider";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useLineCanvas } from "./LineCanvasProvider";
 import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
 import { SelectionBounds } from "@/types/charts";
@@ -10,14 +10,15 @@ interface UseSelectionProps {
 }
 
 export const useSelection = ({ rafRef }: UseSelectionProps) => {
-    const { selectionCanvasRef, setActiveSelection, activeSelection, getNearestX } = useLineView();
+    const { lineCanvasRef, getNearestX } = useLineCanvas();
+    const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
     const { setXRange, setYRange, xRange, yRange, bounds } = useLineData();
 
     const selectionRef = useRef<SelectionBounds | null>(null);
     const didDragRef = useRef<boolean>(false);
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        const rect = selectionCanvasRef.current?.getBoundingClientRect();
+        const rect = lineCanvasRef.current?.getBoundingClientRect();
         if (!rect) return;
         const startXRaw = e.clientX - rect.left;
         const startY = e.clientY - rect.top;
@@ -31,7 +32,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         let lastY = startY;
 
         const onMove = (ev: MouseEvent) => {
-            const r = selectionCanvasRef.current?.getBoundingClientRect();
+            const r = lineCanvasRef.current?.getBoundingClientRect();
             if (!r) return;
             const mxRaw = ev.clientX - r.left;
             const my = ev.clientY - r.top;
@@ -57,7 +58,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
 
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
-    }, [selectionCanvasRef, getNearestX, setActiveSelection]);
+    }, [lineCanvasRef, getNearestX, setActiveSelection]);
 
     const clearSelection = useCallback(async () => {
         setActiveSelection(null);
@@ -67,7 +68,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
     // Zoom into the active selection
     const zoomIntoActiveSelection = useCallback(async (activeSelection: SelectionBounds | null) => {
         if (!activeSelection) return;
-        const canvas = selectionCanvasRef.current;
+        const canvas = lineCanvasRef.current;
         if (!canvas) return;
 
         const minX = Math.max(margin.left, Math.min(activeSelection.xMin, activeSelection.xMax));
@@ -90,7 +91,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         const newYMax = Math.max(yMinData, yMaxData);
         setXRange([newXMin, newXMax]);
         setYRange([newYMin, newYMax]);
-    }, [selectionCanvasRef, clearSelection, setXRange, setYRange, xRange, yRange]);
+    }, [lineCanvasRef, clearSelection, setXRange, setYRange, xRange, yRange]);
 
     // Reset the zoom to the default range
     const resetZoom = useCallback(async () => {
@@ -104,18 +105,19 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
             if (activeSelection) {
-                drawRectPx(selectionCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
+                drawRectPx(lineCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
             } else {
-                clear(selectionCanvasRef);
+                clear(lineCanvasRef);
             }
         });
-    }, [activeSelection, drawRectPx, clear, rafRef]);
+    }, [activeSelection, rafRef, lineCanvasRef]);
 
     return {
         handleMouseDown,
         clearSelection,
         zoomIntoActiveSelection,
         resetZoom,
+        activeSelection,
         didDragRef,
         getNearestX,
     };

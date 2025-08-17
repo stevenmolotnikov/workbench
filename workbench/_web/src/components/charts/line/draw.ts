@@ -1,7 +1,7 @@
 import { lineMargin as margin } from "../theming";
 
-const clear = (selectionCanvasRef: React.RefObject<HTMLCanvasElement>) => {
-    const canvas = selectionCanvasRef.current;
+const clear = (lineCanvasRef: React.RefObject<HTMLCanvasElement>) => {
+    const canvas = lineCanvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
@@ -15,13 +15,13 @@ const clearCrosshair = (crosshairCanvasRef: React.RefObject<HTMLCanvasElement>) 
 };
 
 const drawRectPx = (
-    selectionCanvasRef: React.RefObject<HTMLCanvasElement>,
+    lineCanvasRef: React.RefObject<HTMLCanvasElement>,
     x0: number,
     y0: number,
     x1: number,
     y1: number
 ) => {
-    const canvas = selectionCanvasRef.current;
+    const canvas = lineCanvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
     // clamp to inner plotting area defined by margins

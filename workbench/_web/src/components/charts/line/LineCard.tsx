@@ -1,15 +1,15 @@
-import React, { useEffect, type RefObject } from "react";
+import React, { type RefObject } from "react";
 import { Line } from "./Line";
 import { LineDataProvider, useLineData } from "./LineDataProvider";
 import { LineChart } from "@/db/schema";
-import { LineViewProvider } from "./LineViewProvider";
-import { useLineView } from "./LineViewProvider";
+import { LineCanvasProvider, useLineCanvas } from "./LineCanvasProvider";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
 import { useSelection } from "./useSelection";
 import { useCrosshair } from "./useCrosshair";
 import { useLineClick } from "./useLineClick";
+import { LineHoverProvider, useLineHover } from "./LineHoverProvider";
 
 
 interface LineCardProps {
@@ -21,9 +21,11 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
     return (
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
             <LineDataProvider chart={chart}>
-                <LineViewProvider>
-                    <LineCardWithSelection />
-                </LineViewProvider>
+                <LineCanvasProvider>
+                    <LineHoverProvider>
+                        <LineCardWithSelection />
+                    </LineHoverProvider>
+                </LineCanvasProvider>
             </LineDataProvider>
         </div>
     )
@@ -32,29 +34,21 @@ export const LineCard = ({ chart, captureRef }: LineCardProps) => {
 const LineCardWithSelection = () => {
     const { data, yRange } = useLineData();
     const { highlightedLineIds, toggleLineHighlight } = useLensWorkspace();
-    const { rafRef, clear, activeSelection, crosshairCanvasRef, selectionCanvasRef } = useLineView();
+    const { rafRef, lineCanvasRef } = useLineCanvas();
+    const { handleMouseMove, handleMouseLeave } = useLineHover();
     const { clearHighlightedLineIds } = useLensWorkspace();
 
     const {
         handleMouseDown,
         zoomIntoActiveSelection,
         resetZoom,
+        activeSelection,
         didDragRef,
     } = useSelection({ rafRef });
 
-    const {
-        handleMouseMove,
-        handleMouseLeave,
-    } = useCrosshair({ rafRef });
+    const { crosshairCanvasRef } = useCrosshair({ rafRef });
 
     const { handleClick } = useLineClick();
-
-    const combinedHandleMouseLeave = () => {
-        handleMouseLeave();
-        if (!activeSelection) {
-            clear();
-        }
-    };
 
     const combinedHandleClick = (e: React.MouseEvent) => {
         if (didDragRef.current) {
@@ -96,10 +90,11 @@ const LineCardWithSelection = () => {
                     highlightedLineIds={highlightedLineIds}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
-                    onMouseLeave={combinedHandleMouseLeave}
+                    onMouseLeave={handleMouseLeave}
                     onClick={combinedHandleClick}
+                    lineCanvasRef={lineCanvasRef}
                     crosshairCanvasRef={crosshairCanvasRef}
-                    selectionCanvasRef={selectionCanvasRef}
+                    useTooltip={true}
                 />
             </div>
         </div>

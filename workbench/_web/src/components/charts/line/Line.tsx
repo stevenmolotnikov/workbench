@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { resolveThemeCssVars } from "@/lib/utils";
 import { Margin } from "@nivo/core";
 import { hslFromCssVar } from "@/lib/utils";
-import { TooltipAtX } from "./Tooltip";
+import { Tooltip } from "./Tooltip";
 
 interface LineProps {
     data: LineGraphData;
@@ -19,9 +19,9 @@ interface LineProps {
     onMouseMove?: (e: React.MouseEvent) => void;
     onMouseLeave?: () => void;
     onClick?: (e: React.MouseEvent) => void;
-    rafRef?: React.MutableRefObject<number | null>;
     crosshairCanvasRef?: React.RefObject<HTMLCanvasElement>;
-    selectionCanvasRef?: React.RefObject<HTMLCanvasElement>;
+    lineCanvasRef?: React.RefObject<HTMLCanvasElement>;
+    useTooltip?: boolean;
 }
 
 export function Line({
@@ -34,9 +34,9 @@ export function Line({
     onMouseMove,
     onMouseLeave,
     onClick,
-    rafRef,
     crosshairCanvasRef,
-    selectionCanvasRef,
+    lineCanvasRef,
+    useTooltip = false,
 }: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
@@ -95,15 +95,15 @@ export function Line({
                 onMouseLeave={onMouseLeave}
                 onClick={onClick}
             >
-                <canvas
+                {crosshairCanvasRef && <canvas
                     ref={crosshairCanvasRef}
                     className="absolute inset-0 size-full z-10 pointer-events-none"
-                />
-                <canvas
-                    ref={selectionCanvasRef}
+                />}
+                {lineCanvasRef && <canvas
+                    ref={lineCanvasRef}
                     className="absolute inset-0 size-full z-20"
-                />
-                {rafRef && <TooltipAtX rafRef={rafRef} />}
+                />}
+                {useTooltip && <Tooltip />}
                 <ResponsiveLine
                     data={data.lines}
                     margin={margin}

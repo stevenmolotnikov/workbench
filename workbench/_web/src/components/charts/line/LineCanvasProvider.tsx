@@ -4,44 +4,38 @@ import { useDpr } from "../useDpr";
 import { SelectionBounds } from "@/types/charts";
 import { useLineData } from "./LineDataProvider";
 
-interface LineViewContextValue {
-    selectionCanvasRef: React.RefObject<HTMLCanvasElement>;
-    crosshairCanvasRef: React.RefObject<HTMLCanvasElement>;
+interface LineCanvasContextValue {
+    lineCanvasRef: React.RefObject<HTMLCanvasElement>;
     rafRef: React.MutableRefObject<number | null>;
-    activeSelection: SelectionBounds | null;
-    setActiveSelection: (selection: SelectionBounds | null) => void;
     getNearestX: (px: number, returnPixelValue?: boolean) => number;
 }
 
-const LineViewContext = createContext<LineViewContextValue | null>(null);
+const LineCanvasContext = createContext<LineCanvasContextValue | null>(null);
 
-export const useLineView = () => {
-    const context = useContext(LineViewContext);
+export const useLineCanvas = () => {
+    const context = useContext(LineCanvasContext);
     if (!context) {
-        throw new Error("useLineView must be used within a LineViewProvider");
+        throw new Error("useLineCanvas must be used within a LineCanvasProvider");
     }
     return context;
 };
 
-interface LineViewProviderProps {
+interface LineCanvasProviderProps {
     children: ReactNode;
 }
 
-export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) => {
-    const selectionCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const crosshairCanvasRef = useRef<HTMLCanvasElement | null>(null);
+export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children }) => {
+    const lineCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
     const rafRef = useRef<number | null>(null);
 
-    const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
-
     // DPR + resize handling
-    useDpr(selectionCanvasRef);
-    useDpr(crosshairCanvasRef);
+    useDpr(lineCanvasRef);
 
     const { xRange, uniqueSortedX } = useLineData();
 
     const getNearestX = useCallback((px: number, returnPixelValue: boolean = false): number => {
-        const canvas = selectionCanvasRef.current;
+        const canvas = lineCanvasRef.current;
         if (!canvas || uniqueSortedX.length === 0) return px;
         const innerWidth = Math.max(1, canvas.clientWidth - margin.left - margin.right);
         const xDomainMin = xRange[0];
@@ -63,21 +57,18 @@ export const LineViewProvider: React.FC<LineViewProviderProps> = ({ children }) 
         if (!returnPixelValue) return nearest;
         const snappedPx = margin.left + ((nearest - xDomainMin) / domainSpan) * innerWidth;
         return snappedPx;
-    }, [xRange, selectionCanvasRef, uniqueSortedX]);
+    }, [xRange, lineCanvasRef, uniqueSortedX]);
 
-    const contextValue: LineViewContextValue = {
-        selectionCanvasRef,
-        crosshairCanvasRef,
-        rafRef, 
-        activeSelection,
-        setActiveSelection,
+    const contextValue: LineCanvasContextValue = {
+        lineCanvasRef,
+        rafRef,
         getNearestX,
     };
 
     return (
 
-        <LineViewContext.Provider value={contextValue}>
+        <LineCanvasContext.Provider value={contextValue}>
             {children}
-        </LineViewContext.Provider>
+        </LineCanvasContext.Provider>
     );
 };
