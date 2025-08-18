@@ -34,9 +34,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const [predictions, setPredictions] = useState<Prediction[]>([]);
     const { selectedModel, currentChartType, setCurrentChartType } = useWorkspace();
-
-    // Workspace display state
-    const [showTokenArea, setShowTokenArea] = useState(false);
+    const [editingText, setEditingText] = useState(false);
 
     const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
@@ -66,22 +64,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // const init = useRef(false);
-    // useEffect(() => {
-    //     if (init.current) return;
-    //     if ("token" in config && config.token.targetIds.length > 0) {
-    //         handleInit();
-    //     }
-    // }, []);
-
-    // // If targetIds already exist, run with the initial config
-    // const handleInit = async () => {
-    //     const tokens = await encodeText(config.prompt, selectedModel.name);
-    //     setTokenData(tokens);
-    //     setShowTokenArea(true);
-    //     await runPredictions(config);
-    // }
-
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
             ...config,
@@ -92,7 +74,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const handleTokenize = async () => {
         const tokens = await encodeText(config.prompt, selectedModel.name);
         setTokenData(tokens);
-        setShowTokenArea(true);
 
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
@@ -125,10 +106,17 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 type: "lens",
             }
         });
-        // init.current = true;
+        setEditingText(false);
+
+        return predictions[0].ids.slice(0, 3);
     }
 
-    const handleTokenClick = async (idx: number) => {
+    const handleTokenClick = async (event: React.MouseEvent<HTMLDivElement>, idx: number) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        setCurrentChartType("line");
+
         // Skip if the token is already selected
         if (config.token.idx === idx) return;
 
@@ -141,26 +129,12 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         setConfig(temporaryConfig);
 
         // Run predictions
-        await runPredictions(temporaryConfig);
+        const targetIds = await runPredictions(temporaryConfig);
+        await handleCreateLineChart({ ...temporaryConfig, token: { ...temporaryConfig.token, targetIds } });
     };
 
     const handleClear = async () => {
-        const cleanedConfig: LensConfigData = {
-            ...config,
-            token: { idx: 0, id: 0, text: "", targetIds: [] },
-        }
-        await updateChartConfigMutation({
-            configId,
-            config: {
-                data: cleanedConfig,
-                workspaceId,
-                type: "lens",
-            }
-        });
-        setConfig(cleanedConfig);
-        setTokenData([]);
-        setShowTokenArea(false);
-        setPredictions([]);
+        setEditingText(true);
 
         // Focus the textarea and place cursor at the end after state updates
         setTimeout(() => {
@@ -176,7 +150,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         <div className="flex flex-col w-full gap-2">
             {/* Content */}
             <div className="flex size-full relative">
-                {!showTokenArea ? (
+                {editingText ? (
                     <Textarea
                         ref={textareaRef}
                         value={config.prompt}
@@ -189,7 +163,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                     <div
                         className={cn(
                             "flex w-full h-24 px-3 py-2 border overflow-y-auto  rounded cursor-pointer",
-                            // showTokenArea ? "rounded-t-lg" : "rounded"
                         )}
                         onClick={handleClear}
                     >
@@ -201,15 +174,15 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                     </div>
                 )}
                 <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                    {showTokenArea && <GenerateButton
+                    {!editingText && <GenerateButton
                         prompt={config.prompt}
                         setPredictions={setPredictions}
                         config={config}
                         setConfig={setConfig}
                     />}
-                    {!showTokenArea && <Button
+                    {editingText && <Button
                         size="icon"
-                        variant={showTokenArea ? "outline" : "default"}
+                        variant="outline"
                         id="tokenize-button"
                         onClick={() => {
                             handleTokenize();
@@ -221,9 +194,15 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
             </div>
 
-            {(showTokenArea && predictions.length > 0 && !isExecuting) && (
+            {(predictions.length > 0) && (
                 <div
-                    className="border p-2 flex flex-col items-center gap-3 bg-muted rounded"
+                    className={cn(
+                        "border p-2 flex flex-col items-center gap-3 bg-muted rounded transition",
+                        editingText ? "opacity-60 blur-[0.25px] hover:opacity-100 hover:blur-0" : "opacity-100"
+                    )}
+                    onMouseDown={() => {
+                        if (editingText) setEditingText(false);                        
+                    }}
                 >
                     <div className="flex w-full justify-between items-center">
                         <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">

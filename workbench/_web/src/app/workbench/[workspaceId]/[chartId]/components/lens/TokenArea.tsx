@@ -7,7 +7,7 @@ import { useWorkspace } from "@/stores/useWorkspace";
 
 interface TokenAreaProps {
     config: LensConfigData;
-    handleTokenClick: (idx: number) => void;
+    handleTokenClick: (event: React.MouseEvent<HTMLDivElement>, idx: number) => void;
     tokenData: Token[];
 }
 
@@ -82,8 +82,8 @@ export function TokenArea({
 
                             data-token-id={idx}
                             className={styles}
-                            onClick={() => {
-                                handleTokenClick(idx);
+                            onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+                                handleTokenClick(event, idx);
                             }}
                         >
                             {result}
