@@ -9,7 +9,6 @@ import { HeatmapCard } from "./heatmap/HeatmapCard";
 import { LineCard } from "./line/LineCard";
 import CodeExport from "@/app/workbench/[workspaceId]/components/CodeExport";
 import { Button } from "../ui/button";
-import { BorderBeam } from "../magicui/border-beam";
 import { HeatmapChart, LineChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { queryKeys } from "@/lib/queryKeys";
@@ -20,6 +19,7 @@ export function ChartDisplay() {
 
     const { captureRef, handleCopyPng } = useCapture();
 
+    const { currentChartType } = useWorkspace();
     // Fetch the single chart by id
     const { data: chart, isLoading } = useQuery({
         queryKey: queryKeys.charts.chart(chartId),
@@ -33,35 +33,45 @@ export function ChartDisplay() {
 
 
     if (!chart) {
-        return <div>No chart found</div>;
+        return <div>Error: No chart found</div>;
     }
 
-    if (isLoading) return (
-        <div className="flex-1 flex h-full items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-    );
+    // if (currentChartType !== chart.type) OR (chart.data === null AND jobStatus !== "idle") --> show pending
+    // if (chart.data !== null) AND (currentChartType === chart.type) --> show chart
+    // else --> show no chart data
+
+    if ((jobStatus === "idle" && chart.data === null) || isLoading) {
+        return (
+            <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
+                <div className="px-2 py-2 flex items-center bg-background justify-end h-12 border-b">
+                    <div className="flex items-center gap-2">
+                        <CodeExport chartId={chart?.id} chartType={chart?.type as ("line" | "heatmap" | null | undefined)} />
+                        <Button variant="outline" size="sm" onClick={onCopyPng}><Copy className="h-4 w-4" /> Copy</Button>
+                    </div>
+                </div>
+
+                <div className="flex-1 flex h-full items-center relative justify-center border m-2 border-dashed rounded">
+                    <div className="text-muted-foreground">No chart data</div>
+                </div>
+            </div>
+        );
+    }
+
+    const pending = (jobStatus === "idle" && chart.data === null) || (currentChartType !== chart.type);
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
             <div className="px-2 py-2 flex items-center bg-background justify-end h-12 border-b">
                 <div className="flex items-center gap-2">
-                    <CodeExport chartId={chart?.id} chartType={chart?.type as ("line"|"heatmap"|null|undefined)} />
+                    <CodeExport chartId={chart?.id} chartType={chart?.type as ("line" | "heatmap" | null | undefined)} />
                     <Button variant="outline" size="sm" onClick={onCopyPng}><Copy className="h-4 w-4" /> Copy</Button>
                 </div>
             </div>
 
-            {chart && chart.type === "heatmap" && chart.data !== null ? (
-                <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} />
-            ) : chart ? (
-                <LineCard captureRef={captureRef} chart={chart as LineChart} />
+            {currentChartType === "heatmap" ? (
+                <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} pending={pending} />
             ) : (
-                <div className="flex-1 flex h-full items-center relative justify-center border m-2 border-dashed rounded">
-                    {jobStatus !== "idle" && <BorderBeam duration={5}
-                        size={300}
-                        className="from-transparent bg-primary to-transparent" />}
-                    <div className="text-muted-foreground">No chart data</div>
-                </div>
+                <LineCard captureRef={captureRef} chart={chart as LineChart} pending={pending} />
             )}
         </div>
     );

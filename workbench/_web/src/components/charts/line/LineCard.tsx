@@ -16,31 +16,31 @@ import { useWorkspace } from "@/stores/useWorkspace";
 
 interface LineCardProps {
     chart: LineChart;
+    pending: boolean;
     captureRef?: RefObject<HTMLDivElement>;
 }
 
-export const LineCard = ({ chart, captureRef }: LineCardProps) => {
-    const { jobStatus } = useWorkspace();
+export const LineCard = ({ chart, captureRef, pending }: LineCardProps) => {
     return (
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
-            {
-                (chart.data === null) ?
-                    <PendingLine />
-                    : <LineDataProvider chart={chart}>
-                        <LineCanvasProvider>
-                            <LineHoverProvider>
-                                <InteractiveLine />
-                            </LineHoverProvider>
-                        </LineCanvasProvider>
-                    </LineDataProvider>
-            }
+            {pending ? (
+                <PendingLine />
+            ) : (
+                <LineDataProvider chart={chart}>
+                    <LineCanvasProvider>
+                        <LineHoverProvider>
+                            <InteractiveLine />
+                        </LineHoverProvider>
+                    </LineCanvasProvider>
+                </LineDataProvider>
+            )}
         </div>
     )
 }
 
 const PendingLine = () => {
     return (
-        <div className="flex flex-col h-full w-full">
+        <div className="flex flex-col h-full w-full relative">
             <div className="flex h-[10%] gap-2 items-end p-4 lg:p-8 justify-end">
                 <div className="flex items-center gap-2">
                     <Button
@@ -60,6 +60,10 @@ const PendingLine = () => {
                 <Line
                     data={{ lines: [] }}
                 />
+            </div>
+
+            <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
             </div>
         </div>
     );

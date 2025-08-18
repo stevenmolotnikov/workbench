@@ -5,30 +5,72 @@ import { SelectionProvider, useSelection } from "./SelectionProvider";
 import { HeatmapChart } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
-import ChartTitle from "@/components/charts/ChartTitle";
 import { CanvasProvider, useCanvasProvider } from "./CanvasProvider";
 
 interface HeatmapCardProps {
     chart: HeatmapChart;
+    pending: boolean;
     captureRef?: RefObject<HTMLDivElement>;
 }
 
-export const HeatmapCard = ({ chart, captureRef }: HeatmapCardProps) => {
+export const HeatmapCard = ({ chart, captureRef, pending }: HeatmapCardProps) => {
     return (
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
-            <HeatmapDataProvider chart={chart}>
-                <CanvasProvider>
-                    <SelectionProvider chart={chart}>
-                        <HeatmapCardContent chart={chart} captureRef={captureRef} />
-                    </SelectionProvider>
+            {pending ? (
+                <PendingHeatmap />
+            ) : (
+                <HeatmapDataProvider chart={chart}>
+                    <CanvasProvider>
+                        <SelectionProvider chart={chart}>
+                            <HeatmapCardContent chart={chart} captureRef={captureRef} />
+                        </SelectionProvider>
 
-                </CanvasProvider>
-            </HeatmapDataProvider>
+                    </CanvasProvider>
+                </HeatmapDataProvider>
+            )}
         </div>
     );
 };
 
-const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
+const PendingHeatmap = () => {
+    return (
+        <div className="flex flex-col size-full relative">
+            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-end">
+                <input
+                    disabled
+                    className="w-20 h-8 border rounded px-2 text-xs bg-background"
+                />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8"
+                    disabled
+                >
+                    <Crop className="w-4 h-4" />
+                </Button>
+
+                <Button variant="outline" size="sm" className="h-8 w-8" disabled>
+                    <RotateCcw className="w-4 h-4" />
+                </Button>
+            </div>
+
+            <div className="flex h-[90%] w-full">
+                <Heatmap data={{ rows: [] }} />
+            </div>
+
+            <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            </div>
+        </div>
+    )
+}
+
+interface HeatmapCardContentProps {
+    chart: HeatmapChart;
+    captureRef?: RefObject<HTMLDivElement>;
+}
+
+const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardContentProps) => {
     const { filteredData: data, bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
     const { zoomIntoActiveSelection, clearSelection, activeSelection, onMouseDown } = useSelection()
     const { selectionCanvasRef } = useCanvasProvider()
@@ -43,38 +85,33 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
     }
 
     return (
-        <>
-            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-between">
-                <ChartTitle chart={chart} />
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="number"
-                            min={1}
-                            max={Math.max(1, bounds.maxCol - bounds.minCol)}
-                            step={1}
-                            value={xStep}
-                            onChange={handleStepChange}
-                            className="w-20 h-8 border rounded px-2 text-xs bg-background"
-                            aria-label="X Range Step"
-                            title="X Range Step"
-                        />
-                    </div>
-                    <Button
-                        variant={activeSelection ? "default" : "outline"}
-                        size="sm"
-                        className="h-8 w-8"
-                        onClick={() => { void zoomIntoActiveSelection() }}
-                        disabled={!activeSelection}
-                        title={activeSelection ? "Zoom into selection and clear annotation" : "Draw a selection on the chart first"}
-                    >
-                        <Crop className="w-4 h-4" />
-                    </Button>
+        <div className="flex flex-col size-full">
+            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-end">
+                <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, bounds.maxCol - bounds.minCol)}
+                    step={1}
+                    value={xStep}
+                    onChange={handleStepChange}
+                    className="w-20 h-8 border rounded px-2 text-xs bg-background"
+                    aria-label="X Range Step"
+                    title="X Range Step"
+                />
+                <Button
+                    variant={activeSelection ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 w-8"
+                    onClick={() => { void zoomIntoActiveSelection() }}
+                    disabled={!activeSelection}
+                    title={activeSelection ? "Zoom into selection and clear annotation" : "Draw a selection on the chart first"}
+                >
+                    <Crop className="w-4 h-4" />
+                </Button>
 
-                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={() => { void handleReset() }} title="Reset zoom and clear selection">
-                        <RotateCcw className="w-4 h-4" />
-                    </Button>
-                </div>
+                <Button variant="outline" size="sm" className="h-8 w-8" onClick={() => { void handleReset() }} title="Reset zoom and clear selection">
+                    <RotateCcw className="w-4 h-4" />
+                </Button>
             </div>
 
             <div className="flex h-[90%] w-full" ref={captureRef}>
@@ -86,6 +123,6 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardProps) => {
                     <Heatmap data={data} />
                 </div>
             </div>
-        </>
+        </div>
     )
 }

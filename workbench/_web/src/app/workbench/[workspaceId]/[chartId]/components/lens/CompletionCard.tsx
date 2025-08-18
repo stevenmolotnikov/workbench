@@ -125,7 +125,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 type: "lens",
             }
         });
-        init.current = true;
+        // init.current = true;
     }
 
     const handleTokenClick = async (idx: number) => {

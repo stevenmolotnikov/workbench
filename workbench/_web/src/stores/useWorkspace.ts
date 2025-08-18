@@ -5,8 +5,8 @@ interface WorkspaceState {
     jobStatus: string;
     setJobStatus: (jobStatus: string) => void;
 
-    currentChartType: "heatmap" | "line" | null;
-    setCurrentChartType: (chartType: "heatmap" | "line" | null) => void;
+    currentChartType: "heatmap" | "line";
+    setCurrentChartType: (chartType: "heatmap" | "line") => void;
 
     selectedModel: Model | null;
     setSelectedModel: (model: Model | null) => void;
@@ -16,8 +16,8 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
     jobStatus: "idle",
     setJobStatus: (jobStatus: string) => set({ jobStatus }),
 
-    currentChartType: null,
-    setCurrentChartType: (chartType: "heatmap" | "line" | null) => set({ currentChartType: chartType }),
+    currentChartType: "heatmap",
+    setCurrentChartType: (chartType: "heatmap" | "line") => set({ currentChartType: chartType }),
 
     selectedModel: null,
     setSelectedModel: (model: Model | null) => set({ selectedModel: model }),
