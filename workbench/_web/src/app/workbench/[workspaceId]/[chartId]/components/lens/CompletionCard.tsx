@@ -21,6 +21,8 @@ import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { LensConfig } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
 import GenerateButton from "./GenerateButton";
+import { DecoderSelector } from "./DecoderSelector";
+import { useDebouncedCallback } from "use-debounce";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -44,22 +46,41 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
 
-    const init = useRef(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    useEffect(() => {
-        if (init.current) return;
-        if ("token" in config && config.token.targetIds.length > 0) {
-            handleInit();
-        }
-    }, []);
+    // Debounced function to run line chart 2 seconds after target token IDs change
+    const debouncedRunLineChart = useDebouncedCallback(
+        async (currentConfig: LensConfigData) => {
+            if (currentConfig.token.targetIds.length > 0) {
+                await handleCreateLineChart(currentConfig);
+            }
+        },
+        3000
+    );
 
-    // If targetIds already exist, run with the initial config
-    const handleInit = async () => {
-        const tokens = await encodeText(config.prompt, selectedModel.name);
-        setTokenData(tokens);
-        setShowTokenArea(true);
-        await runPredictions(config);
-    }
+    // Effect to trigger debounced line chart when target token IDs change
+    useEffect(() => {
+        if (config.token.targetIds.length > 0) {
+            debouncedRunLineChart.cancel();
+            debouncedRunLineChart(config);
+        }
+    }, [config.token.targetIds, debouncedRunLineChart]);
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // const init = useRef(false);
+    // useEffect(() => {
+    //     if (init.current) return;
+    //     if ("token" in config && config.token.targetIds.length > 0) {
+    //         handleInit();
+    //     }
+    // }, []);
+
+    // // If targetIds already exist, run with the initial config
+    // const handleInit = async () => {
+    //     const tokens = await encodeText(config.prompt, selectedModel.name);
+    //     setTokenData(tokens);
+    //     setShowTokenArea(true);
+    //     await runPredictions(config);
+    // }
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setConfig({
@@ -104,6 +125,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 type: "lens",
             }
         });
+        init.current = true;
     }
 
     const handleTokenClick = async (idx: number) => {
@@ -139,7 +161,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         setTokenData([]);
         setShowTokenArea(false);
         setPredictions([]);
-        
+
         // Focus the textarea and place cursor at the end after state updates
         setTimeout(() => {
             if (textareaRef.current) {
@@ -151,7 +173,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     }
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full gap-2">
             {/* Content */}
             <div className="flex size-full relative">
                 {!showTokenArea ? (
@@ -166,8 +188,8 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 ) : (
                     <div
                         className={cn(
-                            "flex w-full h-24 px-3 py-2 border overflow-y-auto cursor-pointer",
-                            showTokenArea ? "rounded-t-lg" : "rounded"
+                            "flex w-full h-24 px-3 py-2 border overflow-y-auto  rounded cursor-pointer",
+                            // showTokenArea ? "rounded-t-lg" : "rounded"
                         )}
                         onClick={handleClear}
                     >
@@ -201,30 +223,46 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
             {(showTokenArea && predictions.length > 0 && !isExecuting) && (
                 <div
-                    className="border-x border-b p-2 flex items-center justify-between bg-muted rounded-b-lg transition-all duration-200 ease-in-out animate-in slide-in-from-top-2"
+                    className="border p-3 flex flex-col items-center gap-2 bg-muted rounded"
                 >
-                    <div className="flex gap-2 items-start flex-1">
-                        <Button
-                            size="icon"
-                            onClick={() => handleCreateHeatmap(config)}
-                            variant={currentChartType === "heatmap" ? "default" : "outline"}
-                        >
-                            <Grid3x3 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                            size="icon"
-                            onClick={() => handleCreateLineChart(config)}
-                            disabled={config.token.targetIds.length === 0}
-                            variant={currentChartType === "line" ? "default" : "outline"}
-                        >
-                            <ChartLine className="w-4 h-4" />
-                        </Button>
-                        <PredictionBadges
-                            config={config}
-                            setConfig={setConfig}
-                            predictions={predictions}
-                        />
+                    <div className="flex w-full justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Chart type</span>
+
+                        <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">
+                            <button
+                                onClick={() => handleCreateHeatmap(config)}
+                                className={cn(
+                                    "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
+                                    currentChartType === "heatmap" ? "bg-accent border" : "bg-background"
+                                )}
+                            >
+                                <Grid3x3 className="w-4 h-4" />
+                                Heatmap
+                            </button>
+                            <button
+                                onClick={() => handleCreateLineChart(config)}
+                                disabled={config.token.targetIds.length === 0}
+                                className={cn(
+                                    "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
+                                    currentChartType === "line" ? "bg-accent border" : "bg-background"
+                                )}
+                            >
+                                <ChartLine className="w-4 h-4" />
+                                Line
+                            </button>
+                        </div>
                     </div>
+
+                    <div className="flex w-full justify-between items-center">
+                        <span className="text-sm text-muted-foreground">Decoder</span>
+                        <DecoderSelector />
+                    </div>
+
+                    <PredictionBadges
+                        config={config}
+                        setConfig={setConfig}
+                        predictions={predictions}
+                    />
                 </div>
             )}
         </div>

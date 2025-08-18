@@ -29,7 +29,7 @@ export function ModelSelector() {
 
     return (
         <Select value={selectedModel?.name} onValueChange={handleModelChange}>
-            <SelectTrigger className={cn("w-[220px]", {
+            <SelectTrigger className={cn("w-fit border-none gap-2 focus-visible:ring-0 hover:bg-accent", {
                 "animate-pulse": isLoading
             })}>
                 <SelectValue placeholder="Select a model" />

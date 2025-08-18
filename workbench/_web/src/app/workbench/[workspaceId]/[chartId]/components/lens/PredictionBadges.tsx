@@ -5,6 +5,7 @@ import { LensConfigData } from "@/types/lens";
 import { Prediction, TokenOption } from "@/types/models";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useDebouncedCallback } from "use-debounce";
+import { X } from "lucide-react";
 
 interface PredictionBadgesProps {
     config: LensConfigData;
@@ -178,76 +179,69 @@ export const PredictionBadges = ({
         [debouncedFetch, config.model, probLookup, options]
     );
 
-    const formattedSelectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = useMemo(() => {
-        return {
-            ...selectStyles,
-            multiValue: (base, props) => {
-                const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
-                return {
-                    ...base,
-                    backgroundColor: isHighlighted
-                        ? "hsl(var(--accent))"
-                        : "hsl(var(--muted))",
-                    border: isHighlighted
-                        ? "1px solid hsl(var(--primary))"
-                        : "1px solid hsl(var(--input))",
-                    margin: 0,
-                    alignItems: "center",
-                    minHeight: "1.25rem",
-                    borderRadius: "calc(var(--radius) - 4px)",
-                    paddingLeft: 2,
-                    paddingRight: 2,
-                };
-            },
-        };
-    }, []);
 
     const [inputValue, setInputValue] = useState<string>("");
 
     if (!currentTokenPrediction) {
-        return (
-            <div>
-                No predictions for this token.
-            </div>
-        );
+        return null;
     }
 
     return (
-        <div className="w-full flex-1 min-w-[12rem]">
-            <AsyncSelect<TokenOption, true>
-                classNamePrefix="pred-select"
-                isMulti
-                isClearable
-                defaultOptions={options}
-                cacheOptions
-                loadOptions={loadOptions}
-                value={selectedOptions}
-                onChange={handleChange}
-                styles={formattedSelectStyles}
-                placeholder="Select tokens…"
-                // aria-placeholder="Select tokens…"
-                closeMenuOnSelect={false}
-                inputValue={inputValue}
-                onInputChange={(newValue) => {
-                    setInputValue(newValue);
-                }}
-                formatOptionLabel={(option: TokenOption) => (
-                    <div className="flex items-center justify-between w-full">
-                        <span className="font-medium text-foreground">{renderTokenText(option.text)}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{(option.prob ?? 0).toFixed(4)}</span>
-                    </div>
-                )}
-                components={{
-                    IndicatorSeparator: () => null
-                }}
-                onKeyDown={(e) => {
-                    // Allow leading space by manually inserting into controlled input, while preventing option selection
-                    if (e.key === ' ' && inputValue.length === 0) {
-                        e.preventDefault();
-                        setInputValue(' ');
-                    }
-                }}
-            />
+        <div className="flex flex-col gap-2 w-full">
+            <div className="flex -mb-2 justify-between items-center">
+                <span className="text-sm text-muted-foreground">Target tokens</span>
+                {config.token.targetIds.length > 0 &&
+                    <button
+                        className="text-xs flex h-8 items-center gap-1 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                            setConfig({
+                                ...config,
+                                token: { ...config.token, targetIds: [] },
+                            });
+                        }}
+                    >
+                        <X className="w-3 h-3" />
+                        Clear
+                    </button>}
+            </div>
+            <div className="w-full flex-1 min-w-[12rem]">
+                <AsyncSelect<TokenOption, true>
+                    classNamePrefix="pred-select"
+                    isMulti
+                    isClearable
+                    defaultOptions={options}
+                    cacheOptions
+                    loadOptions={loadOptions}
+                    value={selectedOptions}
+                    onChange={handleChange}
+                    styles={selectStyles}
+                    placeholder="Enter a token..."
+                    closeMenuOnSelect={false}
+                    inputValue={inputValue}
+                    onInputChange={(newValue) => {
+                        setInputValue(newValue);
+                    }}
+                    formatOptionLabel={(option: TokenOption) => (
+                        <div className="flex items-center justify-between w-full">
+                            <span className="font-medium text-foreground">{renderTokenText(option.text)}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">{(option.prob ?? 0).toFixed(4)}</span>
+                        </div>
+                    )}
+                    components={{
+                        IndicatorSeparator: () => null,
+                        DropdownIndicator: () => null,
+                        ClearIndicator: () => null,
+                        IndicatorsContainer: () => null,
+                    }}
+                    onKeyDown={(e) => {
+                        // Allow leading space by manually inserting into controlled input, while preventing option selection
+                        if (e.key === ' ' && inputValue.length === 0) {
+                            e.preventDefault();
+                            setInputValue(' ');
+                        }
+                    }}
+                />
+            </div>
         </div>
     );
 };
@@ -276,7 +270,7 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
         paddingTop: 0,
         paddingBottom: 0,
         paddingLeft: 0,
-        paddingRight: 6,
+        paddingRight: 0,
         ':hover': {
             borderColor: "hsl(var(--input))",
         },
@@ -323,56 +317,24 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
             color: "hsl(var(--accent-foreground))",
         },
     }),
-    multiValue: (base, props: MultiValueProps<TokenOption, true, GroupBase<TokenOption>>) => {
+    multiValue: (base, props) => {
         const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
         return {
             ...base,
-            backgroundColor: isHighlighted ? "hsl(var(--accent))" : "hsl(var(--muted))",
-            border: isHighlighted ? "1px solid hsl(var(--primary))" : "1px solid hsl(var(--input))",
+            backgroundColor: isHighlighted
+                ? "hsl(var(--accent))"
+                : "hsl(var(--muted))",
+            border: isHighlighted
+                ? "1px solid hsl(var(--primary))"
+                : "1px solid hsl(var(--input))",
             margin: 0,
             alignItems: "center",
-            minHeight: "1.25rem",
+            minHeight: "1.5rem",
             borderRadius: "calc(var(--radius) - 4px)",
             paddingLeft: 2,
             paddingRight: 2,
         };
     },
-    indicatorsContainer: (base) => ({
-        ...base,
-        padding: 0,
-        gap: 2,
-        alignItems: "center",
-    }),
-    clearIndicator: (base) => ({
-        ...base,
-        color: "hsl(var(--muted-foreground))",
-        padding: 0,
-        height: "1rem",
-        width: "1rem",
-        display: "flex",
-        alignItems: "center",
-        cursor: "pointer",
-        justifyContent: "center",
-        alignSelf: "center",
-        ':hover': {
-            color: "hsl(var(--foreground))",
-        },
-    }),
-    dropdownIndicator: (base) => ({
-        ...base,
-        color: "hsl(var(--muted-foreground))",
-        padding: 0,
-        height: "1rem",
-        width: "1rem",
-        display: "flex",
-        alignItems: "center",
-        cursor: "pointer",
-        justifyContent: "center",
-        alignSelf: "center",
-        ':hover': {
-            color: "hsl(var(--foreground))",
-        },
-    }),
     menu: (base) => ({
         ...base,
         backgroundColor: "hsl(var(--popover))",
@@ -391,13 +353,14 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
     }),
     option: (base, state) => ({
         ...base,
-        backgroundColor: state.isSelected
+        backgroundColor: state.isFocused
             ? "hsl(var(--accent))"
-            : state.isFocused
-                ? "hsl(var(--accent))"
-                : "transparent",
-        color: state.isSelected || state.isFocused
+            : "transparent",
+        color: state.isFocused
             ? "hsl(var(--accent-foreground))"
             : "hsl(var(--popover-foreground))",
+        ':active': {
+            backgroundColor: "hsl(var(--accent))",
+        },
     }),
 };
