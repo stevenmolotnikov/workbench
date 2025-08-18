@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteConfig, setConfig } from "@/lib/queries/configQueries";
 import { NewConfig } from "@/db/schema";
+import { toast } from "sonner";
+import { queryKeys } from "../queryKeys";
 
 export const useDeleteChartConfig = () => {
     const queryClient = useQueryClient();
@@ -10,10 +12,10 @@ export const useDeleteChartConfig = () => {
             await deleteConfig(configId);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.all });
         },
         onError: (error) => {
-            console.error("Error deleting completion:", error);
+            toast.error("Error deleting config");
         },
     });
 };
@@ -26,11 +28,11 @@ export const useUpdateChartConfig = () => {
             await setConfig(configId, config);
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["configs", variables.config.workspaceId, variables.config.chartId] });
-            console.log("Successfully updated chart config");
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.config(variables.configId) });
+            toast.success("Config updated");
         },
         onError: (error) => {
-            console.error("Error updating workspace:", error);
+            toast.error("Error updating config");
         },
     });
 };

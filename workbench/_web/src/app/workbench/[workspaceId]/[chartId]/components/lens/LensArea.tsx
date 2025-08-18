@@ -5,13 +5,14 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 import { LensConfig } from "@/db/schema";
+import { queryKeys } from "@/lib/queryKeys";
 
 export default function LensArea() {
     const { selectedModel } = useWorkspace();
-    const { workspaceId, chartId } = useParams<{ workspaceId: string; chartId: string }>();
+    const { chartId } = useParams<{ chartId: string }>();
 
     const { data: config } = useQuery({
-        queryKey: ["configs", workspaceId, chartId],
+        queryKey: queryKeys.charts.config(chartId),
         queryFn: () => getConfigForChart(chartId),
         enabled: !!selectedModel && !!chartId,
     });

@@ -12,6 +12,7 @@ import { Button } from "../ui/button";
 import { BorderBeam } from "../magicui/border-beam";
 import { HeatmapChart, LineChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function ChartDisplay() {
     const { jobStatus } = useWorkspace();
@@ -21,7 +22,7 @@ export function ChartDisplay() {
 
     // Fetch the single chart by id
     const { data: chart, isLoading } = useQuery({
-        queryKey: ["chartById", chartId],
+        queryKey: queryKeys.charts.chart(chartId),
         queryFn: () => getChartById(chartId as string),
         enabled: !!chartId,
     });

@@ -14,6 +14,7 @@ import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { LineGraphData, HeatmapData, ChartData, ChartView } from "@/types/charts";
+import { queryKeys } from "../queryKeys";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
@@ -52,19 +53,15 @@ export const useLensLine = () => {
             return response.data;
         },
         onSuccess: (data, variables) => {
-            // Invalidate queries to refresh the UI with updated data
-            queryClient.invalidateQueries({
-                queryKey: ["lensCharts"],
-            });
-            // Ensure the single-chart view refreshes as well
-            queryClient.invalidateQueries({
-                queryKey: ["chartById", variables.lensRequest.chartId],
-            }).then(() => {
-
-                setTimeout(() => {
-                    captureChartThumbnail(variables.lensRequest.chartId);
-                }, 500);
-            });
+            queryClient
+                .invalidateQueries({
+                    queryKey: queryKeys.charts.chart(variables.lensRequest.chartId),
+                })
+                .then(() => {
+                    setTimeout(() => {
+                        captureChartThumbnail(variables.lensRequest.chartId);
+                    }, 500);
+                });
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
@@ -109,20 +106,15 @@ export const useLensGrid = () => {
             return response.data;
         },
         onSuccess: (data, variables) => {
-            // Invalidate queries to refresh the UI with updated data
-            queryClient.invalidateQueries({
-                queryKey: ["lensCharts"],
-            });
-            // Ensure the single-chart view refreshes as well
-            queryClient.invalidateQueries({
-                queryKey: ["chartById", variables.lensRequest.chartId],
-            }).then(() => {
-                
-                // Wait for chart to rerender before capturing thumbnail
-                setTimeout(() => {
-                    captureChartThumbnail(variables.lensRequest.chartId);
-                }, 500);
-            });
+            queryClient
+                .invalidateQueries({
+                    queryKey: queryKeys.charts.chart(variables.lensRequest.chartId),
+                })
+                .then(() => {
+                    setTimeout(() => {
+                        captureChartThumbnail(variables.lensRequest.chartId);
+                    }, 500);
+                });
         },
         onError: (error, variables) => {
             console.error("Error fetching logit lens data:", error);
@@ -137,8 +129,8 @@ export const useUpdateChartName = () => {
         mutationFn: async ({ chartId, name }: { chartId: string; name: string }) => {
             return await updateChartName(chartId, name);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["chartById"] });
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.chart(variables.chartId) });
         },
     });
 };
@@ -150,8 +142,8 @@ export const useUpdateChartView = () => {
         mutationFn: async ({ chartId, view }: { chartId: string; view: ChartView }) => {
             return await updateChartView(chartId, view);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["chartById"] });
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.chart(variables.chartId) });
         },
     });
 };
@@ -162,8 +154,7 @@ export const useDeleteChart = () => {
     return useMutation({
         mutationFn: (chartId: string) => deleteChart(chartId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.sidebar() });
         },
     });
 };
@@ -188,14 +179,12 @@ export const useCreateLensChartPair = () => {
             return await createLensChartPair(workspaceId, config);
         },
         onSuccess: ({ chart }) => {
-            // Refresh charts and configs
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
-            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.sidebar() });
         },
     });
 };
 
+// TODO(cadentj): FIX THIS
 export const useCreatePatchChartPair = () => {
     const queryClient = useQueryClient();
 
@@ -235,9 +224,7 @@ export const useCopyChart = () => {
     return useMutation({
         mutationFn: (chartId: string) => copyChart(chartId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["lensCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
-            queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.sidebar() });
         },
     });
 };

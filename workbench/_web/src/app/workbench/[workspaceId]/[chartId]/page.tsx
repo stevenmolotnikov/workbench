@@ -16,6 +16,7 @@ import SimplePatchArea from "./components/patch/SimplePatchArea";
 import { ChartDisplay } from "@/components/charts/ChartDisplay";
 import { getConfigForChart } from "@/lib/queries/chartQueries";
 import { Loader2, Search, ReplaceAll, X } from "lucide-react";
+import { queryKeys } from "@/lib/queryKeys";
 
 
 const tools = [
@@ -30,8 +31,9 @@ export default function ChartPage() {
     // Ensure a selected model exists
     useModels();
 
+    // TODO(cadentj): FIX THE INSTANCES WHERE CONFIGS ARE CALLED BY CHART ID
     const { data: config, isLoading: isConfigLoading } = useQuery({
-        queryKey: ["chartConfig", chartId],
+        queryKey: queryKeys.charts.config(chartId),
         queryFn: () => getConfigForChart(chartId),
         enabled: !!chartId,
     });

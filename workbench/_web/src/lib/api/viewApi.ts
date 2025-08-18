@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createView, deleteView, updateView } from "@/lib/queries/viewQueries";
 import { NewView } from "@/db/schema";
 import type { ChartView } from "@/types/charts";
+import { toast } from "sonner";
+import { queryKeys } from "../queryKeys";
 
 export const useCreateView = () => {
     const queryClient = useQueryClient();
@@ -12,11 +14,11 @@ export const useCreateView = () => {
             return view;
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["views", variables.chartId] });
-            console.log("Successfully created view");
+            queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
+            toast.success("View created");
         },
         onError: (error) => {
-            console.error("Error creating view:", error);
+            toast.error("Error creating view");
         },
     });
 };
@@ -30,11 +32,11 @@ export const useDeleteView = () => {
             await deleteView(id);
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["views", variables.chartId] });
-            console.log("Successfully deleted view");
+            queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
+            toast.success("View deleted");
         },
         onError: (error) => {
-            console.error("Error deleting view:", error);
+            toast.error("Error deleting view");
         },
     });
 };
@@ -48,11 +50,11 @@ export const useUpdateView = () => {
             return view;
         },
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["views", variables.chartId] });
-            console.log("Successfully updated view");
+            queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
+            toast.success("View updated");
         },
         onError: (error) => {
-            console.error("Error updating view:", error);
+            toast.error("Error updating view");
         },
     });
 };
