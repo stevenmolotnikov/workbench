@@ -10,6 +10,8 @@ import { useSelection } from "./useSelection";
 import { useCrosshair } from "./useCrosshair";
 import { useLineClick } from "./useLineClick";
 import { LineHoverProvider, useLineHover } from "./LineHoverProvider";
+import { useAnnotationSelection } from "./useAnnotationSelection";
+import { useWorkspace } from "@/stores/useWorkspace";
 
 
 interface LineCardProps {
@@ -18,36 +20,76 @@ interface LineCardProps {
 }
 
 export const LineCard = ({ chart, captureRef }: LineCardProps) => {
+    const { jobStatus } = useWorkspace();
     return (
         <div className="flex flex-col h-full m-2 border rounded bg-muted">
-            <LineDataProvider chart={chart}>
-                <LineCanvasProvider>
-                    <LineHoverProvider>
-                        <LineCardWithSelection />
-                    </LineHoverProvider>
-                </LineCanvasProvider>
-            </LineDataProvider>
+            {
+                (chart.data === null) ?
+                    <PendingLine />
+                    : <LineDataProvider chart={chart}>
+                        <LineCanvasProvider>
+                            <LineHoverProvider>
+                                <InteractiveLine />
+                            </LineHoverProvider>
+                        </LineCanvasProvider>
+                    </LineDataProvider>
+            }
         </div>
     )
 }
 
-const LineCardWithSelection = () => {
+const PendingLine = () => {
+    return (
+        <div className="flex flex-col h-full w-full">
+            <div className="flex h-[10%] gap-2 items-end p-4 lg:p-8 justify-end">
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8"
+                        disabled
+                    >
+                        <Crop className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 w-8" disabled>
+                        <RotateCcw className="w-4 h-4" />
+                    </Button>
+                </div>
+            </div>
+            <div className="flex h-[90%] w-full">
+                <Line
+                    data={{ lines: [] }}
+                />
+            </div>
+        </div>
+    );
+}
+
+const InteractiveLine = () => {
     // Provider context hooks
     const { data, yRange } = useLineData();
-    const { rafRef, lineCanvasRef } = useLineCanvas();
+    const { rafRef, lineCanvasRef, activeSelection } = useLineCanvas();
     const { handleMouseMove, handleMouseLeave } = useLineHover();
 
-    // Interaction hooks
+    // Enable legend highlighting
     const { highlightedLineIds, toggleLineHighlight, clearHighlightedLineIds } = useLensWorkspace();
+
+    // Draw vertical crosshair
     const { crosshairCanvasRef } = useCrosshair({ rafRef });
+
+    // Enable line click
     const { handleClick } = useLineClick();
+
+    // Enable drag selection
     const {
         handleMouseDown,
         zoomIntoActiveSelection,
         resetZoom,
-        activeSelection,
         didDragRef,
-    } = useSelection({ rafRef });
+    } = useSelection();
+
+    // Enable default annotation selection
+    useAnnotationSelection();
 
     const onClick = (e: React.MouseEvent) => {
         if (didDragRef.current) {

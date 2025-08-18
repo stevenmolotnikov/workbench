@@ -22,6 +22,7 @@ interface LineProps {
     crosshairCanvasRef?: React.RefObject<HTMLCanvasElement>;
     lineCanvasRef?: React.RefObject<HTMLCanvasElement>;
     useTooltip?: boolean;
+    pending?: boolean;
 }
 
 export function Line({
@@ -37,6 +38,7 @@ export function Line({
     crosshairCanvasRef,
     lineCanvasRef,
     useTooltip = false,
+    pending = false,
 }: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 

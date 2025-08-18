@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncSelect from "react-select/async";
-import type { MultiValue, StylesConfig, GroupBase, MultiValueProps } from "react-select";
+import type { MultiValue, StylesConfig, GroupBase } from "react-select";
 import { LensConfigData } from "@/types/lens";
 import { Prediction, TokenOption } from "@/types/models";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
@@ -282,7 +282,6 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
         paddingBottom: 4,
         paddingLeft: 4,
         gap: 4,
-        display: "flex",
         alignItems: "center",
         minHeight: "2rem",
         flexWrap: "wrap",
@@ -294,11 +293,7 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
         padding: 0,
         order: 1,
         minWidth: 2,
-    }),
-    singleValue: (base) => ({
-        ...base,
-        color: "hsl(var(--foreground))",
-        lineHeight: "1rem",
+        paddingLeft: 2,
     }),
     multiValueLabel: (base) => ({
         ...base,
@@ -329,7 +324,7 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
                 : "1px solid hsl(var(--input))",
             margin: 0,
             alignItems: "center",
-            minHeight: "1.5rem",
+            minHeight: "1.25rem",
             borderRadius: "calc(var(--radius) - 4px)",
             paddingLeft: 2,
             paddingRight: 2,

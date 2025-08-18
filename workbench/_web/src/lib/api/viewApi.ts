@@ -15,7 +15,6 @@ export const useCreateView = () => {
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
-            toast.success("View created");
         },
         onError: (error) => {
             toast.error("Error creating view");
@@ -33,7 +32,6 @@ export const useDeleteView = () => {
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
-            toast.success("View deleted");
         },
         onError: (error) => {
             toast.error("Error deleting view");
@@ -51,7 +49,6 @@ export const useUpdateView = () => {
         },
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.views.byChart(variables.chartId) });
-            toast.success("View updated");
         },
         onError: (error) => {
             toast.error("Error updating view");

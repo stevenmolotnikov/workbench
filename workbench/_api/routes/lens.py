@@ -102,7 +102,6 @@ class GridLensRequest(BaseModel):
     model: str
     prompt: str
 
-
 class GridCell(Point):
     label: str
 

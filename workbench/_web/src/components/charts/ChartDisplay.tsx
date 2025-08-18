@@ -51,9 +51,9 @@ export function ChartDisplay() {
                 </div>
             </div>
 
-            {chart && chart.type === "heatmap" && (chart.data !== null) ? (
+            {chart && chart.type === "heatmap" && chart.data !== null ? (
                 <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} />
-            ) : chart && chart.data !== null ? (
+            ) : chart ? (
                 <LineCard captureRef={captureRef} chart={chart as LineChart} />
             ) : (
                 <div className="flex-1 flex h-full items-center relative justify-center border m-2 border-dashed rounded">

@@ -1,13 +1,16 @@
-import React, { createContext, useCallback, useContext, useRef, ReactNode, useState } from "react";
+import React, { createContext, useCallback, useContext, useRef, ReactNode, useState, useEffect } from "react";
 import { lineMargin as margin } from "../theming";
 import { useDpr } from "../useDpr";
 import { SelectionBounds } from "@/types/charts";
 import { useLineData } from "./LineDataProvider";
+import { clear, drawRectPx } from "./draw";
 
 interface LineCanvasContextValue {
     lineCanvasRef: React.RefObject<HTMLCanvasElement>;
     rafRef: React.MutableRefObject<number | null>;
     getNearestX: (px: number, returnPixelValue?: boolean) => number;
+    activeSelection: SelectionBounds | null;
+    setActiveSelection: (selection: SelectionBounds | null) => void;
 }
 
 const LineCanvasContext = createContext<LineCanvasContextValue | null>(null);
@@ -26,8 +29,8 @@ interface LineCanvasProviderProps {
 
 export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children }) => {
     const lineCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
     const rafRef = useRef<number | null>(null);
+    const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
 
     // DPR + resize handling
     useDpr(lineCanvasRef);
@@ -59,10 +62,24 @@ export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children
         return snappedPx;
     }, [xRange, lineCanvasRef, uniqueSortedX]);
 
+    // Draw the selection rectangle
+    useEffect(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            if (activeSelection) {
+                drawRectPx(lineCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
+            } else {
+                clear(lineCanvasRef);
+            }
+        });
+    }, [activeSelection, rafRef, lineCanvasRef]);
+
     const contextValue: LineCanvasContextValue = {
         lineCanvasRef,
         rafRef,
         getNearestX,
+        activeSelection,
+        setActiveSelection,
     };
 
     return (

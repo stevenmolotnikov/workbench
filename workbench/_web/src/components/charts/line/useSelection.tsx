@@ -1,18 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef } from "react";
 import { useLineCanvas } from "./LineCanvasProvider";
 import { useLineData } from "./LineDataProvider";
 import { lineMargin as margin } from "../theming";
 import { SelectionBounds } from "@/types/charts";
-import { drawRectPx, clear } from "./draw";
+import { useLineView } from "../ViewProvider";
 
-interface UseSelectionProps {
-    rafRef: React.MutableRefObject<number | null>;
-}
-
-export const useSelection = ({ rafRef }: UseSelectionProps) => {
-    const { lineCanvasRef, getNearestX } = useLineCanvas();
-    const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
+export const useSelection = () => {
+    const { lineCanvasRef, getNearestX, activeSelection, setActiveSelection } = useLineCanvas();
     const { setXRange, setYRange, xRange, yRange, bounds } = useLineData();
+    const { persistView, clearView  } = useLineView();
 
     const selectionRef = useRef<SelectionBounds | null>(null);
     const didDragRef = useRef<boolean>(false);
@@ -49,7 +45,12 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
 
         const onUp = () => {
             const final = selectionRef.current;
-            if (final) setActiveSelection(final);
+            if (final) {
+                setActiveSelection(final);
+                persistView({
+                    annotation: final,
+                });
+            }
             selectionRef.current = null;
 
             window.removeEventListener('mousemove', onMove);
@@ -58,7 +59,7 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
 
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
-    }, [lineCanvasRef, getNearestX, setActiveSelection]);
+    }, [lineCanvasRef, getNearestX, setActiveSelection, persistView]);
 
     const clearSelection = useCallback(async () => {
         setActiveSelection(null);
@@ -84,33 +85,28 @@ export const useSelection = ({ rafRef }: UseSelectionProps) => {
         const yMinData = yRange[0] + (1 - (maxY - margin.top) / innerHeight) * (yRange[1] - yRange[0]);
         const yMaxData = yRange[0] + (1 - (minY - margin.top) / innerHeight) * (yRange[1] - yRange[0]);
 
-        await clearSelection();
         const newXMin = Math.min(xMinData, xMaxData);
         const newXMax = Math.max(xMinData, xMaxData);
         const newYMin = Math.min(yMinData, yMaxData);
         const newYMax = Math.max(yMinData, yMaxData);
         setXRange([newXMin, newXMax]);
         setYRange([newYMin, newYMax]);
-    }, [lineCanvasRef, clearSelection, setXRange, setYRange, xRange, yRange]);
+
+        // Clear the annotation and overwrite pending annotation view updates
+        await clearSelection();
+        persistView({
+            bounds: { xMin: newXMin, xMax: newXMax, yMin: newYMin, yMax: newYMax },
+            annotation: undefined,
+        });
+    }, [lineCanvasRef, clearSelection, setXRange, setYRange, xRange, yRange, persistView]);
 
     // Reset the zoom to the default range
     const resetZoom = useCallback(async () => {
         await clearSelection();
         setXRange([bounds.xMin, bounds.xMax]);
         setYRange([0, 1]);
-    }, [clearSelection, setXRange, setYRange, bounds]);
-
-    // Draw the selection rectangle
-    useEffect(() => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-            if (activeSelection) {
-                drawRectPx(lineCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
-            } else {
-                clear(lineCanvasRef);
-            }
-        });
-    }, [activeSelection, rafRef, lineCanvasRef]);
+        clearView();
+    }, [clearSelection, setXRange, setYRange, bounds, clearView]);
 
     return {
         handleMouseDown,

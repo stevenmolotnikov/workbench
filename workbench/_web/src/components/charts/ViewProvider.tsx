@@ -1,17 +1,19 @@
 import { HeatmapView, LineView, View } from "@/db/schema"
-import { createContext, ReactNode, useCallback, useContext } from "react"
-import { ChartType, ChartView } from "@/types/charts"
+import { createContext, ReactNode, useCallback, useContext, useMemo, useRef } from "react"
+import { ChartType, ChartView, HeatmapBounds, SelectionBounds } from "@/types/charts"
 import { useDebouncedCallback } from "use-debounce"
-import { useCreateView, useUpdateView } from "@/lib/api/viewApi"
+import { useCreateView, useDeleteView, useUpdateView } from "@/lib/api/viewApi"
 import { getView } from "@/lib/queries/viewQueries"
 import { useQuery } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/queryKeys"
 
 interface ViewContextValue {
     view: View | null
     chartType: ChartType | null
     isViewSuccess: boolean
-    persistView: (view: ChartView) => void
     cancelPersistView: () => void
+    persistView: (viewData: Partial<ChartView>) => void
+    clearView: () => void
 }
 
 const ViewContext = createContext<ViewContextValue | null>(null)
@@ -37,14 +39,17 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
 
     const { mutateAsync: updateView } = useUpdateView()
     const { mutateAsync: createView } = useCreateView()
+    const { mutateAsync: deleteView } = useDeleteView()
 
     const { data, isSuccess: isViewSuccess } = useQuery<{view: View, chartType: ChartType} | null>({
-        queryKey: ["views", chartId],
+        queryKey: queryKeys.views.byChart(chartId),
         queryFn: () => getView(chartId),
         enabled: !!chartId,
     })
     const view: View | null = data?.view ?? null
     const chartType: ChartType | null = data?.chartType ?? null
+
+    const pendingRef = useRef<ChartView | null>(null)
 
     const _persistView = useDebouncedCallback(async (viewData: ChartView) => {
         // Skip if query is not ready yet
@@ -55,23 +60,48 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         } else {
             await createView({ chartId: chartId, data: viewData })
         }
-    }, 3000)
+        // Clear pending after successful persist
+        pendingRef.current = null
+    }, 1000)
 
-    const persistView = useCallback((viewData: ChartView) => {
-        if (_persistView.isPending()) _persistView.cancel()
-        _persistView(viewData)
-    }, [_persistView])
+    const defaultView = useMemo(() => ({
+        selectedLineIds: [],
+    }), [])
+
+    const getBaseView = useCallback(() => {
+        let base = pendingRef.current ?? (view?.data as ChartView | null)
+        if (!base) {
+            base = defaultView
+        }
+        return base
+    }, [pendingRef, view, defaultView])
+
+    const persistView = useCallback((viewData: Partial<ChartView>) => {
+        const base = getBaseView()
+        const merged = { ...base, ...viewData } as ChartView
+        pendingRef.current = merged
+        _persistView(merged)
+    }, [_persistView, getBaseView])
 
     const cancelPersistView = useCallback(() => {
         _persistView.cancel()
+        pendingRef.current = null
     }, [_persistView])
+
+    const clearView = useCallback(() => {
+        cancelPersistView()
+        if (view) {
+            deleteView({ id: view.id, chartId: chartId })
+        }
+    }, [view, chartId, deleteView, cancelPersistView])
 
     const contextValue: ViewContextValue = {
         view,
         chartType,
         isViewSuccess,
-        persistView,
         cancelPersistView,
+        persistView,
+        clearView,
     }
 
     return <ViewContext.Provider value={contextValue}>{children}</ViewContext.Provider>

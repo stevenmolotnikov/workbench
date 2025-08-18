@@ -28,9 +28,9 @@ export interface HeatmapBounds {
 }
 
 export interface HeatmapViewData { 
-    bounds: HeatmapBounds;
+    bounds?: HeatmapBounds;
     xStep: number;
-    annotation: HeatmapBounds
+    annotation?: HeatmapBounds
 }
 
 export type Range = [number, number];
@@ -61,9 +61,9 @@ export interface SelectionBounds {
 }
 
 export interface LineViewData {
-    bounds: SelectionBounds;
+    bounds?: SelectionBounds;
     selectedLineIds: string[];
-    annotation: SelectionBounds;
+    annotation?: SelectionBounds;
 }
 
 // Combined Types
