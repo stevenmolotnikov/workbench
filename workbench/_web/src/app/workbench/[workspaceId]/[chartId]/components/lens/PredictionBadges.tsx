@@ -1,26 +1,15 @@
-import { useEffect, useMemo } from "react";
-import Select, {
-    MultiValue,
-    type FilterOptionOption,
-    type StylesConfig,
-    MultiValueProps
-} from "react-select";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import AsyncSelect from "react-select/async";
+import type { MultiValue, StylesConfig, GroupBase, MultiValueProps } from "react-select";
 import { LensConfigData } from "@/types/lens";
-import { Prediction } from "@/types/models";
+import { Prediction, TokenOption } from "@/types/models";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
+import { useDebouncedCallback } from "use-debounce";
 
 interface PredictionBadgesProps {
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
     predictions: Prediction[];
-}
-
-// Token option for react-select
-interface TokenOption {
-    value: number; // token id
-    label: string; // token text
-    prob: number;  // probability
-    normalizedLabel: string; // label with leading space trimmed and lowercased for matching
 }
 
 export const PredictionBadges = ({
@@ -30,18 +19,44 @@ export const PredictionBadges = ({
 }: PredictionBadgesProps) => {
     const currentTokenPrediction = predictions?.[0];
 
-    // Helper function to render token text with blue underscore for leading spaces
+    const probLookup = useMemo(() => {
+        if (!currentTokenPrediction) return null as Map<number, number> | null;
+        return new Map<number, number>(
+            currentTokenPrediction.ids.map((id: number, idx: number) => [
+                id,
+                currentTokenPrediction.probs[idx] ?? 0,
+            ])
+        );
+    }, [currentTokenPrediction]);
+
+    // Helper function to render token text with blue underscore for leading spaces and blue "\n" for newlines
     const renderTokenText = (text: string | undefined) => {
         if (!text) return "";
+        const elements: React.ReactNode[] = [];
+        let index = 0;
+
+        // Represent a single leading space with a blue underscore for visibility
         if (text.startsWith(" ")) {
-            return (
-                <>
-                    <span className="text-blue-500">_</span>
-                    {text.slice(1)}
-                </>
-            );
+            elements.push(<span className="text-blue-500" key={`lead-space`}>_</span>);
+            index = 1;
         }
-        return text;
+
+        let buffer = "";
+        for (; index < text.length; index++) {
+            const ch = text[index];
+            if (ch === "\n") {
+                if (buffer) {
+                    elements.push(<span key={`txt-${index}`}>{buffer}</span>);
+                    buffer = "";
+                }
+                elements.push(<span className="text-blue-500" key={`nl-${index}`}>\n</span>);
+            } else {
+                buffer += ch;
+            }
+        }
+        if (buffer) elements.push(<span key={`tail`}>{buffer}</span>);
+
+        return elements.length ? <>{elements}</> : text;
     };
 
     // Build options from all predicted tokens
@@ -50,8 +65,7 @@ export const PredictionBadges = ({
         return currentTokenPrediction.ids.map((id: number, index: number) => {
             const text = currentTokenPrediction.texts[index] ?? "";
             const prob = currentTokenPrediction.probs[index] ?? 0;
-            const normalizedLabel = text.replace(/^\s+/, "").toLowerCase();
-            return { value: id, label: text, prob, normalizedLabel } as TokenOption;
+            return { value: id, text, prob } as TokenOption;
         });
     }, [currentTokenPrediction]);
 
@@ -66,50 +80,116 @@ export const PredictionBadges = ({
         }
     }, [currentTokenPrediction]);
 
+    // Maintain a local registry of known options so selections from queries persist
+    const [knownOptionsById, setKnownOptionsById] = useState<Map<number, TokenOption>>(new Map());
+
+    // Sync prediction options into known registry
+    useEffect(() => {
+        if (options.length === 0) return;
+        setKnownOptionsById(prev => {
+            const updated = new Map(prev);
+            for (const opt of options) {
+                updated.set(opt.value, opt);
+            }
+            return updated;
+        });
+    }, [options]);
+
     const selectedOptions: TokenOption[] = useMemo(() => {
-        if (!options.length) return [];
-        const idSet = new Set(config.token.targetIds);
-        return options.filter(opt => idSet.has(opt.value));
-    }, [options, config.token.targetIds]);
+        if (config.token.targetIds.length === 0) return [];
+        return config.token.targetIds
+            .map(id => knownOptionsById.get(id))
+            .filter((v): v is TokenOption => !!v);
+    }, [knownOptionsById, config.token.targetIds]);
 
     const handleChange = (newValue: MultiValue<TokenOption>) => {
         const newIds = newValue.map(opt => opt.value);
+        // Persist any newly chosen options into the registry
+        setKnownOptionsById(prev => {
+            const updated = new Map(prev);
+            for (const opt of newValue) {
+                updated.set(opt.value, opt);
+            }
+            return updated;
+        });
         setConfig({
             ...config,
             token: { ...config.token, targetIds: newIds },
         });
     };
 
-    // Custom filtering: compare against leading-space-trimmed, lowercased tokens
-    const filterOption = (
-        option: FilterOptionOption<TokenOption>,
-        rawInput: string
-    ) => {
-        const input = rawInput.replace(/^\s+/, "").toLowerCase();
-        if (!input) return true;
-        return (
-            option.data.normalizedLabel.includes(input) ||
-            String(option.value).includes(input)
-        );
-    };
+    const debouncedFetch = useDebouncedCallback(
+        async (
+            query: string,
+            model: string,
+            pLookup: Map<number, number> | null,
+            resolve: (options: TokenOption[]) => void
+        ) => {
+            const raw = (query ?? "");
+            if (raw.length === 0) {
+                resolve([]);
+                return;
+            }
+            try {
+                const resp = await fetch("/api/tokens/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query: raw, model, limit: 50 }),
+                });
+                const data = (await resp.json()) as { tokens?: TokenOption[] };
+                const tokens = data.tokens ?? [];
 
-    const {highlightedLineIds} = useLensWorkspace()
+                // Attach probs and sort by probability descending
+                const opts = tokens.map((t) => ({
+                    value: t.value,
+                    text: t.text,
+                    prob: pLookup?.get(t.value) ?? 0,
+                } as TokenOption));
 
-    const formattedSelectStyles = useMemo(() => {
+                opts.sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0));
+                resolve(opts);
+            } catch {
+                resolve([]);
+            }
+        },
+        500
+    );
+
+    const loadOptions = useCallback(
+        (inputValue: string): Promise<TokenOption[]> =>
+            new Promise((resolve) => {
+                debouncedFetch.cancel();
+                // If input is empty or whitespace-only, show predictions; otherwise query
+                const raw = inputValue ?? "";
+                if (raw.length === 0 || /^\s*$/.test(raw)) {
+                    resolve(options);
+                } else {
+                    debouncedFetch(inputValue, config.model, probLookup, (fetched) => {
+                        // Merge fetched options into known registry for persistence
+                        setKnownOptionsById(prev => {
+                            const updated = new Map(prev);
+                            for (const opt of fetched) updated.set(opt.value, opt);
+                            return updated;
+                        });
+                        resolve(fetched);
+                    });
+                }
+            }),
+        [debouncedFetch, config.model, probLookup, options]
+    );
+
+    const formattedSelectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = useMemo(() => {
         return {
             ...selectStyles,
-            multiValue: (base: MultiValueProps<TokenOption>, { data }: { data: TokenOption }) => {
-                // Example: if the token has a high probability (>0.5), use a different border color
-
-                const isHighlighted = highlightedLineIds.has(data.label);
-
+            multiValue: (base, props) => {
+                const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
                 return {
                     ...base,
-                    backgroundColor: isHighlighted 
-                        ? "hsl(var(--accent))" 
+                    backgroundColor: isHighlighted
+                        ? "hsl(var(--accent))"
                         : "hsl(var(--muted))",
-                    border: isHighlighted 
-                        ? "1px solid hsl(var(--primary))" 
+                    border: isHighlighted
+                        ? "1px solid hsl(var(--primary))"
                         : "1px solid hsl(var(--input))",
                     margin: 0,
                     alignItems: "center",
@@ -119,8 +199,10 @@ export const PredictionBadges = ({
                     paddingRight: 2,
                 };
             },
-        }
-    }, [highlightedLineIds])
+        };
+    }, []);
+
+    const [inputValue, setInputValue] = useState<string>("");
 
     if (!currentTokenPrediction) {
         return (
@@ -132,31 +214,37 @@ export const PredictionBadges = ({
 
     return (
         <div className="w-full flex-1 min-w-[12rem]">
-            <Select<TokenOption, true>
+            <AsyncSelect<TokenOption, true>
                 classNamePrefix="pred-select"
                 isMulti
                 isClearable
-                options={options}
+                defaultOptions={options}
+                cacheOptions
+                loadOptions={loadOptions}
                 value={selectedOptions}
                 onChange={handleChange}
-                filterOption={filterOption}
                 styles={formattedSelectStyles}
                 placeholder="Select tokens…"
+                // aria-placeholder="Select tokens…"
                 closeMenuOnSelect={false}
+                inputValue={inputValue}
+                onInputChange={(newValue) => {
+                    setInputValue(newValue);
+                }}
                 formatOptionLabel={(option: TokenOption) => (
                     <div className="flex items-center justify-between w-full">
-                        <span className="font-medium text-foreground">{renderTokenText(option.label)}</span>
-                        <span className="ml-2 text-xs text-muted-foreground">{option.prob.toFixed(4)}</span>
+                        <span className="font-medium text-foreground">{renderTokenText(option.text)}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{(option.prob ?? 0).toFixed(4)}</span>
                     </div>
                 )}
                 components={{
-                    // DropdownIndicator: () => null,
                     IndicatorSeparator: () => null
                 }}
                 onKeyDown={(e) => {
-                    // Space key should not be used to select tokens
-                    if (e.key === ' ' && !e.currentTarget.querySelector('input')?.value) {
+                    // Allow leading space by manually inserting into controlled input, while preventing option selection
+                    if (e.key === ' ' && inputValue.length === 0) {
                         e.preventDefault();
+                        setInputValue(' ');
                     }
                 }}
             />
@@ -166,7 +254,7 @@ export const PredictionBadges = ({
 
 
 // Theme-aware styles for react-select using shadcn/tailwind CSS variables
-const selectStyles: StylesConfig<TokenOption, true> = {
+const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
     container: (base) => ({
         ...base,
         width: "100%",
@@ -235,6 +323,20 @@ const selectStyles: StylesConfig<TokenOption, true> = {
             color: "hsl(var(--accent-foreground))",
         },
     }),
+    multiValue: (base, props: MultiValueProps<TokenOption, true, GroupBase<TokenOption>>) => {
+        const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
+        return {
+            ...base,
+            backgroundColor: isHighlighted ? "hsl(var(--accent))" : "hsl(var(--muted))",
+            border: isHighlighted ? "1px solid hsl(var(--primary))" : "1px solid hsl(var(--input))",
+            margin: 0,
+            alignItems: "center",
+            minHeight: "1.25rem",
+            borderRadius: "calc(var(--radius) - 4px)",
+            paddingLeft: 2,
+            paddingRight: 2,
+        };
+    },
     indicatorsContainer: (base) => ({
         ...base,
         padding: 0,

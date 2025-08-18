@@ -6,6 +6,12 @@ export interface Token {
     targetIds: number[];
 }
 
+export interface TokenOption {
+    value: number; // token id
+    text: string; // token text
+    prob?: number;  // probability
+}
+
 export interface Prediction {
     // Index of the token in the prompt
     idx: number;
