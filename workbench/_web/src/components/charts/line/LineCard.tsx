@@ -64,7 +64,7 @@ const LineCardWithSelection = () => {
 
     return (
         <div className="flex flex-col h-full w-full">
-            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-between">
+            <div className="flex h-[10%] gap-2 items-end p-4 lg:p-8 justify-end">
                 <div className="flex items-center gap-2">
                     <Button
                         variant={activeSelection ? "default" : "outline"}

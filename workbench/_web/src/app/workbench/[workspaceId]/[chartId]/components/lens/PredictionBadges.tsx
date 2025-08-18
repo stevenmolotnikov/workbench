@@ -187,12 +187,12 @@ export const PredictionBadges = ({
     }
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <div className="flex -mb-2 justify-between items-center">
-                <span className="text-sm text-muted-foreground">Target tokens</span>
+        <div className="flex flex-col gap-1.5 w-full">
+            <div className="flex justify-between items-center">
+                <span className="text-xs text-muted-foreground">Target Tokens</span>
                 {config.token.targetIds.length > 0 &&
                     <button
-                        className="text-xs flex h-8 items-center gap-1 text-muted-foreground hover:text-foreground"
+                        className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
                         onClick={() => {
                             setConfig({
                                 ...config,

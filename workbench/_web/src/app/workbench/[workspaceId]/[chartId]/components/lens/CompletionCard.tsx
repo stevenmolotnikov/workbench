@@ -223,11 +223,9 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
             {(showTokenArea && predictions.length > 0 && !isExecuting) && (
                 <div
-                    className="border p-3 flex flex-col items-center gap-2 bg-muted rounded"
+                    className="border p-2 flex flex-col items-center gap-3 bg-muted rounded"
                 >
                     <div className="flex w-full justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Chart type</span>
-
                         <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">
                             <button
                                 onClick={() => handleCreateHeatmap(config)}
@@ -251,10 +249,9 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                                 Line
                             </button>
                         </div>
-                    </div>
 
-                    <div className="flex w-full justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Decoder</span>
+
+
                         <DecoderSelector />
                     </div>
 
