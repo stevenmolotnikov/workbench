@@ -3,7 +3,6 @@ import torch as t
 
 from pydantic import BaseModel
 
-from ..utils import make_backend
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
 

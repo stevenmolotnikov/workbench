@@ -40,6 +40,8 @@ export function ChartDisplay() {
     // Some query is running
     const isPending = isLineRunning || isHeatmapRunning;
 
+    console.log("CHART", chart.data);
+
     // Has no data or is loading from db
     const showEmptyState = (jobStatus === "idle" && chart.data === null) || isLoading;
 

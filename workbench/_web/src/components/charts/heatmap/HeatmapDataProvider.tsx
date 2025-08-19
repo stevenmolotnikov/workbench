@@ -41,6 +41,8 @@ export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart,
 
     // Calculate bounds
     const bounds = useMemo(() => {
+
+        console.log("HEYEYEYEY", rows);
         const xMax = rows.length && rows[0].data.length ? rows[0].data.length - 1 : 100;
         const yMax = rows.length ? rows.length - 1 : 100;
         return {

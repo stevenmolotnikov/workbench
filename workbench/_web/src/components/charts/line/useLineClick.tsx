@@ -6,7 +6,7 @@ import { lineMargin as margin } from "../theming";
 
 export const useLineClick = () => {
     const { lineCanvasRef, getNearestX } = useLineCanvas();
-    const { data, yRange } = useLineData();
+    const { lines, yRange } = useLineData();
     const { toggleLineHighlight } = useLensWorkspace();
 
     const handleClick = useCallback((e: React.MouseEvent) => {
@@ -22,7 +22,7 @@ export const useLineClick = () => {
         const mouseYData = curY[0] + (1 - (yRaw - margin.top) / innerHeight) * (curY[1] - curY[0]);
         let bestId: string | null = null;
         let bestDist = Number.POSITIVE_INFINITY;
-        for (const line of data.lines) {
+        for (const line of lines) {
             const p = line.data.find(pt => pt.x === snappedXVal);
             if (!p) continue;
             const dy = Math.abs(p.y - mouseYData);
@@ -32,7 +32,7 @@ export const useLineClick = () => {
             }
         }
         if (bestId) toggleLineHighlight(bestId);
-    }, [lineCanvasRef, getNearestX, yRange, data.lines, toggleLineHighlight]);
+    }, [lineCanvasRef, getNearestX, yRange, lines, toggleLineHighlight]);
 
     return { handleClick };
 }

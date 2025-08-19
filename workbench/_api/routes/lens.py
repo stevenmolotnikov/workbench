@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
 
-from ..utils import make_backend
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
+
 
 class LensLineRequest(BaseModel):
     model: str
@@ -29,13 +29,11 @@ class LensLineResponse(NDIFResponse):
 router = APIRouter()
 
 
-def line(
-    req: LensLineRequest, state: AppState
-) -> list[t.Tensor] | str:
+def line(req: LensLineRequest, state: AppState) -> list[t.Tensor] | str:
     model = state.get_model(req.model)
 
     with model.trace(
-        req.prompt, remote=state.remote, backend=make_backend(model)
+        req.prompt, remote=state.remote, backend=state.make_backend(model)
     ) as tracer:
 
         def decode(x):
@@ -66,10 +64,12 @@ def line(
 
     return results
 
+
 def get_remote_line(job_id: str, state: AppState):
     backend = state.make_backend(job_id=job_id)
     results = backend()
-    return results['results']
+    return results["results"]
+
 
 def collect_line_results(
     req: LensLineRequest,
@@ -83,8 +83,6 @@ def collect_line_results(
         raw_results = result
     else:
         raw_results = get_remote_line(job_id, state)
-        if isinstance(raw_results, str):
-            return LensLineResponse(job_id=raw_results)
 
     tok = state[req.model].tokenizer
     target_token_strs = tok.batch_decode(req.token.target_ids)
@@ -104,7 +102,7 @@ def collect_line_results(
                 lines[line_idx].data.append(Point(x=layer_idx, y=prob))
 
     return LensLineResponse(
-        lines=lines,
+        data=lines,
     )
 
 
@@ -113,6 +111,7 @@ async def start_line(
     lens_request: LensLineRequest, state: AppState = Depends(get_state)
 ):
     return collect_line_results(lens_request, state)
+
 
 @router.post("/results-line/{job_id}")
 async def collect_line(
@@ -153,7 +152,6 @@ def heatmap(
     with model.trace(
         req.prompt, remote=state.remote, backend=state.make_backend(model)
     ) as tracer:
-
         pred_ids = []
         probs = []
 
@@ -169,7 +167,6 @@ def heatmap(
 
             pred_ids.append(pred_ids_L.tolist())
             probs.append(probs_L.tolist())
-
 
         for layer in model.model.layers[:-1]:
             _compute_top_probs(decode(layer.output[0]))
@@ -187,7 +184,8 @@ def heatmap(
 def get_remote_heatmap(job_id: str, state: AppState):
     backend = state.make_backend(job_id=job_id)
     results = backend()
-    return results['probs'], results['pred_ids']
+    return results["probs"], results["pred_ids"]
+
 
 def collect_grid_results(
     lens_request: GridLensRequest,
@@ -234,7 +232,7 @@ def collect_grid_results(
 async def get_grid(
     lens_request: GridLensRequest, state: AppState = Depends(get_state)
 ):
-    return heatmap(lens_request, state)
+    return collect_grid_results(lens_request, state)
 
 
 @router.post("/results-grid/{job_id}")

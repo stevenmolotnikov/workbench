@@ -2,31 +2,20 @@
 
 
 from nnsight import LanguageModel
+import torch as t
+from nnsight.intervention.backends.remote import RemoteBackend
 
 import nnsight
+
 nnsight.CONFIG.set_default_api_key("")
-nnsight.CONFIG.API.HOST = "dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001"
+nnsight.CONFIG.API.HOST = (
+    "dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001"
+)
 nnsight.CONFIG.API.SSL = False
 model = LanguageModel("openai-community/gpt2")
 
 
-import torch as t
-
-from nnsight import LanguageModel
-from nnsight.intervention.backends.remote import RemoteBackend
-
-def make_backend(model: LanguageModel | None = None, job_id: str | None = None):
-    return RemoteBackend(
-        job_id=job_id, blocking=False, model_key=model.to_model_key() if model is not None else None
-    )
-
-import nnsight as ns
-
-with model.trace(
-    "hello, world",
-    remote=True,
-    backend=make_backend(model)
-) as tracer:
+with model.trace("hello, world", remote=True, blocking=False) as tracer:
     results = []
     logits_BLV = model.lm_head.output
 
@@ -40,10 +29,14 @@ with model.trace(
 
 # %%
 
-backend = make_backend(model, job_id=tracer.backend.job_id)
+backend = RemoteBackend(
+    job_id=tracer.backend.job_id,
+    blocking=False,
+    model_key=model.to_model_key()
+)
 results = backend()
 
 # %%
-len(results['results'])
+len(results["results"])
 
 # %%
