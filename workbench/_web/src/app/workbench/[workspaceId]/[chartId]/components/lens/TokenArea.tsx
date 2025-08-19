@@ -9,6 +9,8 @@ interface TokenAreaProps {
     config: LensConfigData;
     handleTokenClick: (event: React.MouseEvent<HTMLDivElement>, idx: number) => void;
     tokenData: Token[];
+    loading: boolean;
+    showFill: boolean;
 }
 
 // Token styling constants
@@ -38,8 +40,10 @@ export function TokenArea({
     config,
     handleTokenClick,
     tokenData,
+    loading, 
+    showFill
 }: TokenAreaProps) {
-    const { currentChartType } = useWorkspace();
+
 
     const getTokenStyle = (
         token: Token,
@@ -48,7 +52,7 @@ export function TokenArea({
         const isFilled = config.token.targetIds.length > 0;
 
         let backgroundStyle = "";
-        if (config.token.idx === idx && currentChartType === "line") {
+        if (config.token.idx === idx && showFill) {
             backgroundStyle = (isFilled) ? TOKEN_STYLES.filled : TOKEN_STYLES.highlight;
         } else {
             backgroundStyle = "bg-transparent";
@@ -57,9 +61,10 @@ export function TokenArea({
         return cn(
             TOKEN_STYLES.base,
             backgroundStyle,
-            TOKEN_STYLES.hover,
+            !loading && TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
-            "cursor-pointer",
+            // "cursor-pointer",
+            loading ? "cursor-progress" : "cursor-pointer"
         );
     };
 

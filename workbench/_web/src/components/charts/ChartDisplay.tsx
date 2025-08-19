@@ -1,7 +1,7 @@
 import { useWorkspace } from "@/stores/useWorkspace";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy } from "lucide-react";
 import { getChartById } from "@/lib/queries/chartQueries";
-import { useQuery } from "@tanstack/react-query";
+import { useIsMutating, useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useCallback } from "react";
 
@@ -13,10 +13,15 @@ import { HeatmapChart, LineChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { queryKeys } from "@/lib/queryKeys";
 
+// Track mutation state globally via keys set in chartApi hooks
+
 export function ChartDisplay() {
-    const { jobStatus, currentChartType } = useWorkspace();
+    const { jobStatus } = useWorkspace();
     const { chartId } = useParams<{ chartId: string }>();
     const { captureRef, handleCopyPng } = useCapture();
+
+    const isLineRunning = useIsMutating({ mutationKey: ["lensLine"] }) > 0;
+    const isHeatmapRunning = useIsMutating({ mutationKey: ["lensGrid"] }) > 0;
 
     const { data: chart, isLoading } = useQuery({
         queryKey: queryKeys.charts.chart(chartId),
@@ -32,10 +37,11 @@ export function ChartDisplay() {
         return <div>Error: No chart found</div>;
     }
 
-    // Determine UI state
-    const hasNoData = jobStatus === "idle" && chart.data === null;
-    const isPending = jobStatus !== "idle" || currentChartType !== chart.type;
-    const showEmptyState = hasNoData || isLoading;
+    // Some query is running
+    const isPending = isLineRunning || isHeatmapRunning;
+
+    // Has no data or is loading from db
+    const showEmptyState = (jobStatus === "idle" && chart.data === null) || isLoading;
 
     return (
         <div className="flex-1 flex h-full flex-col overflow-hidden custom-scrollbar relative">
@@ -50,7 +56,7 @@ export function ChartDisplay() {
                 <div className="flex-1 flex h-full items-center relative justify-center border m-2 border-dashed rounded">
                     <div className="text-muted-foreground">No chart data</div>
                 </div>
-            ) : currentChartType === "heatmap" ? (
+            ) : isHeatmapRunning || (!isPending && chart.type === "heatmap") ? (
                 <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} pending={isPending} />
             ) : (
                 <LineCard captureRef={captureRef} chart={chart as LineChart} pending={isPending} />

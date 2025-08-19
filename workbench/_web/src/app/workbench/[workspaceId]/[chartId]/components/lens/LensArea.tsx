@@ -3,9 +3,10 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import { CompletionCard } from "./CompletionCard";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getConfigForChart } from "@/lib/queries/chartQueries";
+import { getChartById, getConfigForChart } from "@/lib/queries/chartQueries";
 import { LensConfig } from "@/db/schema";
 import { queryKeys } from "@/lib/queryKeys";
+import { ChartType } from "@/types/charts";
 
 export default function LensArea() {
     const { selectedModel } = useWorkspace();
@@ -15,6 +16,12 @@ export default function LensArea() {
         queryKey: queryKeys.charts.config(chartId),
         queryFn: () => getConfigForChart(chartId),
         enabled: !!selectedModel && !!chartId,
+    });
+
+    const { data: chart } = useQuery({
+        queryKey: queryKeys.charts.chart(chartId),
+        queryFn: () => getChartById(chartId as string),
+        enabled: !!chartId,
     });
 
     if (!config) {
@@ -34,7 +41,7 @@ export default function LensArea() {
 
             <div className="p-2">
                 {/* Assume lens config here; unified page will gate by config.type */}
-                <CompletionCard initialConfig={config as LensConfig} />
+                <CompletionCard initialConfig={config as LensConfig} chartType={chart?.type as ChartType} />
             </div>
         </div>
     );

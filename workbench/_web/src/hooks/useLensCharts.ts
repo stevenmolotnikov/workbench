@@ -6,14 +6,11 @@ import { useWorkspace } from "@/stores/useWorkspace";
 
 export const useLensCharts = ({ configId }: { configId: string }) => {
     const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
-    const { setCurrentChartType } = useWorkspace();
     const { mutateAsync: createHeatmap } = useLensGrid();
     const { mutateAsync: updateChartConfig } = useUpdateChartConfig();
     const { mutateAsync: createLineChart } = useLensLine();
 
     const handleCreateHeatmap = async (config: LensConfigData) => {
-        setCurrentChartType("heatmap");
-
         const data = await createHeatmap({
             lensRequest: {
                 completion: config,
@@ -35,8 +32,6 @@ export const useLensCharts = ({ configId }: { configId: string }) => {
     };
 
     const handleCreateLineChart = async (config: LensConfigData) => {
-        setCurrentChartType("line");
-
         const data = await createLineChart({
             lensRequest: {
                 completion: config,

@@ -23,16 +23,18 @@ import { useWorkspace } from "@/stores/useWorkspace";
 import GenerateButton from "./GenerateButton";
 import { DecoderSelector } from "./DecoderSelector";
 import { useDebouncedCallback } from "use-debounce";
+import { ChartType } from "@/types/charts";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
+    chartType: ChartType;
 }
 
-export function CompletionCard({ initialConfig }: CompletionCardProps) {
+export function CompletionCard({ initialConfig, chartType }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
     const { tokenData, setTokenData } = useLensWorkspace();
 
-    const { selectedModel, currentChartType, setCurrentChartType } = useWorkspace();
+    const { selectedModel } = useWorkspace();
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
 
     const { mutateAsync: executeSelected, isPending: isExecuting } = useExecuteSelected();
@@ -119,8 +121,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         event.preventDefault();
         event.stopPropagation();
 
-        setCurrentChartType("line");
-
         // Skip if the token is already selected
         if (config.token.idx === idx) return;
 
@@ -137,7 +137,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         await handleCreateLineChart({ ...temporaryConfig, token: { ...temporaryConfig.token, targetIds } });
     };
 
-    const handleClear = async () => {
+    const escapeTokenArea = async () => {
         setEditingText(true);
 
         // Focus the textarea and place cursor at the end after state updates
@@ -167,14 +167,19 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 ) : (
                     <div
                         className={cn(
-                            "flex w-full h-24 px-3 py-2 border overflow-y-auto  rounded cursor-pointer",
+                            "flex w-full h-24 px-3 py-2 border overflow-y-auto rounded",
+                            isExecuting ? "cursor-progress" : "cursor-text"
                         )}
-                        onClick={handleClear}
+                        onClick={() => {
+                            if (!isExecuting) escapeTokenArea();
+                        }}
                     >
                         <TokenArea
                             config={config}
                             handleTokenClick={handleTokenClick}
                             tokenData={tokenData}
+                            loading={isExecuting}
+                            showFill={chartType === "line"}
                         />
                     </div>
                 )}
@@ -221,7 +226,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                                     onClick={() => handleCreateHeatmap(config)}
                                     className={cn(
                                         "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
-                                        currentChartType === "heatmap" ? "bg-accent border" : "bg-background"
+                                        chartType === "heatmap" ? "bg-accent border" : "bg-background"
                                     )}
                                 >
                                     <Grid3x3 className="w-4 h-4" />
@@ -232,7 +237,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                                     disabled={config.token.targetIds.length === 0}
                                     className={cn(
                                         "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
-                                        currentChartType === "line" ? "bg-accent border" : "bg-background"
+                                        chartType === "line" ? "bg-accent border" : "bg-background"
                                     )}
                                 >
                                     <ChartLine className="w-4 h-4" />

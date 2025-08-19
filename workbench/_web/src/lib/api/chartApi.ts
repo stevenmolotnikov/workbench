@@ -35,6 +35,7 @@ export const useLensLine = () => {
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
+        mutationKey: ["lensLine"],
         mutationFn: async ({
             lensRequest,
             configId,
@@ -81,6 +82,7 @@ export const useLensGrid = () => {
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
+        mutationKey: ["lensGrid"],
         mutationFn: async ({
             lensRequest,
             configId,
@@ -90,6 +92,7 @@ export const useLensGrid = () => {
         }) => {
             const response = await getLensGrid(lensRequest);
             await setChartData(lensRequest.chartId, response.data, "heatmap");
+            console.log("response.data", response.data);
             return response.data;
         },
         onSuccess: (data, variables) => {
