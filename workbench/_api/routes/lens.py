@@ -10,6 +10,7 @@ from ..jobs import jobs
 
 JobStatus = ResponseModel.JobStatus
 
+
 class LensLineRequest(BaseModel):
     model: str
     prompt: str
@@ -29,12 +30,14 @@ class Line(BaseModel):
 class LensLineResponse(BaseModel):
     lines: list[Line] | None = None
     status: JobStatus
-    job_id: str
+
 
 router = APIRouter()
 
 
-def line(req: LensLineRequest, state: AppState, job_id: str | None = None) -> tuple[JobStatus, str, list[t.Tensor]]:
+def line(
+    req: LensLineRequest, state: AppState, job_id: str | None = None
+) -> tuple[JobStatus, str, list[t.Tensor]]:
     model = state.get_model(req.model)
 
     def decode(x):
@@ -67,18 +70,19 @@ def line(req: LensLineRequest, state: AppState, job_id: str | None = None) -> tu
         results,
     )
 
+
 async def collect_line_results(
     lens_request: LensLineRequest,
     state: AppState,
+    job_id: str,
 ):
     # Check or download results
-    job_status, job_id, raw_results = line(lens_request, state)
+    job_status, _, raw_results = line(lens_request, state, job_id)
 
     if job_status == JobStatus.COMPLETED:
         raw_results = [r.value for r in raw_results]
     else:
         return LensLineResponse(
-            job_id=job_id,
             status=job_status,
         ).model_dump()
 
@@ -102,7 +106,6 @@ async def collect_line_results(
     return LensLineResponse(
         lines=lines,
         status=job_status,
-        job_id=job_id,
     )
 
 
@@ -111,11 +114,18 @@ async def get_line(
     lens_request: LensLineRequest, state: AppState = Depends(get_state)
 ):
     _, job_id, _ = line(lens_request, state)
-    return job_id
+    return {
+        "job_id": job_id,
+    }
+
 
 @router.get("/poll-line/{job_id}")
-async def poll_line(job_id: str):
-    return collect_line_results(job_id)
+async def poll_line(
+    lens_request: LensLineRequest,
+    job_id: str,
+    state: AppState = Depends(get_state),
+):
+    return collect_line_results(lens_request, state, job_id)
 
 
 class GridLensRequest(BaseModel):
@@ -136,10 +146,9 @@ class GridRow(BaseModel):
 class GridLensResponse(BaseModel):
     rows: list[GridRow] | None = None
     status: JobStatus
-    job_id: str
 
 
-def heatmap(req: GridLensRequest, state: AppState):
+def heatmap(req: GridLensRequest, state: AppState, job_id: str | None = None):
     model = state.get_model(req.model)
 
     def decode(x):
@@ -161,10 +170,15 @@ def heatmap(req: GridLensRequest, state: AppState):
         pred_ids.append(pred_ids_L.save())
         probs.append(probs_L.save())
 
-    with model.trace(req.prompt, remote=state.remote) as tracer:
+    with model.trace(
+        req.prompt, remote=state.remote, blocking=False, job_id=job_id
+    ) as tracer:
         for layer in model.model.layers[:-1]:
             _compute_top_probs(decode(layer.output[0]))
         _compute_top_probs(model.output.logits)
+
+    if job_id is None:
+        job_id = tracer.backend.job_id
 
     return (
         tracer.backend.job_status,
@@ -177,14 +191,14 @@ def heatmap(req: GridLensRequest, state: AppState):
 async def collect_grid_results(
     lens_request: GridLensRequest,
     state: AppState,
+    job_id: str,
 ):
     """Background task to process grid lens computation"""
 
     # NOTE: These are ordered by layer
-    job_status, job_id, pred_ids, probs = heatmap(lens_request, state)
+    job_status, _, pred_ids, probs = heatmap(lens_request, state, job_id)
 
     if job_status == JobStatus.COMPLETED:
-
         # TEMP FIX FOR 0.4
         # Specifically, can't call .tolist() bc items are still proxies
         probs = [p.tolist() for p in probs]
@@ -193,7 +207,6 @@ async def collect_grid_results(
     else:
         return GridLensResponse(
             status=job_status,
-            job_id=job_id,
         ).model_dump()
 
     # Get the stringified tokens of the input
@@ -216,7 +229,6 @@ async def collect_grid_results(
     return GridLensResponse(
         rows=rows,
         status=job_status,
-        job_id=job_id,
     )
 
 
@@ -224,10 +236,16 @@ async def collect_grid_results(
 async def get_grid(
     lens_request: GridLensRequest, state: AppState = Depends(get_state)
 ):
-    _, job_id, _ = heatmap(lens_request, state)
-    return job_id
+    _, job_id, _, _ = heatmap(lens_request, state)
+    return {
+        "job_id": job_id,
+    }
 
 
 @router.get("/poll-grid/{job_id}")
-async def poll_grid(job_id: str):
-    return collect_grid_results(job_id)
+async def poll_grid(
+    lens_request: GridLensRequest,
+    job_id: str,
+    state: AppState = Depends(get_state),
+):
+    return collect_grid_results(lens_request, state, job_id)
