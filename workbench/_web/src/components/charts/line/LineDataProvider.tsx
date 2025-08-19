@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect } from "react";
 import { LineChart } from "@/db/schema";
-import { LineGraphData, Range, SelectionBounds } from "@/types/charts";
+import { Line, Range, SelectionBounds } from "@/types/charts";
 import { useLineView } from "../ViewProvider";
 
 interface LineDataContextValue {
     // Range State
-    data: LineGraphData;
+    lines: Line[];
     uniqueSortedX: number[];
     xRange: Range;
     yRange: Range;
@@ -30,14 +30,14 @@ interface LineDataProviderProps {
 }
 
 export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, children }) => {
-    const { data: rawData } = chart;
+    const { data: rawLines } = chart;
 
     // Calculate the bounds from the data
     const bounds = useMemo(() => {
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
 
-        rawData.lines.forEach(line => {
+        rawLines.forEach(line => {
             line.data.forEach(point => {
                 minX = Math.min(minX, point.x);
                 maxX = Math.max(maxX, point.x);
@@ -52,7 +52,7 @@ export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, child
             yMin: minY === Infinity ? 0 : minY,
             yMax: maxY === -Infinity ? 1 : maxY,
         } as SelectionBounds;
-    }, [rawData]);
+    }, [rawLines]);
 
     const [xRange, setXRange] = useState<Range>([bounds.xMin, bounds.xMax]);
     const [yRange, setYRange] = useState<Range>([0, 1]);
@@ -71,35 +71,30 @@ export const LineDataProvider: React.FC<LineDataProviderProps> = ({ chart, child
 
     // Filter the data based on X range only
     // Y range truncates incorrectly ish
-    const data = useMemo(() => {
+    const lines = useMemo<Line[]>(() => {
         if (!xRange) {
-            return rawData;
+            return rawLines;
         }
 
         const xMin = xRange[0];
         const xMax = xRange[1];
 
-        return {
-            ...rawData,
-            lines: rawData.lines.map(line => ({
-                ...line,
-                data: line.data.filter(point =>
-                    point.x >= xMin && point.x <= xMax
-                )
-            }))
-        };
-    }, [rawData, xRange]);
+        return rawLines.map(line => ({
+            ...line,
+            data: line.data.filter(point => point.x >= xMin && point.x <= xMax)
+        }));
+    }, [rawLines, xRange]);
 
     const uniqueSortedX = React.useMemo(() => {
         const set = new Set<number>();
-        data.lines.forEach(line => {
+        lines.forEach(line => {
             line.data.forEach(p => set.add(p.x));
         });
         return Array.from(set).sort((a, b) => a - b);
-    }, [data]);
+    }, [lines]);
 
     const contextValue: LineDataContextValue = {
-        data,
+        lines,
         uniqueSortedX,
         xRange,
         yRange,

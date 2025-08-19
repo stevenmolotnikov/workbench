@@ -76,8 +76,3 @@ export type NewChartConfigLink = typeof chartConfigLinks.$inferInsert;
 
 export type View = typeof views.$inferSelect;
 export type NewView = typeof views.$inferInsert;
-
-// Specific chart config types
-export type LensConfig = Omit<Config, 'data'> & {
-    data: LensConfigData;
-};

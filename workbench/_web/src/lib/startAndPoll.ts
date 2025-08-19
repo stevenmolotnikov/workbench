@@ -36,15 +36,16 @@ async function awaitNDIFJob(jobId: string): Promise<void> {
     }
 }
 
-async function startJob(url: string, body: unknown): Promise<string> {
+type JobStartResponse<T> = { job_id: string | null } & { data?: T } & Record<string, unknown>;
+
+async function startJob<T>(url: string, body: unknown): Promise<JobStartResponse<T>> {
     const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("Failed to start job");
-    const { job_id } = await response.json();
-    return job_id;
+    return await response.json();
 }
 
 async function fetchResults<T>(
@@ -67,9 +68,20 @@ export async function startAndPoll<T>(
 ): Promise<T> {
 
     const startUrl = config.getApiUrl(startEndpoint);
-    const jobId = await startJob(startUrl, body);
-    await awaitNDIFJob(jobId);
+    const response = await startJob<T>(startUrl, body);
+    const jobId = response?.job_id ?? null;
+    if (jobId) {
+        await awaitNDIFJob(jobId);
 
-    const resultsUrl = config.getApiUrl(resultsEndpoint(jobId));
-    return fetchResults(resultsUrl, body);
+        const resultsUrl = config.getApiUrl(resultsEndpoint(jobId));
+        const results = await fetchResults<unknown>(resultsUrl, body);
+        if (results && typeof results === "object" && "data" in results) {
+            return (results as { data: T }).data;
+        }
+        return results as T;
+    }
+    if ("data" in response) {
+        return (response as { data: T | null }).data as T;
+    }
+    return response as unknown as T;
 }

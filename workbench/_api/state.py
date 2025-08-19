@@ -1,8 +1,9 @@
 import os
-import tomllib
+import toml
 from fastapi import Request
 
 from nnsight import LanguageModel, CONFIG
+from nnsight.intervention.backends.remote import RemoteBackend
 from pydantic import BaseModel
 
 class ModelConfig(BaseModel):
@@ -48,6 +49,14 @@ class AppState:
     def get_config(self):
         return self.config
     
+    def make_backend(self, model: LanguageModel | None = None, job_id: str | None = None):
+        if self.remote:
+            return RemoteBackend(
+                job_id=job_id, blocking=False, model_key=model.to_model_key() if model is not None else None
+            )
+        else:
+            return None
+    
     def __getitem__(self, model_name: str):
         return self.get_model(model_name)
 
@@ -58,8 +67,8 @@ class AppState:
         current_path = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_path, f"_model_configs/{env}.toml")
 
-        with open(config_path, "rb") as f:
-            config = ModelsConfig(**tomllib.load(f))
+        with open(config_path, "r") as f:
+            config = ModelsConfig(**toml.load(f))
 
         self.remote = config.remote
 

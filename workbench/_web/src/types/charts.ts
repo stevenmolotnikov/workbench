@@ -14,10 +14,6 @@ export interface HeatmapRow {
     data: HeatmapCell[];
 }
 
-export interface HeatmapData {
-    rows: HeatmapRow[];
-}
-
 // Heatmap View Types
 
 export interface HeatmapBounds {
@@ -47,10 +43,6 @@ export interface Line {
     data: Position[];
 }
 
-export interface LineGraphData {
-    lines: Line[];
-}
-
 // Line View Types
 
 export interface SelectionBounds {
@@ -68,7 +60,7 @@ export interface LineViewData {
 
 // Combined Types
 
-export type ChartData = LineGraphData | HeatmapData;
+export type ChartData = Line[] | HeatmapRow[];
 export type ChartView = HeatmapViewData | LineViewData;
 export type ConfigData = LensConfigData | PatchingConfig;
 

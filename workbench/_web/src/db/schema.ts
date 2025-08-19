@@ -15,7 +15,7 @@ import {
     documents as pgDocuments,
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
-import type { HeatmapData, HeatmapViewData, LineViewData, LineGraphData } from '@/types/charts';
+import type { HeatmapRow, HeatmapViewData, LineViewData, Line } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
 const isLocal = process.env.NEXT_PUBLIC_USE_SQLITE === 'true';
@@ -55,11 +55,11 @@ export type LineView = Omit<View, 'data'> & {
 };
 
 export type HeatmapChart = Omit<Chart, 'data'> & {
-    data: HeatmapData;
+    data: HeatmapRow[];
 };
 
 export type LineChart = Omit<Chart, 'data'> & {
-    data: LineGraphData;
+    data: Line[];
 };
 
 // Specific chart config types

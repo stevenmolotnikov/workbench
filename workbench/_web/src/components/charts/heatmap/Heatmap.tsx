@@ -5,21 +5,21 @@ import { ResponsiveHeatMapCanvas } from '@nivo/heatmap'
 import { heatmapMargin, heatmapTheme } from '../theming'
 import { resolveThemeCssVars } from '@/lib/utils'
 import { Margin } from '@nivo/core';
-import { HeatmapData } from '@/types/charts';
+import { HeatmapRow } from '@/types/charts';
 
 
 interface HeatmapProps {
-    data: HeatmapData
+    rows: HeatmapRow[]
     margin?: Margin;
 }
 
 
-export function Heatmap({ data, margin = heatmapMargin }: HeatmapProps) {
+export function Heatmap({ rows, margin = heatmapMargin }: HeatmapProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(heatmapTheme), [])
 
     return (
         <ResponsiveHeatMapCanvas
-            data={data.rows}
+            data={rows}
             margin={margin}
             valueFormat=">-.2f"
             axisTop={null}

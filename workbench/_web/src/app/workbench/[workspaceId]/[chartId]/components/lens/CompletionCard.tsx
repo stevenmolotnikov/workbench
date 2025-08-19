@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
-import { useExecuteSelected } from "@/lib/api/modelsApi";
+import { usePrediction } from "@/lib/api/modelsApi";
 import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
 
@@ -37,7 +37,7 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     const { selectedModel } = useWorkspace();
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
 
-    const { mutateAsync: executeSelected, isPending: isExecuting } = useExecuteSelected();
+    const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
 
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
@@ -100,8 +100,8 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     };
 
     const runPredictions = async (temporaryConfig: LensConfigData) => {
-        const data = await executeSelected(temporaryConfig);
-        temporaryConfig.prediction = data[0];
+        const prediction = await getPrediction(temporaryConfig);
+        temporaryConfig.prediction = prediction;
         setConfig(temporaryConfig);
         await updateChartConfigMutation({
             configId,
@@ -113,7 +113,7 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
         });
         setEditingText(false);
 
-        return data[0].ids.slice(0, 3);
+        return prediction.ids.slice(0, 3);
     }
 
     const handleTokenClick = async (event: React.MouseEvent<HTMLDivElement>, idx: number) => {

@@ -57,9 +57,7 @@ const PendingLine = () => {
                 </div>
             </div>
             <div className="flex h-[90%] w-full">
-                <Line
-                    data={{ lines: [] }}
-                />
+                <Line lines={[]} />
             </div>
 
             <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
@@ -71,7 +69,7 @@ const PendingLine = () => {
 
 const InteractiveLine = () => {
     // Provider context hooks
-    const { data, yRange } = useLineData();
+    const { lines, yRange } = useLineData();
     const { rafRef, lineCanvasRef, activeSelection } = useLineCanvas();
     const { handleMouseMove, handleMouseLeave } = useLineHover();
 
@@ -129,7 +127,7 @@ const InteractiveLine = () => {
             </div>
             <div className="flex h-[90%] w-full">
                 <Line
-                    data={data}
+                    lines={lines}
                     yRange={yRange}
                     onLegendClick={toggleLineHighlight}
                     highlightedLineIds={highlightedLineIds}

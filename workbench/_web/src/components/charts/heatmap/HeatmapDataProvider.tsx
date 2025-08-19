@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useMemo, useEffect, ReactNode, useCallback } from "react";
-import { HeatmapData, HeatmapBounds, Range } from "@/types/charts";
+import { HeatmapRow, HeatmapBounds, Range } from "@/types/charts";
 import { HeatmapChart, HeatmapView } from "@/db/schema";
 import { useHeatmapView } from "../ViewProvider";
 
@@ -17,7 +17,7 @@ interface HeatmapDataContextValue {
 
     // Computed Values
     bounds: HeatmapBounds;
-    filteredData: HeatmapData;
+    filteredData: HeatmapRow[];
 }
 
 const HeatmapDataContext = createContext<HeatmapDataContextValue | null>(null);
@@ -36,20 +36,20 @@ interface HeatmapDataProviderProps {
 }
 
 export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart, children }) => {
-    const data = chart.data
+    const rows = chart.data
     const { view, isViewSuccess } = useHeatmapView()
 
     // Calculate bounds
     const bounds = useMemo(() => {
-        const xMax = data.rows.length && data.rows[0].data.length ? data.rows[0].data.length - 1 : 100;
-        const yMax = data.rows.length ? data.rows.length - 1 : 100;
+        const xMax = rows.length && rows[0].data.length ? rows[0].data.length - 1 : 100;
+        const yMax = rows.length ? rows.length - 1 : 100;
         return {
             minRow: 0,
             maxRow: yMax,
             minCol: 0,
             maxCol: xMax,
         };
-    }, [data]);
+    }, [rows]);
 
     // Range State, default to full bounds
     const [xRange, setXRange] = useState<Range>([bounds.minCol, bounds.maxCol]);
@@ -67,20 +67,23 @@ export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart,
     // Update the X step when there's new data
     useEffect(() => {
         setXStep(defaultXStep);
-    }, [data]);
+    }, [rows]);
 
     // Update the Y range to the last 10 tokens when there's new data
     useEffect(() => {
         const start = Math.max(bounds.minRow, bounds.maxRow - 9);
         setYRange([start, bounds.maxRow]);
-    }, [data]);
+    }, [rows]);
 
     // This should only run on loading a stored chart
     useEffect(() => {
         if (isViewSuccess && view) {
             const hv = view as HeatmapView
-            setXRange([hv.data.bounds.minCol, hv.data.bounds.maxCol])
-            setYRange([hv.data.bounds.minRow, hv.data.bounds.maxRow])
+            const b = hv.data.bounds
+            if (b) {
+                setXRange([b.minCol, b.maxCol])
+                setYRange([b.minRow, b.maxRow])
+            }
             setXStep(hv.data.xStep)
         }
     }, [view, isViewSuccess])
@@ -95,38 +98,35 @@ export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart,
     }, [bounds.maxCol, bounds.minCol])
 
     // Filter data based on ranges and stepping
-    const filteredData = useMemo(() => {
+    const filteredData = useMemo<HeatmapRow[]>(() => {
         const stride = Math.max(1, Math.floor(xStep));
 
-        return {
-            ...data,
-            rows: data.rows
-                .map((row, yIndex) => {
-                    // Check if this row index is within Y range
-                    const inYRange = yIndex >= yRange[0] && yIndex <= yRange[1];
-                    if (!inYRange) return null;
+        return rows
+            .map((row, yIndex) => {
+                // Check if this row index is within Y range
+                const inYRange = yIndex >= yRange[0] && yIndex <= yRange[1];
+                if (!inYRange) return null;
 
-                    // Apply X range filtering and stepping
-                    const filteredAndSampled = row.data
-                        .map((cell, idx) => ({ cell, idx }))
-                        .filter(({ idx }) => {
-                            // First check if within X range
-                            const inXRange = idx >= xRange[0] && idx <= xRange[1];
-                            if (!inXRange) return false;
-                            // Then apply stepping (take every Nth element)
-                            const relativeIdx = idx - xRange[0];
-                            return relativeIdx % stride === 0;
-                        })
-                        .map(({ cell }) => cell);
+                // Apply X range filtering and stepping
+                const filteredAndSampled = row.data
+                    .map((cell, idx) => ({ cell, idx }))
+                    .filter(({ idx }) => {
+                        // First check if within X range
+                        const inXRange = idx >= xRange[0] && idx <= xRange[1];
+                        if (!inXRange) return false;
+                        // Then apply stepping (take every Nth element)
+                        const relativeIdx = idx - xRange[0];
+                        return relativeIdx % stride === 0;
+                    })
+                    .map(({ cell }) => cell);
 
-                    return {
-                        ...row,
-                        data: filteredAndSampled
-                    };
-                })
-                .filter(row => row !== null) as typeof data.rows
-        };
-    }, [data, xRange, yRange, xStep]);
+                return {
+                    ...row,
+                    data: filteredAndSampled
+                } as HeatmapRow;
+            })
+            .filter((row): row is HeatmapRow => row !== null);
+    }, [rows, xRange, yRange, xStep]);
 
     const contextValue: HeatmapDataContextValue = {
         // Range State

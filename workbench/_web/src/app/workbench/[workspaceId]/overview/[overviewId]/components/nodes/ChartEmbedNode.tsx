@@ -2,11 +2,11 @@
 
 import { DecoratorNode, LexicalEditor, NodeKey, SerializedLexicalNode, Spread, $getNodeByKey, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, COMMAND_PRIORITY_LOW } from "lexical";
 import * as React from "react";
-import { LineGraphData, HeatmapData } from "@/types/charts";
+import { Line, HeatmapRow } from "@/types/charts";
 import { getChartById } from "@/lib/queries/chartQueries";
 import type { ChartMetadata } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
-import { Line } from "@/components/charts/line/Line";
+import { Line as LineChart } from "@/components/charts/line/Line";
 import { Heatmap } from "@/components/charts/heatmap/Heatmap";
 import { Card } from "@/components/ui/card";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
@@ -141,11 +141,11 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
         <div className="text-sm text-muted-foreground">Loading chart…</div>
       ) : type === "line" && chart.data ? (
         <div className="w-full h-96">
-          <Line data={chart.data as LineGraphData} />
+          <LineChart lines={chart.data as Line[]} />
         </div>
       ) : type === "heatmap" && chart.data ? (
         <div className="w-full h-96">
-          <Heatmap data={chart.data as HeatmapData} />
+          <Heatmap data={chart.data as HeatmapRow[]} />
         </div>
       ) : (
         <div className="text-sm text-muted-foreground">No data available</div>

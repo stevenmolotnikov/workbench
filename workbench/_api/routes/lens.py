@@ -4,7 +4,7 @@ import torch as t
 
 from ..utils import make_backend
 from ..state import AppState, get_state
-from ..data_models import Token
+from ..data_models import Token, NDIFResponse
 
 class LensLineRequest(BaseModel):
     model: str
@@ -22,25 +22,26 @@ class Line(BaseModel):
     data: list[Point]
 
 
-class LensLineResponse(BaseModel):
-    lines: list[Line]
+class LensLineResponse(NDIFResponse):
+    data: list[Line] | None = None
 
 
 router = APIRouter()
 
 
 def line(
-    req: LensLineRequest, state: AppState, job_id: str | None = None
+    req: LensLineRequest, state: AppState
 ) -> list[t.Tensor] | str:
     model = state.get_model(req.model)
 
-    def decode(x):
-        return model.lm_head(model.model.ln_f(x))
-
-    results = []
     with model.trace(
-        req.prompt, remote=state.remote, backend=make_backend(model, job_id)
+        req.prompt, remote=state.remote, backend=make_backend(model)
     ) as tracer:
+
+        def decode(x):
+            return model.lm_head(model.model.ln_f(x))
+
+        results = []
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             hidden_BLD = layer.output[0]
@@ -56,25 +57,37 @@ def line(
                 probs_V, 0, t.tensor(req.token.target_ids)
             )
 
-            results.append(target_probs_X.save())
+            results.append(target_probs_X)
 
-    if job_id is None:
+        results.save()
+
+    if state.remote:
         return tracer.backend.job_id
 
     return results
 
+def get_remote_line(job_id: str, state: AppState):
+    backend = state.make_backend(job_id=job_id)
+    results = backend()
+    return results['results']
 
 def collect_line_results(
-    lens_request: LensLineRequest,
+    req: LensLineRequest,
     state: AppState,
-    job_id: str,
+    job_id: str | None = None,
 ):
-    # Check or download results
-    raw_results = line(lens_request, state, job_id)
-    raw_results = [r.value for r in raw_results]
+    if job_id is None:
+        result = line(req, state)
+        if isinstance(result, str):
+            return LensLineResponse(job_id=result)
+        raw_results = result
+    else:
+        raw_results = get_remote_line(job_id, state)
+        if isinstance(raw_results, str):
+            return LensLineResponse(job_id=raw_results)
 
-    tok = state[lens_request.model].tokenizer
-    target_token_strs = tok.batch_decode(lens_request.token.target_ids)
+    tok = state[req.model].tokenizer
+    target_token_strs = tok.batch_decode(req.token.target_ids)
 
     # Postprocess results
     lines = []
@@ -96,11 +109,10 @@ def collect_line_results(
 
 
 @router.post("/start-line")
-async def get_line(
+async def start_line(
     lens_request: LensLineRequest, state: AppState = Depends(get_state)
 ):
-    return {"job_id": line(lens_request, state)}
-
+    return collect_line_results(lens_request, state)
 
 @router.post("/results-line/{job_id}")
 async def collect_line(
@@ -126,58 +138,72 @@ class GridRow(BaseModel):
     data: list[GridCell]
 
 
-class GridLensResponse(BaseModel):
-    rows: list[GridRow]
+class GridLensResponse(NDIFResponse):
+    data: list[GridRow] | None = None
 
 
 def heatmap(
-    req: GridLensRequest, state: AppState, job_id: str | None = None
+    req: GridLensRequest, state: AppState
 ) -> tuple[list[t.Tensor], list[t.Tensor]] | str:
     model = state.get_model(req.model)
 
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
-    pred_ids = []
-    probs = []
-
-    def _compute_top_probs(logits_BLV: t.Tensor):
-        relevant_tokens_LV = logits_BLV[0, :, :]
-
-        probs_LV = t.nn.functional.softmax(relevant_tokens_LV, dim=-1)
-        pred_ids_L = relevant_tokens_LV.argmax(dim=-1)
-
-        # Gather probabilities over the predicted tokens
-        pred_ids_L1 = pred_ids_L.unsqueeze(1)
-        probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
-
-        pred_ids.append(pred_ids_L.save())
-        probs.append(probs_L.save())
-
     with model.trace(
-        req.prompt, remote=state.remote, backend=make_backend(model, job_id)
+        req.prompt, remote=state.remote, backend=state.make_backend(model)
     ) as tracer:
+
+        pred_ids = []
+        probs = []
+
+        def _compute_top_probs(logits_BLV: t.Tensor):
+            relevant_tokens_LV = logits_BLV[0, :, :]
+
+            probs_LV = t.nn.functional.softmax(relevant_tokens_LV, dim=-1)
+            pred_ids_L = relevant_tokens_LV.argmax(dim=-1)
+
+            # Gather probabilities over the predicted tokens
+            pred_ids_L1 = pred_ids_L.unsqueeze(1)
+            probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
+
+            pred_ids.append(pred_ids_L.tolist())
+            probs.append(probs_L.tolist())
+
+
         for layer in model.model.layers[:-1]:
             _compute_top_probs(decode(layer.output[0]))
         _compute_top_probs(model.output.logits)
 
-    if job_id is None:
+        probs.save()
+        pred_ids.save()
+
+    if state.remote:
         return tracer.backend.job_id
 
-    probs = [p.tolist() for p in probs]
-    pred_ids = [p.tolist() for p in pred_ids]
-    return pred_ids, probs
+    return probs, pred_ids
 
+
+def get_remote_heatmap(job_id: str, state: AppState):
+    backend = state.make_backend(job_id=job_id)
+    results = backend()
+    return results['probs'], results['pred_ids']
 
 def collect_grid_results(
     lens_request: GridLensRequest,
     state: AppState,
-    job_id: str,
+    job_id: str | None = None,
 ):
     """Background task to process grid lens computation"""
 
     # NOTE: These are ordered by layer
-    pred_ids, probs = heatmap(lens_request, state, job_id)
+    if job_id is None:
+        result = heatmap(lens_request, state)
+        if isinstance(result, str):
+            return GridLensResponse(job_id=result)
+        probs, pred_ids = result
+    else:
+        probs, pred_ids = get_remote_heatmap(job_id, state)
 
     # probs = [p.tolist() for p in probs]
     # pred_ids = [p.tolist() for p in pred_ids]
@@ -200,7 +226,7 @@ def collect_grid_results(
         rows.append(GridRow(id=f"{input_str}-{seq_idx}", data=points))
 
     return GridLensResponse(
-        rows=rows,
+        data=rows,
     )
 
 
@@ -208,7 +234,7 @@ def collect_grid_results(
 async def get_grid(
     lens_request: GridLensRequest, state: AppState = Depends(get_state)
 ):
-    return {"job_id": heatmap(lens_request, state)}
+    return heatmap(lens_request, state)
 
 
 @router.post("/results-grid/{job_id}")

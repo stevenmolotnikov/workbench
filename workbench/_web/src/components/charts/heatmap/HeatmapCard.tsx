@@ -55,7 +55,7 @@ const PendingHeatmap = () => {
             </div>
 
             <div className="flex h-[90%] w-full">
-                <Heatmap data={{ rows: [] }} />
+                <Heatmap rows={[]} />
             </div>
 
             <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
@@ -120,7 +120,7 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardContentProps) => {
                         ref={selectionCanvasRef}
                         className="absolute inset-0 size-full pointer-events-auto z-20"
                     />
-                    <Heatmap data={data} />
+                    <Heatmap rows={data} />
                 </div>
             </div>
         </div>

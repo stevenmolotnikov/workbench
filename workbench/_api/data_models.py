@@ -6,8 +6,8 @@ class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: str
 
-class NDIFRequest(BaseModel):
-    job_id: str
+class NDIFResponse(BaseModel):
+    job_id: str | None = None
 
 class Token(BaseModel):
     idx: int

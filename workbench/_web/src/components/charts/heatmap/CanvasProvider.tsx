@@ -121,9 +121,9 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setTooltip(prev => prev.visible ? { ...prev, visible: false } : prev)
             return
         }
-        const firstRow = data.rows[0]
+        const firstRow = data[0]
         const xVal = firstRow?.data[cell.col]?.x ?? ""
-        const yVal = data.rows[cell.row]?.data[cell.col]?.y ?? null
+        const yVal = data[cell.row]?.data[cell.col]?.y ?? null
         const color = valueToBlue(typeof yVal === 'number' ? yVal : null)
         const left = e.clientX + 12
         const top = e.clientY - 12

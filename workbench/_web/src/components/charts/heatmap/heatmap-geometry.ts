@@ -1,9 +1,9 @@
-import { HeatmapData } from "@/types/charts";
+import { HeatmapRow } from "@/types/charts";
 import { heatmapMargin as margin } from "../theming";
 
 // Calculate cell dimensions based on canvas size and data
-const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: HeatmapData) => {
-    if (!canvasRef.current || !data.rows.length || !data.rows[0].data.length) {
+const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: HeatmapRow[]) => {
+    if (!canvasRef.current || !data.length || !data[0].data.length) {
         return null;
     }
 
@@ -15,8 +15,8 @@ const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: 
     const gridWidth = width - margin.left - margin.right;
     const gridHeight = height - margin.top - margin.bottom;
 
-    const numCols = data.rows[0].data.length;
-    const numRows = data.rows.length;
+    const numCols = data[0].data.length;
+    const numRows = data.length;
 
     const cellWidth = gridWidth / numCols;
     const cellHeight = gridHeight / numRows;
@@ -34,7 +34,7 @@ const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: 
 // Convert mouse position to cell indices
 const getCellFromPosition = (
     canvasRef: React.RefObject<HTMLCanvasElement>,
-    data: HeatmapData,
+    data: HeatmapRow[],
     x: number,
     y: number
 ) => {

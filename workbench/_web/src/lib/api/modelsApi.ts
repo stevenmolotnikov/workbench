@@ -12,18 +12,18 @@ interface Prediction {
     texts: string[];
 }
 
-export const executeSelected = async (request: LensConfigData): Promise<Prediction[]> => {
-    return await startAndPoll<Prediction[]>(
-        config.endpoints.startExecuteSelected,
+export const getPrediction = async (request: LensConfigData): Promise<Prediction> => {
+    return await startAndPoll<Prediction>(
+        config.endpoints.startPrediction,
         request,
-        config.endpoints.resultsExecuteSelected
+        config.endpoints.resultsPrediction
     );
 };
 
 
-export const useExecuteSelected = () => {
+export const usePrediction = () => {
     return useMutation({
-        mutationFn: executeSelected,
+        mutationFn: getPrediction,
         onError: (error, variables, context) => {
             toast.error(`Error: ${error}`);
         },

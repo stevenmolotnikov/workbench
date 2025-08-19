@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from ..utils import make_backend
 from ..state import AppState, get_state
-from ..data_models import Token
+from ..data_models import Token, NDIFResponse
 
 router = APIRouter()
 
@@ -21,16 +21,18 @@ class LensCompletion(BaseModel):
     token: Token
 
 
-def execute_selected(
-    execute_request: LensCompletion, state: AppState, job_id: str | None = None
+def get_prediction(
+    req: LensCompletion, state: AppState
 ) -> tuple[t.Tensor, t.Tensor]:
-    idxs = [execute_request.token.idx]
-    model = state.get_model(execute_request.model)
+    idxs = [req.token.idx]
+    model = state.get_model(req.model)
+
+    print("IS REMOTE", state.remote)
 
     with model.trace(
-        execute_request.prompt,
+        req.prompt,
         remote=state.remote,
-        backend=make_backend(model, job_id),
+        backend=state.make_backend(model),
     ) as tracer:
         logits_BLV = model.lm_head.output
 
@@ -40,11 +42,16 @@ def execute_selected(
         values_LV = values_LV_indices_LV[0].save()
         indices_LV = values_LV_indices_LV[1].save()
 
-    if job_id is None:
+    # Tracer will have a job_id if remote=True
+    if state.remote:
         return tracer.backend.job_id
 
     return values_LV, indices_LV
 
+def get_remote_prediction(job_id: str, state: AppState):
+    backend = state.make_backend(job_id=job_id)
+    results = backend()
+    return results["values_LV"], results["indices_LV"]
 
 class Prediction(BaseModel):
     idx: int
@@ -52,94 +59,59 @@ class Prediction(BaseModel):
     probs: list[float]
     texts: list[str]
 
+class PredictionResponse(NDIFResponse):
+    data: Prediction | None = None
 
-def collect_execute_selected_results(
-    execute_request: LensCompletion,
+def collect_prediction(
+    req: LensCompletion,
     state: AppState,
-    job_id: str,
-) -> list[Prediction]:
-    values_LV, indices_LV = execute_selected(execute_request, state, job_id)
+    job_id: str | None = None,
+) -> Prediction | str:
+    if job_id is None:
+        result = get_prediction(req, state)
+        if isinstance(result, str):
+            return PredictionResponse(job_id=result)
+        values_LV, indices_LV = result
+    else:
+        values_LV, indices_LV = get_remote_prediction(job_id, state)
 
-    tok = state[execute_request.model].tokenizer
-    idxs = [execute_request.token.idx]
-    predictions = []
+    tok = state[req.model].tokenizer
+    idxs = [req.token.idx]
 
-    for idx_values, idx_indices, token_index in zip(
-        values_LV, indices_LV, idxs
-    ):
-        # Round values to 2 decimal places
-        idx_values = t.round(idx_values * 100) / 100
-        nonzero = idx_values > 0
+    # for idx_values, idx_indices, token_index in zip(
+    #     values_LV, indices_LV, idxs
+    # ):
+    # Round values to 2 decimal places
+    idx_values = t.round(values_LV[0] * 100) / 100
+    nonzero = idx_values > 0
 
-        nonzero_values = idx_values[nonzero].tolist()
-        nonzero_indices = idx_indices[nonzero].tolist()
-        nonzero_texts = tok.batch_decode(nonzero_indices)
+    nonzero_values = idx_values[nonzero].tolist()
+    nonzero_indices = indices_LV[0][nonzero].tolist()
+    nonzero_texts = tok.batch_decode(nonzero_indices)
 
-        predictions.append(
-            Prediction(
-                idx=token_index,
-                ids=nonzero_indices,
-                probs=nonzero_values,
-                texts=nonzero_texts,
-            ).model_dump()
-        )
+    prediction = Prediction(
+        idx=idxs[0],
+        ids=nonzero_indices,
+        probs=nonzero_values,
+        texts=nonzero_texts,
+    )
 
-    return predictions
+    return PredictionResponse(data=prediction)
 
-
-@router.post("/start-execute-selected")
-async def start_execute_selected(
-    execute_request: LensCompletion, state: AppState = Depends(get_state)
+@router.post("/start-prediction")
+async def start_prediction(
+    prediction_request: LensCompletion, state: AppState = Depends(get_state)
 ):
-    return {"job_id": execute_selected(execute_request, state)}
+    print(state.remote)
+    return collect_prediction(prediction_request, state)
 
-
-@router.post("/results-execute-selected/{job_id}")
-async def collect_execute_selected(
+@router.post("/results-prediction/{job_id}")
+async def results_prediction(
     job_id: str,
-    execute_request: LensCompletion,
+    prediction_request: LensCompletion,
     state: AppState = Depends(get_state),
 ):
-    return collect_execute_selected_results(execute_request, state, job_id)
-
-
-# class EncodeRequest(BaseModel):
-#     text: str
-#     model: str
-#     add_special_tokens: bool = True
-
-
-# class DecodeRequest(BaseModel):
-#     token_ids: list[int]
-#     model: str
-#     batch: bool = False
-
-
-# @router.post("/encode")
-# async def encode(
-#     encode_request: EncodeRequest, state: AppState = Depends(get_state)
-# ):
-#     tok = state[encode_request.model].tokenizer
-#     ids = tok.encode(
-#         encode_request.text,
-#         add_special_tokens=encode_request.add_special_tokens,
-#     )
-#     text_ids = tok.batch_decode(ids)
-#     return [
-#         Token(idx=i, id=id, text=text, targetIds=[])
-#         for i, (id, text) in enumerate(zip(ids, text_ids))
-#     ]
-
-
-# @router.post("/decode")
-# async def decode(
-#     decode_request: DecodeRequest, state: AppState = Depends(get_state)
-# ):
-#     tok = state[decode_request.model].tokenizer
-#     if decode_request.batch:
-#         return {"texts": tok.batch_decode(decode_request.token_ids)}
-#     else:
-#         return {"text": tok.decode(decode_request.token_ids)}
+    return collect_prediction(prediction_request, state, job_id)
 
 
 class Completion(BaseModel):
@@ -162,7 +134,7 @@ def generate_text(
         completion_request.prompt,
         max_new_tokens=completion_request.max_new_tokens,
         remote=state.remote,
-        backend=make_backend(model, job_id),
+        backend=state.make_backend(model, job_id),
     ) as generator:
         logits = []
         with model.lm_head.all():

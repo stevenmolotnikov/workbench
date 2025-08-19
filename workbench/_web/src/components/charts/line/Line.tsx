@@ -1,6 +1,6 @@
 "use client";
 
-import type { LineGraphData } from "@/types/charts";
+import type { Line } from "@/types/charts";
 import { ResponsiveLine } from '@nivo/line'
 import { lineMargin, lineTheme, lineColors } from '../theming'
 import { useMemo } from "react";
@@ -10,7 +10,7 @@ import { hslFromCssVar } from "@/lib/utils";
 import { Tooltip } from "./Tooltip";
 
 interface LineProps {
-    data: LineGraphData;
+    lines: Line[];
     onLegendClick?: (lineId: string) => void;
     margin?: Margin;
     yRange?: [number, number];
@@ -22,11 +22,10 @@ interface LineProps {
     crosshairCanvasRef?: React.RefObject<HTMLCanvasElement>;
     lineCanvasRef?: React.RefObject<HTMLCanvasElement>;
     useTooltip?: boolean;
-    pending?: boolean;
 }
 
 export function Line({
-    data,
+    lines,
     margin = lineMargin,
     onLegendClick = () => {},
     yRange = [0, 1],
@@ -38,28 +37,27 @@ export function Line({
     crosshairCanvasRef,
     lineCanvasRef,
     useTooltip = false,
-    pending = false,
 }: LineProps) {
     const resolvedTheme = useMemo(() => resolveThemeCssVars(lineTheme), [])
 
     const colorFn = useMemo(() => {
         const hasHighlighted = highlightedLineIds.size > 0;
         return (line: { id: string }) => {
-            const lineIndex = data.lines.findIndex(l => l.id === line.id);
+            const lineIndex = lines.findIndex(l => l.id === line.id);
             const baseColor = lineColors[lineIndex % lineColors.length];
             const isHighlighted = highlightedLineIds.has(line.id);
             if (!hasHighlighted) return baseColor;
             if (isHighlighted) return baseColor;
             return hslFromCssVar('--border');
         };
-    }, [data.lines, highlightedLineIds]);
+    }, [lines, highlightedLineIds]);
 
     return (
         <div className="size-full flex flex-col">
             <div
                 className="flex flex-wrap gap-3 justify-center min-h-[5%] p-2"
             >
-                {data.lines.map((line, index) => {
+                {lines.map((line, index) => {
                     const color = lineColors[index % lineColors.length];
                     const isHighlighted = highlightedLineIds.has(line.id);
                     const hasAnyHighlighted = highlightedLineIds.size > 0;
@@ -107,7 +105,7 @@ export function Line({
                 />}
                 {useTooltip && <Tooltip />}
                 <ResponsiveLine
-                    data={data.lines}
+                    data={lines}
                     margin={margin}
                     yScale={{
                         type: 'linear',

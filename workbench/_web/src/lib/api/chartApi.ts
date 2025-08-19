@@ -12,22 +12,17 @@ import {
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
 import { useCapture } from "@/components/providers/CaptureProvider";
-import { LineGraphData, HeatmapData, ChartView } from "@/types/charts";
+import { Line, HeatmapRow, ChartView } from "@/types/charts";
 import { queryKeys } from "../queryKeys";
 import { toast } from "sonner";
 import { startAndPoll } from "../startAndPoll";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
-    try {
-        const result = await startAndPoll<{ lines: LineGraphData["lines"] }>(
-            config.endpoints.startLensLine,
-            lensRequest.completion,
-            config.endpoints.resultsLensLine
-        );
-        return { data: { lines: result.lines } as LineGraphData };
-    } catch (error) {
-        throw error;
-    }
+    return await startAndPoll<Line[]>(
+        config.endpoints.startLensLine,
+        lensRequest.completion,
+        config.endpoints.resultsLensLine
+    );
 };
 
 export const useLensLine = () => {
@@ -44,8 +39,8 @@ export const useLensLine = () => {
             configId: string;
         }) => {
             const response = await getLensLine(lensRequest);
-            await setChartData(lensRequest.chartId, response.data, "line");
-            return response.data;
+            await setChartData(lensRequest.chartId, response, "line");
+            return response;
         },
         onSuccess: (data, variables) => {
             queryClient
@@ -65,16 +60,11 @@ export const useLensLine = () => {
 };
 
 const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
-    try {
-        const result = await startAndPoll<{ rows: HeatmapData["rows"] }>(
-            config.endpoints.startLensGrid,
-            lensRequest.completion,
-            config.endpoints.resultsLensGrid
-        );
-        return { data: { rows: result.rows } as HeatmapData };
-    } catch (error) {
-        throw error;
-    }
+    return await startAndPoll<HeatmapRow[]>(
+        config.endpoints.startLensGrid,
+        lensRequest.completion,
+        config.endpoints.resultsLensGrid
+    );
 };
 
 export const useLensGrid = () => {
@@ -91,9 +81,8 @@ export const useLensGrid = () => {
             configId: string;
         }) => {
             const response = await getLensGrid(lensRequest);
-            await setChartData(lensRequest.chartId, response.data, "heatmap");
-            console.log("response.data", response.data);
-            return response.data;
+            await setChartData(lensRequest.chartId, response, "heatmap");
+            return response;
         },
         onSuccess: (data, variables) => {
             queryClient
