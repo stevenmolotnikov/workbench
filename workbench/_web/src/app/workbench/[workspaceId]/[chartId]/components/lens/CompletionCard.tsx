@@ -1,11 +1,11 @@
 "use client";
 
-import { ChartLine, CornerDownLeft, Grid3x3, X } from "lucide-react";
+import { ChartLine, CornerDownLeft, Grid3x3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
-import { executeSelected } from "@/lib/api/modelsApi";
+import { useExecuteSelected } from "@/lib/api/modelsApi";
 import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
 
@@ -32,9 +32,10 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
     const { tokenData, setTokenData } = useLensWorkspace();
 
-    const [predictions, setPredictions] = useState<Prediction[]>([]);
     const { selectedModel, currentChartType, setCurrentChartType } = useWorkspace();
-    const [editingText, setEditingText] = useState(false);
+    const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
+
+    const { mutateAsync: executeSelected, isPending: isExecuting } = useExecuteSelected();
 
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
@@ -53,13 +54,16 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         3000
     );
 
-    // Effect to trigger debounced line chart when target token IDs change
+    // NOTE(cadentj): check if this only runs once-ish
     useEffect(() => {
-        if (config.token.targetIds.length > 0) {
-            debouncedRunLineChart.cancel();
-            debouncedRunLineChart(config);
+        const fetchTokens = async () => {
+            if (config.prediction) {
+                const tokens = await encodeText(config.prompt, selectedModel.name);
+                setTokenData(tokens);
+            }
         }
-    }, [config.token.targetIds, debouncedRunLineChart]);
+        fetchTokens();
+    }, []);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,7 +91,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey && !isExecuting) {
             e.preventDefault();
             handleTokenize();
         }
@@ -95,7 +99,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
 
     const runPredictions = async (temporaryConfig: LensConfigData) => {
         const data = await executeSelected(temporaryConfig);
-        setPredictions(data);
+        temporaryConfig.prediction = data[0];
         setConfig(temporaryConfig);
         await updateChartConfigMutation({
             configId,
@@ -107,10 +111,11 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
         });
         setEditingText(false);
 
-        return predictions[0].ids.slice(0, 3);
+        return data[0].ids.slice(0, 3);
     }
 
     const handleTokenClick = async (event: React.MouseEvent<HTMLDivElement>, idx: number) => {
+        // Prevent the editing state from activating
         event.preventDefault();
         event.stopPropagation();
 
@@ -157,6 +162,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         onKeyDown={handleKeyDown}
                         className="w-full h-24"
                         placeholder="Enter your prompt here."
+                        onBlur={() => setEditingText(false)}
                     />
                 ) : (
                     <div
@@ -175,7 +181,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                 <div className="absolute bottom-2 right-2 flex items-center gap-2">
                     {!editingText && <GenerateButton
                         prompt={config.prompt}
-                        setPredictions={setPredictions}
                         config={config}
                         setConfig={setConfig}
                     />}
@@ -186,58 +191,66 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
                         onClick={() => {
                             handleTokenize();
                         }}
+                        disabled={isExecuting}
                     >
-                        <CornerDownLeft className="w-4 h-4" />
+                        {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CornerDownLeft className="w-4 h-4" />}
                     </Button>}
                 </div>
 
             </div>
 
-            {(predictions.length > 0) && (
+            {config.prediction && (
                 <div
                     className={cn(
-                        "border p-2 flex flex-col items-center gap-3 bg-muted rounded transition",
-                        editingText ? "opacity-60 blur-[0.25px] hover:opacity-100 hover:blur-0" : "opacity-100"
+                        "transition-all",
+                        (editingText || isExecuting) ? "opacity-60 blur-[0.25px]" : "opacity-100",
+                        isExecuting ? "!cursor-progress" : "cursor-pointer"
                     )}
                     onMouseDown={() => {
-                        if (editingText) setEditingText(false);                        
+                        if (editingText && !isExecuting) setEditingText(false);
                     }}
                 >
-                    <div className="flex w-full justify-between items-center">
-                        <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">
-                            <button
-                                onClick={() => handleCreateHeatmap(config)}
-                                className={cn(
-                                    "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
-                                    currentChartType === "heatmap" ? "bg-accent border" : "bg-background"
-                                )}
-                            >
-                                <Grid3x3 className="w-4 h-4" />
-                                Heatmap
-                            </button>
-                            <button
-                                onClick={() => handleCreateLineChart(config)}
-                                disabled={config.token.targetIds.length === 0}
-                                className={cn(
-                                    "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
-                                    currentChartType === "line" ? "bg-accent border" : "bg-background"
-                                )}
-                            >
-                                <ChartLine className="w-4 h-4" />
-                                Line
-                            </button>
+                    {/* Prevent pointer events when overlay is active */}
+                    <div className={cn(
+                        "flex flex-col size-full border p-2 items-center gap-3 bg-muted rounded",
+                        (editingText || isExecuting) ? "pointer-events-none" : "pointer-events-auto"
+                    )}>
+                        <div className="flex w-full justify-between items-center">
+                            <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">
+                                <button
+                                    onClick={() => handleCreateHeatmap(config)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
+                                        currentChartType === "heatmap" ? "bg-accent border" : "bg-background"
+                                    )}
+                                >
+                                    <Grid3x3 className="w-4 h-4" />
+                                    Heatmap
+                                </button>
+                                <button
+                                    onClick={() => handleCreateLineChart(config)}
+                                    disabled={config.token.targetIds.length === 0}
+                                    className={cn(
+                                        "flex items-center gap-2 px-2 py-0.5 rounded-lg text-xs",
+                                        currentChartType === "line" ? "bg-accent border" : "bg-background"
+                                    )}
+                                >
+                                    <ChartLine className="w-4 h-4" />
+                                    Line
+                                </button>
+                            </div>
+
+
+
+                            <DecoderSelector />
                         </div>
 
-
-
-                        <DecoderSelector />
+                        <PredictionBadges
+                            config={config}
+                            setConfig={setConfig}
+                            runLineChart={debouncedRunLineChart}
+                        />
                     </div>
-
-                    <PredictionBadges
-                        config={config}
-                        setConfig={setConfig}
-                        predictions={predictions}
-                    />
                 </div>
             )}
         </div>

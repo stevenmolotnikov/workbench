@@ -2,6 +2,8 @@ import config from "@/lib/config";
 import type { LensConfigData } from "@/types/lens";
 import type { Model, Token } from "@/types/models";
 import { startAndPoll } from "../startAndPoll";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface Prediction {
     idx: number;
@@ -11,16 +13,21 @@ interface Prediction {
 }
 
 export const executeSelected = async (request: LensConfigData): Promise<Prediction[]> => {
-    try {
-        const result = await startAndPoll<Prediction[]>(
-            config.endpoints.startExecuteSelected,
-            request,
-            config.endpoints.resultsExecuteSelected
-        );
-        return result;
-    } catch (error) {
-        throw error;
-    }
+    return await startAndPoll<Prediction[]>(
+        config.endpoints.startExecuteSelected,
+        request,
+        config.endpoints.resultsExecuteSelected
+    );
+};
+
+
+export const useExecuteSelected = () => {
+    return useMutation({
+        mutationFn: executeSelected,
+        onError: (error, variables, context) => {
+            toast.error(`Error: ${error}`);
+        },
+    });
 };
 
 interface Completion {

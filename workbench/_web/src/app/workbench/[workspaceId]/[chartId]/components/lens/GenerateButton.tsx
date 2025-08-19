@@ -10,12 +10,11 @@ import type { GenerationResponse } from "@/lib/api/modelsApi";
 
 interface GenerateButtonProps {
     prompt: string,
-    setPredictions: (predictions: Prediction[]) => void,
     config: LensConfigData,
     setConfig: (config: LensConfigData) => void,
 }
 
-export default function GenerateButton({ prompt, setPredictions, config, setConfig }: GenerateButtonProps) {
+export default function GenerateButton({ prompt, config, setConfig }: GenerateButtonProps) {
     const [maxNewTokens, setMaxNewTokens] = useState(3);
     const { selectedModel } = useWorkspace();
     const { tokenData, setTokenData } = useLensWorkspace();
@@ -28,10 +27,10 @@ export default function GenerateButton({ prompt, setPredictions, config, setConf
         });
 
         setTokenData(response.completion)
-        setPredictions([response.last_token_prediction]);
         setConfig({
             ...config,
             prompt: response.completion.map(token => token.text).join(""),
+            prediction: response.last_token_prediction,
             token: {
                 idx: response.completion.length - 1,
                 id: response.completion[response.completion.length - 1].id,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+    import { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncSelect from "react-select/async";
 import type { MultiValue, StylesConfig, GroupBase } from "react-select";
 import { LensConfigData } from "@/types/lens";
@@ -10,25 +10,25 @@ import { X } from "lucide-react";
 interface PredictionBadgesProps {
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
-    predictions: Prediction[];
+    runLineChart: () => void;
 }
 
 export const PredictionBadges = ({
     config,
     setConfig,
-    predictions,
+    runLineChart,
 }: PredictionBadgesProps) => {
-    const currentTokenPrediction = predictions?.[0];
+    const prediction = config.prediction;
 
     const probLookup = useMemo(() => {
-        if (!currentTokenPrediction) return null as Map<number, number> | null;
+        if (!prediction) return null as Map<number, number> | null;
         return new Map<number, number>(
-            currentTokenPrediction.ids.map((id: number, idx: number) => [
+            prediction.ids.map((id: number, idx: number) => [
                 id,
-                currentTokenPrediction.probs[idx] ?? 0,
+                prediction.probs[idx] ?? 0,
             ])
         );
-    }, [currentTokenPrediction]);
+    }, [prediction]);
 
     // Helper function to render token text with blue underscore for leading spaces and blue "\n" for newlines
     const renderTokenText = (text: string | undefined) => {
@@ -62,24 +62,24 @@ export const PredictionBadges = ({
 
     // Build options from all predicted tokens
     const options: TokenOption[] = useMemo(() => {
-        if (!currentTokenPrediction) return [];
-        return currentTokenPrediction.ids.map((id: number, index: number) => {
-            const text = currentTokenPrediction.texts[index] ?? "";
-            const prob = currentTokenPrediction.probs[index] ?? 0;
+        if (!prediction) return [];
+        return prediction.ids.map((id: number, index: number) => {
+            const text = prediction.texts[index] ?? "";
+            const prob = prediction.probs[index] ?? 0;
             return { value: id, text, prob } as TokenOption;
         });
-    }, [currentTokenPrediction]);
+    }, [prediction]);
 
     // Default to the top token (index 0) if none selected yet
     useEffect(() => {
-        if (!currentTokenPrediction) return;
-        if (config.token.targetIds.length === 0 && currentTokenPrediction.ids.length > 0) {
+        if (!prediction) return;
+        if (config.token.targetIds.length === 0 && prediction.ids.length > 0) {
             setConfig({
                 ...config,
-                token: { ...config.token, targetIds: currentTokenPrediction.ids.slice(0, 3) },
+                token: { ...config.token, targetIds: prediction.ids.slice(0, 3) },
             });
         }
-    }, [currentTokenPrediction]);
+    }, [prediction]);
 
     // Maintain a local registry of known options so selections from queries persist
     const [knownOptionsById, setKnownOptionsById] = useState<Map<number, TokenOption>>(new Map());
@@ -117,6 +117,7 @@ export const PredictionBadges = ({
             ...config,
             token: { ...config.token, targetIds: newIds },
         });
+        runLineChart();
     };
 
     const debouncedFetch = useDebouncedCallback(
@@ -182,7 +183,7 @@ export const PredictionBadges = ({
 
     const [inputValue, setInputValue] = useState<string>("");
 
-    if (!currentTokenPrediction) {
+    if (!prediction) {
         return null;
     }
 
