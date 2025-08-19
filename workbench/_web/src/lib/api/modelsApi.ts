@@ -1,8 +1,5 @@
 import config from "@/lib/config";
-import sseService from "@/lib/sseProvider";
 import type { LensConfigData } from "@/types/lens";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
 import type { Model, Token } from "@/types/models";
 import { startAndPoll } from "../startAndPoll";
 
