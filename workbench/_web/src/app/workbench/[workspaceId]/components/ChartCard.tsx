@@ -76,7 +76,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
             isSelected && "border-primary"
         )
 
-        if (process.env.NEXT_PUBLIC_LOCAL === "true") {
+        if (process.env.NEXT_PUBLIC_USE_SQLITE === "true") {
             return (
                 <div className={style} />
             );

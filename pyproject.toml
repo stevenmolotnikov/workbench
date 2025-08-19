@@ -6,9 +6,10 @@ requires-python = ">=3.8"
 dependencies = [
     "fastapi>=0.115.6",
     "python-dotenv>=1.0.1",
-    "nnsight @ git+https://github.com/ndif-team/nnsight.git@job-status",
+    # "nnsight>=0.5.0.dev15",
     # Required for .uv_sync on Modal image
     "modal>=0.65.66",
+    "nnsight==0.4.11",
 ]
 
 [project.optional-dependencies]

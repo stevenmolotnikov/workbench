@@ -1,8 +1,14 @@
 "use client";
 
 import { createClient } from '@/lib/supabase/client'
+import { redirect } from 'next/navigation'
 
 export default function LoginPage() {
+
+  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true') {
+    redirect('/workbench')
+  }
+
   const handleGitHubLogin = async () => {
     const supabase = createClient()
     console.log('Login - using redirect URL:', process.env.NEXT_PUBLIC_BASE_URL, window.location.origin)

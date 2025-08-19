@@ -18,7 +18,7 @@ import type { LensConfigData } from '@/types/lens';
 import type { HeatmapData, HeatmapViewData, LineViewData, LineGraphData } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
-const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
+const isLocal = process.env.NEXT_PUBLIC_USE_SQLITE === 'true';
 
 export const workspaces = isLocal ? sqliteWorkspaces : pgWorkspaces;
 export const charts = isLocal ? sqliteCharts : pgCharts;

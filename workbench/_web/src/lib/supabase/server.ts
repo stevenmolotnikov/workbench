@@ -5,7 +5,7 @@ export async function createClient() {
   const cookieStore = await cookies()
 
   // If local return a mock client
-  if (process.env.NEXT_PUBLIC_LOCAL === 'true') {
+  if (process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true') {
     return {
       auth: {
         getUser: async () => ({

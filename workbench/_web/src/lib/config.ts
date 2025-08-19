@@ -5,15 +5,19 @@ const config = {
     endpoints: {
         // Lens (polling)
         startLensLine: '/lens/start-line',
+        executeLensLine: '/lens/execute-line',
         resultsLensLine: (jobId: string) => `/lens/results-line/${jobId}`,
 
         startLensGrid: '/lens/start-grid',
+        executeLensGrid: '/lens/execute-grid',
         resultsLensGrid: (jobId: string) => `/lens/results-grid/${jobId}`,
 
         startExecuteSelected: '/models/start-execute-selected',
+        executeExecuteSelected: '/models/execute-execute-selected',
         resultsExecuteSelected: (jobId: string) => `/models/results-execute-selected/${jobId}`,
 
         startGenerate: '/models/start-generate',
+        executeGenerate: '/models/execute-generate',
         resultsGenerate: (jobId: string) => `/models/results-generate/${jobId}`,
         
         models: '/models/',

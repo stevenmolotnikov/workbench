@@ -5,7 +5,7 @@ config({ path: '.env' });
 
 let database: any;
 
-if (process.env.NEXT_PUBLIC_LOCAL === 'true') {
+if (process.env.NEXT_PUBLIC_USE_SQLITE === 'true') {
   const Database = require('better-sqlite3');
   const { drizzle } = require('drizzle-orm/better-sqlite3');
 
