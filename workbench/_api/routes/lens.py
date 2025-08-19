@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
-from nnsight.schema.response import ResponseModel
 
+from ..utils import make_backend
 from ..state import AppState, get_state
 from ..data_models import Token
-
-JobStatus = ResponseModel.JobStatus
-
 
 class LensLineRequest(BaseModel):
     model: str
@@ -31,6 +28,7 @@ class LensLineResponse(BaseModel):
 
 router = APIRouter()
 
+
 def line(
     req: LensLineRequest, state: AppState, job_id: str | None = None
 ) -> list[t.Tensor] | str:
@@ -41,7 +39,7 @@ def line(
 
     results = []
     with model.trace(
-        req.prompt, remote=state.remote, blocking=False, job_id=job_id
+        req.prompt, remote=state.remote, backend=make_backend(model, job_id)
     ) as tracer:
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
@@ -157,7 +155,7 @@ def heatmap(
         probs.append(probs_L.save())
 
     with model.trace(
-        req.prompt, remote=state.remote, blocking=False, job_id=job_id
+        req.prompt, remote=state.remote, backend=make_backend(model, job_id)
     ) as tracer:
         for layer in model.model.layers[:-1]:
             _compute_top_probs(decode(layer.output[0]))
@@ -165,7 +163,7 @@ def heatmap(
 
     if job_id is None:
         return tracer.backend.job_id
-    
+
     probs = [p.tolist() for p in probs]
     pred_ids = [p.tolist() for p in pred_ids]
     return pred_ids, probs

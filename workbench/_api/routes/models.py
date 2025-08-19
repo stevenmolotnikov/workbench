@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
 import torch as t
-import asyncio
 
 from pydantic import BaseModel
 
-from ..jobs import jobs
+from ..utils import make_backend
 from ..state import AppState, get_state
 from ..data_models import Token
 
@@ -31,8 +30,7 @@ def execute_selected(
     with model.trace(
         execute_request.prompt,
         remote=state.remote,
-        blocking=False,
-        job_id=job_id,
+        backend=make_backend(model, job_id),
     ) as tracer:
         logits_BLV = model.lm_head.output
 
@@ -164,8 +162,7 @@ def generate_text(
         completion_request.prompt,
         max_new_tokens=completion_request.max_new_tokens,
         remote=state.remote,
-        blocking=False,
-        job_id=job_id,
+        backend=make_backend(model, job_id),
     ) as generator:
         logits = []
         with model.lm_head.all():
