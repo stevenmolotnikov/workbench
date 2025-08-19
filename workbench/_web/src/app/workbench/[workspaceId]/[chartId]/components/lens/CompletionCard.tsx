@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
-import { useExecuteSelected, useGenerate } from "@/lib/api/modelsApi";
+import { executeSelected } from "@/lib/api/modelsApi";
 import type { Prediction } from "@/types/models";
 import type { LensConfigData } from "@/types/lens";
 
@@ -36,7 +36,6 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     const { selectedModel, currentChartType, setCurrentChartType } = useWorkspace();
     const [editingText, setEditingText] = useState(false);
 
-    const { mutateAsync: getExecuteSelected, isPending: isExecuting } = useExecuteSelected();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
@@ -95,7 +94,7 @@ export function CompletionCard({ initialConfig }: CompletionCardProps) {
     };
 
     const runPredictions = async (temporaryConfig: LensConfigData) => {
-        const data = await getExecuteSelected(temporaryConfig);
+        const data = await executeSelected(temporaryConfig);
         setPredictions(data);
         setConfig(temporaryConfig);
         await updateChartConfigMutation({

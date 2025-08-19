@@ -155,30 +155,40 @@ class GenerationResponse(BaseModel):
     last_token_prediction: Prediction
 
 
-async def generate_text(completion_request: Completion, state: AppState):
-    def _generate_text(completion_request: Completion, state: AppState):
-        model = state.get_model(completion_request.model)
+def generate_text(
+    completion_request: Completion, state: AppState, job_id: str | None = None
+):
+    model = state.get_model(completion_request.model)
 
-        with model.generate(
-            completion_request.prompt,
-            max_new_tokens=completion_request.max_new_tokens,
-            remote=state.remote,
-        ):
-            logits = []
-            with model.lm_head.all():
-                logits.append(model.lm_head.output)
+    with model.generate(
+        completion_request.prompt,
+        max_new_tokens=completion_request.max_new_tokens,
+        remote=state.remote,
+        blocking=False,
+        job_id=job_id,
+    ) as generator:
+        logits = []
+        with model.lm_head.all():
+            logits.append(model.lm_head.output)
 
-            probs_V = logits[0][0, -1, :].softmax(dim=-1)
-            values_V_indices_V = t.sort(probs_V, dim=-1, descending=True)
-            values_V = values_V_indices_V[0].save()
-            indices_V = values_V_indices_V[1].save()
+        probs_V = logits[0][0, -1, :].softmax(dim=-1)
+        values_V_indices_V = t.sort(probs_V, dim=-1, descending=True)
+        values_V = values_V_indices_V[0].save()
+        indices_V = values_V_indices_V[1].save()
 
-            new_token_ids = model.generator.output.save()
+        new_token_ids = model.generator.output.save()
 
-        return values_V, indices_V, new_token_ids[0]
+    if job_id is None:
+        return generator.backend.job_id
 
-    values_V, indices_V, new_token_ids = await asyncio.to_thread(
-        _generate_text, completion_request, state
+    return values_V, indices_V, new_token_ids[0]
+
+
+def collect_generation_results(
+    completion_request: Completion, state: AppState, job_id: str
+):
+    values_V, indices_V, new_token_ids = generate_text(
+        completion_request, state, job_id
     )
 
     tok = state[completion_request.model].tokenizer
@@ -208,13 +218,17 @@ async def generate_text(completion_request: Completion, state: AppState):
     ).model_dump()
 
 
-@router.post("/generate")
+@router.post("/start-generate")
 async def generate(
     generate_request: Completion, state: AppState = Depends(get_state)
 ):
-    return jobs.create_job(generate_text, generate_request, state)
+    return {"job_id": generate_text(generate_request, state)}
 
 
-@router.get("/listen-generate/{job_id}")
-async def listen_generate(job_id: str):
-    return jobs.get_job(job_id)
+@router.post("/results-generate/{job_id}")
+async def collect_generate(
+    job_id: str,
+    generate_request: Completion,
+    state: AppState = Depends(get_state),
+):
+    return generate_text(generate_request, state, job_id)

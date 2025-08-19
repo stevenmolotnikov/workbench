@@ -13,8 +13,8 @@ const config = {
         startExecuteSelected: '/models/start-execute-selected',
         resultsExecuteSelected: (jobId: string) => `/models/results-execute-selected/${jobId}`,
 
-        getGenerate: '/models/generate',
-        listenGenerate: '/models/listen-generate',
+        startGenerate: '/models/start-generate',
+        resultsGenerate: (jobId: string) => `/models/results-generate/${jobId}`,
         
         models: '/models/',
         // encode: '/models/encode',

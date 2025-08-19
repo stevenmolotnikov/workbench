@@ -13,7 +13,7 @@ interface Prediction {
     texts: string[];
 }
 
-export const getExecuteSelected = async (request: LensConfigData): Promise<Prediction[]> => {
+export const executeSelected = async (request: LensConfigData): Promise<Prediction[]> => {
     try {
         const result = await startAndPoll<Prediction[]>(
             config.endpoints.startExecuteSelected,
@@ -26,17 +26,6 @@ export const getExecuteSelected = async (request: LensConfigData): Promise<Predi
     }
 };
 
-
-export const useExecuteSelected = () => {
-    return useMutation({
-        mutationFn: getExecuteSelected,
-        onError: (error, variables, context) => {
-            toast.error(`Error: ${error}`);
-        },
-    });
-};
-
-
 interface Completion {
     prompt: string;
     max_new_tokens: number;
@@ -48,31 +37,20 @@ export interface GenerationResponse {
     last_token_prediction: Prediction;
 }
 
-export const getGenerate = async (request: Completion): Promise<GenerationResponse> => {
-    const response = await fetch(config.getApiUrl(config.endpoints.getGenerate), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-    });
+export const generate = async (request: Completion): Promise<GenerationResponse> => {
+    try {
+        const result = await startAndPoll<GenerationResponse>(
+            config.endpoints.startGenerate,
+            request,
+            config.endpoints.resultsGenerate
+        );
 
-    if (!response.ok) throw new Error("Failed to start computation");
-    const { job_id: jobId } = await response.json();
-
-    const result = await sseService.listenToSSE<GenerationResponse>(
-        config.endpoints.listenGenerate + `/${jobId}`
-    );
-    return result;
+        console.log(result);
+        return result;
+    } catch (error) {
+        throw error;
+    }
 }
-
-export const useGenerate = () => {
-    return useMutation({
-        mutationFn: getGenerate,
-        onError: (error, variables, context) => {
-            toast.error(`Error: ${error}`);
-        },
-    });
-};
-
 
 export const getModels = async (): Promise<Model[]> => {
     const response = await fetch(config.getApiUrl(config.endpoints.models));
