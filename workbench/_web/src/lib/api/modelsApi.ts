@@ -4,6 +4,7 @@ import type { LensConfigData } from "@/types/lens";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Model, Token } from "@/types/models";
+import { startAndPoll } from "../startAndPoll";
 
 interface Prediction {
     idx: number;
@@ -13,20 +14,18 @@ interface Prediction {
 }
 
 export const getExecuteSelected = async (request: LensConfigData): Promise<Prediction[]> => {
-    const response = await fetch(config.getApiUrl(config.endpoints.getExecuteSelected), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-    });
-
-    if (!response.ok) throw new Error("Failed to start computation");
-    const { job_id: jobId } = await response.json();
-
-    const result = await sseService.listenToSSE<Prediction[]>(
-        config.endpoints.listenExecuteSelected + `/${jobId}`
-    );
-    return result;
+    try {
+        const result = await startAndPoll<Prediction[]>(
+            config.endpoints.startExecuteSelected,
+            request,
+            config.endpoints.resultsExecuteSelected
+        );
+        return result;
+    } catch (error) {
+        throw error;
+    }
 };
+
 
 export const useExecuteSelected = () => {
     return useMutation({

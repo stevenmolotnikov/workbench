@@ -3,23 +3,25 @@
 const config = {
     backendUrl: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000',
     endpoints: {
-        getLensLine: '/lens/get-line',
-        listenLensLine: '/lens/listen-line',
+        // Lens (polling)
+        startLensLine: '/lens/start-line',
+        resultsLensLine: (jobId: string) => `/lens/results-line/${jobId}`,
 
-        getLensGrid: '/lens/get-grid',
-        listenLensGrid: '/lens/listen-grid',
+        startLensGrid: '/lens/start-grid',
+        resultsLensGrid: (jobId: string) => `/lens/results-grid/${jobId}`,
 
-        getExecuteSelected: '/models/get-execute-selected',
-        listenExecuteSelected: '/models/listen-execute-selected',
+        startExecuteSelected: '/models/start-execute-selected',
+        resultsExecuteSelected: (jobId: string) => `/models/results-execute-selected/${jobId}`,
 
         getGenerate: '/models/generate',
         listenGenerate: '/models/listen-generate',
         
         models: '/models/',
-        encode: '/models/encode',
-        decode: '/models/decode',
+        // encode: '/models/encode',
+        // decode: '/models/decode',
     },
     getApiUrl: (endpoint: string) => `${config.backendUrl}${endpoint}`,
+    ndifStatusUrl: (jobId: string) => `https://ndif.dev/response/${jobId}`,
 } as const;
 
-export default config; 
+export default config;

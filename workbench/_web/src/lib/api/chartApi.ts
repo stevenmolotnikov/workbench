@@ -12,52 +12,17 @@ import {
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
 import { useCapture } from "@/components/providers/CaptureProvider";
-import { LineGraphData, HeatmapData, ChartData, ChartView } from "@/types/charts";
+import { LineGraphData, HeatmapData, ChartView } from "@/types/charts";
 import { queryKeys } from "../queryKeys";
 import { toast } from "sonner";
-
-const POLL_INTERVAL_MS = 1000;
-const POLL_TIMEOUT_MS = 15000;
-
-async function startJob(startPath: string, body: unknown): Promise<string> {
-    const response = await fetch(config.getApiUrl(startPath), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-    });
-    if (!response.ok) throw new Error("Failed to start job");
-    const jobId = await response.json();
-    if (typeof jobId !== "string") throw new Error("Invalid job id response");
-    return jobId;
-}
-
-async function pollUntilCompleted<T>(pollPathBase: string, jobId: string): Promise<T> {
-    const startedAt = Date.now();
-    while (true) {
-        if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-            throw new Error("Timed out waiting for job to complete");
-        }
-
-        const pollResp = await fetch(config.getApiUrl(`${pollPathBase}/${jobId}`));
-        if (!pollResp.ok) throw new Error("Polling failed");
-        const data = await pollResp.json();
-        const status = data?.status as string | undefined;
-
-        if (status === "COMPLETED") {
-            return data as T;
-        }
-
-        // For non-terminal statuses, wait and try again
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    }
-}
+import { startAndPoll } from "../startAndPoll";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
-        const jobId = await startJob("/lens/start-line", lensRequest.completion);
-        const result = await pollUntilCompleted<{ lines: LineGraphData["lines"]; status: string }>(
-            "/lens/poll-line",
-            jobId
+        const result = await startAndPoll<{ lines: LineGraphData["lines"] }>(
+            config.endpoints.startLensLine,
+            lensRequest.completion,
+            config.endpoints.resultsLensLine
         );
         return { data: { lines: result.lines } as LineGraphData };
     } catch (error) {
@@ -100,10 +65,10 @@ export const useLensLine = () => {
 
 const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     try {
-        const jobId = await startJob("/lens/start-grid", lensRequest.completion);
-        const result = await pollUntilCompleted<{ rows: HeatmapData["rows"]; status: string }>(
-            "/lens/poll-grid",
-            jobId
+        const result = await startAndPoll<{ rows: HeatmapData["rows"] }>(
+            config.endpoints.startLensGrid,
+            lensRequest.completion,
+            config.endpoints.resultsLensGrid
         );
         return { data: { rows: result.rows } as HeatmapData };
     } catch (error) {

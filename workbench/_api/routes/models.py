@@ -11,19 +11,29 @@ from ..data_models import Token
 router = APIRouter()
 
 
+@router.get("/")
+async def get_models(state: AppState = Depends(get_state)):
+    return state.get_config().get_model_list()
+
+
 class LensCompletion(BaseModel):
     model: str
     prompt: str
     token: Token
 
 
-def _execute_selected(
-    execute_request: LensCompletion, state: AppState
+def execute_selected(
+    execute_request: LensCompletion, state: AppState, job_id: str | None = None
 ) -> tuple[t.Tensor, t.Tensor]:
     idxs = [execute_request.token.idx]
     model = state.get_model(execute_request.model)
 
-    with model.trace(execute_request.prompt, remote=state.remote):
+    with model.trace(
+        execute_request.prompt,
+        remote=state.remote,
+        blocking=False,
+        job_id=job_id,
+    ) as tracer:
         logits_BLV = model.lm_head.output
 
         logits_LV = logits_BLV[0, idxs, :].softmax(dim=-1)
@@ -31,6 +41,9 @@ def _execute_selected(
 
         values_LV = values_LV_indices_LV[0].save()
         indices_LV = values_LV_indices_LV[1].save()
+
+    if job_id is None:
+        return tracer.backend.job_id
 
     return values_LV, indices_LV
 
@@ -42,13 +55,12 @@ class Prediction(BaseModel):
     texts: list[str]
 
 
-async def process_execute_selected_background(
+def collect_execute_selected_results(
     execute_request: LensCompletion,
     state: AppState,
+    job_id: str,
 ) -> list[Prediction]:
-    values_LV, indices_LV = await asyncio.to_thread(
-        _execute_selected, execute_request, state
-    )
+    values_LV, indices_LV = execute_selected(execute_request, state, job_id)
 
     tok = state[execute_request.model].tokenizer
     idxs = [execute_request.token.idx]
@@ -77,62 +89,59 @@ async def process_execute_selected_background(
     return predictions
 
 
-@router.post("/get-execute-selected")
-async def get_execute_selected(
+@router.post("/start-execute-selected")
+async def start_execute_selected(
     execute_request: LensCompletion, state: AppState = Depends(get_state)
 ):
-    return jobs.create_job(
-        process_execute_selected_background, execute_request, state
-    )
+    return {"job_id": execute_selected(execute_request, state)}
 
 
-@router.get("/listen-execute-selected/{job_id}")
-async def listen_execute_selected(job_id: str):
-    return jobs.get_job(job_id)
-
-
-@router.get("/")
-async def get_models(state: AppState = Depends(get_state)):
-    return state.get_config().get_model_list()
-
-
-class EncodeRequest(BaseModel):
-    text: str
-    model: str
-    add_special_tokens: bool = True
-
-
-class DecodeRequest(BaseModel):
-    token_ids: list[int]
-    model: str
-    batch: bool = False
-
-
-@router.post("/encode")
-async def encode(
-    encode_request: EncodeRequest, state: AppState = Depends(get_state)
+@router.post("/results-execute-selected/{job_id}")
+async def collect_execute_selected(
+    job_id: str,
+    execute_request: LensCompletion,
+    state: AppState = Depends(get_state),
 ):
-    tok = state[encode_request.model].tokenizer
-    ids = tok.encode(
-        encode_request.text,
-        add_special_tokens=encode_request.add_special_tokens,
-    )
-    text_ids = tok.batch_decode(ids)
-    return [
-        Token(idx=i, id=id, text=text, targetIds=[])
-        for i, (id, text) in enumerate(zip(ids, text_ids))
-    ]
+    return collect_execute_selected_results(execute_request, state, job_id)
 
 
-@router.post("/decode")
-async def decode(
-    decode_request: DecodeRequest, state: AppState = Depends(get_state)
-):
-    tok = state[decode_request.model].tokenizer
-    if decode_request.batch:
-        return {"texts": tok.batch_decode(decode_request.token_ids)}
-    else:
-        return {"text": tok.decode(decode_request.token_ids)}
+# class EncodeRequest(BaseModel):
+#     text: str
+#     model: str
+#     add_special_tokens: bool = True
+
+
+# class DecodeRequest(BaseModel):
+#     token_ids: list[int]
+#     model: str
+#     batch: bool = False
+
+
+# @router.post("/encode")
+# async def encode(
+#     encode_request: EncodeRequest, state: AppState = Depends(get_state)
+# ):
+#     tok = state[encode_request.model].tokenizer
+#     ids = tok.encode(
+#         encode_request.text,
+#         add_special_tokens=encode_request.add_special_tokens,
+#     )
+#     text_ids = tok.batch_decode(ids)
+#     return [
+#         Token(idx=i, id=id, text=text, targetIds=[])
+#         for i, (id, text) in enumerate(zip(ids, text_ids))
+#     ]
+
+
+# @router.post("/decode")
+# async def decode(
+#     decode_request: DecodeRequest, state: AppState = Depends(get_state)
+# ):
+#     tok = state[decode_request.model].tokenizer
+#     if decode_request.batch:
+#         return {"texts": tok.batch_decode(decode_request.token_ids)}
+#     else:
+#         return {"text": tok.decode(decode_request.token_ids)}
 
 
 class Completion(BaseModel):
