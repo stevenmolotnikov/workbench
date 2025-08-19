@@ -2,11 +2,13 @@ import asyncio
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
+from nnsight.schema.response import ResponseModel
 
 from ..state import AppState, get_state
 from ..data_models import Token
 from ..jobs import jobs
 
+JobStatus = ResponseModel.JobStatus
 
 class LensLineRequest(BaseModel):
     model: str
@@ -25,20 +27,23 @@ class Line(BaseModel):
 
 
 class LensLineResponse(BaseModel):
-    lines: list[Line]
-
+    lines: list[Line] | None = None
+    status: JobStatus
+    job_id: str
 
 router = APIRouter()
 
 
-def line(req: LensLineRequest, state: AppState):
+def line(req: LensLineRequest, state: AppState, job_id: str | None = None) -> tuple[JobStatus, str, list[t.Tensor]]:
     model = state.get_model(req.model)
 
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
     results = []
-    with model.trace(req.prompt, remote=state.remote):
+    with model.trace(
+        req.prompt, remote=state.remote, blocking=False, job_id=job_id
+    ) as tracer:
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             hidden_BLD = layer.output[0]
@@ -56,15 +61,26 @@ def line(req: LensLineRequest, state: AppState):
 
             results.append(target_probs_X.save())
 
-    return [r.value for r in results]
+    return (
+        tracer.backend.job_status,
+        tracer.backend.job_id,
+        results,
+    )
 
-
-async def execute_line(
+async def collect_line_results(
     lens_request: LensLineRequest,
     state: AppState,
 ):
-    # Run computation in thread pool
-    raw_results = await asyncio.to_thread(line, lens_request, state)
+    # Check or download results
+    job_status, job_id, raw_results = line(lens_request, state)
+
+    if job_status == JobStatus.COMPLETED:
+        raw_results = [r.value for r in raw_results]
+    else:
+        return LensLineResponse(
+            job_id=job_id,
+            status=job_status,
+        ).model_dump()
 
     tok = state[lens_request.model].tokenizer
     target_token_strs = tok.batch_decode(lens_request.token.target_ids)
@@ -75,43 +91,52 @@ async def execute_line(
         for line_idx, prob in enumerate(probs.tolist()):
             if layer_idx == 0:
                 lines.append(
-                    Line(id=target_token_strs[line_idx].replace(" ", "_"), data=[Point(x=layer_idx, y=prob)])
+                    Line(
+                        id=target_token_strs[line_idx].replace(" ", "_"),
+                        data=[Point(x=layer_idx, y=prob)],
+                    )
                 )
             else:
                 lines[line_idx].data.append(Point(x=layer_idx, y=prob))
 
     return LensLineResponse(
         lines=lines,
-    ).model_dump()
+        status=job_status,
+        job_id=job_id,
+    )
 
 
-@router.post("/get-line")
+@router.post("/start-line")
 async def get_line(
     lens_request: LensLineRequest, state: AppState = Depends(get_state)
 ):
-    return jobs.create_job(execute_line, lens_request, state)
+    _, job_id, _ = line(lens_request, state)
+    return job_id
 
-
-@router.get("/listen-line/{job_id}")
-async def listen_line(job_id: str):
-    """Listen for line lens results via SSE using MemoryObjectStream"""
-    return jobs.get_job(job_id)
+@router.get("/poll-line/{job_id}")
+async def poll_line(job_id: str):
+    return collect_line_results(job_id)
 
 
 class GridLensRequest(BaseModel):
     model: str
     prompt: str
 
+
 class GridCell(Point):
     label: str
+
 
 class GridRow(BaseModel):
     # Token ID
     id: str
     data: list[GridCell]
 
+
 class GridLensResponse(BaseModel):
-    rows: list[GridRow]
+    rows: list[GridRow] | None = None
+    status: JobStatus
+    job_id: str
 
 
 def heatmap(req: GridLensRequest, state: AppState):
@@ -136,27 +161,40 @@ def heatmap(req: GridLensRequest, state: AppState):
         pred_ids.append(pred_ids_L.save())
         probs.append(probs_L.save())
 
-    with model.trace(req.prompt, remote=state.remote):
+    with model.trace(req.prompt, remote=state.remote) as tracer:
         for layer in model.model.layers[:-1]:
             _compute_top_probs(decode(layer.output[0]))
         _compute_top_probs(model.output.logits)
 
-    # TEMP FIX FOR 0.4
-    # Specifically, can't call .tolist() bc items are still proxies
-    probs = [p.tolist() for p in probs]
-    pred_ids = [p.tolist() for p in pred_ids]
+    return (
+        tracer.backend.job_status,
+        tracer.backend.job_id,
+        pred_ids,
+        probs,
+    )
 
-    return pred_ids, probs
 
-
-async def execute_grid(
+async def collect_grid_results(
     lens_request: GridLensRequest,
     state: AppState,
 ):
     """Background task to process grid lens computation"""
 
     # NOTE: These are ordered by layer
-    pred_ids, probs = await asyncio.to_thread(heatmap, lens_request, state)
+    job_status, job_id, pred_ids, probs = heatmap(lens_request, state)
+
+    if job_status == JobStatus.COMPLETED:
+
+        # TEMP FIX FOR 0.4
+        # Specifically, can't call .tolist() bc items are still proxies
+        probs = [p.tolist() for p in probs]
+        pred_ids = [p.tolist() for p in pred_ids]
+
+    else:
+        return GridLensResponse(
+            status=job_status,
+            job_id=job_id,
+        ).model_dump()
 
     # Get the stringified tokens of the input
     tok = state[lens_request.model].tokenizer
@@ -175,17 +213,21 @@ async def execute_grid(
         # Add the input string to the row id to make it unique
         rows.append(GridRow(id=f"{input_str}-{seq_idx}", data=points))
 
-    return GridLensResponse(rows=rows).model_dump()
+    return GridLensResponse(
+        rows=rows,
+        status=job_status,
+        job_id=job_id,
+    )
 
 
-@router.post("/get-grid")
+@router.post("/start-grid")
 async def get_grid(
     lens_request: GridLensRequest, state: AppState = Depends(get_state)
 ):
-    return jobs.create_job(execute_grid, lens_request, state)
+    _, job_id, _ = heatmap(lens_request, state)
+    return job_id
 
 
-@router.get("/listen-grid/{job_id}")
-async def listen_grid(job_id: str):
-    """Listen for grid lens results via SSE using MemoryObjectStream"""
-    return jobs.get_job(job_id)
+@router.get("/poll-grid/{job_id}")
+async def poll_grid(job_id: str):
+    return collect_grid_results(job_id)
