@@ -188,7 +188,7 @@ export const PredictionBadges = ({
                             </span>
                             </span>
                         </TooltipTrigger>
-                        <TooltipContent side="right" className="bg-background border text-foreground">Default top 3</TooltipContent>
+                        <TooltipContent side="right" >Default top 3</TooltipContent>
                     </Tooltip>
 
                 {config.token.targetIds.length > 0 &&

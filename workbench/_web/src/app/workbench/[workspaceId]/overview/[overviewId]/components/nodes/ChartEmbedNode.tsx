@@ -140,11 +140,11 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
       {!chart ? (
         <div className="text-sm text-muted-foreground">Loading chart…</div>
       ) : type === "line" && chart.data ? (
-        <div className="w-full h-96">
+        <div className="w-full h-86">
           <LineChart lines={chart.data as Line[]} />
         </div>
       ) : type === "heatmap" && chart.data ? (
-        <div className="w-full h-96">
+        <div className="w-full h-86">
           <Heatmap data={chart.data as HeatmapRow[]} />
         </div>
       ) : (
