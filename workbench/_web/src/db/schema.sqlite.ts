@@ -64,6 +64,7 @@ export const documents = sqliteTable("documents", {
     workspaceId: text("workspace_id").notNull(),
     content: text("content", { mode: 'json' }).notNull(), // JSON stored as text in SQLite
     createdAt: integer("created_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull(),
+    updatedAt: integer("updated_at", { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull().$onUpdate(() => new Date()),
 });
 
 // Generate types from schema
