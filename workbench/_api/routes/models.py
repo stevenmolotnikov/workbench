@@ -87,7 +87,7 @@ def process_prediction(
         texts=nonzero_texts,
     )
 
-    return {"data": prediction}
+    return prediction
 
 
 @router.post("/start-prediction", response_model=PredictionResponse)
@@ -100,7 +100,8 @@ async def start_prediction(
     if state.remote:
         return {"job_id": backend.job_id}
 
-    return process_prediction(values_LV, indices_LV, prediction_request, state)
+    data = process_prediction(values_LV, indices_LV, prediction_request, state)
+    return {"data": data}
 
 
 @router.post("/results-prediction/{job_id}", response_model=PredictionResponse)
@@ -110,7 +111,8 @@ async def results_prediction(
     state: AppState = Depends(get_state),
 ):
     values_LV, indices_LV = get_remote_prediction(job_id, state)
-    return process_prediction(values_LV, indices_LV, prediction_request, state)
+    data = process_prediction(values_LV, indices_LV, prediction_request, state)
+    return {"data": data}
 
 
 class Completion(BaseModel):
@@ -119,22 +121,24 @@ class Completion(BaseModel):
     model: str
 
 
-class GenerationResponse(BaseModel):
+class Generation(BaseModel):
     completion: list[Token]
     last_token_prediction: Prediction
 
 
-def generate_text(
-    completion_request: Completion, state: AppState, job_id: str | None = None
-):
-    model = state.get_model(completion_request.model)
+class GenerationResponse(NDIFResponse):
+    data: Generation | None = None
+
+
+def generate(req: Completion, state: AppState, backend: RemoteBackend | None):
+    model = state[req.model]
 
     with model.generate(
-        completion_request.prompt,
-        max_new_tokens=completion_request.max_new_tokens,
+        req.prompt,
+        max_new_tokens=req.max_new_tokens,
         remote=state.remote,
-        backend=state.make_backend(model, job_id),
-    ) as generator:
+        backend=backend,
+    ):
         logits = []
         with model.lm_head.all():
             logits.append(model.lm_head.output)
@@ -146,20 +150,25 @@ def generate_text(
 
         new_token_ids = model.generator.output.save()
 
-    if job_id is None:
-        return generator.backend.job_id
-
     return values_V, indices_V, new_token_ids[0]
 
 
-def collect_generation_results(
-    completion_request: Completion, state: AppState, job_id: str
-):
-    values_V, indices_V, new_token_ids = generate_text(
-        completion_request, state, job_id
-    )
+def get_remote_generate(
+    job_id: str, state: AppState
+) -> tuple[t.Tensor, t.Tensor, t.Tensor]:
+    backend = state.make_backend(job_id=job_id)
+    results = backend()
+    return results["values_V"], results["indices_V"], results["new_token_ids"]
 
-    tok = state[completion_request.model].tokenizer
+
+def process_generation_results(
+    values_V: t.Tensor,
+    indices_V: t.Tensor,
+    new_token_ids: t.Tensor,
+    req: Completion,
+    state: AppState,
+):
+    tok = state[req.model].tokenizer
     new_token_text = tok.batch_decode(new_token_ids)
     tokens = [
         Token(idx=i, id=id, text=text, targetIds=[])
@@ -181,22 +190,37 @@ def collect_generation_results(
         texts=nonzero_texts,
     ).model_dump()
 
-    return GenerationResponse(
-        completion=tokens, last_token_prediction=last_token_prediction
-    ).model_dump()
+    return {
+        "completion": tokens,
+        "last_token_prediction": last_token_prediction,
+    }
 
 
-@router.post("/start-generate")
-async def generate(
-    generate_request: Completion, state: AppState = Depends(get_state)
+@router.post("/start-generate", response_model=GenerationResponse)
+async def start_generate(
+    req: Completion, state: AppState = Depends(get_state)
 ):
-    return {"job_id": generate_text(generate_request, state)}
+    backend = state.make_backend(model=state[req.model])
+    values_V, indices_V, new_token_ids = generate(
+        req, state, backend
+    )
+    if state.remote:
+        return {"job_id": backend.job_id}
+
+    data = process_generation_results(
+        values_V, indices_V, new_token_ids, req, state
+    )
+    return {"data": data}
 
 
-@router.post("/results-generate/{job_id}")
-async def collect_generate(
+@router.post("/results-generate/{job_id}", response_model=GenerationResponse)
+async def results_generate(
     job_id: str,
-    generate_request: Completion,
+    req: Completion,
     state: AppState = Depends(get_state),
 ):
-    return generate_text(generate_request, state, job_id)
+    values_V, indices_V, new_token_ids = get_remote_generate(job_id, state)
+    data = process_generation_results(
+        values_V, indices_V, new_token_ids, req, state
+    )
+    return {"data": data}

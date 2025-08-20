@@ -13,7 +13,7 @@ interface ViewContextValue {
     isViewSuccess: boolean
     cancelPersistView: () => void
     persistView: (viewData: Partial<ChartView>) => void
-    clearView: () => void
+    clearView: () => Promise<void>
 }
 
 const ViewContext = createContext<ViewContextValue | null>(null)
@@ -88,10 +88,10 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         pendingRef.current = null
     }, [_persistView])
 
-    const clearView = useCallback(() => {
+    const clearView = useCallback(async () => {
         cancelPersistView()
         if (view) {
-            deleteView({ id: view.id, chartId: chartId })
+            await deleteView({ id: view.id, chartId: chartId })
         }
     }, [view, chartId, deleteView, cancelPersistView])
 

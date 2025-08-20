@@ -1,13 +1,10 @@
 import {
     Select,
     SelectContent,
-    SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 const decoders = ["Probability", "Entropy", "Rank"]

@@ -16,6 +16,7 @@ import { Line, HeatmapRow, ChartView } from "@/types/charts";
 import { queryKeys } from "../queryKeys";
 import { toast } from "sonner";
 import { startAndPoll } from "../startAndPoll";
+import { useHeatmapView, useLineView } from "@/components/charts/ViewProvider";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
     return await startAndPoll<Line[]>(
@@ -26,7 +27,8 @@ const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: s
 };
 
 export const useLensLine = () => {
-    const queryClient = useQueryClient();
+    const queryClient = useQueryClient();   
+    const { clearView } = useLineView();
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
@@ -43,7 +45,8 @@ export const useLensLine = () => {
             await setChartData(lensRequest.chartId, response, "line");
             return response;
         },
-        onSuccess: (data, variables) => {
+        onSuccess: async (data, variables) => {
+            await clearView();
             queryClient
                 .invalidateQueries({
                     queryKey: queryKeys.charts.chart(variables.lensRequest.chartId),
@@ -70,6 +73,7 @@ const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: s
 
 export const useLensGrid = () => {
     const queryClient = useQueryClient();
+    const { clearView } = useHeatmapView();
     const { captureChartThumbnail } = useCapture();
 
     return useMutation({
@@ -85,7 +89,8 @@ export const useLensGrid = () => {
             await setChartData(lensRequest.chartId, response, "heatmap");
             return response;
         },
-        onSuccess: (data, variables) => {
+        onSuccess: async (data, variables) => {
+            await clearView();
             queryClient
                 .invalidateQueries({
                     queryKey: queryKeys.charts.chart(variables.lensRequest.chartId),

@@ -70,17 +70,6 @@ export const PredictionBadges = ({
         });
     }, [prediction]);
 
-    // Default to the top token (index 0) if none selected yet
-    useEffect(() => {
-        if (!prediction) return;
-        if (config.token.targetIds.length === 0 && prediction.ids.length > 0) {
-            setConfig({
-                ...config,
-                token: { ...config.token, targetIds: prediction.ids.slice(0, 3) },
-            });
-        }
-    }, [prediction]);
-
     // Maintain a local registry of known options so selections from queries persist
     const [knownOptionsById, setKnownOptionsById] = useState<Map<number, TokenOption>>(new Map());
 

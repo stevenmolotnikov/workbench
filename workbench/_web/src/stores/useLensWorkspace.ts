@@ -1,10 +1,6 @@
 import { create } from 'zustand';
-import type { Token } from '@/types/models';
 
 interface LensWorkspaceState {
-    tokenData: Token[];
-    setTokenData: (tokenData: Token[]) => void;
-
     highlightedLineIds: Set<string>;
     setHighlightedLineIds: (highlightedLineIds: Set<string>) => void;
 
@@ -13,9 +9,6 @@ interface LensWorkspaceState {
 }
 
 export const useLensWorkspace = create<LensWorkspaceState>()((set) => ({
-    tokenData: [],
-    setTokenData: (tokenData: Token[]) => set({ tokenData }),
-
     highlightedLineIds: new Set(),
     setHighlightedLineIds: (highlightedLineIds: Set<string>) => set({ highlightedLineIds }),
 

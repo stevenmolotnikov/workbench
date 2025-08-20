@@ -15,7 +15,7 @@ interface TokenAreaProps {
 
 // Token styling constants
 const TOKEN_STYLES = {
-    base: "text-sm whitespace-pre-wrap select-none !box-border relative",
+    base: "text-sm leading-5 whitespace-pre-wrap break-words select-none !box-border relative",
     highlight: "bg-primary/30 ring-1 ring-primary/30 ring-inset",
     filled: "bg-primary/70 ring-1 ring-primary/30 ring-inset",
     hover: "hover:bg-primary/20 hover:ring-1 hover:ring-primary/30 hover:ring-inset",
@@ -70,8 +70,7 @@ export function TokenArea({
 
     return (
         <div
-            className="max-h-40 overflow-y-auto w-full custom-scrollbar select-none whitespace-pre-wrap"
-            style={{ display: "inline" }}
+            className="w-full custom-scrollbar select-none whitespace-pre-wrap break-words"
         >
             {tokenData.map((token, idx) => {
                 const styles = getTokenStyle(

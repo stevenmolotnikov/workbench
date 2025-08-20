@@ -92,7 +92,7 @@ def process_line_results(
             else:
                 lines[line_idx].data.append(Point(x=layer_idx, y=prob))
 
-    return {"data": lines}
+    return lines
 
 
 @router.post("/start-line", response_model=LensLineResponse)
@@ -105,7 +105,9 @@ async def start_line(
     if state.remote:
         return {"job_id": backend.job_id}
 
-    return process_line_results(result, req, state)
+    return {
+        "data" : process_line_results(result, req, state)
+    }
 
 
 @router.post("/results-line/{job_id}", response_model=LensLineResponse)
@@ -115,7 +117,9 @@ async def collect_line(
     state: AppState = Depends(get_state),
 ):
     results = get_remote_line(job_id, state)
-    return process_line_results(results, req, state)
+    return {
+        "data" : process_line_results(results, req, state)
+    }
 
 
 class GridLensRequest(BaseModel):
@@ -204,7 +208,7 @@ def process_grid_results(
         # Add the input string to the row id to make it unique
         rows.append(GridRow(id=f"{input_str}-{seq_idx}", data=points))
 
-    return {"data": rows}
+    return rows
 
 
 @router.post("/start-grid", response_model=GridLensResponse)
@@ -215,7 +219,7 @@ async def get_grid(req: GridLensRequest, state: AppState = Depends(get_state)):
     if state.remote:
         return {"job_id": backend.job_id}
 
-    return process_grid_results(probs, pred_ids, req, state)
+    return {"data": process_grid_results(probs, pred_ids, req, state)}
 
 
 @router.post("/results-grid/{job_id}", response_model=GridLensResponse)
@@ -225,4 +229,6 @@ async def collect_grid(
     state: AppState = Depends(get_state),
 ):
     probs, pred_ids = get_remote_heatmap(job_id, state)
-    return process_grid_results(probs, pred_ids, lens_request, state)
+    return {
+        "data" : process_grid_results(probs, pred_ids, lens_request, state)
+    }

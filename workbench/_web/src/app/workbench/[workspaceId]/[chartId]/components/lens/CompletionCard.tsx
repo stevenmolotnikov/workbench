@@ -1,10 +1,9 @@
 "use client";
 
-import { ChartLine, CornerDownLeft, Grid3x3, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChartLine, Grid3x3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { getModels, usePrediction } from "@/lib/api/modelsApi";
 import type { LensConfigData } from "@/types/lens";
 
@@ -14,8 +13,7 @@ import { encodeText } from "@/actions/tok";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 import { useParams } from "next/navigation";
 import { useLensCharts } from "@/hooks/useLensCharts";
-import { cn } from "@/lib/utils";
-import { useLensWorkspace } from "@/stores/useLensWorkspace";
+import { cn } from "@/lib/utils";   
 
 import { LensConfig } from "@/db/schema";
 import { useWorkspace } from "@/stores/useWorkspace";
@@ -24,32 +22,26 @@ import { DecoderSelector } from "./DecoderSelector";
 import { useDebouncedCallback } from "use-debounce";
 import { ChartType } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
+import { Token } from "@/types/models";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
     chartType: ChartType;
+    selectedModel: string;
 }
 
-export function CompletionCard({ initialConfig, chartType }: CompletionCardProps) {
+export function CompletionCard({ initialConfig, chartType, selectedModel }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
-    const { tokenData, setTokenData } = useLensWorkspace();
 
-    const { selectedModelIdx } = useWorkspace();
-    const { data: models, isLoading, isSuccess } = useQuery({
-        queryKey: ['models'],
-        queryFn: getModels,
-        refetchInterval: 120000,
-    });
 
+    const [tokenData, setTokenData] = useState<Token[]>([]);
+    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
 
     const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
-    const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
-    const configId = initialConfig.id;
-
-    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId });
+    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId: initialConfig.id });
 
     // Debounced function to run line chart 2 seconds after target token IDs change
     const debouncedRunLineChart = useDebouncedCallback(
@@ -64,33 +56,41 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     // NOTE(cadentj): check if this only runs once-ish
     useEffect(() => {
         const fetchTokens = async () => {
-            if (config.prediction && models) {
-                const tokens = await encodeText(config.prompt, models[selectedModelIdx].name);
+            if (config.prediction) {
+                const tokens = await encodeText(config.prompt, selectedModel);
                 setTokenData(tokens);
             }
         }
         fetchTokens();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Toggle the TokenArea component to the TextArea component
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const tokenContainerRef = useRef<HTMLDivElement>(null);
+    const settingsRef = useRef<HTMLDivElement>(null);
+    const escapeTokenArea = async () => {
+        setEditingText(true);
 
-    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setConfig({
-            ...config,
-            prompt: e.target.value,
-        });
-    };
+        // Focus the textarea and place cursor at the end after state updates
+        setTimeout(() => {
+            if (textareaRef.current) {
+                textareaRef.current.focus();
+                const length = textareaRef.current.value.length;
+                textareaRef.current.setSelectionRange(length, length);
+            }
+        }, 0);
+    }
 
+    // Tokenize the prompt and run predictions
     const handleTokenize = async () => {
-        if (!models) return;
-
-        const tokens = await encodeText(config.prompt, models[selectedModelIdx].name);
+        const tokens = await encodeText(config.prompt, selectedModel);
         setTokenData(tokens);
 
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
             ...config,
-            model: models[selectedModelIdx].name,
+            model: selectedModel,
             token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
         }
 
@@ -99,6 +99,14 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
         await handleCreateHeatmap(temporaryConfig);
     }
 
+    const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setConfig({
+            ...config,
+            prompt: e.target.value,
+        });
+    };
+
+    // Newline on shift + enter and tokenize on enter
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey && !isExecuting) {
             e.preventDefault();
@@ -106,20 +114,51 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
         }
     };
 
-    const runPredictions = async (temporaryConfig: LensConfigData) => {
+    // Auto-resize the textarea to fit its content
+    const autoResizeTextarea = () => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "auto";
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    };
+    useEffect(() => {
+        if (editingText) autoResizeTextarea();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [config.prompt, editingText]);
+
+    // Close editing when focus leaves to outside of textarea, token area, or settings
+    const handleTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+        if (!config.prediction) return; // only exit editing once a prediction exists
+        const next = (e.relatedTarget as Node | null);
+        const withinTextarea = next && textareaRef.current?.contains(next);
+        const withinToken = next && tokenContainerRef.current?.contains(next);
+        const withinSettings = next && settingsRef.current?.contains(next);
+        if (withinTextarea || withinToken || withinSettings) return;
+        setEditingText(false);
+    };
+
+    const runPredictions = async (temporaryConfig: LensConfigData): Promise<number[]> => {
+        // Run predictions for the selected token in the config
         const prediction = await getPrediction(temporaryConfig);
+
+        // Update the config locally
         temporaryConfig.prediction = prediction;
         setConfig(temporaryConfig);
+
+        // Update the config in the database
         await updateChartConfigMutation({
-            configId,
+            configId: initialConfig.id,
             config: {
                 data: temporaryConfig,
                 workspaceId,
                 type: "lens",
             }
         });
+
+        // Exit the editing state
         setEditingText(false);
 
+        // Return the first 3 target IDs which are sorted by probability
         return prediction.ids.slice(0, 3);
     }
 
@@ -137,25 +176,13 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
             token: { idx, id: 0, text: "", targetIds: [] }
         }
 
-        setConfig(temporaryConfig);
-
         // Run predictions
         const targetIds = await runPredictions(temporaryConfig);
-        await handleCreateLineChart({ ...temporaryConfig, token: { ...temporaryConfig.token, targetIds } });
+        temporaryConfig.token.targetIds = targetIds;
+
+        setConfig(temporaryConfig);
+        await handleCreateLineChart(temporaryConfig);
     };
-
-    const escapeTokenArea = async () => {
-        setEditingText(true);
-
-        // Focus the textarea and place cursor at the end after state updates
-        setTimeout(() => {
-            if (textareaRef.current) {
-                textareaRef.current.focus();
-                const length = textareaRef.current.value.length;
-                textareaRef.current.setSelectionRange(length, length);
-            }
-        }, 0);
-    }
 
     return (
         <div className="flex flex-col w-full gap-2">
@@ -165,16 +192,17 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
                     <Textarea
                         ref={textareaRef}
                         value={config.prompt}
-                        onChange={handlePromptChange}
+                        onChange={(e) => { handlePromptChange(e); autoResizeTextarea(); }}
                         onKeyDown={handleKeyDown}
-                        className="w-full h-24"
+                        onBlur={handleTextareaBlur}
+                        className="w-full text-sm leading-5"
                         placeholder="Enter your prompt here."
-                        onBlur={() => setEditingText(false)}
                     />
                 ) : (
                     <div
+                        ref={tokenContainerRef}
                         className={cn(
-                            "flex w-full h-24 px-3 py-2 border overflow-y-auto rounded",
+                            "flex w-full px-3 py-2 border rounded",
                             isExecuting ? "cursor-progress" : "cursor-text"
                         )}
                         onClick={() => {
@@ -190,23 +218,19 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
                         />
                     </div>
                 )}
-                <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                    {!editingText && <GenerateButton
-                        prompt={config.prompt}
-                        config={config}
-                        setConfig={setConfig}
-                    />}
-                    {editingText && <Button
-                        size="icon"
-                        variant="outline"
-                        id="tokenize-button"
-                        onClick={() => {
-                            handleTokenize();
-                        }}
-                        disabled={isExecuting}
-                    >
-                        {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CornerDownLeft className="w-4 h-4" />}
-                    </Button>}
+                <div ref={settingsRef} className="absolute bottom-2 right-2 flex items-center gap-2">
+                    {editingText && (
+                        <GenerateButton
+                            config={config}
+                            setConfig={setConfig}
+                            setTokenData={setTokenData}
+                            setEditingText={setEditingText}
+                            isExecuting={isExecuting}
+                            selectedModel={selectedModel}
+                            handleTokenize={handleTokenize}
+                            handleCreateHeatmap={handleCreateHeatmap}
+                        />
+                    )}
                 </div>
 
             </div>
@@ -252,15 +276,13 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
                                 </button>
                             </div>
 
-
-
                             <DecoderSelector />
                         </div>
 
                         <PredictionBadges
                             config={config}
                             setConfig={setConfig}
-                            runLineChart={debouncedRunLineChart}
+                            runLineChart={() => debouncedRunLineChart(config)}
                         />
                     </div>
                 </div>
