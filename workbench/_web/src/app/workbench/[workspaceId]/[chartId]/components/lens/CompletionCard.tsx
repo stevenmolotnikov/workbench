@@ -250,7 +250,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         (editingText || isExecuting) ? "pointer-events-none" : "pointer-events-auto"
                     )}>
                         <div className="flex w-full justify-between items-center">
-                            <div className="flex items-center p-1 max-h-8 bg-background rounded-lg">
+                            <div className="flex items-center p-1 h-8 bg-background rounded-lg">
                                 <button
                                     onClick={() => handleCreateHeatmap(config)}
                                     className={cn(

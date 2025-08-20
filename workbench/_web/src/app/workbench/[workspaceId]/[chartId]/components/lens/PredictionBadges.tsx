@@ -181,15 +181,15 @@ export const PredictionBadges = ({
         <div className="flex flex-col gap-1.5 w-full">
             <div className="flex justify-between items-center">
 
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="inline-block">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="inline-block">
                             <span className="text-xs">Target Tokens
                             </span>
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" >Default top 3</TooltipContent>
-                    </Tooltip>
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Defaults to top 3.</TooltipContent>
+                </Tooltip>
 
                 {config.token.targetIds.length > 0 &&
                     <button

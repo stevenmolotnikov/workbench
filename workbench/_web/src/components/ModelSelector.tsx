@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/useWorkspace";
 import { useQuery } from "@tanstack/react-query";
 import { getModels } from "@/lib/api/modelsApi";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ModelSelector() {
     const { selectedModelIdx, setSelectedModelIdx } = useWorkspace();
@@ -39,11 +40,19 @@ export function ModelSelector() {
 
     return (
         <Select value={models[selectedModelIdx].name} onValueChange={handleModelChange}>
-            <SelectTrigger className={cn("w-fit gap-2", {
-                "animate-pulse": isLoading
-            })}>
-                <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
+
+
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <SelectTrigger className={cn("w-fit gap-2", {
+                        "animate-pulse": isLoading
+                    })}>
+                        <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>    
+                </TooltipTrigger>
+                <TooltipContent>Select a model to use for predictions.</TooltipContent>
+            </Tooltip>
+
             <SelectContent>
                 {baseModels.length > 0 && (
                     <SelectGroup>
