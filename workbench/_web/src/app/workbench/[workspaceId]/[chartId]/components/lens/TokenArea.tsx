@@ -15,7 +15,7 @@ interface TokenAreaProps {
 
 // Token styling constants
 const TOKEN_STYLES = {
-    base: "text-sm leading-5 whitespace-pre-wrap break-words select-none !box-border relative",
+    base: "!text-sm !leading-5 whitespace-pre-wrap break-words select-none !box-border relative",
     highlight: "bg-primary/30 ring-1 ring-primary/30 ring-inset",
     filled: "bg-primary/70 ring-1 ring-primary/30 ring-inset",
     hover: "hover:bg-primary/20 hover:ring-1 hover:ring-primary/30 hover:ring-inset",
@@ -63,7 +63,6 @@ export function TokenArea({
             backgroundStyle,
             !loading && TOKEN_STYLES.hover,
             token.text === "\\n" ? "w-full" : "w-fit",
-            // "cursor-pointer",
             loading ? "cursor-progress" : "cursor-pointer"
         );
     };

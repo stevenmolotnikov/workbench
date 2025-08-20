@@ -1,11 +1,13 @@
 import { type RefObject } from "react";
 import { Heatmap } from "./Heatmap";
 import { HeatmapDataProvider, useHeatmapData } from "./HeatmapDataProvider";
-import { SelectionProvider, useSelection } from "./SelectionProvider";
 import { HeatmapChart } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
 import { HeatmapCanvasProvider, useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
+import { HeatmapHoverProvider, useHeatmapHover } from "./HeatmapHoverProvider";
+import { Tooltip } from "./Tooltip";
+import { useSelection } from "./useSelection";
 
 interface HeatmapCardProps {
     chart: HeatmapChart;
@@ -21,10 +23,9 @@ export const HeatmapCard = ({ chart, captureRef, pending }: HeatmapCardProps) =>
             ) : (
                 <HeatmapDataProvider chart={chart}>
                     <HeatmapCanvasProvider>
-                        <SelectionProvider chart={chart}>
-                            <HeatmapCardContent chart={chart} captureRef={captureRef} />
-                        </SelectionProvider>
-
+                        <HeatmapHoverProvider>
+                            <HeatmapCardContent captureRef={captureRef} />
+                        </HeatmapHoverProvider>
                     </HeatmapCanvasProvider>
                 </HeatmapDataProvider>
             )}
@@ -66,14 +67,14 @@ const PendingHeatmap = () => {
 }
 
 interface HeatmapCardContentProps {
-    chart: HeatmapChart;
     captureRef?: RefObject<HTMLDivElement>;
 }
 
-const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardContentProps) => {
+const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
     const { filteredData: data, bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
     const { zoomIntoActiveSelection, clearSelection, activeSelection, onMouseDown } = useSelection()
-    const { selectionCanvasRef } = useHeatmapCanvasProvider()
+    const { heatmapCanvasRef } = useHeatmapCanvasProvider()
+    const { handleMouseMove, handleMouseLeave } = useHeatmapHover()
 
     // Handle reset: clear selection and reset ranges/step
     const handleReset = async () => {
@@ -115,13 +116,22 @@ const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardContentProps) => {
             </div>
 
             <div className="flex h-[90%] w-full" ref={captureRef}>
-                <div className="size-full relative cursor-crosshair" onMouseDown={onMouseDown}>
+                {/* <div className="size-full relative cursor-crosshair" onMouseDown={onMouseDown} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
                     <canvas
-                        ref={selectionCanvasRef}
+                        ref={heatmapCanvasRef}
                         className="absolute inset-0 size-full pointer-events-auto z-20"
                     />
                     <Heatmap rows={data} />
-                </div>
+                    <Tooltip />
+                </div> */}
+                <Heatmap
+                    rows={data}
+                    heatmapCanvasRef={heatmapCanvasRef}
+                    useTooltip={true}
+                    onMouseMove={handleMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseDown={onMouseDown} 
+                    />
             </div>
         </div>
     )

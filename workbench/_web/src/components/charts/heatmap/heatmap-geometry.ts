@@ -1,6 +1,12 @@
 import { HeatmapRow } from "@/types/charts";
 import { heatmapMargin as margin } from "../theming";
 
+
+export interface CellDimensions {
+    width: number;
+    height: number;
+}
+
 // Calculate cell dimensions based on canvas size and data
 const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: HeatmapRow[]) => {
     if (!canvasRef.current || !data.length || !data[0].data.length) {
@@ -22,12 +28,8 @@ const getCellDimensions = (canvasRef: React.RefObject<HTMLCanvasElement>, data: 
     const cellHeight = gridHeight / numRows;
 
     return {
-        cellWidth,
-        cellHeight,
-        gridWidth,
-        gridHeight,
-        numCols,
-        numRows,
+        width: cellWidth,
+        height: cellHeight,
     };
 };
 
@@ -41,48 +43,28 @@ const getCellFromPosition = (
     const dims = getCellDimensions(canvasRef, data);
     if (!dims) return null;
 
-    const gridX = Math.max(0, x - margin.left);
-    const gridY = Math.max(0, y - margin.top);
+    // Do not clamp to 0 here; we want to return null when hovering in the margins
+    const gridX = x - margin.left;
+    const gridY = y - margin.top;
 
-    if (gridX < 0 || gridY < 0 || gridX >= dims.gridWidth || gridY >= dims.gridHeight) {
+    const gridWidth = dims.width * data[0].data.length;
+    const gridHeight = dims.height * data.length;
+
+    if (gridX < 0 || gridY < 0 || gridX >= gridWidth || gridY >= gridHeight) {
         return null;
     }
 
-    const col = Math.floor(gridX / dims.cellWidth);
-    const row = Math.floor(gridY / dims.cellHeight);
+    const col = Math.floor(gridX / dims.width);
+    const row = Math.floor(gridY / dims.height);
 
-    if (col >= 0 && col < dims.numCols && row >= 0 && row < dims.numRows) {
+    const numCols = data[0].data.length;
+    const numRows = data.length;
+
+    if (col >= 0 && col < numCols && row >= 0 && row < numRows) {
         return { col, row };
     }
 
     return null;
 };
 
-// Helper function to get bounding box from cell IDs
-const getCellBounds = (
-    cellIds: string[]
-) => {
-    let minRow = Infinity,
-        maxRow = -Infinity;
-    let minCol = Infinity,
-        maxCol = -Infinity;
-
-    cellIds.forEach((cellId) => {
-        const parts = cellId.split("-");
-        if (parts.length >= 3) {
-            const row = parseInt(parts[parts.length - 2]);
-            const col = parseInt(parts[parts.length - 1]);
-
-            if (!isNaN(row) && !isNaN(col)) {
-                minRow = Math.min(minRow, row);
-                maxRow = Math.max(maxRow, row);
-                minCol = Math.min(minCol, col);
-                maxCol = Math.max(maxCol, col);
-            }
-        }
-    });
-
-    return minRow !== Infinity ? { minRow, maxRow, minCol, maxCol } : null;
-};
-
-export { getCellDimensions, getCellFromPosition, getCellBounds };
+export { getCellDimensions, getCellFromPosition };

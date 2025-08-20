@@ -53,7 +53,7 @@ export default function GenerateButton({ config, setConfig, setTokenData, setEdi
     }
 
     return (
-        <div className="flex items-center h-8 w-fit border rounded">
+        <div className="flex items-center h-fit w-fit rounded">
             <button
                 id="tokenize-button"
                 type="button"
@@ -61,7 +61,7 @@ export default function GenerateButton({ config, setConfig, setTokenData, setEdi
                     handleTokenize();
                 }}
                 disabled={isExecuting || isGenerating || !config.prompt}
-                className="rounded-l border-r items-center justify-center flex h-8 w-8"
+                className="rounded-l border items-center hover:bg-accent transition-all duration-100 bg-muted justify-center flex h-8 w-8"
             >
                 {isExecuting || isGenerating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -77,7 +77,7 @@ export default function GenerateButton({ config, setConfig, setTokenData, setEdi
                             e.preventDefault();
                             e.stopPropagation();
                         }}
-                        className="rounded-l-none rounded-r h-8 w-4 flex items-center justify-center"
+                        className="rounded-l-none rounded-r border-r hover:bg-accent transition-all duration-100 border-y bg-muted h-8 w-4 flex items-center justify-center"
                         disabled={isExecuting || isGenerating || !config.prompt}
                     >
                         <ChevronDown className="w-3 h-3" />

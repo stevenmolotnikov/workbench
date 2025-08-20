@@ -187,7 +187,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     return (
         <div className="flex flex-col w-full gap-2">
             {/* Content */}
-            <div className="flex size-full relative">
+            <div className="flex flex-col size-full relative">
                 {editingText ? (
                     <Textarea
                         ref={textareaRef}
@@ -195,14 +195,14 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         onChange={(e) => { handlePromptChange(e); autoResizeTextarea(); }}
                         onKeyDown={handleKeyDown}
                         onBlur={handleTextareaBlur}
-                        className="w-full text-sm leading-5"
+                        className="w-full !text-sm min-h-48 !leading-5"
                         placeholder="Enter your prompt here."
                     />
                 ) : (
                     <div
                         ref={tokenContainerRef}
                         className={cn(
-                            "flex w-full px-3 py-2 border rounded",
+                            "flex w-full px-3 py-2 border rounded min-h-48",
                             isExecuting ? "cursor-progress" : "cursor-text"
                         )}
                         onClick={() => {
