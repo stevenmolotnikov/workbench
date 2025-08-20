@@ -4,10 +4,10 @@ import { HeatmapDataProvider, useHeatmapData } from "./HeatmapDataProvider";
 import { HeatmapChart } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
-import { HeatmapCanvasProvider, useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
+import { HeatmapCanvasProvider, useHeatmapCanvas } from "./HeatmapCanvasProvider";
 import { HeatmapHoverProvider, useHeatmapHover } from "./HeatmapHoverProvider";
-import { Tooltip } from "./Tooltip";
 import { useSelection } from "./useSelection";
+import { useAnnotationSelection } from "./useAnnotationSelection";
 
 interface HeatmapCardProps {
     chart: HeatmapChart;
@@ -73,8 +73,9 @@ interface HeatmapCardContentProps {
 const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
     const { filteredData: data, bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
     const { zoomIntoActiveSelection, clearSelection, activeSelection, onMouseDown } = useSelection()
-    const { heatmapCanvasRef } = useHeatmapCanvasProvider()
+    const { heatmapCanvasRef } = useHeatmapCanvas()
     const { handleMouseMove, handleMouseLeave } = useHeatmapHover()
+    useAnnotationSelection()
 
     // Handle reset: clear selection and reset ranges/step
     const handleReset = async () => {
@@ -116,14 +117,6 @@ const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
             </div>
 
             <div className="flex h-[90%] w-full" ref={captureRef}>
-                {/* <div className="size-full relative cursor-crosshair" onMouseDown={onMouseDown} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
-                    <canvas
-                        ref={heatmapCanvasRef}
-                        className="absolute inset-0 size-full pointer-events-auto z-20"
-                    />
-                    <Heatmap rows={data} />
-                    <Tooltip />
-                </div> */}
                 <Heatmap
                     rows={data}
                     heatmapCanvasRef={heatmapCanvasRef}
@@ -131,7 +124,7 @@ const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
                     onMouseDown={onMouseDown} 
-                    />
+                />
             </div>
         </div>
     )

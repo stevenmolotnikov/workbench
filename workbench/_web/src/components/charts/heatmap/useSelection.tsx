@@ -1,41 +1,15 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { getCellFromPosition } from "./heatmap-geometry";
-import { HeatmapBounds, Range, HeatmapViewData } from "@/types/charts";
-import { useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
-import { HeatmapView } from "@/db/schema";
+import { HeatmapBounds, Range } from "@/types/charts";
+import { useHeatmapCanvas } from "./HeatmapCanvasProvider";
 import { useHeatmapData } from "./HeatmapDataProvider";
 import { useHeatmapView } from "../ViewProvider";
 
 
 export const useSelection = () => {
-    const { filteredData: data, bounds, xStep, xRange, yRange, setXRange, setYRange } = useHeatmapData()
-    const { heatmapCanvasRef, activeSelection, setActiveSelection } = useHeatmapCanvasProvider()
-    const { view, isViewSuccess, persistView, clearView } = useHeatmapView()
-
-    // Initialize active selection from existing DB view (if present)
-    useEffect(() => {
-        if (isViewSuccess && view) {
-            const hv = view as HeatmapView
-            setActiveSelection(hv.data.annotation ?? null)
-        }
-    }, [view, isViewSuccess, setActiveSelection])
-
-    const updateView = useCallback((selection: HeatmapBounds | null, overrideBounds?: HeatmapBounds) => {
-        if (!selection) return
-        const viewBounds: HeatmapBounds = overrideBounds ?? {
-            minCol: Math.max(bounds.minCol, xRange[0]),
-            maxCol: Math.min(bounds.maxCol, xRange[1]),
-            minRow: Math.max(bounds.minRow, yRange[0]),
-            maxRow: Math.min(bounds.maxRow, yRange[1]),
-        }
-        const payload: HeatmapViewData = { bounds: viewBounds, xStep: xStep, annotation: selection }
-        persistView(payload)
-    }, [persistView, bounds.minCol, bounds.maxCol, bounds.minRow, bounds.maxRow, xRange, yRange, xStep])
-
-    const clearSelection = useCallback(async () => {
-        setActiveSelection(null)
-        clearView()
-    }, [clearView, setActiveSelection])
+    const { filteredData: data, xStep, bounds, xRange, yRange, setXRange, setYRange } = useHeatmapData()
+    const { heatmapCanvasRef, activeSelection, setActiveSelection } = useHeatmapCanvas()
+    const { persistView, clearView } = useHeatmapView()
 
     const selectionRef = useRef<HeatmapBounds | null>(null)
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -72,7 +46,10 @@ export const useSelection = () => {
                     maxCol: Math.max(final.minCol, final.maxCol),
                 }
                 setActiveSelection(bounds)
-                updateView(bounds)
+                persistView({
+                    xStep: xStep,
+                    annotation: bounds,
+                })
             }
             selectionRef.current = null
             window.removeEventListener('mousemove', onMove)
@@ -81,8 +58,13 @@ export const useSelection = () => {
 
         window.addEventListener('mousemove', onMove)
         window.addEventListener('mouseup', onUp)
-    }, [data, setActiveSelection, heatmapCanvasRef, updateView])
+    }, [data, setActiveSelection, heatmapCanvasRef, persistView, xStep])
 
+    const clearSelection = useCallback(async () => {
+        setActiveSelection(null)
+        await clearView()
+    }, [clearView, setActiveSelection])
+    
     const zoomIntoActiveSelection = useCallback(async () => {
         if (!activeSelection) return
         const zoomBounds = activeSelection
@@ -122,9 +104,15 @@ export const useSelection = () => {
             maxRow: Math.min(bounds.maxRow, nextYRange[1]),
         }
 
-        updateView(zoomBounds, nextBounds)
-    }, [setActiveSelection, bounds, xRange, yRange, activeSelection, updateView, setXRange, setYRange])
+        await clearSelection()
+        persistView({
+            xStep: xStep,
+            bounds: nextBounds,
+            annotation: undefined,
+        })
+    }, [setActiveSelection, bounds, xRange, yRange, activeSelection, setXRange, setYRange, xStep, persistView, clearSelection])
 
+    
     return {
         clearSelection,
         onMouseDown,

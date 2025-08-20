@@ -62,7 +62,7 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         }
         // Clear pending after successful persist
         pendingRef.current = null
-    }, 3000)
+    }, 1000)
 
     const defaultView = useMemo(() => ({
         selectedLineIds: [],

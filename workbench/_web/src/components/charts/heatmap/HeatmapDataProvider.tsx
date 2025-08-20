@@ -37,7 +37,7 @@ interface HeatmapDataProviderProps {
 
 export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart, children }) => {
     const rows = chart.data
-    const { view, isViewSuccess } = useHeatmapView()
+    const { view, isViewSuccess, persistView } = useHeatmapView()
 
     // Calculate bounds
     const bounds = useMemo(() => {
@@ -93,7 +93,9 @@ export const HeatmapDataProvider: React.FC<HeatmapDataProviderProps> = ({ chart,
         if (Number.isNaN(val)) {
             setXStep(1);
         } else {
-            setXStep(Math.max(1, Math.min(val, Math.max(1, bounds.maxCol - bounds.minCol))));
+            const step = Math.max(1, Math.min(val, Math.max(1, bounds.maxCol - bounds.minCol)))
+            setXStep(step)
+            persistView({ xStep: step })
         }
     }, [bounds.maxCol, bounds.minCol])
 

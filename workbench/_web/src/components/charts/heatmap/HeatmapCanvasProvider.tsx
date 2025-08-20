@@ -15,9 +15,9 @@ interface HeatmapCanvasContextValue {
 
 const HeatmapCanvasContext = createContext<HeatmapCanvasContextValue | null>(null)
 
-export const useHeatmapCanvasProvider = () => {
+export const useHeatmapCanvas = () => {
     const ctx = useContext(HeatmapCanvasContext)
-    if (!ctx) throw new Error("useCanvasProvider must be used within a CanvasProvider")
+    if (!ctx) throw new Error("useHeatmapCanvas must be used within a HeatmapCanvasProvider")
     return ctx
 }
 

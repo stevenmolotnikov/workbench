@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
-import { useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
+import { useHeatmapCanvas } from "./HeatmapCanvasProvider";
 
 interface HeatmapHoverContextValue {
     handleMouseMove: (e: React.MouseEvent) => void;
@@ -17,7 +17,7 @@ export const useHeatmapHover = () => {
 };
 
 export const HeatmapHoverProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { heatmapCanvasRef } = useHeatmapCanvasProvider();
+    const { heatmapCanvasRef } = useHeatmapCanvas();
 
     const [hoverX, setHoverX] = useState<number | null>(null);
     const [hoverY, setHoverY] = useState<number | null>(null);

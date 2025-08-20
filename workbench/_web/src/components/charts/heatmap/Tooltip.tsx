@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import { useHeatmapHover } from "./HeatmapHoverProvider";
 import { getCellFromPosition } from "./heatmap-geometry";
-import { useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
+import { useHeatmapCanvas } from "./HeatmapCanvasProvider";
 import { interpolateBlues } from "d3-scale-chromatic";
 import { useHeatmapData } from "./HeatmapDataProvider";
 
 
 export const Tooltip = () => {
     const { hoverX, hoverY } = useHeatmapHover();
-    const { heatmapCanvasRef } = useHeatmapCanvasProvider();
+    const { heatmapCanvasRef } = useHeatmapCanvas();
     const { filteredData: data } = useHeatmapData();
 
     const valueToBlue = (value: number | null) => {
