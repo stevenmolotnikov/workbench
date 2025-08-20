@@ -16,14 +16,14 @@ interface GenerateButtonProps {
 
 export default function GenerateButton({ prompt, config, setConfig }: GenerateButtonProps) {
     const [maxNewTokens, setMaxNewTokens] = useState(3);
-    const { selectedModel } = useWorkspace();
-    const { tokenData, setTokenData } = useLensWorkspace();
+
+    const { setTokenData } = useLensWorkspace();
 
     const handleGenerate = async () => {
         const response: GenerationResponse = await generate({
             prompt: prompt,
             max_new_tokens: maxNewTokens,
-            model: selectedModel.name,
+            model: config.model,
         });
 
         setTokenData(response.completion)

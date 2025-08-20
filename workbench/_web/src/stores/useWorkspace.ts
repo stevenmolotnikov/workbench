@@ -5,14 +5,14 @@ interface WorkspaceState {
     jobStatus: string;
     setJobStatus: (jobStatus: string) => void;
 
-    selectedModel: Model | null;
-    setSelectedModel: (model: Model | null) => void;
+    selectedModelIdx: number;
+    setSelectedModelIdx: (modelIdx: number) => void;
 }
 
 export const useWorkspace = create<WorkspaceState>()((set, get) => ({
     jobStatus: "idle",
     setJobStatus: (jobStatus: string) => set({ jobStatus }),
 
-    selectedModel: null,
-    setSelectedModel: (model: Model | null) => set({ selectedModel: model }),
+    selectedModelIdx: 0,
+    setSelectedModelIdx: (modelIdx: number) => set({ selectedModelIdx: modelIdx }),
 }));

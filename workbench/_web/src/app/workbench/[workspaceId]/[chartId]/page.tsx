@@ -9,7 +9,6 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable";
 
-import useModels from "@/hooks/useModels";
 import ChartCardsSidebar from "../components/ChartCardsSidebar";
 import LensArea from "./components/lens/LensArea";
 import SimplePatchArea from "./components/patch/SimplePatchArea";
@@ -27,9 +26,6 @@ const tools = [
 
 export default function ChartPage() {
     const { chartId } = useParams<{ workspaceId: string; chartId: string }>();
-
-    // Ensure a selected model exists
-    useModels();
 
     // TODO(cadentj): FIX THE INSTANCES WHERE CONFIGS ARE CALLED BY CHART ID
     const { data: config, isLoading: isConfigLoading } = useQuery({

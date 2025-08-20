@@ -11,11 +11,21 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/stores/useWorkspace";
-import useModels from "@/hooks/useModels";
+import { useQuery } from "@tanstack/react-query";
+import { getModels } from "@/lib/api/modelsApi";
 
 export function ModelSelector() {
-    const { selectedModel, setSelectedModel } = useWorkspace();
-    const { models, isLoading } = useModels();
+    const { selectedModelIdx, setSelectedModelIdx } = useWorkspace();
+
+    const { data: models, isLoading } = useQuery({
+        queryKey: ['models'],
+        queryFn: getModels,
+        refetchInterval: 120000,
+    });
+
+    if (!models) {
+        return <div>Loading models...</div>;
+    }
 
     const baseModels = models.filter(model => model.type === "base").map(model => model.name);
     const chatModels = models.filter(model => model.type === "chat").map(model => model.name);
@@ -23,12 +33,12 @@ export function ModelSelector() {
     const handleModelChange = (modelName: string) => {
         const model = models.find(model => model.name === modelName);
         if (model) {
-            setSelectedModel(model);
+            setSelectedModelIdx(models.indexOf(model));
         }
     };
 
     return (
-        <Select value={selectedModel?.name} onValueChange={handleModelChange}>
+        <Select value={models[selectedModelIdx].name} onValueChange={handleModelChange}>
             <SelectTrigger className={cn("w-fit gap-2", {
                 "animate-pulse": isLoading
             })}>

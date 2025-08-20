@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
-import { usePrediction } from "@/lib/api/modelsApi";
-import type { Prediction } from "@/types/models";
+import { getModels, usePrediction } from "@/lib/api/modelsApi";
 import type { LensConfigData } from "@/types/lens";
 
 import { PredictionBadges } from "./PredictionBadges";
@@ -24,6 +23,7 @@ import GenerateButton from "./GenerateButton";
 import { DecoderSelector } from "./DecoderSelector";
 import { useDebouncedCallback } from "use-debounce";
 import { ChartType } from "@/types/charts";
+import { useQuery } from "@tanstack/react-query";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -34,11 +34,16 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     const { workspaceId } = useParams<{ workspaceId: string }>();
     const { tokenData, setTokenData } = useLensWorkspace();
 
-    const { selectedModel } = useWorkspace();
+    const { selectedModelIdx } = useWorkspace();
+    const { data: models, isLoading, isSuccess } = useQuery({
+        queryKey: ['models'],
+        queryFn: getModels,
+        refetchInterval: 120000,
+    });
+
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
 
     const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
-
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
@@ -59,8 +64,8 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     // NOTE(cadentj): check if this only runs once-ish
     useEffect(() => {
         const fetchTokens = async () => {
-            if (config.prediction) {
-                const tokens = await encodeText(config.prompt, selectedModel.name);
+            if (config.prediction && models) {
+                const tokens = await encodeText(config.prompt, models[selectedModelIdx].name);
                 setTokenData(tokens);
             }
         }
@@ -77,13 +82,15 @@ export function CompletionCard({ initialConfig, chartType }: CompletionCardProps
     };
 
     const handleTokenize = async () => {
-        const tokens = await encodeText(config.prompt, selectedModel.name);
+        if (!models) return;
+
+        const tokens = await encodeText(config.prompt, models[selectedModelIdx].name);
         setTokenData(tokens);
 
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
             ...config,
-            model: selectedModel.name,
+            model: models[selectedModelIdx].name,
             token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
         }
 
