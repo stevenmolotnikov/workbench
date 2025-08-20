@@ -21,6 +21,6 @@ const supabaseConfig = {
   },
 }
 
-const dbConfig = process.env.NEXT_PUBLIC_USE_SQLITE === 'true' ? localConfig : supabaseConfig;
+const dbConfig = process.env.NEXT_PUBLIC_LOCAL_DB === 'true' ? localConfig : supabaseConfig;
 
 export default defineConfig(dbConfig);

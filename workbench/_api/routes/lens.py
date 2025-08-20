@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
+from nnsight.intervention.backends.remote import RemoteBackend
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
@@ -29,12 +30,12 @@ class LensLineResponse(NDIFResponse):
 router = APIRouter()
 
 
-def line(req: LensLineRequest, state: AppState) -> list[t.Tensor] | str:
-    model = state.get_model(req.model)
+def line(
+    req: LensLineRequest, state: AppState, backend: RemoteBackend | None
+) -> list[t.Tensor]:
+    model = state[req.model]
 
-    with model.trace(
-        req.prompt, remote=state.remote, backend=state.make_backend(model)
-    ) as tracer:
+    with model.trace(req.prompt, remote=state.remote, backend=backend):
 
         def decode(x):
             return model.lm_head(model.model.ln_f(x))
@@ -59,9 +60,6 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor] | str:
 
         results.save()
 
-    if state.remote:
-        return tracer.backend.job_id
-
     return results
 
 
@@ -71,25 +69,18 @@ def get_remote_line(job_id: str, state: AppState):
     return results["results"]
 
 
-def collect_line_results(
+def process_line_results(
+    results: list[t.Tensor],
     req: LensLineRequest,
     state: AppState,
-    job_id: str | None = None,
 ):
-    if job_id is None:
-        result = line(req, state)
-        if isinstance(result, str):
-            return LensLineResponse(job_id=result)
-        raw_results = result
-    else:
-        raw_results = get_remote_line(job_id, state)
-
     tok = state[req.model].tokenizer
     target_token_strs = tok.batch_decode(req.token.target_ids)
 
-    # Postprocess results
     lines = []
-    for layer_idx, probs in enumerate(raw_results):
+
+    # Get results into a format for the FE component
+    for layer_idx, probs in enumerate(results):
         for line_idx, prob in enumerate(probs.tolist()):
             if layer_idx == 0:
                 lines.append(
@@ -101,25 +92,30 @@ def collect_line_results(
             else:
                 lines[line_idx].data.append(Point(x=layer_idx, y=prob))
 
-    return LensLineResponse(
-        data=lines,
-    )
+    return {"data": lines}
 
 
-@router.post("/start-line")
+@router.post("/start-line", response_model=LensLineResponse)
 async def start_line(
-    lens_request: LensLineRequest, state: AppState = Depends(get_state)
+    req: LensLineRequest, state: AppState = Depends(get_state)
 ):
-    return collect_line_results(lens_request, state)
+    backend = state.make_backend(model=state[req.model])
+    result = line(req, state, backend)
+
+    if state.remote:
+        return {"job_id": backend.job_id}
+
+    return process_line_results(result, req, state)
 
 
-@router.post("/results-line/{job_id}")
+@router.post("/results-line/{job_id}", response_model=LensLineResponse)
 async def collect_line(
     job_id: str,
-    lens_request: LensLineRequest,
+    req: LensLineRequest,
     state: AppState = Depends(get_state),
 ):
-    return collect_line_results(lens_request, state, job_id)
+    results = get_remote_line(job_id, state)
+    return process_line_results(results, req, state)
 
 
 class GridLensRequest(BaseModel):
@@ -142,16 +138,14 @@ class GridLensResponse(NDIFResponse):
 
 
 def heatmap(
-    req: GridLensRequest, state: AppState
-) -> tuple[list[t.Tensor], list[t.Tensor]] | str:
-    model = state.get_model(req.model)
+    req: GridLensRequest, state: AppState, backend: RemoteBackend | None
+) -> tuple[list[t.Tensor], list[t.Tensor]]:
+    model = state[req.model]
 
     def decode(x):
         return model.lm_head(model.model.ln_f(x))
 
-    with model.trace(
-        req.prompt, remote=state.remote, backend=state.make_backend(model)
-    ) as tracer:
+    with model.trace(req.prompt, remote=state.remote, backend=backend):
         pred_ids = []
         probs = []
 
@@ -175,37 +169,24 @@ def heatmap(
         probs.save()
         pred_ids.save()
 
-    if state.remote:
-        return tracer.backend.job_id
-
     return probs, pred_ids
 
 
-def get_remote_heatmap(job_id: str, state: AppState):
+def get_remote_heatmap(
+    job_id: str, state: AppState
+) -> tuple[list[t.Tensor], list[t.Tensor]]:
     backend = state.make_backend(job_id=job_id)
     results = backend()
     return results["probs"], results["pred_ids"]
 
 
-def collect_grid_results(
+def process_grid_results(
+    probs: list[t.Tensor],
+    pred_ids: list[t.Tensor],
     lens_request: GridLensRequest,
     state: AppState,
-    job_id: str | None = None,
 ):
     """Background task to process grid lens computation"""
-
-    # NOTE: These are ordered by layer
-    if job_id is None:
-        result = heatmap(lens_request, state)
-        if isinstance(result, str):
-            return GridLensResponse(job_id=result)
-        probs, pred_ids = result
-    else:
-        probs, pred_ids = get_remote_heatmap(job_id, state)
-
-    # probs = [p.tolist() for p in probs]
-    # pred_ids = [p.tolist() for p in pred_ids]
-
     # Get the stringified tokens of the input
     tok = state[lens_request.model].tokenizer
     input_strs = tok.batch_decode(tok.encode(lens_request.prompt))
@@ -223,22 +204,25 @@ def collect_grid_results(
         # Add the input string to the row id to make it unique
         rows.append(GridRow(id=f"{input_str}-{seq_idx}", data=points))
 
-    return GridLensResponse(
-        data=rows,
-    )
+    return {"data": rows}
 
 
-@router.post("/start-grid")
-async def get_grid(
-    lens_request: GridLensRequest, state: AppState = Depends(get_state)
-):
-    return collect_grid_results(lens_request, state)
+@router.post("/start-grid", response_model=GridLensResponse)
+async def get_grid(req: GridLensRequest, state: AppState = Depends(get_state)):
+    backend = state.make_backend(model=state[req.model])
+    probs, pred_ids = heatmap(req, state, backend)
+
+    if state.remote:
+        return {"job_id": backend.job_id}
+
+    return process_grid_results(probs, pred_ids, req, state)
 
 
-@router.post("/results-grid/{job_id}")
+@router.post("/results-grid/{job_id}", response_model=GridLensResponse)
 async def collect_grid(
     job_id: str,
     lens_request: GridLensRequest,
     state: AppState = Depends(get_state),
 ):
-    return collect_grid_results(lens_request, state, job_id)
+    probs, pred_ids = get_remote_heatmap(job_id, state)
+    return process_grid_results(probs, pred_ids, lens_request, state)

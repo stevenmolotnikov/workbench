@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
-import torch as t
-
 from pydantic import BaseModel
+import torch as t
+from nnsight.intervention.backends.remote import RemoteBackend
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
@@ -20,37 +20,37 @@ class LensCompletion(BaseModel):
     token: Token
 
 
-def get_prediction(
-    req: LensCompletion, state: AppState
+def prediction(
+    req: LensCompletion, state: AppState, backend: RemoteBackend | None
 ) -> tuple[t.Tensor, t.Tensor]:
-    idxs = [req.token.idx]
-    model = state.get_model(req.model)
-
-    print("IS REMOTE", state.remote)
+    model = state[req.model]
 
     with model.trace(
         req.prompt,
         remote=state.remote,
-        backend=state.make_backend(model),
-    ) as tracer:
+        backend=backend,
+    ):
         logits_BLV = model.lm_head.output
 
-        logits_LV = logits_BLV[0, idxs, :].softmax(dim=-1)
+        # Get logits for the correct index
+        logits_LV = logits_BLV[0, [req.token.idx], :].softmax(dim=-1)
+
+        # Sort logits by descending probability
         values_LV_indices_LV = t.sort(logits_LV, dim=-1, descending=True)
 
         values_LV = values_LV_indices_LV[0].save()
         indices_LV = values_LV_indices_LV[1].save()
 
-    # Tracer will have a job_id if remote=True
-    if state.remote:
-        return tracer.backend.job_id
-
     return values_LV, indices_LV
 
-def get_remote_prediction(job_id: str, state: AppState):
+
+def get_remote_prediction(
+    job_id: str, state: AppState
+) -> tuple[t.Tensor, t.Tensor]:
     backend = state.make_backend(job_id=job_id)
     results = backend()
     return results["values_LV"], results["indices_LV"]
+
 
 class Prediction(BaseModel):
     idx: int
@@ -58,28 +58,20 @@ class Prediction(BaseModel):
     probs: list[float]
     texts: list[str]
 
+
 class PredictionResponse(NDIFResponse):
     data: Prediction | None = None
 
-def collect_prediction(
+
+def process_prediction(
+    values_LV: t.Tensor,
+    indices_LV: t.Tensor,
     req: LensCompletion,
     state: AppState,
-    job_id: str | None = None,
-) -> Prediction | str:
-    if job_id is None:
-        result = get_prediction(req, state)
-        if isinstance(result, str):
-            return PredictionResponse(job_id=result)
-        values_LV, indices_LV = result
-    else:
-        values_LV, indices_LV = get_remote_prediction(job_id, state)
-
+):
     tok = state[req.model].tokenizer
     idxs = [req.token.idx]
 
-    # for idx_values, idx_indices, token_index in zip(
-    #     values_LV, indices_LV, idxs
-    # ):
     # Round values to 2 decimal places
     idx_values = t.round(values_LV[0] * 100) / 100
     nonzero = idx_values > 0
@@ -95,22 +87,30 @@ def collect_prediction(
         texts=nonzero_texts,
     )
 
-    return PredictionResponse(data=prediction)
+    return {"data": prediction}
 
-@router.post("/start-prediction")
+
+@router.post("/start-prediction", response_model=PredictionResponse)
 async def start_prediction(
     prediction_request: LensCompletion, state: AppState = Depends(get_state)
 ):
-    print(state.remote)
-    return collect_prediction(prediction_request, state)
+    backend = state.make_backend(model=state[prediction_request.model])
+    values_LV, indices_LV = prediction(prediction_request, state, backend)
 
-@router.post("/results-prediction/{job_id}")
+    if state.remote:
+        return {"job_id": backend.job_id}
+
+    return process_prediction(values_LV, indices_LV, prediction_request, state)
+
+
+@router.post("/results-prediction/{job_id}", response_model=PredictionResponse)
 async def results_prediction(
     job_id: str,
     prediction_request: LensCompletion,
     state: AppState = Depends(get_state),
 ):
-    return collect_prediction(prediction_request, state, job_id)
+    values_LV, indices_LV = get_remote_prediction(job_id, state)
+    return process_prediction(values_LV, indices_LV, prediction_request, state)
 
 
 class Completion(BaseModel):
