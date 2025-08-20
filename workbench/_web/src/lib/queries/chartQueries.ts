@@ -119,6 +119,7 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
             id: charts.id,
             name: charts.name,
             chartType: charts.type,
+            createdAt: charts.createdAt,
             updatedAt: charts.updatedAt,
             toolType: configs.type,
         })
@@ -126,7 +127,7 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
         .leftJoin(chartConfigLinks, eq(charts.id, chartConfigLinks.chartId))
         .leftJoin(configs, eq(chartConfigLinks.configId, configs.id))
         .where(eq(charts.workspaceId, workspaceId))
-        .groupBy(charts.id, charts.updatedAt, charts.type, configs.type)
+        .groupBy(charts.id, charts.createdAt, charts.updatedAt, charts.type, configs.type)
         .orderBy(desc(charts.updatedAt));
 
     return rows.map((r) => ({
@@ -134,6 +135,7 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
         name: r.name,
         chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
         toolType: (r.toolType as "lens" | "patch" | null) ?? null,
+        createdAt: r.createdAt as Date,
         updatedAt: r.updatedAt as Date,
     } as ChartMetadata));
 };

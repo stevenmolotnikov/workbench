@@ -3,11 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { getChartsMetadata } from "@/lib/queries/chartQueries";
 import { useParams, useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
 import { useCreateLensChartPair, useCreatePatchChartPair, useDeleteChart } from "@/lib/api/chartApi";
-import { useCreateDocument, useGetDocumentByWorkspace } from "@/lib/api/documentApi";
+import { useCreateDocument, useDeleteDocument, useGetDocumentsForWorkspace } from "@/lib/api/documentApi";
 import ChartCard from "./ChartCard";
+import ReportCard from "./ReportCard";
 import { ChartMetadata } from "@/types/charts";
+import type { DocumentListItem } from "@/lib/queries/documentQueries";
 
 export default function ChartCardsSidebar() {
     const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -18,12 +19,13 @@ export default function ChartCardsSidebar() {
         queryFn: () => getChartsMetadata(workspaceId as string),
     });
 
-    const { data: document, isLoading: isDocLoading } = useGetDocumentByWorkspace(workspaceId as string);
+    const { data: reports, isLoading: isReportsLoading } = useGetDocumentsForWorkspace(workspaceId as string);
 
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
     const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
     const { mutate: deleteChart } = useDeleteChart();
     const { mutate: createDocument, isPending: isCreatingOverview } = useCreateDocument();
+    const { mutate: deleteDocument } = useDeleteDocument();
 
     const navigateToChart = (chartId: string) => {
         router.push(`/workbench/${workspaceId}/${chartId}`);
@@ -56,13 +58,28 @@ export default function ChartCardsSidebar() {
     };
 
     const handleOverviewClick = () => {
-        if (document?.id) {
-            navigateToOverview(document.id);
+        // Option A: prevent multiple empty reports
+        const empty = (reports || []).find((r) => r.derivedTitle === "");
+        if (empty) {
+            navigateToOverview(empty.id);
             return;
         }
         createDocument(workspaceId as string, {
             onSuccess: (created) => {
                 if (created?.id) navigateToOverview(created.id);
+            },
+        });
+    };
+
+    const handleDeleteReport = (e: React.MouseEvent, reportId: string) => {
+        e.stopPropagation();
+        deleteDocument({ workspaceId: workspaceId as string, documentId: reportId }, {
+            onSuccess: () => {
+                // If the current route is the deleted report, navigate to first chart if any
+                const firstChartId = charts && charts.length > 0 ? charts[0].id : null;
+                if (firstChartId) {
+                    navigateToChart(firstChartId);
+                }
             },
         });
     };
@@ -74,23 +91,43 @@ export default function ChartCardsSidebar() {
                 <span className="text-sm font-medium">Charts</span>
             </div>
             <div className="p-2 space-y-2 overflow-auto">
-                {isChartsLoading && (
+                {(isChartsLoading || isReportsLoading) && (
                     <div className="text-xs text-muted-foreground px-2 py-6 text-center">Loading...</div>
                 )}
-                {(!charts || charts.length === 0) && !isChartsLoading && (
-                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">No charts yet. Create a chart to get started.</div>
+                {(!charts || charts.length === 0) && (!reports || reports.length === 0) && !isChartsLoading && !isReportsLoading && (
+                    <div className="text-xs text-muted-foreground px-2 py-6 text-center">No charts or reports yet. Create one to get started.</div>
                 )}
-                {charts?.map((chart) => {
-                    const canDelete = (charts?.length || 0) > 1;
-                    return (
-                        <ChartCard  
-                            key={chart.id}
-                            metadata={chart}
-                            handleDelete={handleDelete}
-                            canDelete={canDelete}
-                        />
-                    );
-                })}
+                {(charts && reports) && (
+                    [...charts.map((c) => ({ type: "chart" as const, item: c })), ...reports.map((r) => ({ type: "report" as const, item: r }))]
+                        .sort((a, b) => {
+                            const aTime = a.type === "chart" ? new Date(a.item.createdAt).getTime() : new Date(a.item.createdAt).getTime();
+                            const bTime = b.type === "chart" ? new Date(b.item.createdAt).getTime() : new Date(b.item.createdAt).getTime();
+                            return bTime - aTime; // newest first
+                        })
+                        .map((entry) => {
+                            if (entry.type === "chart") {
+                                const chart = entry.item as ChartMetadata;
+                                const canDelete = (charts?.length || 0) > 1;
+                                return (
+                                    <ChartCard
+                                        key={`chart-${chart.id}`}
+                                        metadata={chart}
+                                        handleDelete={handleDelete}
+                                        canDelete={canDelete}
+                                    />
+                                );
+                            }
+                            const report = entry.item as DocumentListItem;
+                            return (
+                                <ReportCard
+                                    key={`report-${report.id}`}
+                                    report={report}
+                                    onClick={() => navigateToOverview(report.id)}
+                                    onDelete={(e) => handleDeleteReport(e, report.id)}
+                                />
+                            );
+                        })
+                )}
                 <div className="flex flex-row h-24 gap-2">
                     <button
                         className="size-full flex items-center text-xs border rounded border-dashed bg-muted/50 justify-center"

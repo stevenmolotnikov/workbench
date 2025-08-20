@@ -55,10 +55,11 @@ export const views = pgTable("views", {
 
 export const documents = pgTable("documents", {
     id: uuid("id").primaryKey().defaultRandom(),
-    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull().unique(),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
     
     content: jsonb("content").notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 // Generate types from schema

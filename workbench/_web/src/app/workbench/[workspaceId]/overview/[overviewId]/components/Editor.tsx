@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
 import { useGetDocument, useSaveDocument } from '@/lib/api/documentApi';
 
 import { EditorState, SerializedEditorState } from 'lexical';
@@ -24,7 +23,8 @@ import { OnChangePlugin } from './plugins/OnChangePlugin';
 import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
 import { DragDropChartPlugin } from './plugins/DragDropChartPlugin';
-import { FileText, Save } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
+import { useDebouncedCallback } from 'use-debounce';
 
 const theme = {
     ltr: 'ltr',
@@ -63,13 +63,12 @@ function Placeholder() {
 }
 
 export function Editor() {
-    const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
     const editorStateRef = useRef<EditorState | null>(null);
 
     const { workspaceId, overviewId } = useParams<{ workspaceId: string; overviewId: string }>();
     const { data: document, isLoading } = useGetDocument(overviewId);
-    const { mutate: saveDocument } = useSaveDocument();
+    const mutation = useSaveDocument();
 
     const initialConfig = {
         namespace: 'LexicalEditor',
@@ -91,35 +90,42 @@ export function Editor() {
         },
     };
 
+    const debouncedSave = useDebouncedCallback(async () => {
+        if (!editorStateRef.current) return;
+        try {
+            const content: SerializedEditorState = editorStateRef.current.toJSON();
+            mutation.mutate({ workspaceId, documentId: overviewId, content });
+        } catch (error) {
+            console.error('Failed to serialize editor state:', error);
+        }
+    }, 20000, { leading: false, trailing: true });
+
     const onChange = useCallback((editorState: EditorState) => {
         editorStateRef.current = editorState;
         setHasChanges(true);
-    }, []);
+        // Cancel any pending save and schedule a new one
+        debouncedSave.cancel();
+        debouncedSave();
+    }, [debouncedSave]);
 
-    const handleSave = async () => {
-        if (!editorStateRef.current) return;
+    useEffect(() => {
+        return () => {
+            // Flush pending changes on unmount
+            debouncedSave.flush();
+        };
+    }, [debouncedSave]);
 
-        setIsSaving(true);
-        try {
-            const content: SerializedEditorState = editorStateRef.current.toJSON();
+    useEffect(() => {
+        // When the document changes (route change), flush pending save
+        debouncedSave.flush();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [overviewId]);
 
-            saveDocument(
-                { workspaceId, content },
-                {
-                    onSuccess: () => {
-                        setHasChanges(false);
-                        setIsSaving(false);
-                    },
-                    onError: () => {
-                        setIsSaving(false);
-                    }
-                }
-            );
-        } catch (error) {
-            console.error('Failed to save:', error);
-            setIsSaving(false);
+    useEffect(() => {
+        if (!mutation.isPending && hasChanges && editorStateRef.current === null) {
+            setHasChanges(false);
         }
-    };
+    }, [mutation.isPending, hasChanges]);
 
     if (isLoading) {
         return (
@@ -136,15 +142,16 @@ export function Editor() {
                     <FileText className="h-4 w-4" />
                     Editor
                 </div>
-                <Button
-                    onClick={handleSave}
-                    variant="outline"
-                    disabled={isSaving || !hasChanges}
-                    size="sm"
-                >
-                    <Save className="h-4 w-4" />
-                    {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
-                </Button>
+                <div className="text-xs text-muted-foreground inline-flex items-center gap-2 px-2">
+                    {(debouncedSave.isPending() || mutation.isPending) ? (
+                        <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Saving…</span>
+                        </>
+                    ) : (
+                        <span>Saved</span>
+                    )}
+                </div>
             </div>
 
             <LexicalComposer initialConfig={initialConfig}>
