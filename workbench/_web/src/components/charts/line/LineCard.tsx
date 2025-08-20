@@ -11,13 +11,12 @@ import { useCrosshair } from "./useCrosshair";
 import { useLineClick } from "./useLineClick";
 import { LineHoverProvider, useLineHover } from "./LineHoverProvider";
 import { useAnnotationSelection } from "./useAnnotationSelection";
-import { useWorkspace } from "@/stores/useWorkspace";
 
 
 interface LineCardProps {
     chart: LineChart;
     pending: boolean;
-    captureRef?: RefObject<HTMLDivElement>;
+    captureRef: RefObject<HTMLDivElement>;
 }
 
 export const LineCard = ({ chart, captureRef, pending }: LineCardProps) => {

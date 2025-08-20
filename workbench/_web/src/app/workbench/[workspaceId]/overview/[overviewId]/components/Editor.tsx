@@ -20,7 +20,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 
 import { OnChangePlugin } from './plugins/OnChangePlugin';
-import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
+// import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
 import { DragDropChartPlugin } from './plugins/DragDropChartPlugin';
 import { FileText, Loader2 } from 'lucide-react';
@@ -98,7 +98,7 @@ export function Editor() {
         } catch (error) {
             console.error('Failed to serialize editor state:', error);
         }
-    }, 20000, { leading: false, trailing: true });
+    }, 5000, { leading: false, trailing: true });
 
     const onChange = useCallback((editorState: EditorState) => {
         editorStateRef.current = editorState;
@@ -172,7 +172,7 @@ export function Editor() {
                             {/* <LinkPlugin /> */}
                             <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
                             <AutoFocusPlugin />
-                            <SlashCommandPlugin />
+                            {/* <SlashCommandPlugin /> */}
                             <DragDropChartPlugin />
                         </div>
                     </div>

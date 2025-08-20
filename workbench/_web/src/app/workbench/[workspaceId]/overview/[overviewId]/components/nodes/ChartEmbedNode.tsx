@@ -2,16 +2,16 @@
 
 import { DecoratorNode, LexicalEditor, NodeKey, SerializedLexicalNode, Spread, $getNodeByKey, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, COMMAND_PRIORITY_LOW } from "lexical";
 import * as React from "react";
-import { Line, HeatmapRow } from "@/types/charts";
 import { getChartById } from "@/lib/queries/chartQueries";
 import type { ChartMetadata } from "@/types/charts";
 import { useQuery } from "@tanstack/react-query";
-import { Line as LineChart } from "@/components/charts/line/Line";
-import { Heatmap } from "@/components/charts/heatmap/Heatmap";
+import { StaticHeatmapCard } from "@/components/charts/heatmap/StaticHeatmapCard";
 import { Card } from "@/components/ui/card";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
+import { StaticLineCard } from "@/components/charts/line/StaticLineCard";
+import { HeatmapChart, LineChart } from "@/db/schema";
 // no-op
 
 // Command payload and command export
@@ -141,11 +141,11 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
         <div className="text-sm text-muted-foreground">Loading chart…</div>
       ) : type === "line" && chart.data ? (
         <div className="w-full h-86">
-          <LineChart lines={chart.data as Line[]} />
+          <StaticLineCard chart={chart as LineChart} />
         </div>
       ) : type === "heatmap" && chart.data ? (
         <div className="w-full h-86">
-          <Heatmap data={chart.data as HeatmapRow[]} />
+          <StaticHeatmapCard chart={chart as HeatmapChart} />
         </div>
       ) : (
         <div className="text-sm text-muted-foreground">No data available</div>
