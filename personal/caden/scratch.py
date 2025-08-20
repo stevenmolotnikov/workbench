@@ -7,11 +7,11 @@ from nnsight.intervention.backends.remote import RemoteBackend
 
 import nnsight
 
-nnsight.CONFIG.set_default_api_key("")
-nnsight.CONFIG.API.HOST = (
-    "dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001"
-)
-nnsight.CONFIG.API.SSL = False
+# nnsight.CONFIG.set_default_api_key("")
+# nnsight.CONFIG.API.HOST = (
+#     "dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001"
+# )
+# nnsight.CONFIG.API.SSL = False
 model = LanguageModel("openai-community/gpt2")
 
 nnsight.CONFIG.API.JOB_ID = None
@@ -29,6 +29,10 @@ with model.trace("hello, world", remote=True, blocking=False) as tracer:
     results.save()
 
 nnsight.CONFIG.API.JOB_ID = None
+
+# %%
+
+print(tracer.backend.job_id)
 
 # %%
 

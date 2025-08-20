@@ -28,18 +28,24 @@ interface CompletionCardProps {
 }
 
 export function CompletionCard({ initialConfig, chartType, selectedModel }: CompletionCardProps) {
-    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
-
+    const { workspaceId } = useParams<{ workspaceId: string }>();
 
     const [tokenData, setTokenData] = useState<Token[]>([]);
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
+    const [promptHasChanged, setPromptHasChanged] = useState(false);
 
     const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId: initialConfig.id });
 
+    // Reset promptHasChanged when config changes (e.g., when switching between different configs)
+    useEffect(() => {
+        setPromptHasChanged(false);
+    }, [initialConfig.id]);
+
+    // Tokenize the prompt if the config changes and there's an existing prediction
     useEffect(() => {
         const fetchTokens = async () => {
             if (config.prediction) {
@@ -48,8 +54,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             }
         }
         fetchTokens();
-
-    }, [chartId]);
+    }, [initialConfig.id]);
 
     // Toggle the TokenArea component to the TextArea component
     const textareaRef = useRef<HTMLTextAreaElement>(null);

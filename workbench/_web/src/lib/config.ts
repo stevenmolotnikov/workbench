@@ -21,8 +21,8 @@ const config = {
         // decode: '/models/decode',
     },
     getApiUrl: (endpoint: string) => `${config.backendUrl}${endpoint}`,
-    // ndifStatusUrl: (jobId: string) => `https://ndif.dev/response/${jobId}`,
-    ndifStatusUrl: (jobId: string) => `http://dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001/response/${jobId}`,
+    ndifStatusUrl: (jobId: string) => `https://api.ndif.us/response/${jobId}`,
+    // ndifStatusUrl: (jobId: string) => `http://dev-nlb-5bbd7ae7fcd3eea2.elb.us-east-1.amazonaws.com:8001/response/${jobId}`,
 } as const;
 
 export default config;

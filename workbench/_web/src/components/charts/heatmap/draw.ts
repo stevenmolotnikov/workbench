@@ -22,12 +22,16 @@ export const drawRect = (canvasRef: React.RefObject<HTMLCanvasElement>, bounds: 
     const y = margin.top + minRow * dims.height
     const w = (maxCol - minCol + 1) * dims.width
     const h = (maxRow - minRow + 1) * dims.height
-    // Use primary blue color from globals.css (HSL: 217.2193 91.2195% 59.8039%)
-    ctx.strokeStyle = 'hsl(217.22, 91.22%, 59.8%)'
-    ctx.lineWidth = 1
+    
+    // Use dashed red style for selection rectangle
+    ctx.save();
+    ctx.strokeStyle = "#ef4444"; // red-500
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1.5
     const sx = x + 0.5
     const sy = y + 0.5
     const sw = Math.max(0, w - 1)
     const sh = Math.max(0, h - 1)
     ctx.strokeRect(sx, sy, sw, sh)
+    ctx.restore();
 }

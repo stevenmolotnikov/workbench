@@ -34,15 +34,19 @@ const drawRectPx = (
     const minY = Math.max(innerMinY, Math.min(y0, y1));
     const maxY = Math.min(innerMaxY, Math.max(y0, y1));
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-    // Use primary blue color from globals.css (HSL: 217.2193 91.2195% 59.8039%)
-    ctx.strokeStyle = "hsl(217.22, 91.22%, 59.8%)";
-    ctx.lineWidth = 1;
+    
+    // Use dashed red style for selection rectangle
+    ctx.save();
+    ctx.strokeStyle = "#ef4444"; // red-500
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(
         minX + 0.5,
         minY + 0.5,
         Math.max(0, maxX - minX - 1),
         Math.max(0, maxY - minY - 1)
     );
+    ctx.restore();
 };
 
 const drawVerticalLinePx = (
