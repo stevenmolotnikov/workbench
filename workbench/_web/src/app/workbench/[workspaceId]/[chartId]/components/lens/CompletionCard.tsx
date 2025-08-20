@@ -13,13 +13,14 @@ import { encodeText } from "@/actions/tok";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
 import { useParams } from "next/navigation";
 import { useLensCharts } from "@/hooks/useLensCharts";
-import { cn } from "@/lib/utils";   
+import { cn } from "@/lib/utils";
 
 import { LensConfig } from "@/db/schema";
 import GenerateButton from "./GenerateButton";
 import { DecoderSelector } from "./DecoderSelector";
 import { ChartType } from "@/types/charts";
 import { Token } from "@/types/models";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -85,6 +86,11 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             token: { idx: tokens[tokens.length - 1].idx, id: 0, text: "", targetIds: [] }
         }
 
+        if (!promptHasChanged) {
+            setEditingText(false);
+            return;
+        };
+
         // Run predictions
         await runPredictions(temporaryConfig);
         await handleCreateHeatmap(temporaryConfig);
@@ -95,6 +101,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             ...config,
             prompt: e.target.value,
         });
+        if (!promptHasChanged) setPromptHasChanged(true);
     };
 
     // Newline on shift + enter and tokenize on enter
@@ -120,17 +127,17 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     // Close editing when focus leaves to outside of textarea, token area, or settings
     const handleTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
         if (!config.prediction) return; // only exit editing once a prediction exists
-        
+
         // Use setTimeout to allow click events to register first
         setTimeout(() => {
             const activeElement = document.activeElement;
             const withinTextarea = activeElement && textareaRef.current?.contains(activeElement);
             const withinToken = activeElement && tokenContainerRef.current?.contains(activeElement);
             const withinSettings = activeElement && settingsRef.current?.contains(activeElement);
-            
+
             // Check if a popover is open (Radix UI adds data-state="open" to popovers)
             const popoverOpen = document.querySelector('[data-radix-popper-content-wrapper]');
-            
+
             if (withinTextarea || withinToken || withinSettings || popoverOpen) return;
             setEditingText(false);
         }, 0);
@@ -277,11 +284,20 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                             <DecoderSelector />
                         </div>
 
-                        <PredictionBadges
-                            config={config}
-                            setConfig={setConfig}
-                            configId={initialConfig.id}
-                        />
+
+
+                        <div className={cn(
+                            "size-full",
+                            chartType === "heatmap" ? "opacity-50 pointer-events-none" : "pointer-events-auto"
+                        )}>
+                            <PredictionBadges
+                                config={config}
+                                setConfig={setConfig}
+                                configId={initialConfig.id}
+                            />
+                        </div>
+
+
                     </div>
                 </div>
             )}

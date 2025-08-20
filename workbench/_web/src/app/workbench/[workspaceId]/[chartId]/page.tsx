@@ -50,11 +50,9 @@ export default function ChartPage() {
                 <ResizableHandle className="w-[0.8px]" />
                 <ResizablePanel className="h-full" defaultSize={30} minSize={25}>
                     <div className="flex items-center justify-between border-b h-12 px-2 py-2">
-                        <div className="relative group">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded transition-colors bg-muted text-foreground">
-                                {activeTool?.icon}
-                                {activeTool?.name || ""}
-                            </div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 border rounded transition-colors bg-muted text-foreground">
+                            {activeTool?.icon}
+                            {activeTool?.name || ""}
                         </div>
                     </div>
                     {

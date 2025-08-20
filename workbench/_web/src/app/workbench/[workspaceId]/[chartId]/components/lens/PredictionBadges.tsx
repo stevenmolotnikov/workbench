@@ -201,7 +201,7 @@ export const PredictionBadges = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const CustomMultiValue = (props: any) => {
         const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
-        
+
         return (
             <div
                 className={cn(
@@ -240,14 +240,11 @@ export const PredictionBadges = ({
     };
 
     return (
-        <div className="flex flex-col gap-1 w-full">
+        <div className="flex flex-col gap-1.5 w-full">
             <div className="flex justify-between items-center">
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <span className="inline-block">
-                            <span className="text-xs">Target Tokens
-                            </span>
-                        </span>
+                        <span className="text-xs">Target Tokens</span>
                     </TooltipTrigger>
                     <TooltipContent side="right">Defaults to top 3.</TooltipContent>
                 </Tooltip>

@@ -29,7 +29,7 @@ export const LineCard = ({ chart, captureRef, pending }: LineCardProps) => {
                 <LineDataProvider chart={chart}>
                     <LineCanvasProvider>
                         <LineHoverProvider>
-                            <InteractiveLine />
+                            <InteractiveLine captureRef={captureRef}/>
                         </LineHoverProvider>
                     </LineCanvasProvider>
                 </LineDataProvider>
@@ -67,7 +67,7 @@ const PendingLine = () => {
     );
 }
 
-const InteractiveLine = () => {
+const InteractiveLine = ({ captureRef }: { captureRef: RefObject<HTMLDivElement> }) => {
     // Provider context hooks
     const { lines, yRange } = useLineData();
     const { rafRef, lineCanvasRef, activeSelection } = useLineCanvas();
@@ -123,7 +123,7 @@ const InteractiveLine = () => {
                     <RotateCcw className="w-4 h-4" />
                 </Button>
             </div>
-            <div className="flex h-[90%] w-full">
+            <div className="flex h-[90%] w-full" ref={captureRef}>
                 <Line
                     lines={lines}
                     yRange={yRange}

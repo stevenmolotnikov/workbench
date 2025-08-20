@@ -6,6 +6,7 @@ import { useCreateView, useDeleteView, useUpdateView } from "@/lib/api/viewApi"
 import { getView } from "@/lib/queries/viewQueries"
 import { useQuery } from "@tanstack/react-query"
 import { queryKeys } from "@/lib/queryKeys"
+import { useCapture } from "../providers/CaptureProvider"
 
 interface ViewContextValue {
     view: View | null
@@ -36,6 +37,7 @@ interface ViewProviderProps {
 }
 
 export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
+    const { captureChartThumbnail } = useCapture();
 
     const { mutateAsync: updateView } = useUpdateView()
     const { mutateAsync: createView } = useCreateView()
@@ -62,7 +64,8 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         }
         // Clear pending after successful persist
         pendingRef.current = null
-    }, 1000)
+        await captureChartThumbnail(chartId);
+    }, 3000)
 
     const persistView = useCallback((viewData: Partial<ChartView>) => {
         const base = pendingRef.current ?? (view?.data as ChartView | null) ?? {}
