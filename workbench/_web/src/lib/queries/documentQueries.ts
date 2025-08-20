@@ -112,7 +112,7 @@ export const getDocumentsForWorkspace = async (workspaceId: string): Promise<Doc
     }));
 };
 
-// Default content: empty document
+// Default content: minimal valid document (one empty paragraph)
 const defaultInitialContent = {
     root: {
         type: "root",
@@ -120,7 +120,16 @@ const defaultInitialContent = {
         format: "",
         indent: 0,
         direction: "ltr",
-        children: [],
+        children: [
+            {
+                type: "paragraph",
+                version: 1,
+                format: "",
+                indent: 0,
+                direction: "ltr",
+                children: [],
+            },
+        ],
     },
 } as unknown as SerializedEditorState;
 
