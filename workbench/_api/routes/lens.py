@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
-from nnsight.intervention.backends.remote import RemoteBackend
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
@@ -30,35 +29,39 @@ class LensLineResponse(NDIFResponse):
 router = APIRouter()
 
 
-def line(
-    req: LensLineRequest, state: AppState, backend: RemoteBackend | None
-) -> list[t.Tensor]:
+def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
     model = state[req.model]
+    idx = req.token.idx
+    target_ids = req.token.target_ids
 
-    with model.trace(req.prompt, remote=state.remote, backend=backend):
-
-        def decode(x):
-            return model.lm_head(model.model.ln_f(x))
-
+    with model.trace(
+        req.prompt,
+        remote=state.remote,
+        backend=state.make_backend(model=model),
+    ) as tracer:
         results = []
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
             hidden_BLD = layer.output[0]
-            logits_BLV = decode(hidden_BLD)
+
+            # NOTE(cadentj): Can't pickle local decode function atm
+            logits_BLV = model.lm_head(model.model.ln_f(hidden_BLD))
 
             # Compute probabilities over the relevant tokens
-            logits_V = logits_BLV[0, req.token.idx, :]
+            logits_V = logits_BLV[0, idx, :]
 
             probs_V = t.nn.functional.softmax(logits_V, dim=-1)
 
             # Gather probabilities over the predicted tokens
-            target_probs_X = t.gather(
-                probs_V, 0, t.tensor(req.token.target_ids)
-            )
+            target_ids_tensor = t.tensor(target_ids).to(probs_V.device)
+            target_probs_X = t.gather(probs_V, 0, target_ids_tensor)
 
             results.append(target_probs_X)
 
         results.save()
+
+    if state.remote:
+        return tracer.backend.job_id
 
     return results
 
@@ -99,15 +102,11 @@ def process_line_results(
 async def start_line(
     req: LensLineRequest, state: AppState = Depends(get_state)
 ):
-    backend = state.make_backend(model=state[req.model])
-    result = line(req, state, backend)
-
+    result = line(req, state)
     if state.remote:
-        return {"job_id": backend.job_id}
+        return {"job_id": result}
 
-    return {
-        "data" : process_line_results(result, req, state)
-    }
+    return {"data": process_line_results(result, req, state)}
 
 
 @router.post("/results-line/{job_id}", response_model=LensLineResponse)
@@ -117,9 +116,7 @@ async def collect_line(
     state: AppState = Depends(get_state),
 ):
     results = get_remote_line(job_id, state)
-    return {
-        "data" : process_line_results(results, req, state)
-    }
+    return {"data": process_line_results(results, req, state)}
 
 
 class GridLensRequest(BaseModel):
@@ -142,36 +139,50 @@ class GridLensResponse(NDIFResponse):
 
 
 def heatmap(
-    req: GridLensRequest, state: AppState, backend: RemoteBackend | None
+    req: GridLensRequest, state: AppState
 ) -> tuple[list[t.Tensor], list[t.Tensor]]:
     model = state[req.model]
 
-    def decode(x):
-        return model.lm_head(model.model.ln_f(x))
+    def _compute_top_probs(
+        logits_BLV: t.Tensor,
+        # NOTE(cadentj): Can't put this in the trace body bc of pickling issues
+        probs: list[t.Tensor],
+        pred_ids: list[t.Tensor],
+    ):
+        relevant_tokens_LV = logits_BLV[0, :, :]
 
-    with model.trace(req.prompt, remote=state.remote, backend=backend):
+        probs_LV = t.nn.functional.softmax(relevant_tokens_LV, dim=-1)
+        pred_ids_L = relevant_tokens_LV.argmax(dim=-1)
+
+        # Gather probabilities over the predicted tokens
+        pred_ids_L1 = pred_ids_L.unsqueeze(1)
+        probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
+
+        pred_ids.append(pred_ids_L.tolist())
+        probs.append(probs_L.tolist())
+
+    with model.trace(
+        req.prompt,
+        remote=state.remote,
+        backend=state.make_backend(model=model),
+    ) as tracer:
         pred_ids = []
         probs = []
 
-        def _compute_top_probs(logits_BLV: t.Tensor):
-            relevant_tokens_LV = logits_BLV[0, :, :]
-
-            probs_LV = t.nn.functional.softmax(relevant_tokens_LV, dim=-1)
-            pred_ids_L = relevant_tokens_LV.argmax(dim=-1)
-
-            # Gather probabilities over the predicted tokens
-            pred_ids_L1 = pred_ids_L.unsqueeze(1)
-            probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
-
-            pred_ids.append(pred_ids_L.tolist())
-            probs.append(probs_L.tolist())
-
         for layer in model.model.layers[:-1]:
-            _compute_top_probs(decode(layer.output[0]))
-        _compute_top_probs(model.output.logits)
+            _compute_top_probs(
+                # NOTE(cadentj): Can't put this in the trace body bc of pickling issues
+                model.lm_head(model.model.ln_f(layer.output[0])),
+                probs,
+                pred_ids,
+            )
+        _compute_top_probs(model.output.logits, probs, pred_ids)
 
         probs.save()
         pred_ids.save()
+
+    if state.remote:
+        return tracer.backend.job_id
 
     return probs, pred_ids
 
@@ -213,12 +224,11 @@ def process_grid_results(
 
 @router.post("/start-grid", response_model=GridLensResponse)
 async def get_grid(req: GridLensRequest, state: AppState = Depends(get_state)):
-    backend = state.make_backend(model=state[req.model])
-    probs, pred_ids = heatmap(req, state, backend)
-
+    result = heatmap(req, state)
     if state.remote:
-        return {"job_id": backend.job_id}
+        return {"job_id": result}
 
+    probs, pred_ids = result
     return {"data": process_grid_results(probs, pred_ids, req, state)}
 
 
@@ -229,6 +239,4 @@ async def collect_grid(
     state: AppState = Depends(get_state),
 ):
     probs, pred_ids = get_remote_heatmap(job_id, state)
-    return {
-        "data" : process_grid_results(probs, pred_ids, lens_request, state)
-    }
+    return {"data": process_grid_results(probs, pred_ids, lens_request, state)}

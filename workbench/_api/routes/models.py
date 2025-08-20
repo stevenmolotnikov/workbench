@@ -21,19 +21,20 @@ class LensCompletion(BaseModel):
 
 
 def prediction(
-    req: LensCompletion, state: AppState, backend: RemoteBackend | None
-) -> tuple[t.Tensor, t.Tensor]:
+    req: LensCompletion, state: AppState
+) -> tuple[t.Tensor, t.Tensor] | str:
     model = state[req.model]
+    idx = req.token.idx
 
     with model.trace(
         req.prompt,
         remote=state.remote,
-        backend=backend,
-    ):
+        backend=state.make_backend(model=model),
+    ) as tracer:
         logits_BLV = model.lm_head.output
 
         # Get logits for the correct index
-        logits_LV = logits_BLV[0, [req.token.idx], :].softmax(dim=-1)
+        logits_LV = logits_BLV[0, [idx], :].softmax(dim=-1)
 
         # Sort logits by descending probability
         values_LV_indices_LV = t.sort(logits_LV, dim=-1, descending=True)
@@ -41,8 +42,10 @@ def prediction(
         values_LV = values_LV_indices_LV[0].save()
         indices_LV = values_LV_indices_LV[1].save()
 
-    return values_LV, indices_LV
+    if state.remote: 
+        return tracer.backend.job_id
 
+    return values_LV, indices_LV
 
 def get_remote_prediction(
     job_id: str, state: AppState
@@ -94,12 +97,11 @@ def process_prediction(
 async def start_prediction(
     prediction_request: LensCompletion, state: AppState = Depends(get_state)
 ):
-    backend = state.make_backend(model=state[prediction_request.model])
-    values_LV, indices_LV = prediction(prediction_request, state, backend)
-
+    result = prediction(prediction_request, state)
     if state.remote:
-        return {"job_id": backend.job_id}
+        return {"job_id": result}
 
+    values_LV, indices_LV = result
     data = process_prediction(values_LV, indices_LV, prediction_request, state)
     return {"data": data}
 
@@ -130,15 +132,15 @@ class GenerationResponse(NDIFResponse):
     data: Generation | None = None
 
 
-def generate(req: Completion, state: AppState, backend: RemoteBackend | None):
+def generate(req: Completion, state: AppState):
     model = state[req.model]
 
     with model.generate(
         req.prompt,
         max_new_tokens=req.max_new_tokens,
         remote=state.remote,
-        backend=backend,
-    ):
+        backend=state.make_backend(model=model),
+    ) as generator:
         logits = []
         with model.lm_head.all():
             logits.append(model.lm_head.output)
@@ -149,6 +151,9 @@ def generate(req: Completion, state: AppState, backend: RemoteBackend | None):
         indices_V = values_V_indices_V[1].save()
 
         new_token_ids = model.generator.output.save()
+
+    if state.remote:
+        return generator.backend.job_id
 
     return values_V, indices_V, new_token_ids[0]
 
@@ -200,12 +205,11 @@ def process_generation_results(
 async def start_generate(
     req: Completion, state: AppState = Depends(get_state)
 ):
-    backend = state.make_backend(model=state[req.model])
-    values_V, indices_V, new_token_ids = generate(
-        req, state, backend
-    )
+    result = generate(req, state)
     if state.remote:
-        return {"job_id": backend.job_id}
+        return {"job_id": result}
+    
+    values_V, indices_V, new_token_ids = result
 
     data = process_generation_results(
         values_V, indices_V, new_token_ids, req, state
