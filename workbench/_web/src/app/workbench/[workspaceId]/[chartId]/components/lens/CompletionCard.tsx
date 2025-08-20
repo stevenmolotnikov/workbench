@@ -137,12 +137,14 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
         setEditingText(false);
     };
 
-    const runPredictions = async (temporaryConfig: LensConfigData): Promise<number[]> => {
+    const runPredictions = async (temporaryConfig: LensConfigData) => {
         // Run predictions for the selected token in the config
         const prediction = await getPrediction(temporaryConfig);
+        const topThree = prediction.ids.slice(0, 3);
 
         // Update the config locally
         temporaryConfig.prediction = prediction;
+        temporaryConfig.token.targetIds = topThree;
         setConfig(temporaryConfig);
 
         // Update the config in the database
@@ -157,9 +159,6 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
 
         // Exit the editing state
         setEditingText(false);
-
-        // Return the first 3 target IDs which are sorted by probability
-        return prediction.ids.slice(0, 3);
     }
 
     const handleTokenClick = async (event: React.MouseEvent<HTMLDivElement>, idx: number) => {
@@ -177,8 +176,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
         }
 
         // Run predictions
-        const targetIds = await runPredictions(temporaryConfig);
-        temporaryConfig.token.targetIds = targetIds;
+        await runPredictions(temporaryConfig);
 
         setConfig(temporaryConfig);
         await handleCreateLineChart(temporaryConfig);

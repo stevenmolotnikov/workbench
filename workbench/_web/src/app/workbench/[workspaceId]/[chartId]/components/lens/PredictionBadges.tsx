@@ -1,11 +1,12 @@
-    import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncSelect from "react-select/async";
 import type { MultiValue, StylesConfig, GroupBase } from "react-select";
 import { LensConfigData } from "@/types/lens";
-import { Prediction, TokenOption } from "@/types/models";
+import { TokenOption } from "@/types/models";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useDebouncedCallback } from "use-debounce";
 import { X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PredictionBadgesProps {
     config: LensConfigData;
@@ -179,7 +180,17 @@ export const PredictionBadges = ({
     return (
         <div className="flex flex-col gap-1.5 w-full">
             <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Target Tokens</span>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="inline-block">
+                            <span className="text-xs">Target Tokens
+                            </span>
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-background border text-foreground">Default top 3</TooltipContent>
+                    </Tooltip>
+
                 {config.token.targetIds.length > 0 &&
                     <button
                         className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
