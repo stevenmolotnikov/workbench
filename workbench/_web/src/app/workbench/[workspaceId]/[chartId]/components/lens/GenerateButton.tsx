@@ -7,8 +7,11 @@ import { useState } from "react";
 import type { GenerationResponse } from "@/lib/api/modelsApi";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CornerDownLeft, ChevronDown, Loader2 } from "lucide-react";
+import { useUpdateChartConfig } from "@/lib/api/configApi";
+import { useParams } from "next/navigation";
 
 interface GenerateButtonProps {
+    configId: string,
     config: LensConfigData,
     setConfig: (config: LensConfigData) => void,
     setTokenData: (tokenData: Token[]) => void,
@@ -19,9 +22,11 @@ interface GenerateButtonProps {
     handleCreateHeatmap: (config: LensConfigData) => Promise<unknown>,
 }
 
-export default function GenerateButton({ config, setConfig, setTokenData, setEditingText, isExecuting, handleTokenize, selectedModel, handleCreateHeatmap }: GenerateButtonProps) {
+export default function GenerateButton({ configId, config, setConfig, setTokenData, setEditingText, isExecuting, handleTokenize, selectedModel, handleCreateHeatmap }: GenerateButtonProps) {
     const [maxNewTokens, setMaxNewTokens] = useState(10);
+    const { workspaceId } = useParams<{ workspaceId: string }>();
     const { mutateAsync: generate, isPending: isGenerating } = useGenerate();
+    const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
     const handleGenerate = async () => {
         const {completion, last_token_prediction}: GenerationResponse = await generate({ 
@@ -49,6 +54,17 @@ export default function GenerateButton({ config, setConfig, setTokenData, setEdi
             handleCreateHeatmap(newConfig);
         }
         setConfig(newConfig);
+
+        // Update the config in the database
+        await updateChartConfigMutation({
+            configId: configId,
+            config: {
+                data: newConfig,
+                workspaceId,
+                type: "lens",
+            }
+        });
+
         setEditingText(false);
     }
 

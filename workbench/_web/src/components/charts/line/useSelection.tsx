@@ -8,7 +8,7 @@ import { useLineView } from "../ViewProvider";
 export const useSelection = () => {
     const { lineCanvasRef, getNearestX, activeSelection, setActiveSelection } = useLineCanvas();
     const { setXRange, setYRange, xRange, yRange, bounds } = useLineData();
-    const { persistView, clearView } = useLineView();
+    const { persistView, clearView, cancelPersistView } = useLineView();
 
     const selectionRef = useRef<SelectionBounds | null>(null);
     const didDragRef = useRef<boolean>(false);
@@ -26,6 +26,9 @@ export const useSelection = () => {
 
         let lastXRaw = startXRaw;
         let lastY = startY;
+
+        // Clear any pending annotations
+        cancelPersistView()
 
         const onMove = (ev: MouseEvent) => {
             const r = lineCanvasRef.current?.getBoundingClientRect();

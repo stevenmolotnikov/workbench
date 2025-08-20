@@ -5,20 +5,36 @@ import { LensConfigData } from "@/types/lens";
 import { TokenOption } from "@/types/models";
 import { useLensWorkspace } from "@/stores/useLensWorkspace";
 import { useDebouncedCallback } from "use-debounce";
-import { X } from "lucide-react";
+import { Loader2, RotateCcw, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLensCharts } from "@/hooks/useLensCharts";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface PredictionBadgesProps {
+    configId: string;
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
-    runLineChart: () => void;
 }
 
 export const PredictionBadges = ({
+    configId,
     config,
     setConfig,
-    runLineChart,
 }: PredictionBadgesProps) => {
+    const { handleCreateLineChart, isExecuting } = useLensCharts({ configId });
+    const { toggleLineHighlight } = useLensWorkspace();
+
+    // Debounced function to run line chart 2 seconds after target token IDs change
+    const debouncedRunLineChart = useDebouncedCallback(
+        async (currentConfig: LensConfigData) => {
+            if (currentConfig.token.targetIds.length > 0) {
+                await handleCreateLineChart(currentConfig);
+            }
+        },
+        3000
+    );
+
     const prediction = config.prediction;
 
     const probLookup = useMemo(() => {
@@ -103,11 +119,16 @@ export const PredictionBadges = ({
             }
             return updated;
         });
-        setConfig({
+        const newConfig = {
             ...config,
             token: { ...config.token, targetIds: newIds },
-        });
-        runLineChart();
+        }
+        setConfig(newConfig);
+
+        debouncedRunLineChart.cancel();
+
+        // Run line chart 2 seconds after target token IDs change
+        debouncedRunLineChart(newConfig);
     };
 
     const debouncedFetch = useDebouncedCallback(
@@ -170,17 +191,57 @@ export const PredictionBadges = ({
         [debouncedFetch, config.model, probLookup, options]
     );
 
-
     const [inputValue, setInputValue] = useState<string>("");
 
     if (!prediction) {
         return null;
     }
 
-    return (
-        <div className="flex flex-col gap-1.5 w-full">
-            <div className="flex justify-between items-center">
+    // Custom MultiValue component with click handler
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const CustomMultiValue = (props: any) => {
+        const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
+        
+        return (
+            <div
+                className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors",
+                    isHighlighted
+                        ? "bg-accent border border-primary"
+                        : "bg-muted border border-input"
+                )}
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleLineHighlight(props.data.text);
+                }}
+                onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+            >
+                <span className="text-muted-foreground">{renderTokenText(props.data.text)}</span>
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        props.removeProps.onClick(e);
+                    }}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }}
+                    className="ml-1 text-muted-foreground hover:text-foreground"
+                >
+                    <X className="w-3 h-3" />
+                </button>
+            </div>
+        );
+    };
 
+    return (
+        <div className="flex flex-col gap-1 w-full">
+            <div className="flex justify-between items-center">
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <span className="inline-block">
@@ -191,19 +252,40 @@ export const PredictionBadges = ({
                     <TooltipContent side="right">Defaults to top 3.</TooltipContent>
                 </Tooltip>
 
-                {config.token.targetIds.length > 0 &&
+                <div className="flex items-center gap-2">
+                    {config.token.targetIds.length > 0 &&
+                        <button
+                            className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                                setConfig({
+                                    ...config,
+                                    token: { ...config.token, targetIds: [] },
+                                });
+                            }}
+                        >
+                            <X className="w-3 h-3" />
+                            Clear
+                        </button>
+
+                    }
+                    {config.token.targetIds.length > 0 &&
+                        <Separator orientation="vertical" className="h-3 w-[0.5px]" />
+                    }
                     <button
-                        className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                            setConfig({
-                                ...config,
-                                token: { ...config.token, targetIds: [] },
-                            });
+                        className={cn(
+                            "text-xs flex items-center gap-1 text-muted-foreground",
+                            isExecuting || debouncedRunLineChart.isPending() ? "cursor-progress" : "cursor-pointer hover:text-foreground"
+                        )}
+                        disabled={isExecuting || debouncedRunLineChart.isPending()}
+                        onClick={async () => {
+                            debouncedRunLineChart.cancel();
+                            await debouncedRunLineChart(config);
                         }}
                     >
-                        <X className="w-3 h-3" />
-                        Clear
-                    </button>}
+                        {isExecuting || debouncedRunLineChart.isPending() ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        Rerun
+                    </button>
+                </div>
             </div>
             <div className="w-full flex-1 min-w-[12rem]">
                 <AsyncSelect<TokenOption, true>
@@ -233,6 +315,7 @@ export const PredictionBadges = ({
                         DropdownIndicator: () => null,
                         ClearIndicator: () => null,
                         IndicatorsContainer: () => null,
+                        MultiValue: CustomMultiValue,
                     }}
                     onKeyDown={(e) => {
                         // Allow leading space by manually inserting into controlled input, while preventing option selection
@@ -296,41 +379,7 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
         minWidth: 2,
         paddingLeft: 2,
     }),
-    multiValueLabel: (base) => ({
-        ...base,
-        color: "hsl(var(--muted-foreground))",
-        padding: "0 8px",
-        lineHeight: "1.125rem",
-    }),
-    multiValueRemove: (base) => ({
-        ...base,
-        color: "hsl(var(--muted-foreground))",
-        padding: 0,
-        height: "0.75rem",
-        width: "0.75rem",
-        ':hover': {
-            backgroundColor: "hsl(var(--accent))",
-            color: "hsl(var(--accent-foreground))",
-        },
-    }),
-    multiValue: (base, props) => {
-        const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
-        return {
-            ...base,
-            backgroundColor: isHighlighted
-                ? "hsl(var(--accent))"
-                : "hsl(var(--muted))",
-            border: isHighlighted
-                ? "1px solid hsl(var(--primary))"
-                : "1px solid hsl(var(--input))",
-            margin: 0,
-            alignItems: "center",
-            minHeight: "1.25rem",
-            borderRadius: "calc(var(--radius) - 4px)",
-            paddingLeft: 2,
-            paddingRight: 2,
-        };
-    },
+
     menu: (base) => ({
         ...base,
         backgroundColor: "hsl(var(--popover))",

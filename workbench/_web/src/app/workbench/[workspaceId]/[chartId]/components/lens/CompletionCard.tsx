@@ -3,8 +3,8 @@
 import { ChartLine, Grid3x3 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { getModels, usePrediction } from "@/lib/api/modelsApi";
+import { useState, useEffect, useRef } from "react";
+import { usePrediction } from "@/lib/api/modelsApi";
 import type { LensConfigData } from "@/types/lens";
 
 import { PredictionBadges } from "./PredictionBadges";
@@ -16,12 +16,9 @@ import { useLensCharts } from "@/hooks/useLensCharts";
 import { cn } from "@/lib/utils";   
 
 import { LensConfig } from "@/db/schema";
-import { useWorkspace } from "@/stores/useWorkspace";
 import GenerateButton from "./GenerateButton";
 import { DecoderSelector } from "./DecoderSelector";
-import { useDebouncedCallback } from "use-debounce";
 import { ChartType } from "@/types/charts";
-import { useQuery } from "@tanstack/react-query";
 import { Token } from "@/types/models";
 
 interface CompletionCardProps {
@@ -31,7 +28,7 @@ interface CompletionCardProps {
 }
 
 export function CompletionCard({ initialConfig, chartType, selectedModel }: CompletionCardProps) {
-    const { workspaceId } = useParams<{ workspaceId: string }>();
+    const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
 
 
     const [tokenData, setTokenData] = useState<Token[]>([]);
@@ -43,17 +40,6 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
 
     const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId: initialConfig.id });
 
-    // Debounced function to run line chart 2 seconds after target token IDs change
-    const debouncedRunLineChart = useDebouncedCallback(
-        async (currentConfig: LensConfigData) => {
-            if (currentConfig.token.targetIds.length > 0) {
-                await handleCreateLineChart(currentConfig);
-            }
-        },
-        3000
-    );
-
-    // NOTE(cadentj): check if this only runs once-ish
     useEffect(() => {
         const fetchTokens = async () => {
             if (config.prediction) {
@@ -62,8 +48,8 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             }
         }
         fetchTokens();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+
+    }, [chartId]);
 
     // Toggle the TokenArea component to the TextArea component
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -129,12 +115,20 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     // Close editing when focus leaves to outside of textarea, token area, or settings
     const handleTextareaBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
         if (!config.prediction) return; // only exit editing once a prediction exists
-        const next = (e.relatedTarget as Node | null);
-        const withinTextarea = next && textareaRef.current?.contains(next);
-        const withinToken = next && tokenContainerRef.current?.contains(next);
-        const withinSettings = next && settingsRef.current?.contains(next);
-        if (withinTextarea || withinToken || withinSettings) return;
-        setEditingText(false);
+        
+        // Use setTimeout to allow click events to register first
+        setTimeout(() => {
+            const activeElement = document.activeElement;
+            const withinTextarea = activeElement && textareaRef.current?.contains(activeElement);
+            const withinToken = activeElement && tokenContainerRef.current?.contains(activeElement);
+            const withinSettings = activeElement && settingsRef.current?.contains(activeElement);
+            
+            // Check if a popover is open (Radix UI adds data-state="open" to popovers)
+            const popoverOpen = document.querySelector('[data-radix-popper-content-wrapper]');
+            
+            if (withinTextarea || withinToken || withinSettings || popoverOpen) return;
+            setEditingText(false);
+        }, 0);
     };
 
     const runPredictions = async (temporaryConfig: LensConfigData) => {
@@ -219,6 +213,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                 <div ref={settingsRef} className="absolute bottom-2 right-2 flex items-center gap-2">
                     {editingText && (
                         <GenerateButton
+                            configId={initialConfig.id}
                             config={config}
                             setConfig={setConfig}
                             setTokenData={setTokenData}
@@ -280,7 +275,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         <PredictionBadges
                             config={config}
                             setConfig={setConfig}
-                            runLineChart={() => debouncedRunLineChart(config)}
+                            configId={initialConfig.id}
                         />
                     </div>
                 </div>

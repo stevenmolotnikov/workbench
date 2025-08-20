@@ -9,7 +9,7 @@ import { useHeatmapView } from "../ViewProvider";
 export const useSelection = () => {
     const { filteredData: data, xStep, bounds, xRange, yRange, setXRange, setYRange } = useHeatmapData()
     const { heatmapCanvasRef, activeSelection, setActiveSelection } = useHeatmapCanvas()
-    const { persistView, clearView } = useHeatmapView()
+    const { persistView, clearView, cancelPersistView } = useHeatmapView()
 
     const selectionRef = useRef<HeatmapBounds | null>(null)
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -22,6 +22,9 @@ export const useSelection = () => {
         const start = { minCol: cell.col, minRow: cell.row, maxCol: cell.col, maxRow: cell.row }
         selectionRef.current = start
         setActiveSelection(start)
+
+        // Clear any pending annotations
+        cancelPersistView()
 
         const onMove = (ev: MouseEvent) => {
             const r = heatmapCanvasRef.current?.getBoundingClientRect()
@@ -64,7 +67,7 @@ export const useSelection = () => {
         setActiveSelection(null)
         await clearView()
     }, [clearView, setActiveSelection])
-    
+
     const zoomIntoActiveSelection = useCallback(async () => {
         if (!activeSelection) return
         const zoomBounds = activeSelection

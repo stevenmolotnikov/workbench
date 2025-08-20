@@ -34,10 +34,9 @@ const drawRectPx = (
     const minY = Math.max(innerMinY, Math.min(y0, y1));
     const maxY = Math.min(innerMaxY, Math.max(y0, y1));
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-    ctx.fillStyle = "rgba(239,68,68,0.25)"; // red-500 at 25%
-    ctx.strokeStyle = "#ef4444"; // red-500
+    // Use primary blue color from globals.css (HSL: 217.2193 91.2195% 59.8039%)
+    ctx.strokeStyle = "hsl(217.22, 91.22%, 59.8%)";
     ctx.lineWidth = 1;
-    ctx.fillRect(minX, minY, Math.max(0, maxX - minX), Math.max(0, maxY - minY));
     ctx.strokeRect(
         minX + 0.5,
         minY + 0.5,

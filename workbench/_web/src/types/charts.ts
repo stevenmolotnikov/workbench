@@ -25,7 +25,7 @@ export interface HeatmapBounds {
 
 export interface HeatmapViewData { 
     bounds?: HeatmapBounds;
-    xStep: number;
+    xStep?: number;
     annotation?: HeatmapBounds
 }
 
@@ -54,7 +54,7 @@ export interface SelectionBounds {
 
 export interface LineViewData {
     bounds?: SelectionBounds;
-    selectedLineIds: string[];
+    selectedLineIds?: string[];
     annotation?: SelectionBounds;
 }
 

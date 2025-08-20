@@ -8,6 +8,7 @@ import { HeatmapCanvasProvider, useHeatmapCanvas } from "./HeatmapCanvasProvider
 import { HeatmapHoverProvider, useHeatmapHover } from "./HeatmapHoverProvider";
 import { useSelection } from "./useSelection";
 import { useAnnotationSelection } from "./useAnnotationSelection";
+import { Separator } from "@/components/ui/separator";
 
 interface HeatmapCardProps {
     chart: HeatmapChart;
@@ -89,6 +90,7 @@ const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
     return (
         <div className="flex flex-col size-full">
             <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-end">
+                <span className="text-sm">X-Step:</span>
                 <input
                     type="number"
                     min={1}
@@ -96,10 +98,11 @@ const HeatmapCardContent = ({ captureRef }: HeatmapCardContentProps) => {
                     step={1}
                     value={xStep}
                     onChange={handleStepChange}
-                    className="w-20 h-8 border rounded px-2 text-xs bg-background"
+                    className="w-18 h-8 border rounded px-2 text-xs bg-background "
                     aria-label="X Range Step"
                     title="X Range Step"
                 />
+                <Separator orientation="vertical" />
                 <Button
                     variant={activeSelection ? "default" : "outline"}
                     size="sm"

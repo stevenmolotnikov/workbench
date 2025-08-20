@@ -41,7 +41,7 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
     const { mutateAsync: createView } = useCreateView()
     const { mutateAsync: deleteView } = useDeleteView()
 
-    const { data, isSuccess: isViewSuccess } = useQuery<{view: View, chartType: ChartType} | null>({
+    const { data, isSuccess: isViewSuccess } = useQuery<{ view: View, chartType: ChartType } | null>({
         queryKey: queryKeys.views.byChart(chartId),
         queryFn: () => getView(chartId),
         enabled: !!chartId,
@@ -64,24 +64,12 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         pendingRef.current = null
     }, 1000)
 
-    const defaultView = useMemo(() => ({
-        selectedLineIds: [],
-    }), [])
-
-    const getBaseView = useCallback(() => {
-        let base = pendingRef.current ?? (view?.data as ChartView | null)
-        if (!base) {
-            base = defaultView
-        }
-        return base
-    }, [pendingRef, view, defaultView])
-
     const persistView = useCallback((viewData: Partial<ChartView>) => {
-        const base = getBaseView()
+        const base = pendingRef.current ?? (view?.data as ChartView | null) ?? {}
         const merged = { ...base, ...viewData } as ChartView
         pendingRef.current = merged
         _persistView(merged)
-    }, [_persistView, getBaseView])
+    }, [_persistView, view])
 
     const cancelPersistView = useCallback(() => {
         _persistView.cancel()

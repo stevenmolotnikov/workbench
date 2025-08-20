@@ -107,23 +107,21 @@ const InteractiveLine = () => {
     };
 
     return (
-        <div className="flex flex-col h-full w-full">
-            <div className="flex h-[10%] gap-2 items-end p-4 lg:p-8 justify-end">
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant={activeSelection ? "default" : "outline"}
-                        size="sm"
-                        className="h-8 w-8"
-                        onClick={() => { void zoomIntoActiveSelection(activeSelection) }}
-                        disabled={!activeSelection}
-                        title={activeSelection ? "Zoom into selection and clear selection" : "Draw a selection on the chart first"}
-                    >
-                        <Crop className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset zoom and clear selection">
-                        <RotateCcw className="w-4 h-4" />
-                    </Button>
-                </div>
+        <div className="flex flex-col size-full">
+            <div className="flex h-[10%] gap-2 items-center p-4 lg:p-8 justify-end">
+                <Button
+                    variant={activeSelection ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 w-8"
+                    onClick={() => { void zoomIntoActiveSelection(activeSelection) }}
+                    disabled={!activeSelection}
+                    title={activeSelection ? "Zoom into selection and clear selection" : "Draw a selection on the chart first"}
+                >
+                    <Crop className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 w-8" onClick={handleReset} title="Reset zoom and clear selection">
+                    <RotateCcw className="w-4 h-4" />
+                </Button>
             </div>
             <div className="flex h-[90%] w-full">
                 <Line
