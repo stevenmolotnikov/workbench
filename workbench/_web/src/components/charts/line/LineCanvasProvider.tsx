@@ -31,9 +31,25 @@ export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children
     const lineCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const rafRef = useRef<number | null>(null);
     const [activeSelection, setActiveSelection] = useState<SelectionBounds | null>(null);
+    const activeSelectionRef = useRef<SelectionBounds | null>(null);
+
+    // Keep ref in sync with state for use in callbacks
+    activeSelectionRef.current = activeSelection;
+
+    // Redraw function for resize events
+    const handleResize = useCallback(() => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            if (activeSelectionRef.current) {
+                drawRectPx(lineCanvasRef, activeSelectionRef.current.xMin, activeSelectionRef.current.yMin, activeSelectionRef.current.xMax, activeSelectionRef.current.yMax);
+            } else {
+                clear(lineCanvasRef);
+            }
+        });
+    }, []);
 
     // DPR + resize handling
-    useDpr(lineCanvasRef);
+    useDpr(lineCanvasRef, handleResize);
 
     const { xRange, uniqueSortedX } = useLineData();
 

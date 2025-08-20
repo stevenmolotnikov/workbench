@@ -1,6 +1,6 @@
 import { useLayoutEffect } from "react";
 
-export const useDpr = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
+export const useDpr = (canvasRef: React.RefObject<HTMLCanvasElement>, onResize?: () => void) => {
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -12,6 +12,7 @@ export const useDpr = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
       canvas.height = Math.max(1, Math.floor(height * dpr));
       const ctx = canvas.getContext("2d");
       if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (onResize) onResize();
     };
 
     const ro = new ResizeObserver(update);
@@ -31,5 +32,5 @@ export const useDpr = (canvasRef: React.RefObject<HTMLCanvasElement>) => {
       ro.disconnect();
       mq.removeEventListener("change", onDprChange);
     };
-  }, [canvasRef]);
+  }, [canvasRef, onResize]);
 };

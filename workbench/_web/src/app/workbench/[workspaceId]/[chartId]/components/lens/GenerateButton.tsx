@@ -74,7 +74,6 @@ export default function GenerateButton({ config, setConfig, setTokenData, setEdi
                     <button
                         type="button"
                         onMouseDown={(e) => {
-                            console.log("mouse down");
                             e.preventDefault();
                             e.stopPropagation();
                         }}

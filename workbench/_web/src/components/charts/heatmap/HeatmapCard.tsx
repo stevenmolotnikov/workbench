@@ -5,7 +5,7 @@ import { SelectionProvider, useSelection } from "./SelectionProvider";
 import { HeatmapChart } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Crop, RotateCcw } from "lucide-react";
-import { CanvasProvider, useCanvasProvider } from "./CanvasProvider";
+import { HeatmapCanvasProvider, useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
 
 interface HeatmapCardProps {
     chart: HeatmapChart;
@@ -20,12 +20,12 @@ export const HeatmapCard = ({ chart, captureRef, pending }: HeatmapCardProps) =>
                 <PendingHeatmap />
             ) : (
                 <HeatmapDataProvider chart={chart}>
-                    <CanvasProvider>
+                    <HeatmapCanvasProvider>
                         <SelectionProvider chart={chart}>
                             <HeatmapCardContent chart={chart} captureRef={captureRef} />
                         </SelectionProvider>
 
-                    </CanvasProvider>
+                    </HeatmapCanvasProvider>
                 </HeatmapDataProvider>
             )}
         </div>
@@ -73,7 +73,7 @@ interface HeatmapCardContentProps {
 const HeatmapCardContent = ({ chart, captureRef }: HeatmapCardContentProps) => {
     const { filteredData: data, bounds, xStep, handleStepChange, setXRange, setYRange, setXStep, defaultXStep } = useHeatmapData()
     const { zoomIntoActiveSelection, clearSelection, activeSelection, onMouseDown } = useSelection()
-    const { selectionCanvasRef } = useCanvasProvider()
+    const { selectionCanvasRef } = useHeatmapCanvasProvider()
 
     // Handle reset: clear selection and reset ranges/step
     const handleReset = async () => {

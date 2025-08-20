@@ -41,7 +41,6 @@ export const useLensLine = () => {
             configId: string;
         }) => {
             const response = await getLensLine(lensRequest);
-            console.log("RESPONSE", response);
             await setChartData(lensRequest.chartId, response, "line");
             return response;
         },

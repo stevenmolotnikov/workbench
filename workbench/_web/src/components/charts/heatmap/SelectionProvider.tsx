@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { getCellFromPosition } from "./heatmap-geometry";
 import { HeatmapBounds, Range, HeatmapViewData } from "@/types/charts";
 import { useDeleteView } from "@/lib/api/viewApi";
-import { useCanvasProvider } from "./CanvasProvider";
+import { useHeatmapCanvasProvider } from "./HeatmapCanvasProvider";
 import { HeatmapChart, HeatmapView } from "@/db/schema";
 import { useHeatmapData } from "./HeatmapDataProvider";
 import { useHeatmapView } from "../ViewProvider";
@@ -29,7 +29,7 @@ interface SelectionProviderProps {
 
 export const SelectionProvider = ({ chart, children }: SelectionProviderProps) => {
     const { filteredData: data, bounds, xStep, xRange, yRange, setXRange, setYRange } = useHeatmapData()
-    const { selectionCanvasRef, rafRef, draw, clear } = useCanvasProvider()
+    const { selectionCanvasRef, rafRef, draw, clear } = useHeatmapCanvasProvider()
     const { mutateAsync: deleteView } = useDeleteView()
     const { view, isViewSuccess, persistView, cancelPersistView } = useHeatmapView()
 

@@ -5,7 +5,7 @@ import { HeatmapBounds } from "@/types/charts";
 import { useDpr } from "../useDpr";
 import { getCellFromPosition, getCellDimensions } from "./heatmap-geometry";
 
-interface CanvasContextValue {
+interface HeatmapCanvasContextValue {
     selectionCanvasRef: React.RefObject<HTMLCanvasElement>
     rafRef: React.MutableRefObject<number | null>
     draw: (bounds: HeatmapBounds) => void
@@ -21,15 +21,15 @@ interface Tooltip {
     color: string
 }
 
-const CanvasContext = createContext<CanvasContextValue | null>(null)
+const HeatmapCanvasContext = createContext<HeatmapCanvasContextValue | null>(null)
 
-export const useCanvasProvider = () => {
-    const ctx = useContext(CanvasContext)
+export const useHeatmapCanvasProvider = () => {
+    const ctx = useContext(HeatmapCanvasContext)
     if (!ctx) throw new Error("useCanvasProvider must be used within a CanvasProvider")
     return ctx
 }
 
-export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const HeatmapCanvasProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const selectionCanvasRef = useRef<HTMLCanvasElement>(null)
     const { filteredData: data } = useHeatmapData()
     const rafRef = useRef<number | null>(null)
@@ -72,7 +72,7 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ctx.strokeRect(sx, sy, sw, sh)
     }, [data])
 
-    const contextValue: CanvasContextValue = {
+    const contextValue: HeatmapCanvasContextValue = {
         selectionCanvasRef,
         rafRef,
         draw,
@@ -146,7 +146,7 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [handleMove, handleLeave])
 
     return (
-        <CanvasContext.Provider value={contextValue}>
+        <HeatmapCanvasContext.Provider value={contextValue}>
             {tooltip.visible && (
                 <div
                     className="fixed z-30 px-2 py-1 rounded shadow bg-background border text-sm pointer-events-none"
@@ -160,6 +160,6 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 </div>
             )}
             {children}
-        </CanvasContext.Provider>
+        </HeatmapCanvasContext.Provider>
     )
 }
