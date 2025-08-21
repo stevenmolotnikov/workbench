@@ -33,6 +33,7 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
     model = state[req.model]
     idx = req.token.idx
     target_ids = req.token.target_ids
+    returns_tuple = model.config.returns_tuple
 
     with model.trace(
         req.prompt,
@@ -42,7 +43,10 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
         results = []
         for layer in model.model.layers:
             # Decode hidden state into vocabulary
-            hidden_BLD = layer.output[0]
+            hidden_BLD = layer.output
+
+            if returns_tuple:
+                hidden_BLD = hidden_BLD[0]
 
             # NOTE(cadentj): Can't pickle local decode function atm
             logits_BLV = model.lm_head(model.model.ln_f(hidden_BLD))
@@ -142,6 +146,7 @@ def heatmap(
     req: GridLensRequest, state: AppState
 ) -> tuple[list[t.Tensor], list[t.Tensor]]:
     model = state[req.model]
+    returns_tuple = model.config.returns_tuple
 
     def _compute_top_probs(
         logits_BLV,
@@ -170,9 +175,14 @@ def heatmap(
         probs = []
 
         for layer in model.model.layers[:-1]:
+            hidden_BLD = layer.output
+
+            if returns_tuple:
+                hidden_BLD = hidden_BLD[0]
+
             _compute_top_probs(
                 # NOTE(cadentj): Can't put this in the trace body bc of pickling issues
-                model.lm_head(model.model.ln_f(layer.output[0])),
+                model.lm_head(model.model.ln_f(hidden_BLD)),
                 probs,
                 pred_ids,
             )

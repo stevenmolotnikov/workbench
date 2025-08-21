@@ -76,6 +76,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
 
     // Tokenize the prompt and run predictions
     const handleTokenize = async () => {
+        console.log("tokenizing", config.prompt, selectedModel);
         const tokens = await encodeText(config.prompt, selectedModel);
         setTokenData(tokens);
 

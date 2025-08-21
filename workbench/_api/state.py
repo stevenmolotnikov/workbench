@@ -1,4 +1,5 @@
 import os
+import torch
 import toml
 from fastapi import Request
 
@@ -12,7 +13,7 @@ class ModelConfig(BaseModel):
     name: str
     chat: bool
     rename: dict[str, str]
-    config: dict[str, int | str]
+    config: dict[str, int | str | bool]
 
 class ModelsConfig(BaseModel):
     """Root configuration containing all models."""
@@ -28,6 +29,7 @@ class ModelsConfig(BaseModel):
                 "name": model.name,
                 "type": "chat" if model.chat else "base",
                 "n_layers" : model.config["n_layers"],
+                "returns_tuple" : model.config["returns_tuple"],
             }
             for model in self.models.values()
         ]
@@ -76,7 +78,8 @@ class AppState:
             model = LanguageModel(
                 cfg.name,
                 rename=cfg.rename,
-                device_map="cpu",
+                device_map="auto",
+                torch_dtype=torch.bfloat16,
                 dispatch=not self.remote,
             )
 
