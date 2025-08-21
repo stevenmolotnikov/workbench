@@ -3,31 +3,25 @@
 
 from nnsight import LanguageModel
 import torch as t
-from nnsight.intervention.backends.remote import RemoteBackend
 
-
-model = LanguageModel("openai-community/gpt2")
+model = LanguageModel("meta-llama/Llama-3.1-8B")
 
 with model.trace("hello, world", remote=True) as tracer:
-    results = []
-    for layer in model.model.layers:
-        # Decode hidden state into vocabulary
-        hidden_BLD = layer.output[0]
-        logits_BLV = model.lm_head(model.model.ln_f(hidden_BLD))
+    output = model.model.layers[0].output
 
-        # Compute probabilities over the relevant tokens
-        logits_V = logits_BLV[0, -1, :]
+    if isinstance(output, tuple):
+        output = output[0]
 
-        probs_V = t.nn.functional.softmax(logits_V, dim=-1)
+    print(output.shape)
 
-        # Gather probabilities over the predicted tokens
-        target_ids_tensor = t.tensor([1,2,3]).to(probs_V.device)
-        target_probs_X = t.gather(
-            probs_V, 0, target_ids_tensor
-        )
+# %%
 
-        results.append(target_probs_X)
-    results.save()
+import nnsight
+
+nnsight.CONFIG.API.HOST
+
+# %%
+
 # %%
 
 print(tracer.backend.job_id)

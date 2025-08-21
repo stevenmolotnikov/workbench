@@ -33,7 +33,7 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
     model = state[req.model]
     idx = req.token.idx
     target_ids = req.token.target_ids
-    returns_tuple = model.config.returns_tuple
+    # returns_tuple = model.config.returns_tuple
 
     with model.trace(
         req.prompt,
@@ -45,7 +45,7 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
             # Decode hidden state into vocabulary
             hidden_BLD = layer.output
 
-            if returns_tuple:
+            if isinstance(hidden_BLD, tuple):
                 hidden_BLD = hidden_BLD[0]
 
             # NOTE(cadentj): Can't pickle local decode function atm
@@ -177,7 +177,7 @@ def heatmap(
         for layer in model.model.layers[:-1]:
             hidden_BLD = layer.output
 
-            if returns_tuple:
+            if isinstance(hidden_BLD, tuple):
                 hidden_BLD = hidden_BLD[0]
 
             _compute_top_probs(

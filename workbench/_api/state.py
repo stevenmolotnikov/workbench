@@ -13,7 +13,7 @@ class ModelConfig(BaseModel):
     name: str
     chat: bool
     rename: dict[str, str]
-    config: dict[str, int | str | bool]
+    config: dict[str, int | str]
 
 class ModelsConfig(BaseModel):
     """Root configuration containing all models."""
@@ -29,7 +29,6 @@ class ModelsConfig(BaseModel):
                 "name": model.name,
                 "type": "chat" if model.chat else "base",
                 "n_layers" : model.config["n_layers"],
-                "returns_tuple" : model.config["returns_tuple"],
             }
             for model in self.models.values()
         ]
