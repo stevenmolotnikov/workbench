@@ -144,10 +144,10 @@ def heatmap(
     model = state[req.model]
 
     def _compute_top_probs(
-        logits_BLV: t.Tensor,
+        logits_BLV,
         # NOTE(cadentj): Can't put this in the trace body bc of pickling issues
-        probs: list[t.Tensor],
-        pred_ids: list[t.Tensor],
+        probs_list,
+        pred_ids_list,
     ):
         relevant_tokens_LV = logits_BLV[0, :, :]
 
@@ -158,8 +158,8 @@ def heatmap(
         pred_ids_L1 = pred_ids_L.unsqueeze(1)
         probs_L = t.gather(probs_LV, 1, pred_ids_L1).squeeze()
 
-        pred_ids.append(pred_ids_L.tolist())
-        probs.append(probs_L.tolist())
+        pred_ids_list.append(pred_ids_L.tolist())
+        probs_list.append(probs_L.tolist())
 
     with model.trace(
         req.prompt,
