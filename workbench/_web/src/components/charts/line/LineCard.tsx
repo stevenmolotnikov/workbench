@@ -25,7 +25,7 @@ export const LineCard = ({ chart, captureRef, pending }: LineCardProps) => {
     return (
         <div className="flex flex-col size-full">
             {pending ? (
-                <PendingLine />
+                <PendingLine chart={chart} />
             ) : (
                 <LineDataProvider chart={chart}>
                     <LineCanvasProvider>
@@ -39,30 +39,37 @@ export const LineCard = ({ chart, captureRef, pending }: LineCardProps) => {
     )
 }
 
-const PendingLine = () => {
+const PendingLine = ({ chart }: { chart: LineChart }) => {
     return (
-        <div className="flex flex-col size-full relative">
-            <div className="flex h-[10%] gap-3 items-end p-4 lg:p-8 justify-end">
-                <div className="flex items-center gap-3">
+        <div className="flex flex-col size-full">
+            <div className="flex px-3 py-3 items-center justify-between border-b">
+                <div className="flex items-center gap-2">
+                    <CodeExport chartId={chart?.id} chartType={chart?.type as ("line" | "heatmap" | null | undefined)} />
+                    <CopyImage />
+                </div>
+                <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         size="sm"
                         className="h-8 w-8"
                         disabled
+                        title="Zoom into selection and clear selection"
                     >
                         <Crop className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-8 w-8" disabled>
+                    <Button variant="outline" size="sm" className="h-8 w-8" title="Reset zoom and clear selection">
                         <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>
             </div>
-            <div className="flex h-[90%] w-full">
-                <Line lines={[]} />
-            </div>
+            <div className="flex size-full pt-4 relative">
+                <Line
+                    lines={[]}
+                />
 
-            <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                </div>
             </div>
         </div>
     );

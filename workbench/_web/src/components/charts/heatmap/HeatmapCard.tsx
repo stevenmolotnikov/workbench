@@ -36,34 +36,47 @@ export const HeatmapCard = ({ chart, captureRef, pending }: HeatmapCardProps) =>
     );
 };
 
-const PendingHeatmap = () => {
+const PendingHeatmap = ({ chart }: { chart: HeatmapChart }) => {
     return (
-        <div className="flex flex-col size-full relative">
-            <div className="flex h-[10%] gap-3 items-center p-4 lg:p-8 justify-end">
-                <input
-                    disabled
-                    className="w-20 h-8 border rounded px-3 text-xs bg-background"
+        <div className="flex flex-col size-full">
+            <div className="flex px-3 py-3 items-center justify-between border-b">
+                <div className="flex items-center gap-2">
+                    <CodeExport chartId={chart?.id} chartType={chart?.type as ("line" | "heatmap" | null | undefined)} />
+                    <CopyImage />
+                </div>
+                <div className="flex gap-2 items-center">
+                    <span className="text-sm">X-Step:</span>
+                    <input
+                        type="number"
+                        min={1}
+                        className="w-18 h-8 border rounded px-3 text-xs bg-background "
+                        aria-label="X Range Step"
+                        title="X Range Step"
+                    />
+                    <Separator orientation="vertical" />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8"
+                        disabled
+                        title="Zoom into selection and clear selection"
+                    >
+                        <Crop className="w-4 h-4" />
+                    </Button>
+
+                    <Button variant="outline" size="sm" className="h-8 w-8" title="Reset zoom and clear selection">
+                        <RotateCcw className="w-4 h-4" />
+                    </Button>
+                </div>
+            </div>
+            <div className="flex size-full relative">
+                <Heatmap
+                    rows={[]}
                 />
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8"
-                    disabled
-                >
-                    <Crop className="w-4 h-4" />
-                </Button>
 
-                <Button variant="outline" size="sm" className="h-8 w-8" disabled>
-                    <RotateCcw className="w-4 h-4" />
-                </Button>
-            </div>
-
-            <div className="flex h-[90%] w-full">
-                <Heatmap rows={[]} />
-            </div>
-
-            <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                <div className="absolute inset-0 z-30 overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                </div>
             </div>
         </div>
     )
@@ -110,7 +123,7 @@ const HeatmapCardContent = ({ captureRef, chart }: HeatmapCardContentProps) => {
                         aria-label="X Range Step"
                         title="X Range Step"
                     />
-                    {/* <Separator orientation="vertical" className="wjhite" /> */}
+                    <Separator orientation="vertical" />
                     <Button
                         variant={activeSelection ? "default" : "outline"}
                         size="sm"
