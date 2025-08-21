@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Grid3X3, ChartLine, Trash2, Copy, MoreVertical } from "lucide-react";
 import Image from "next/image";
@@ -153,16 +154,16 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                     isSelected ? "bg-primary/5" : "hover:bg-muted/50"
                 )}
             >
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-3 mb-1">
                             <span className="text-sm font-medium capitalize">
                                 {/* {formatToolType(metadata.toolType)} */}
                                 {metadata.name ? (metadata.name.length > 16 ? `${metadata.name.slice(0, 16)}...` : metadata.name) : 'Untitled'}
                             </span>
 
                         </div>
-                        <div className="text-xs text-muted-foreground break-words flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground break-words flex items-center gap-3">
 
                             {renderChartTypeMini(metadata.chartType)}
                             {updatedAt && renderChartTypeMini(metadata.chartType) && (
@@ -182,7 +183,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                         </PopoverTrigger>
                         <PopoverContent className="w-40 p-1" align="end">
                             <button
-                                className="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
+                                className="flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent rounded-sm"
                                 onClick={(e) => handleCopy(e, metadata.id)}
                             >
                                 <Copy className="h-3.5 w-3.5" />
@@ -191,10 +192,10 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                             <ChartRenameDialog 
                                 chartId={metadata.id} 
                                 chartName={metadata.name || ''} 
-                                triggerClassName="flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
+                                triggerClassName="flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent rounded-sm"
                             />
                             <button
-                                className={`flex w-full items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-sm text-destructive ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
+                                className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm hover:bg-accent rounded-sm text-destructive ${!canDelete ? "opacity-40 cursor-not-allowed" : ""}`}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleDelete(e, metadata.id);
