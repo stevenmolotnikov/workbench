@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ChartRenameDialog } from "./ChartRenameDialog";
 import { useCopyChart } from "@/lib/api/chartApi";
 import { toast } from "sonner";
+import React from "react";
 import {
     Popover,
     PopoverContent,
@@ -74,19 +75,40 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         const style = cn(
             "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r",
             isSelected && "border-primary"
-        )
+        );
 
-        if (process.env.NEXT_PUBLIC_LOCAL_DB === "true") {
-            return (
-                <div className={style} />
-            );
+        const [imageError, setImageError] = React.useState(false);
+        const [imageLoaded, setImageLoaded] = React.useState(false);
+
+        const renderPlaceholder = () => (
+            <div className="absolute inset-0 z-10 bg-muted flex items-center justify-center">
+                <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    {metadata.chartType === "line" ? (
+                        <ChartLine className="h-4 w-4" />
+                    ) : metadata.chartType === "heatmap" ? (
+                        <Grid3X3 className="h-4 w-4" />
+                    ) : (
+                        <Grid3X3 className="h-4 w-4" />
+                    )}
+                    <span className="text-xs font-medium capitalize">
+                        {metadata.chartType || "chart"}
+                    </span>
+                </div>
+            </div>
+        );
+
+        const showRemoteImage = process.env.NEXT_PUBLIC_LOCAL_DB !== "true";
+        if (!showRemoteImage) {
+            return <div className={style}>{renderPlaceholder()}</div>;
         }
 
-        const url = `${process.env.NEXT_PUBLIC_THUMBNAILS_BUCKET_URL}/${workspaceId}/${metadata.id}.png`
+        const url = `${process.env.NEXT_PUBLIC_THUMBNAILS_BUCKET_URL}/${workspaceId}/${metadata.id}.png`;
         const version = metadata.updatedAt ? new Date(metadata.updatedAt).getTime() : undefined;
         const versionedUrl = version ? `${url}${url.includes("?") ? "&" : "?"}v=${version}` : url;
+
         return (
             <div className={style}>
+                {!imageLoaded && !imageError && renderPlaceholder()}
                 <Image
                     src={versionedUrl}
                     alt="chart thumbnail"
@@ -95,10 +117,15 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                     style={{ objectFit: "cover", objectPosition: "bottom" }}
                     loading="lazy"
                     placeholder="empty"
+                    className="z-0"
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => setImageError(true)}
                 />
+                {imageError && renderPlaceholder()}
             </div>
         );
     };
+
 
     return (
         <div

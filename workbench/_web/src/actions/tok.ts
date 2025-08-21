@@ -59,7 +59,6 @@ export async function encodeText(
 
         return tokens;
     } catch (error) {
-        console.error("Error encoding text", error);
         // Mirror tokenize.ts behavior: return [] on failure
         return [];
     }
