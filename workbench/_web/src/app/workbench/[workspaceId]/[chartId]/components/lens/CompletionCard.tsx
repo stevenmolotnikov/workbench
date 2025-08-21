@@ -80,6 +80,8 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
         const tokens = await encodeText(config.prompt, selectedModel);
         setTokenData(tokens);
 
+        console.log("tokens", tokens);
+
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
             ...config,
