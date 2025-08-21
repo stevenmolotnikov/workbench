@@ -9,7 +9,7 @@ ALLOWED_ORIGINS = [
     # Local development
     "http://localhost:3000",
     # Prod
-    "https://workbench.ndif.us/"
+    "https://workbench.ndif.us"
 ]
 
 
