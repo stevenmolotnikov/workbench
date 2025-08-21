@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 import torch as t
-from nnsight.intervention.backends.remote import RemoteBackend
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse

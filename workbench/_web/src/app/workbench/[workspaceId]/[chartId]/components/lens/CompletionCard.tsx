@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePrediction } from "@/lib/api/modelsApi";
 import type { LensConfigData } from "@/types/lens";
 
-import { PredictionBadges } from "./PredictionBadges";
+import { TargetTokenSelector } from "./TargetTokenSelector";
 
 import { encodeText } from "@/actions/tok";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
@@ -289,7 +289,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                             "size-full",
                             chartType === "heatmap" ? "opacity-50 pointer-events-none" : "pointer-events-auto"
                         )}>
-                            <PredictionBadges
+                            <TargetTokenSelector
                                 config={config}
                                 setConfig={setConfig}
                                 configId={initialConfig.id}

@@ -35,7 +35,7 @@ export default function RootLayout({
                         <TourProvider>{children}</TourProvider>
                     </ThemeProvider>
                 </QueryProvider>
-                <Toaster />
+                <Toaster position="bottom-center" />
             </body>
         </html>
     );

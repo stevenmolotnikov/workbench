@@ -64,7 +64,7 @@
         --secondary-foreground: 0 0% 89.8039%;
         --muted: 0 0% 18%; /* Hover/selected states */
         --muted-foreground: 0 0% 63.9216%;
-        --accent: 0 0% 20%; /* Floating elements clearly above cards */
+        --accent: 0 0% 24%; /* Floating elements clearly above cards */
         --accent-foreground: 0 0% 89.8039%;
         --destructive: 0 84.2365% 60.1961%;
         --destructive-foreground: 0 0% 100%;

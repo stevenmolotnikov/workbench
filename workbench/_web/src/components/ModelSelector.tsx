@@ -40,18 +40,11 @@ export function ModelSelector() {
 
     return (
         <Select value={models[selectedModelIdx].name} onValueChange={handleModelChange}>
-
-
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <SelectTrigger className={cn("w-fit gap-3", {
-                        "animate-pulse": isLoading
-                    })}>
-                        <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>    
-                </TooltipTrigger>
-                <TooltipContent>Select a model to use for predictions.</TooltipContent>
-            </Tooltip>
+            <SelectTrigger className={cn("w-fit gap-3", {
+                "animate-pulse": isLoading
+            })}>
+                <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
 
             <SelectContent>
                 {baseModels.length > 0 && (

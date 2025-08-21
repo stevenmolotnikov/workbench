@@ -33,7 +33,6 @@ def line(req: LensLineRequest, state: AppState) -> list[t.Tensor]:
     model = state[req.model]
     idx = req.token.idx
     target_ids = req.token.target_ids
-    # returns_tuple = model.config.returns_tuple
 
     with model.trace(
         req.prompt,
@@ -146,7 +145,6 @@ def heatmap(
     req: GridLensRequest, state: AppState
 ) -> tuple[list[t.Tensor], list[t.Tensor]]:
     model = state[req.model]
-    returns_tuple = model.config.returns_tuple
 
     def _compute_top_probs(
         logits_BLV,

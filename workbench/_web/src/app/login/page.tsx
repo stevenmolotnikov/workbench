@@ -139,7 +139,7 @@ export default function LoginPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-muted px-3 text-muted-foreground">
+                  <span className="bg-card px-3 text-card-foreground">
                     Or
                   </span>
                 </div>

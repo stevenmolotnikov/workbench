@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import type { User } from "@supabase/supabase-js";
 import { ModelsDisplay } from "@/app/workbench/components/ModelsDisplay";
 import { WorkspaceList } from "@/app/workbench/components/WorkspaceList";
 
@@ -14,7 +15,7 @@ export default async function WorkbenchPage() {
         redirect("/login");
     }
 
-    const displayName = (user as any)?.is_anonymous || !user.email ? "Guest" : user.email
+    const displayName = (user as User)?.is_anonymous || !user.email ? "Guest" : user.email
 
     return (
         <>

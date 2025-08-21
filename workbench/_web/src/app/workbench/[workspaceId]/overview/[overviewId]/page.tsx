@@ -1,30 +1,19 @@
 "use client";
 
-import {
-    ResizableHandle,
-    ResizablePanel,
-    ResizablePanelGroup,
-} from "@/components/ui/resizable";
-
 import ChartCardsSidebar from "../../components/ChartCardsSidebar";
 import { Editor } from "./components/Editor";
 
 export default function OverviewPage() {
-
     return (
-        <div className="flex flex-1 min-h-0">
-            <ResizablePanelGroup
-                direction="horizontal"
-                className="flex flex-1 min-h-0 h-full"
-            >
-                <ResizablePanel className="h-full" defaultSize={20} minSize={15}>
-                    <ChartCardsSidebar />
-                </ResizablePanel>
-                <ResizableHandle className="w-[0.8px]" />
-                <ResizablePanel className="h-full" defaultSize={80} minSize={25}>
+        <div className="flex size-full min-h-0">
+            <div className="w-[20vw]">
+                <ChartCardsSidebar />
+            </div>
+            <div className="pb-3 pr-3 w-[80vw] min-h-0">
+                <div className="size-full border rounded bg-secondary/60">
                     <Editor />
-                </ResizablePanel>
-            </ResizablePanelGroup>
+                </div>
+            </div>
         </div>
     );
 }

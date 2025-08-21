@@ -11,19 +11,49 @@ import { useLensCharts } from "@/hooks/useLensCharts";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-interface PredictionBadgesProps {
+
+// Helper function to render token text with blue underscore for leading spaces and blue "\n" for newlines
+const renderTokenText = (text: string | undefined) => {
+    if (!text) return "";
+    const elements: React.ReactNode[] = [];
+    let index = 0;
+
+    // Represent a single leading space with a blue underscore for visibility
+    if (text.startsWith(" ")) {
+        elements.push(<span className="text-blue-500" key={`lead-space`}>_</span>);
+        index = 1;
+    }
+
+    let buffer = "";
+    for (; index < text.length; index++) {
+        const ch = text[index];
+        if (ch === "\n") {
+            if (buffer) {
+                elements.push(<span key={`txt-${index}`}>{buffer}</span>);
+                buffer = "";
+            }
+            elements.push(<span className="text-blue-500" key={`nl-${index}`}>\n</span>);
+        } else {
+            buffer += ch;
+        }
+    }
+    if (buffer) elements.push(<span key={`tail`}>{buffer}</span>);
+
+    return elements.length ? <>{elements}</> : text;
+};
+
+interface TargetTokenSelectorProps {
     configId: string;
     config: LensConfigData;
     setConfig: (config: LensConfigData) => void;
 }
 
-export const PredictionBadges = ({
+export const TargetTokenSelector = ({
     configId,
     config,
     setConfig,
-}: PredictionBadgesProps) => {
+}: TargetTokenSelectorProps) => {
     const { handleCreateLineChart, isExecuting } = useLensCharts({ configId });
-    const { toggleLineHighlight } = useLensWorkspace();
 
     // Debounced function to run line chart 2 seconds after target token IDs change
     const debouncedRunLineChart = useDebouncedCallback(
@@ -47,35 +77,6 @@ export const PredictionBadges = ({
         );
     }, [prediction]);
 
-    // Helper function to render token text with blue underscore for leading spaces and blue "\n" for newlines
-    const renderTokenText = (text: string | undefined) => {
-        if (!text) return "";
-        const elements: React.ReactNode[] = [];
-        let index = 0;
-
-        // Represent a single leading space with a blue underscore for visibility
-        if (text.startsWith(" ")) {
-            elements.push(<span className="text-blue-500" key={`lead-space`}>_</span>);
-            index = 1;
-        }
-
-        let buffer = "";
-        for (; index < text.length; index++) {
-            const ch = text[index];
-            if (ch === "\n") {
-                if (buffer) {
-                    elements.push(<span key={`txt-${index}`}>{buffer}</span>);
-                    buffer = "";
-                }
-                elements.push(<span className="text-blue-500" key={`nl-${index}`}>\n</span>);
-            } else {
-                buffer += ch;
-            }
-        }
-        if (buffer) elements.push(<span key={`tail`}>{buffer}</span>);
-
-        return elements.length ? <>{elements}</> : text;
-    };
 
     // Build options from all predicted tokens
     const options: TokenOption[] = useMemo(() => {
@@ -197,48 +198,6 @@ export const PredictionBadges = ({
         return null;
     }
 
-    // Custom MultiValue component with click handler
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const CustomMultiValue = (props: any) => {
-        const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
-
-        return (
-            <div
-                className={cn(
-                    "inline-flex items-center gap-1 px-3 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors",
-                    isHighlighted
-                        ? "bg-popover border border-primary"
-                        : "bg-popover border border-input"
-                )}
-                onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleLineHighlight(props.data.text);
-                }}
-                onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }}
-            >
-                <span className="text-muted-foreground">{renderTokenText(props.data.text)}</span>
-                <button
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        props.removeProps.onClick(e);
-                    }}
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }}
-                    className="ml-1 text-muted-foreground hover:text-foreground"
-                >
-                    <X className="w-3 h-3" />
-                </button>
-            </div>
-        );
-    };
-
     return (
         <div className="flex flex-col gap-1.5 w-full">
             <div className="flex justify-between items-center">
@@ -328,6 +287,49 @@ export const PredictionBadges = ({
 };
 
 
+// Custom MultiValue component with click handler
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CustomMultiValue = (props: any) => {
+    const { toggleLineHighlight } = useLensWorkspace();
+    const isHighlighted = useLensWorkspace.getState().highlightedLineIds.has(props.data.text);
+
+    return (
+        <div
+            className={cn(
+                "inline-flex items-center gap-1 px-3 hover:bg-accent rounded text-xs font-medium cursor-pointer transition-colors",
+                isHighlighted
+                    ? "bg-muted border border-primary"
+                    : "bg-muted border border-input"
+            )}
+            onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleLineHighlight(props.data.text);
+            }}
+            onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }}
+        >
+            <span className="text-muted-foreground">{renderTokenText(props.data.text)}</span>
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    props.removeProps.onClick(e);
+                }}
+                onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
+                className="ml-1 text-muted-foreground hover:text-foreground"
+            >
+                <X className="w-3 h-3" />
+            </button>
+        </div>
+    );
+};
+
 // Theme-aware styles for react-select using shadcn/tailwind CSS variables
 const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
     container: (base) => ({
@@ -336,7 +338,7 @@ const selectStyles: StylesConfig<TokenOption, true, GroupBase<TokenOption>> = {
     }),
     control: (base, state) => ({
         ...base,
-        backgroundColor: "hsl(var(--background  ))",
+        backgroundColor: "hsl(var(--background))",
         borderColor: state.isFocused
             ? "hsl(var(--ring))"
             : "hsl(var(--input))",
