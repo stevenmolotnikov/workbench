@@ -6,12 +6,10 @@ from .state import AppState
 
 
 ALLOWED_ORIGINS = [
-    # Vercel prod deployment
-    "https://interp-workbench.vercel.app",
-    # Vercel dev deployment
-    "https://interp-workbench-git-dev-cadentjs-projects.vercel.app",
     # Local development
-    "http://localhost:3000"
+    "http://localhost:3000",
+    # Prod
+    "https://workbench.ndif.us/"
 ]
 
 
