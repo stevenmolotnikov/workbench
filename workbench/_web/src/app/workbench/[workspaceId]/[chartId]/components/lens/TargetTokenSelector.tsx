@@ -130,10 +130,9 @@ export const TargetTokenSelector = ({
         }
         setConfig(newConfig);
 
-        debouncedRunLineChart.cancel();
-
         // Run line chart 2 seconds after target token IDs change
         debouncedRunLineChart(newConfig);
+        setLineIsPending(true);
     };
 
     const debouncedFetch = useDebouncedCallback(

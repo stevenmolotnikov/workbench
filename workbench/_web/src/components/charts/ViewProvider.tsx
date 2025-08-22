@@ -65,7 +65,7 @@ export const ViewProvider = ({ chartId, children }: ViewProviderProps) => {
         // Clear pending after successful persist
         pendingRef.current = null
         await captureChartThumbnail(chartId);
-    }, 3000)
+    }, 1500)
 
     const persistView = useCallback((viewData: Partial<ChartView>) => {
         const base = pendingRef.current ?? (view?.data as ChartView | null) ?? {}

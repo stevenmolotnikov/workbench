@@ -99,7 +99,7 @@ export function Editor() {
         } catch (error) {
             console.error('Failed to serialize editor state:', error);
         }
-    }, 5000, { leading: false, trailing: true });
+    }, 3000, { leading: false, trailing: true });
 
     const handleChange = useCallback((editorState: EditorState) => {
         setIsQueuedToSave(true);

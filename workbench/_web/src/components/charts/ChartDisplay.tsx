@@ -32,6 +32,9 @@ export function ChartDisplay() {
     // Has no data or is loading from db
     const showEmptyState = (jobStatus === "Idle" && (chart && chart.data === null)) || isLoading || !chart;
 
+    // better solution at some point
+    const isHeatmapData = chart?.data?.some((row: any) => row.data.some((cell: any) =>  "label" in cell));
+
     return (
         <div className={cn("flex size-full", 
             showEmptyState && "pb-6"
@@ -41,9 +44,9 @@ export function ChartDisplay() {
                     <div className="text-muted-foreground">No chart data</div>
                 </div>
             ) : isHeatmapRunning || (!isPending && chart.type === "heatmap") ? (
-                <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} pending={isPending} />
-            ) : (
-                <LineCard captureRef={captureRef} chart={chart as LineChart} pending={isPending} />
+                <HeatmapCard captureRef={captureRef} chart={chart as HeatmapChart} pending={isPending || !isHeatmapData} />
+            ) :  (
+                <LineCard captureRef={captureRef} chart={chart as LineChart} pending={isPending || isHeatmapData} />
             )}
         </div>
     );
