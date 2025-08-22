@@ -2,17 +2,31 @@
 
 
 from nnsight import LanguageModel
+from nnsight.intervention.backends.remote import RemoteBackend
 import torch as t
+import asyncio
 
-model = LanguageModel("meta-llama/Llama-3.1-8B")
+model = LanguageModel("openai-community/gpt2")
 
-with model.trace("hello, world", remote=True) as tracer:
-    output = model.model.layers[0].output
+for i in range(10):
+    with model.trace("hello, world", remote=True, blocking=False) as tracer:
+        output = model.model.layers[0].output
 
-    if isinstance(output, tuple):
-        output = output[0]
+        if isinstance(output, tuple):
+            output = output[0]
 
-    print(output.shape)
+        print(output.shape)
+
+    job_id = tracer.backend.job_id
+
+    backend = RemoteBackend(
+        job_id=tracer.backend.job_id,
+        blocking=False,
+        model_key=model.to_model_key()
+    )
+    results = backend()
+    
+    print("ITERATION", i)
 
 # %%
 

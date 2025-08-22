@@ -1,8 +1,7 @@
 import http from 'k6/http';
 import { sleep } from 'k6';
-import { check } from 'k6';
 
-const POLL_TIMEOUT_MS = 15000;
+export const POLL_TIMEOUT_MS = 15000;
 const POLL_INTERVAL_MS = 1000;
 
 const config = {
@@ -77,11 +76,17 @@ function fetchResults<T>(url: string, body: any): T {
     return JSON.parse(resp.body as string) as T;
 }
 
+export interface PollResult<T> {
+    data: T;
+    pollDuration: number;
+}
+
 export function startAndPoll<T>(
     startEndpoint: string,
     body: any,
     resultsEndpoint: (jobId: string) => string,
-): T {
+): PollResult<T> {
+    const startTime = Date.now();
     const startUrl = config.getApiUrl(startEndpoint);
     const response = startJob<T>(startUrl, body);
     const jobId = response?.job_id ?? null;
@@ -92,17 +97,21 @@ export function startAndPoll<T>(
         const resultsUrl = config.getApiUrl(resultsEndpoint(jobId));
         const results = fetchResults<any>(resultsUrl, body);
         
+        const pollDuration = Date.now() - startTime;
+        
         if (results && typeof results === 'object' && 'data' in results) {
-            return (results as { data: T }).data;
+            return { data: (results as { data: T }).data, pollDuration };
         }
-        return results as T;
+        return { data: results as T, pollDuration };
     }
+    
+    const pollDuration = Date.now() - startTime;
     
     if ('data' in response) {
-        return (response as { data: T | null }).data as T;
+        return { data: (response as { data: T | null }).data as T, pollDuration };
     }
     
-    return response as unknown as T;
+    return { data: response as unknown as T, pollDuration };
 }
 
 export { config };
