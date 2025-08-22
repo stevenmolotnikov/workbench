@@ -221,6 +221,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         />
                     </div>
                 )}
+                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground ">{config.model}</span>
                 <div ref={settingsRef} className="absolute bottom-2 right-2 flex items-center gap-3">
                     {editingText && (
                         <GenerateButton

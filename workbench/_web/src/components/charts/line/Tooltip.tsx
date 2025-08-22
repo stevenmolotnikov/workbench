@@ -29,8 +29,8 @@ export const Tooltip = () => {
 
     return (
         <div
-            className="absolute top-[5%] z-30 w-36 pointer-events-none"
-            style={{ left: Math.max(0, hoverSnappedXPx - 120) }}
+            className="absolute top-[5%] z-30 w-48 pointer-events-none"
+            style={{ left: Math.max(0, hoverSnappedXPx - 155) }}
         >
             <div className="bg-background border text-xs rounded px-3 py-2 shadow-sm whitespace-nowrap">
                 <div className="font-bold mb-1 text-foreground">Layer {String(hoverSnappedXValue)}</div>
@@ -47,8 +47,9 @@ export const Tooltip = () => {
                                     isNearest ? "opacity-100" : "opacity-25"
                                 )} style={{ backgroundColor: color }} />
                                 <span className={cn(
+                                    "truncate max-w-18",
                                     isNearest ? "font-bold text-foreground" : "text-muted-foreground"
-                                )}>
+                                )} title={String(line.id)}>
                                     {line.id}:
                                 </span>
                             </div>

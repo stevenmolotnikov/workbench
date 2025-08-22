@@ -2,12 +2,14 @@ import { useParams } from "next/navigation";
 import { LensConfigData } from "@/types/lens";
 import { useLensGrid, useLensLine } from "@/lib/api/chartApi";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
+import { useLensWorkspace } from "@/stores/useLensWorkspace";
 
 export const useLensCharts = ({ configId }: { configId: string }) => {
     const { workspaceId, chartId } = useParams<{ workspaceId: string, chartId: string }>();
     const { mutateAsync: createHeatmap, isPending: isCreatingHeatmap } = useLensGrid();
     const { mutateAsync: updateChartConfig, isPending: isUpdatingChartConfig } = useUpdateChartConfig();
     const { mutateAsync: createLineChart, isPending: isCreatingLineChart } = useLensLine();
+    const { clearHighlightedLineIds } = useLensWorkspace();
 
     const handleCreateHeatmap = async (config: LensConfigData) => {
         const data = await createHeatmap({
@@ -31,6 +33,7 @@ export const useLensCharts = ({ configId }: { configId: string }) => {
     };
 
     const handleCreateLineChart = async (config: LensConfigData) => {
+
         const data = await createLineChart({
             lensRequest: {
                 completion: config,
@@ -47,6 +50,8 @@ export const useLensCharts = ({ configId }: { configId: string }) => {
                 type: "lens",
             },
         });
+
+        clearHighlightedLineIds();
 
         return data;
     };
