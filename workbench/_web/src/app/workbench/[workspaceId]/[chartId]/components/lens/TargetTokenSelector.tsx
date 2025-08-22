@@ -54,6 +54,7 @@ export const TargetTokenSelector = ({
     setConfig,
 }: TargetTokenSelectorProps) => {
     const { handleCreateLineChart, isExecuting } = useLensCharts({ configId });
+    const [lineIsPending, setLineIsPending] = useState(false);
 
     // Debounced function to run line chart 2 seconds after target token IDs change
     const debouncedRunLineChart = useDebouncedCallback(
@@ -61,6 +62,7 @@ export const TargetTokenSelector = ({
             if (currentConfig.token.targetIds.length > 0) {
                 await handleCreateLineChart(currentConfig);
             }
+            setLineIsPending(false);
         },
         3000
     );
@@ -230,15 +232,15 @@ export const TargetTokenSelector = ({
                     <button
                         className={cn(
                             "text-xs flex items-center gap-1 text-muted-foreground",
-                            isExecuting || debouncedRunLineChart.isPending() ? "cursor-progress" : "cursor-pointer hover:text-foreground"
+                            isExecuting || lineIsPending ? "cursor-progress" : "cursor-pointer hover:text-foreground"
                         )}
-                        disabled={isExecuting || debouncedRunLineChart.isPending()}
+                        disabled={isExecuting || lineIsPending}
                         onClick={async () => {
-                            debouncedRunLineChart.cancel();
+                            setLineIsPending(true);
                             await debouncedRunLineChart(config);
                         }}
                     >
-                        {isExecuting || debouncedRunLineChart.isPending() ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        {isExecuting || lineIsPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                         Rerun
                     </button>
                 </div>

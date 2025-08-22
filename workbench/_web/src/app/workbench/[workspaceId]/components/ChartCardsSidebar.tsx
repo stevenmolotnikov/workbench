@@ -9,7 +9,7 @@ import ChartCard from "./ChartCard";
 import ReportCard from "./ReportCard";
 import { ChartMetadata } from "@/types/charts";
 import type { DocumentListItem } from "@/lib/queries/documentQueries";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 
@@ -27,7 +27,7 @@ export default function ChartCardsSidebar() {
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
     const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
     const { mutate: deleteChart } = useDeleteChart();
-    const { mutate: createDocument } = useCreateDocument();
+    const { mutate: createDocument, isPending: isCreatingDocument } = useCreateDocument();
     const { mutate: deleteDocument } = useDeleteDocument();
 
     const listRef = useRef<HTMLDivElement | null>(null);
@@ -129,18 +129,22 @@ export default function ChartCardsSidebar() {
                 variant="outline"
                 onClick={() => handleCreate("lens")}
                 disabled={isCreatingPatch}
-                className="w-[50%]"
+                className="flex-1"
             >
-                <Plus className="w-4 h-4" />
-                <span> Lens</span>
+                {
+                    isCreatingLens ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
+                }
+                <span>Lens</span>
             </Button>
             <Button
                 variant="outline"
                 onClick={handleOverviewClick}
                 disabled={isCreatingLens}
-                className="w-[50%]"
+                className="flex-1"
             >
-                <Plus className="w-4 h-4" />
+                {
+                    isCreatingDocument ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
+                }
                 <span>Report</span>
             </Button>
         </div>
@@ -148,7 +152,7 @@ export default function ChartCardsSidebar() {
 
 
     return (
-        <div className="flex h-full flex-col w-[20vw] p-3 relative">
+        <div className="flex h-full flex-col w-[20vw] p-3 pt-0 relative">
             <div ref={listRef} className="flex-1 scrollbar-hide overflow-auto">
                 <div ref={cardsRef} className="space-y-3">
                 {(isChartsLoading || isReportsLoading) && (

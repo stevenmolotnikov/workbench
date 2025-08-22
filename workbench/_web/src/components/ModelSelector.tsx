@@ -24,7 +24,7 @@ export function ModelSelector() {
     });
 
     if (!models) {
-        return <div>Loading models...</div>;
+        return <div className="h-8 animate-pulse bg-muted/50" />
     }
 
     const baseModels = models.filter(model => model.type === "base").map(model => model.name);

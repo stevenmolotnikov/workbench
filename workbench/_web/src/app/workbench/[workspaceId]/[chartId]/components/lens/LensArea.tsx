@@ -9,6 +9,7 @@ import { ChartType } from "@/types/charts";
 import { useMemo } from "react";
 import { getModels } from "@/lib/api/modelsApi";
 import { useWorkspace } from "@/stores/useWorkspace";
+import { Loader2 } from "lucide-react";
 
 export default function LensArea() {
     const { chartId } = useParams<{ chartId: string }>();
@@ -36,8 +37,14 @@ export default function LensArea() {
 
     if (!config || !selectedModel) {
         return (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
-                Loading config…
+
+            <div className="h-full flex flex-col">
+                <div className="px-3 py-3 border-b flex items-center justify-between">
+                    <h2 className="text-sm pl-3 font-medium">Model</h2>
+                    <ModelSelector />
+                </div>
+
+                <div className="h-48 animate-pulse bg-muted/50 m-3 rounded" />
             </div>
         );
     }

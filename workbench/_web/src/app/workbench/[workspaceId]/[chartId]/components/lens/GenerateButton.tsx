@@ -77,7 +77,7 @@ export default function GenerateButton({ configId, config, setConfig, setTokenDa
                     handleTokenize();
                 }}
                 disabled={isExecuting || isGenerating || !config.prompt}
-                className="rounded-l border items-center hover:bg-accent transition-all duration-100 bg-muted justify-center flex h-8 w-8"
+                className="rounded-l border items-center hover:bg-accent disabled:opacity-50 disabled:hover:bg-muted transition-all duration-100 bg-muted justify-center flex h-8 w-8"
             >
                 {isExecuting || isGenerating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -93,7 +93,7 @@ export default function GenerateButton({ configId, config, setConfig, setTokenDa
                             e.preventDefault();
                             e.stopPropagation();
                         }}
-                        className="rounded-l-none rounded-r border-r hover:bg-accent transition-all duration-100 border-y bg-muted h-8 w-4 flex items-center justify-center"
+                        className="rounded-l-none rounded-r border-r hover:bg-accent disabled:opacity-50 disabled:hover:bg-muted transition-all duration-100 border-y bg-muted h-8 w-4 flex items-center justify-center"
                         disabled={isExecuting || isGenerating || !config.prompt}
                     >
                         <ChevronDown className="w-3 h-3" />

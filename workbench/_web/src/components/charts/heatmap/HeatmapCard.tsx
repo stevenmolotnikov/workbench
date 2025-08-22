@@ -22,7 +22,7 @@ export const HeatmapCard = ({ chart, captureRef, pending }: HeatmapCardProps) =>
     return (
         <div className="flex size-full flex-col">
             {pending ? (
-                <PendingHeatmap />
+                <PendingHeatmap chart={chart} />
             ) : (
                 <HeatmapDataProvider chart={chart}>
                     <HeatmapCanvasProvider>
@@ -53,7 +53,7 @@ const PendingHeatmap = ({ chart }: { chart: HeatmapChart }) => {
                         aria-label="X Range Step"
                         title="X Range Step"
                     />
-                    <Separator orientation="vertical" />
+                    <Separator orientation="vertical" className="h-6" />
                     <Button
                         variant="outline"
                         size="sm"
@@ -123,7 +123,7 @@ const HeatmapCardContent = ({ captureRef, chart }: HeatmapCardContentProps) => {
                         aria-label="X Range Step"
                         title="X Range Step"
                     />
-                    <Separator orientation="vertical" />
+                    <Separator orientation="vertical" className="h-6" />
                     <Button
                         variant={activeSelection ? "default" : "outline"}
                         size="sm"

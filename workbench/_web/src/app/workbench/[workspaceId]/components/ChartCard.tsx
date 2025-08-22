@@ -81,7 +81,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         const [imageLoaded, setImageLoaded] = React.useState(false);
 
         const renderPlaceholder = () => (
-            <div className="absolute inset-0 z-10 bg-muted flex items-center justify-center">
+            <div className="absolute inset-0 z-10 bg-secondary flex items-center justify-center">
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     {metadata.chartType === "line" ? (
                         <ChartLine className="h-4 w-4" />

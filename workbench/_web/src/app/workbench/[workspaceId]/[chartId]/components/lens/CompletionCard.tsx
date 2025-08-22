@@ -105,7 +105,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
 
     // Newline on shift + enter and tokenize on enter
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey && !isExecuting) {
+        if (e.key === "Enter" && !e.shiftKey && !isExecuting && config.prompt.length > 0) {
             e.preventDefault();
             handleTokenize();
         }
