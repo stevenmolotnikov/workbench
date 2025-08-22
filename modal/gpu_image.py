@@ -12,12 +12,13 @@ image = (
     .add_local_dir("./workbench/_api", remote_path="/root/workbench/_api", ignore=["__pycache__"])
 )
 
+
 @app.function(
     image=image,
     secrets=[modal.Secret.from_name("ndif"), modal.Secret.from_name("hf")],
     scaledown_window=180,
     gpu="A100-80GB",
-    volumes={"/root/hf": volume}
+    volumes={"/root/hf": volume},
 )
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()

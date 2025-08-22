@@ -20,7 +20,7 @@ export const options: Options = {
 
 // Mock LensConfigData - shared by all users
 const mockLensConfig = {
-    model: 'openai-community/gpt2',
+    model: 'meta-llama/Llama-3.1-8B',
     prompt: 'The quick brown fox jumps over the lazy dog',
     token: {
         idx: 5,
