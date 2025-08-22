@@ -21,6 +21,7 @@ import { DecoderSelector } from "./DecoderSelector";
 import { ChartType } from "@/types/charts";
 import { Token } from "@/types/models";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface CompletionCardProps {
     initialConfig: LensConfig;
@@ -77,6 +78,12 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     // Tokenize the prompt and run predictions
     const handleTokenize = async () => {
         const tokens = await encodeText(config.prompt, selectedModel);
+
+        if (tokens.length <= 1) {
+            toast.error("Please enter a longer prompt.");
+            return;
+        }
+
         setTokenData(tokens);
         // Set the token to the last token in the list
         const temporaryConfig: LensConfigData = {
