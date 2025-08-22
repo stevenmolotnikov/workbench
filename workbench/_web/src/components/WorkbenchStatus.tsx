@@ -16,7 +16,7 @@ export function WorkbenchStatus() {
 
     const getStatusInfo = () => {
         if (isLoading) return { color: 'bg-yellow-500 hover:bg-yellow-600', pulse: true };
-        if (isError) return { color: 'bg-destructive hover:bg-destructive', pulse: false };
+        if (isError) return { color: 'bg-destructive hover:bg-destructive', pulse: false, };
         return { color: 'bg-green-600 hover:bg-green-700', pulse: false };
     };
 
@@ -26,14 +26,19 @@ export function WorkbenchStatus() {
         <div
             className={cn(
                 "rounded h-8 px-3 flex items-center border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-                status.pulse && "animate-pulse"
+                status.pulse && "animate-pulse",
+
             )}
         >
             <div className={cn(
                 "w-2.5 h-2.5 rounded-full mr-3",
                 status.color
             )} />
-            <p className="text-sm text-muted-foreground">{jobStatus}</p>
+            {isLoading ? (
+                <p className="text-sm text-muted-foreground">Connecting</p>
+            ) : (
+                <p className="text-sm text-muted-foreground">{jobStatus}</p>
+            )}
         </div>
 
     );
