@@ -16,7 +16,7 @@ interface StaticLineCardProps {
 
 export const StaticLineCard = ({ chart }: StaticLineCardProps) => {
     return (
-        <div className="h-[60vh] rounded bg-muted">
+        <div className="h-full rounded bg-card">
             <ViewProvider chartId={chart.id}>
                 <LineDataProvider chart={chart}>
                     <LineCanvasProvider>

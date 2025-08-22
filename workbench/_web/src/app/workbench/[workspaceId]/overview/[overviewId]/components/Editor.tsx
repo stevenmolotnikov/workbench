@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useGetDocument, useSaveDocument } from '@/lib/api/documentApi';
 
@@ -19,11 +19,11 @@ import { TRANSFORMERS } from '@lexical/markdown';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin';
 
-import { OnChangePlugin } from './plugins/OnChangePlugin';
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 // import { SlashCommandPlugin } from './plugins/SlashCommandPlugin';
 import { ChartEmbedNode } from './nodes/ChartEmbedNode';
 import { DragDropChartPlugin } from './plugins/DragDropChartPlugin';
-import { FileText, Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 
 const theme = {
@@ -63,8 +63,6 @@ function Placeholder() {
 }
 
 export function Editor() {
-    const [hasChanges, setHasChanges] = useState(false);
-    const editorStateRef = useRef<EditorState | null>(null);
 
     const { workspaceId, overviewId } = useParams<{ workspaceId: string; overviewId: string }>();
     const { data: document, isLoading } = useGetDocument(overviewId);
@@ -90,24 +88,22 @@ export function Editor() {
         },
     };
 
-    const debouncedSave = useDebouncedCallback(async () => {
-        if (!editorStateRef.current) return;
+    const [isQueuedToSave, setIsQueuedToSave] = useState(false);
+
+    const debouncedSave = useDebouncedCallback(async (editorState: EditorState) => {
+        if (!editorState) return;
         try {
-            const content: SerializedEditorState = editorStateRef.current.toJSON();
+            const content: SerializedEditorState = editorState.toJSON();
             mutation.mutate({ workspaceId, documentId: overviewId, content });
+            setIsQueuedToSave(false);
         } catch (error) {
             console.error('Failed to serialize editor state:', error);
         }
     }, 5000, { leading: false, trailing: true });
 
-    const onChange = useCallback((editorState: EditorState) => {
-
-        console.log('onChange', "PENIS");
-        editorStateRef.current = editorState;
-        setHasChanges(true);
-        // Cancel any pending save and schedule a new one
-        debouncedSave.cancel();
-        debouncedSave();
+    const handleChange = useCallback((editorState: EditorState) => {
+        setIsQueuedToSave(true);
+        debouncedSave(editorState);
     }, [debouncedSave]);
 
     useEffect(() => {
@@ -123,12 +119,6 @@ export function Editor() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [overviewId]);
 
-    useEffect(() => {
-        if (!mutation.isPending && hasChanges && editorStateRef.current === null) {
-            setHasChanges(false);
-        }
-    }, [mutation.isPending, hasChanges]);
-
     if (isLoading) {
         return (
             <div className="h-full w-full flex items-center justify-center p-4">
@@ -139,19 +129,18 @@ export function Editor() {
 
     return (
         <div className="h-full w-full flex flex-col">
-            <div className="flex items-center justify-between border-b h-14 px-3 py-3">
-                <div className="inline-flex items-center gap-3 px-3 py-2 rounded transition-colors bg-muted text-foreground">
-                    <FileText className="h-4 w-4" />
-                    Editor
-                </div>
-                <div className="text-xs text-muted-foreground inline-flex items-center gap-3 px-3">
-                    {(debouncedSave.isPending() || mutation.isPending) ? (
+            <div className="flex items-center justify-end border-b h-14 px-3 py-3">
+                <div className="text-xs text-muted-foreground inline-flex items-center gap-2 px-3">
+                    {(isQueuedToSave || mutation.isPending) ? (
                         <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Saving…</span>
+                            <span>Saving</span>
                         </>
                     ) : (
-                        <span>Saved</span>
+                        <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Saved</span>
+                        </>
                     )}
                 </div>
             </div>
@@ -168,7 +157,7 @@ export function Editor() {
                                 placeholder={<Placeholder />}
                                 ErrorBoundary={LexicalErrorBoundary}
                             />
-                            <OnChangePlugin onChange={onChange} />
+                            <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
                             <HistoryPlugin />
                             <ListPlugin />
                             {/* <LinkPlugin /> */}

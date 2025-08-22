@@ -12,10 +12,16 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { mergeRegister } from "@lexical/utils";
 import { StaticLineCard } from "@/components/charts/line/StaticLineCard";
 import { HeatmapChart, LineChart } from "@/db/schema";
+import { Separator } from "@/components/ui/separator";
 // no-op
 
 // Command payload and command export
 import { createCommand } from "lexical";
+import { useParams } from "next/navigation";
+import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 export const INSERT_CHART_EMBED_COMMAND = createCommand<{ chart: ChartMetadata }>("INSERT_CHART_EMBED_COMMAND");
 
 // Node payload
@@ -80,8 +86,11 @@ export function $createChartEmbedNode(payload: ChartEmbedPayload): ChartEmbedNod
 // React renderer that fetches chart and renders a static version
 function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey; chartId: string; chartType: "line" | "heatmap" | null }) {
   const [editor] = useLexicalComposerContext();
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const [isSelected, setSelected] = useLexicalNodeSelection(nodeKey);
   const { data: chart } = useQuery({ queryKey: ["chartById", chartId], queryFn: () => getChartById(chartId) });
+
+  const [size, setSize] = useState<"small" | "medium" | "large">("medium");
 
   React.useEffect(() => {
     return mergeRegister(
@@ -125,6 +134,12 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
   const name = (chart?.name ?? "Untitled");
   const type = (chart?.type ?? chartType);
 
+  const openChart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open(`/workbench/${workspaceId}/${chartId}`, '_blank');
+  }
+
   return (
     <Card
       className={`p-3 rounded cursor-pointer ${isSelected ? "border-primary ring-1 ring-primary" : ""}`}
@@ -136,15 +151,42 @@ function ChartEmbedComponent({ nodeKey, chartId, chartType }: { nodeKey: NodeKey
       }}
       tabIndex={0}
     >
-      <div className="text-xs text-muted-foreground mb-3">{name}</div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-muted-foreground">{name}</span>
+        <div className="flex items-center gap-2">
+          <Select value={size} onValueChange={(value) => setSize(value as "small" | "medium" | "large")}>
+            <SelectTrigger className={cn("w-fit gap-1 border-none !bg-transparent p-0 text-xs text-muted-foreground hover:text-foreground")}>
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent align="center">
+              <SelectItem value="small">Small</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="large">Large</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <button className="text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground" onClick={openChart}>
+            Open <ExternalLink className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
       {!chart ? (
         <div className="text-sm text-muted-foreground">Loading chart…</div>
       ) : type === "line" && chart.data ? (
-        <div className="w-full h-86">
+        <div className={cn("w-full", {
+          "h-[40vh]": size === "small",
+          "h-[60vh]": size === "medium",
+          "h-[80vh]": size === "large",
+        })}>
           <StaticLineCard chart={chart as LineChart} />
         </div>
       ) : type === "heatmap" && chart.data ? (
-        <div className="w-full h-86">
+        <div className={cn("w-full", {
+          "h-[40vh]": size === "small",
+          "h-[60vh]": size === "medium",
+          "h-[80vh]": size === "large",
+        })}>
           <StaticHeatmapCard chart={chart as HeatmapChart} />
         </div>
       ) : (

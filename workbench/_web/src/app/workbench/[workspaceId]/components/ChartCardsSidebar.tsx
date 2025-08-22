@@ -26,7 +26,7 @@ export default function ChartCardsSidebar() {
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
     const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
     const { mutate: deleteChart } = useDeleteChart();
-    const { mutate: createDocument, isPending: isCreatingOverview } = useCreateDocument();
+    const { mutate: createDocument } = useCreateDocument();
     const { mutate: deleteDocument } = useDeleteDocument();
 
     const navigateToChart = (chartId: string) => {

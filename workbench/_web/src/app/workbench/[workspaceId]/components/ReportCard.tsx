@@ -46,7 +46,7 @@ export default function ReportCard({
                 <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium truncate max-w-36">
                                 {report.derivedTitle || 'Untitled'}
                             </span>
                         </div>
