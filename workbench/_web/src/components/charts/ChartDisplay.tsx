@@ -26,15 +26,11 @@ export function ChartDisplay() {
         enabled: !!chartId,
     });
 
-    if (!chart) {
-        return <div>Error: No chart found</div>;
-    }
-
     // Some query is running
     const isPending = isLineRunning || isHeatmapRunning;
 
     // Has no data or is loading from db
-    const showEmptyState = (jobStatus === "Idle" && chart.data === null) || isLoading;
+    const showEmptyState = (jobStatus === "Idle" && (chart && chart.data === null)) || isLoading || !chart;
 
     return (
         <div className={cn("flex size-full", 

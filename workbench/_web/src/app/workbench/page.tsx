@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { User } from "@supabase/supabase-js";
 import { ModelsDisplay } from "@/app/workbench/components/ModelsDisplay";
 import { WorkspaceList } from "@/app/workbench/components/WorkspaceList";
+import { getWorkspaces, createWorkspace } from "@/lib/queries/workspaceQueries";
 
 import { redirect } from "next/navigation";
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,15 @@ export default async function WorkbenchPage() {
     }
 
     const displayName = (user as User)?.is_anonymous || !user.email ? "Guest" : user.email
+
+    // Check if user has any workspaces
+    const workspaces = await getWorkspaces(user.id);
+    
+    // If no workspaces exist, create one and redirect
+    if (!workspaces || workspaces.length === 0) {
+        const newWorkspace = await createWorkspace(user.id, "Default Workspace");
+        redirect(`/workbench/${newWorkspace.id}`);
+    }
 
     return (
         <>

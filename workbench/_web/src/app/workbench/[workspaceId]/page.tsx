@@ -1,22 +1,25 @@
-"use client";
-
 import { redirect } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
-import { getMostRecentChartForWorkspace } from "@/lib/queries/chartQueries";
+import { getMostRecentChartForWorkspace, createLensChartPair } from "@/lib/queries/chartQueries";
+import { LensConfigData } from "@/types/lens";
 
-export default function Page() {
-    const { workspaceId } = useParams();
-    // TODO(cadentj): FIX THIS
-    const { data: chart, isLoading } = useQuery({ queryKey: ["chart", workspaceId], queryFn: () => getMostRecentChartForWorkspace(workspaceId as string) });
-
-    if (chart) {
-        redirect(`/workbench/${workspaceId}/${chart.id}`);
+export default async function Page({ params }: { params: { workspaceId: string } }) {
+    const { workspaceId } = params;
+    
+    // Check if there's an existing chart
+    let chart = await getMostRecentChartForWorkspace(workspaceId);
+    
+    // If no chart exists, create a new lens chart pair with default config
+    if (!chart) {
+        const defaultConfig: LensConfigData = {
+            prompt: "",
+            model: "",
+            token: { idx: 0, id: 0, text: "", targetIds: [] },
+        };
+        
+        const result = await createLensChartPair(workspaceId, defaultConfig);
+        chart = result.chart;
     }
-
-    if (isLoading) {
-        return <div>Loading...</div>;
-    }
-
-    return <div>No chart found</div>;
+    
+    // Redirect to the chart
+    redirect(`/workbench/${workspaceId}/${chart.id}`);
 }
