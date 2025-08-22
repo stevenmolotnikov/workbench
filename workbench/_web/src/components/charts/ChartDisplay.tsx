@@ -8,6 +8,7 @@ import { LineCard } from "./line/LineCard";
 import { HeatmapChart, LineChart } from "@/db/schema";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { queryKeys } from "@/lib/queryKeys";
+import { cn } from "@/lib/utils";
 
 // Track mutation state globally via keys set in chartApi hooks
 
@@ -36,9 +37,11 @@ export function ChartDisplay() {
     const showEmptyState = (jobStatus === "Idle" && chart.data === null) || isLoading;
 
     return (
-        <div className="flex size-full">
+        <div className={cn("flex size-full", 
+            showEmptyState && "pb-6"
+        )}>
             {showEmptyState ? (
-                <div className="flex-1 flex h-full items-center relative justify-center border m-3 border-dashed rounded">
+                <div className="flex size-full items-center justify-center border mx-3 mt-3 border-dashed rounded">
                     <div className="text-muted-foreground">No chart data</div>
                 </div>
             ) : isHeatmapRunning || (!isPending && chart.type === "heatmap") ? (

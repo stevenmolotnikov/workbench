@@ -1,4 +1,4 @@
-remote = true
+remote = false
 
 [models]
 
@@ -15,17 +15,17 @@ c_proj = "o_proj"
 n_heads = 12
 n_layers = 12
 
-[models.two]
-name = "meta-llama/Meta-Llama-3.1-8B"
-chat = false
+# [models.two]
+# name = "meta-llama/Meta-Llama-3.1-8B"
+# chat = false
 
-[models.two.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.two.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.two.config]
-n_heads = 32
-n_layers = 32
+# [models.two.config]
+# n_heads = 32
+# n_layers = 32
 
 # [models.three]
 # name = "meta-llama/Meta-Llama-3.1-70B"
