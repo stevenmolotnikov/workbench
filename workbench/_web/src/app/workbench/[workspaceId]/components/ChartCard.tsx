@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { ChartRenameDialog } from "./ChartRenameDialog";
 import { useCopyChart } from "@/lib/api/chartApi";
 import { toast } from "sonner";
-import React from "react";
 import {
     Popover,
     PopoverContent,
