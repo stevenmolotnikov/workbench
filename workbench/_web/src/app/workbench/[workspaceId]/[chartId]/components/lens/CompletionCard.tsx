@@ -221,7 +221,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         />
                     </div>
                 )}
-                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground ">{config.model}</span>
+                {(config.model !== selectedModel && tokenData.length > 0 && !isExecuting) && <span className="absolute bottom-2 right-2 text-xs text-muted-foreground/50 ">Tokenization does not match selected model.</span>}
                 <div ref={settingsRef} className="absolute bottom-2 right-2 flex items-center gap-3">
                     {editingText && (
                         <GenerateButton
@@ -245,7 +245,8 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                     className={cn(
                         "transition-all",
                         (editingText || isExecuting) ? "opacity-60 blur-[0.25px]" : "opacity-100",
-                        isExecuting ? "!cursor-progress" : "cursor-pointer"
+                        isExecuting && "!cursor-progress",
+                        editingText && "cursor-pointer"
                     )}
                     onMouseDown={() => {
                         if (editingText && !isExecuting) setEditingText(false);

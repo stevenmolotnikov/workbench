@@ -39,8 +39,8 @@ export default function LensArea() {
         return (
 
             <div className="h-full flex flex-col">
-                <div className="px-3 py-3 border-b flex items-center justify-between">
-                    <h2 className="text-sm pl-3 font-medium">Model</h2>
+                <div className="p-3 border-b flex items-center justify-between">
+                    <h2 className="text-sm pl-2 font-medium">Model</h2>
                     <ModelSelector />
                 </div>
 
@@ -51,8 +51,8 @@ export default function LensArea() {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="px-3 py-3 border-b flex items-center justify-between">
-                <h2 className="text-sm pl-3 font-medium">Model</h2>
+            <div className="p-3 border-b flex items-center justify-between">
+                <h2 className="text-sm pl-2 font-medium">Model</h2>
                 <ModelSelector />
             </div>
 
