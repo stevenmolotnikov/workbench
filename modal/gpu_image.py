@@ -16,7 +16,7 @@ image = (
     image=image,
     secrets=[modal.Secret.from_name("ndif"), modal.Secret.from_name("hf")],
     scaledown_window=180,
-    gpu="L40S",
+    gpu="A100-80GB",
     volumes={"/root/hf": volume}
 )
 @modal.concurrent(max_inputs=50)

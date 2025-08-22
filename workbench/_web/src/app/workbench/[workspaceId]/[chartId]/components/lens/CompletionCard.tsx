@@ -225,7 +225,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                     <div
                         ref={tokenContainerRef}
                         className={cn(
-                            "flex w-full max-w-[50vw] px-3 py-3 bg-input/30 border rounded min-h-48",
+                            "flex w-full max-w-[50vw] px-3 py-1 bg-input/30 border rounded min-h-48",
                             isExecuting ? "cursor-progress" : "cursor-text"
                         )}
                         onClick={() => {
