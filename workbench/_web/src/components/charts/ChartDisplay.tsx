@@ -30,7 +30,7 @@ export function ChartDisplay() {
     const isPending = isLineRunning || isHeatmapRunning;
 
     // Has no data or is loading from db
-    const showEmptyState = (jobStatus === "Idle" && (chart && chart.data === null)) || isLoading || !chart;
+    const showEmptyState = (jobStatus === "Idle" && (chart && chart.data === null)) || isLoading || !chart || !chart.data;
 
     // better solution at some point
     const isHeatmapData = chart?.data?.some((row: any) => row.data.some((cell: any) =>  "label" in cell));
