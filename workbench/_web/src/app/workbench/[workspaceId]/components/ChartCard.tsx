@@ -73,7 +73,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
 
     const Thumbnail = () => {
         const style = cn(
-            "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r",
+            "relative w-[35%] h-24 overflow-hidden rounded-l border-border border-y border-r",
             isSelected && "border-primary"
         );
 
@@ -81,7 +81,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
         const [imageLoaded, setImageLoaded] = React.useState(false);
 
         const renderPlaceholder = () => (
-            <div className="absolute inset-0 z-10 bg-secondary flex items-center justify-center">
+            <div className="absolute inset-0 z-10 bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-1 text-muted-foreground">
                     {metadata.chartType === "line" ? (
                         <ChartLine className="h-4 w-4" />
@@ -130,6 +130,7 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
     return (
         <div
             className={cn(
+                // TEMPORARY PROBABLY
                 "flex items-center border h-24 rounded",
                 isSelected && "border-primary"
             )}

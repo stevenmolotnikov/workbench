@@ -100,6 +100,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
         // Run predictions
         await runPredictions(temporaryConfig);
         await handleCreateHeatmap(temporaryConfig);
+        setPromptHasChanged(false);
     }
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -113,8 +114,14 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     // Newline on shift + enter and tokenize on enter
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey && !isExecuting && config.prompt.length > 0) {
-            e.preventDefault();
-            handleTokenize();
+            if (promptHasChanged) {
+                e.preventDefault();
+                handleTokenize();
+                console.log("wefaew", promptHasChanged);
+            } else {
+                console.log("promptHasChanged", promptHasChanged);
+                setEditingText(false);
+            }
         }
     };
 
@@ -143,7 +150,12 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             // Check if a popover is open (Radix UI adds data-state="open" to popovers)
             const popoverOpen = document.querySelector('[data-radix-popper-content-wrapper]');
 
+            // if (promptHasChanged) {
+            //     handleTokenize();
+            // }
+
             if (withinTextarea || withinToken || withinSettings || popoverOpen) return;
+
             setEditingText(false);
         }, 0);
     };
@@ -265,7 +277,13 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         editingText && "cursor-pointer"
                     )}
                     onMouseDown={() => {
-                        if (editingText && !isExecuting) setEditingText(false);
+                        if (editingText && !isExecuting) {
+                            if (promptHasChanged) {
+                                handleTokenize();
+                            } else {
+                                setEditingText(false);
+                            }
+                        }
                     }}
                 >
                     {/* Prevent pointer events when overlay is active */}

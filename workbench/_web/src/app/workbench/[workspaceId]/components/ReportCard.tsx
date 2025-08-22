@@ -16,7 +16,7 @@ export default function ReportCard({
     onClick: () => void;
     onDelete: (e: React.MouseEvent) => void;
 }) {
-    const { workspaceId, overviewId } = useParams<{ workspaceId: string; overviewId?: string }>();
+    const { overviewId } = useParams<{ overviewId?: string }>();
     const isSelected = overviewId === report.id;
     const updatedAt = report.updatedAt ? new Date(report.updatedAt as unknown as string).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : "";
 
@@ -30,11 +30,14 @@ export default function ReportCard({
             draggable={false}
         >
             <div className={cn(
-                "relative w-[35%] h-24 overflow-hidden rounded-l border-y border-r flex items-center justify-center",
+                "relative w-[35%] h-24 overflow-hidden rounded-l text-muted-foreground border-y border-r flex flex-col bg-background items-center justify-center",
                 isSelected && "border-primary"
             )}
             >
-                <FileText className="h-5 w-5 opacity-60" />
+                <FileText className="h-5 w-5" />
+                <span className="text-xs font-medium capitalize">
+                    Report
+                </span>
             </div>
             <div
                 key={report.id}
