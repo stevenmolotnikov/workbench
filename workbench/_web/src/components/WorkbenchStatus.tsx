@@ -25,7 +25,7 @@ export function WorkbenchStatus() {
     return (
         <div
             className={cn(
-                "rounded h-8 px-3 bg-secondary border flex items-center",
+                "rounded h-8 px-3 bg-input/30 border flex items-center",
                 status.pulse && "animate-pulse"
             )}
         >

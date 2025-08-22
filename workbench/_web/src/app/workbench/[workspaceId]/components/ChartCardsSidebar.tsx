@@ -11,6 +11,7 @@ import { ChartMetadata } from "@/types/charts";
 import type { DocumentListItem } from "@/lib/queries/documentQueries";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 
 export default function ChartCardsSidebar() {
     const { workspaceId } = useParams<{ workspaceId: string }>();
@@ -28,6 +29,42 @@ export default function ChartCardsSidebar() {
     const { mutate: deleteChart } = useDeleteChart();
     const { mutate: createDocument } = useCreateDocument();
     const { mutate: deleteDocument } = useDeleteDocument();
+
+    const listRef = useRef<HTMLDivElement | null>(null);
+    const cardsRef = useRef<HTMLDivElement | null>(null);
+    const buttonsMeasureRef = useRef<HTMLDivElement | null>(null);
+    const [canInlineButtons, setCanInlineButtons] = useState(true);
+
+    useEffect(() => {
+        const listEl = listRef.current;
+        const cardsEl = cardsRef.current;
+        if (!listEl || !cardsEl) return;
+
+        const recompute = () => {
+            const scrollAreaHeight = listEl.clientHeight;
+            const cardsHeight = cardsEl.scrollHeight;
+            const buttonsHeight = buttonsMeasureRef.current?.offsetHeight ?? 0;
+            const fitsInline = cardsHeight + buttonsHeight <= scrollAreaHeight;
+            setCanInlineButtons(fitsInline);
+        };
+
+        // Initial compute
+        recompute();
+
+        const listObserver = new ResizeObserver(recompute);
+        const cardsObserver = new ResizeObserver(recompute);
+        listObserver.observe(listEl);
+        cardsObserver.observe(cardsEl);
+
+        const onResize = () => recompute();
+        window.addEventListener("resize", onResize);
+
+        return () => {
+            listObserver.disconnect();
+            cardsObserver.disconnect();
+            window.removeEventListener("resize", onResize);
+        };
+    }, [charts, reports]);
 
     const navigateToChart = (chartId: string) => {
         router.push(`/workbench/${workspaceId}/${chartId}`);
@@ -86,12 +123,40 @@ export default function ChartCardsSidebar() {
         });
     };
 
+    const ActionButtons = () => (
+        <div className="flex flex-row w-full gap-3 text-sm">
+            <Button
+                variant="outline"
+                onClick={() => handleCreate("lens")}
+                disabled={isCreatingPatch}
+                className="w-[50%]"
+            >
+                <Plus className="w-4 h-4" />
+                <span> Lens</span>
+            </Button>
+            <Button
+                variant="outline"
+                onClick={handleOverviewClick}
+                disabled={isCreatingLens}
+                className="w-[50%]"
+            >
+                <Plus className="w-4 h-4" />
+                <span>Report</span>
+            </Button>
+        </div>
+    );
+
 
     return (
-        <div className="flex h-full flex-col overflow-hidden">
-            <div className="px-3 space-y-3 overflow-auto">
+        <div className="flex h-full flex-col w-[20vw] p-3 relative">
+            <div ref={listRef} className="flex-1 scrollbar-hide overflow-auto">
+                <div ref={cardsRef} className="space-y-3">
                 {(isChartsLoading || isReportsLoading) && (
-                    <div className="text-xs text-muted-foreground px-3 py-6 text-center">Loading...</div>
+                    <>
+                        <div className="h-24 bg-card animate-pulse rounded" />
+                        <div className="h-24 bg-card animate-pulse rounded" />
+                        <div className="h-24 bg-card animate-pulse rounded" />
+                    </>
                 )}
                 {(!charts || charts.length === 0) && (!reports || reports.length === 0) && !isChartsLoading && !isReportsLoading && (
                     <div className="text-xs text-muted-foreground px-3 py-6 text-center">No charts or reports yet. Create one to get started.</div>
@@ -127,26 +192,21 @@ export default function ChartCardsSidebar() {
                             );
                         })
                 )}
-                <div className="flex flex-row h-8 gap-3 text-sm">
-                    <Button
-                        // className="size-full flex items-center gap-2 border rounded border-dashed bg-muted/50 justify-center"
-                        variant="outline"
-                        onClick={() => handleCreate("lens")}
-                        disabled={isCreatingPatch}
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span> Lens</span>
-                    </Button>
-                    <Button
-                        // className="size-full flex items-center gap-2 border rounded border-dashed bg-muted/50 justify-center"
-                        variant="outline"
-                        onClick={handleOverviewClick}
-                        disabled={isCreatingLens}
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Report</span>
-                    </Button>
                 </div>
+                {canInlineButtons && (
+                    <div className="pt-3">
+                        <ActionButtons />
+                    </div>
+                )}
+            </div>
+            {!canInlineButtons && (
+                <div className="pt-3 shrink-0">
+                    <ActionButtons />
+                </div>
+            )}
+            {/* Hidden measure for buttons height to avoid layout feedback */}
+            <div className="absolute opacity-0 -z-10 pointer-events-none" ref={buttonsMeasureRef}>
+                <ActionButtons />
             </div>
         </div>
     );

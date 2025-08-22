@@ -31,9 +31,7 @@ export default function ChartPage() {
 
     return (
         <div className="size-full flex min-h-0">
-            <div className="w-[20vw]">
-                <ChartCardsSidebar />
-            </div>
+            <ChartCardsSidebar />
             <div className="flex-1 min-h-0 pb-3 pr-3">
                 <ResizablePanelGroup
                     direction="horizontal"

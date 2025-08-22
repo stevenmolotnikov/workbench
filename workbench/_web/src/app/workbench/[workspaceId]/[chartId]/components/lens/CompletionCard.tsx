@@ -198,14 +198,14 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         onChange={(e) => { handlePromptChange(e); autoResizeTextarea(); }}
                         onKeyDown={handleKeyDown}
                         onBlur={handleTextareaBlur}
-                        className="w-full !text-sm bg-card min-h-48 !leading-5"
+                        className="w-full !text-sm bg-input/30 min-h-48 !leading-5"
                         placeholder="Enter your prompt here."
                     />
                 ) : (
                     <div
                         ref={tokenContainerRef}
                         className={cn(
-                            "flex w-full px-3 py-3 bg-card border rounded min-h-48",
+                            "flex w-full px-3 py-3 bg-input/30 border rounded min-h-48",
                             isExecuting ? "cursor-progress" : "cursor-text"
                         )}
                         onClick={() => {

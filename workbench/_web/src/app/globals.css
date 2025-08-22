@@ -131,3 +131,12 @@
 .bg-gradient {
     background: linear-gradient(135deg, rgba(147, 89, 146, 0.8), rgba(46, 131, 175, 0.8));
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}

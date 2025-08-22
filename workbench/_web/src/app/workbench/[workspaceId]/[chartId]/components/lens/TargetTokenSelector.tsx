@@ -298,8 +298,8 @@ const CustomMultiValue = (props: any) => {
             className={cn(
                 "inline-flex items-center gap-1 px-3 hover:bg-accent rounded text-xs font-medium cursor-pointer transition-colors",
                 isHighlighted
-                    ? "bg-muted border border-primary"
-                    : "bg-muted border border-input"
+                    ? "bg-popover border border-primary"
+                    : "bg-popover border border-input"
             )}
             onClick={(e) => {
                 e.preventDefault();
