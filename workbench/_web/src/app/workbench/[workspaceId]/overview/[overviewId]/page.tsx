@@ -10,7 +10,7 @@ export default function OverviewPage() {
                 <ChartCardsSidebar />
             </div>
             <div className="pb-3 pr-3 w-[80vw] min-h-0">
-                <div className="size-full border rounded bg-secondary/60">
+                <div className="size-full border rounded dark:bg-secondary/60 bg-secondary/80">
                     <Editor />
                 </div>
             </div>

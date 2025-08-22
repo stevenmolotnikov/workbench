@@ -4,37 +4,37 @@
 
 @layer base {
     :root {
-        --background: 0 0% 96%;
-        --foreground: 0 0% 20%;
-        --card: 0 0% 98%; /* Slightly elevated from background */
-        --card-foreground: 0 0% 20%;
-        --popover: 0 0% 94%; /* More prominent/shadowed */
-        --popover-foreground: 0 0% 20%;
+        --background: 0 0% 94%; /* Light gray base */
+        --foreground: 0 0% 9%; /* Dark text for better contrast */
+        --card: 0 0% 100%; /* Pure white - highest elevation */
+        --card-foreground: 0 0% 9%;
+        --popover: 0 0% 100%; /* Pure white - floating elements */
+        --popover-foreground: 0 0% 9%;
         --primary: 217.2193 91.2195% 59.8039%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 0 0% 100%; /* Brightest for emphasis */
-        --secondary-foreground: 215 13.7931% 34.1176%;
-        --muted: 0 0% 96%; /* Matches background */
-        --muted-foreground: 220 8.9362% 46.0784%;
-        --accent: 0 0% 94%; /* More prominent/shadowed */
-        --accent-foreground: 0 0% 20%;
+        --secondary: 0 0% 97%; /* Surface layer - subtly lighter than background */
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 95%; /* Subtle backgrounds */
+        --muted-foreground: 0 0% 40%;
+        --accent: 0 0% 96%; /* Hover states */
+        --accent-foreground: 0 0% 9%;
         --destructive: 0 84.2365% 60.1961%;
         --destructive-foreground: 0 0% 100%;
-        --border: 220 13.0435% 90.9804%;
-        --input: 0 0% 92%; /* Most distinct/inset */
+        --border: 0 0% 88%; /* More visible borders */
+        --input: 0 0% 88%; /* White inputs with border definition */
         --ring: 217.2193 91.2195% 59.8039%;
         --chart-1: 217.2193 91.2195% 59.8039%;
         --chart-2: 221.2121 83.1933% 53.3333%;
         --chart-3: 224.2781 76.3265% 48.0392%;
         --chart-4: 225.931 70.7317% 40.1961%;
         --chart-5: 224.4444 64.2857% 32.9412%;
-        --sidebar: 0 0% 98%; /* Match card */
-        --sidebar-foreground: 0 0% 20%;
+        --sidebar: 0 0% 100%; /* Match card */
+        --sidebar-foreground: 0 0% 9%;
         --sidebar-primary: 217.2193 91.2195% 59.8039%;
         --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 204 93.75% 93.7255%;
-        --sidebar-accent-foreground: 224.4444 64.2857% 32.9412%;
-        --sidebar-border: 220 13.0435% 90.9804%;
+        --sidebar-accent: 0 0% 96%; /* Match accent */
+        --sidebar-accent-foreground: 0 0% 9%;
+        --sidebar-border: 0 0% 89%; /* Match border */
         --sidebar-ring: 217.2193 91.2195% 59.8039%;
         --font-sans: Inter, sans-serif;
         --font-serif: Source Serif 4, serif;

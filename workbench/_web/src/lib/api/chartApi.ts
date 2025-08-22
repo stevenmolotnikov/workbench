@@ -33,6 +33,16 @@ export const useLensLine = () => {
 
     return useMutation({
         mutationKey: ["lensLine"],
+        onMutate: async ({ lensRequest }: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
+            const chartKey = queryKeys.charts.chart(lensRequest.chartId);
+            await queryClient.cancelQueries({ queryKey: chartKey });
+            const previousChart = queryClient.getQueryData(chartKey);
+            queryClient.setQueryData(chartKey, (old: any) => {
+                if (!old) return old;
+                return { ...old, type: "line" };
+            });
+            return { previousChart, chartKey } as { previousChart: unknown; chartKey: ReturnType<typeof queryKeys.charts.chart> };
+        },
         mutationFn: async ({
             lensRequest,
             configId,
@@ -43,6 +53,12 @@ export const useLensLine = () => {
             const response = await getLensLine(lensRequest);
             await setChartData(lensRequest.chartId, response, "line");
             return response;
+        },
+        onError: (error, variables, context) => {
+            if (context?.previousChart) {
+                queryClient.setQueryData(context.chartKey, context.previousChart as any);
+            }
+            toast.error("Failed to compute lens line (timeout or error)");
         },
         onSuccess: async (data, variables) => {
             await clearView();
@@ -55,9 +71,6 @@ export const useLensLine = () => {
                         captureChartThumbnail(variables.lensRequest.chartId);
                     }, 500);
                 });
-        },
-        onError: (error, variables) => {
-            toast.error("Failed to compute lens line (timeout or error)");
         },
     });
 };
@@ -77,6 +90,16 @@ export const useLensGrid = () => {
 
     return useMutation({
         mutationKey: ["lensGrid"],
+        onMutate: async ({ lensRequest }: { lensRequest: { completion: LensConfigData; chartId: string }; configId: string }) => {
+            const chartKey = queryKeys.charts.chart(lensRequest.chartId);
+            await queryClient.cancelQueries({ queryKey: chartKey });
+            const previousChart = queryClient.getQueryData(chartKey);
+            queryClient.setQueryData(chartKey, (old: any) => {
+                if (!old) return old;
+                return { ...old, type: "heatmap" };
+            });
+            return { previousChart, chartKey } as { previousChart: unknown; chartKey: ReturnType<typeof queryKeys.charts.chart> };
+        },
         mutationFn: async ({
             lensRequest,
             configId,
@@ -87,6 +110,12 @@ export const useLensGrid = () => {
             const response = await getLensGrid(lensRequest);
             await setChartData(lensRequest.chartId, response, "heatmap");
             return response;
+        },
+        onError: (error, variables, context) => {
+            if (context?.previousChart) {
+                queryClient.setQueryData(context.chartKey, context.previousChart as any);
+            }
+            toast.error("Failed to compute grid lens (timeout or error)");
         },
         onSuccess: async (data, variables) => {
             await clearView();
@@ -99,9 +128,6 @@ export const useLensGrid = () => {
                         captureChartThumbnail(variables.lensRequest.chartId);
                     }, 500);
                 });
-        },
-        onError: (error, variables) => {
-            toast.error("Failed to compute grid lens (timeout or error)");
         },
     });
 };

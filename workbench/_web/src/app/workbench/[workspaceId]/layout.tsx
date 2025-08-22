@@ -13,7 +13,7 @@ export default function WorkbenchLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <div className="flex flex-col h-screen bg-gradient-to-tr from-background to-primary/15">
+        <div className="flex flex-col h-screen bg-gradient-to-tr from-background dark:to-primary/15 to-primary/30">
             <header className="p-3 pl-5 flex items-center justify-between">
                 <Link href="/workbench">
                 <div className="flex items-center gap-2"

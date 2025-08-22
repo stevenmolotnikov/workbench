@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartLine, Grid3x3 } from "lucide-react";
+import { ChartLine, Grid3x3, Loader2, TriangleAlert } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { TokenArea } from "./TokenArea";
 import { useState, useEffect, useRef } from "react";
@@ -40,7 +40,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
 
-    const { handleCreateLineChart, handleCreateHeatmap } = useLensCharts({ configId: initialConfig.id });
+    const { handleCreateLineChart, handleCreateHeatmap, isCreatingLineChart, isCreatingHeatmap } = useLensCharts({ configId: initialConfig.id });
 
     // Reset promptHasChanged when config changes (e.g., when switching between different configs)
     useEffect(() => {
@@ -56,7 +56,7 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
             }
         }
         fetchTokens();
-    }, [initialConfig.id]);
+    }, [initialConfig.id, config.prediction, config.prompt, selectedModel]);
 
     // Toggle the TokenArea component to the TextArea component
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -127,7 +127,6 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     };
     useEffect(() => {
         if (editingText) autoResizeTextarea();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [config.prompt, editingText]);
 
     // Close editing when focus leaves to outside of textarea, token area, or settings
@@ -228,7 +227,17 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                         />
                     </div>
                 )}
-                {(config.model !== selectedModel && tokenData.length > 0 && !isExecuting) && <span className="absolute bottom-2 right-2 text-xs text-muted-foreground/50 ">Tokenization does not match selected model.</span>}
+                {(config.model !== selectedModel && tokenData.length > 0 && !isExecuting)
+                    &&
+                    <Tooltip>
+                        <TooltipTrigger className="absolute bottom-2 right-2">
+                            <TriangleAlert className="w-4 h-4 text-destructive/70" />
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                            <p className="w-36 text-wrap text-center">The displayed tokenization does not match the selected model. Please retokenize.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                }
                 <div ref={settingsRef} className="absolute bottom-2 right-2 flex items-center gap-3">
                     {editingText && (
                         <GenerateButton
@@ -261,35 +270,36 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
                 >
                     {/* Prevent pointer events when overlay is active */}
                     <div className={cn(
-                        "flex flex-col size-full border p-3 items-center gap-3 bg-card rounded",
+                        "flex flex-col size-full border p-3 items-center gap-3 bg-card/80 rounded",
                         (editingText || isExecuting) ? "pointer-events-none" : "pointer-events-auto"
                     )}>
                         <div className="flex w-full justify-between items-center">
                             <div className="flex items-center p-1 h-8 bg-background rounded">
                                 <button
                                     onClick={() => handleCreateHeatmap(config)}
+                                    disabled={isExecuting || isCreatingLineChart || isCreatingHeatmap}
                                     className={cn(
-                                        "flex items-center gap-3 px-3 py-0.5 rounded text-xs bg-transparent",
-                                        chartType === "heatmap" && "bg-popover border"
+                                        "relative overflow-hidden flex items-center gap-2 px-3 py-0.5 rounded text-xs bg-transparent",
+                                        ((chartType === "heatmap" && !isCreatingLineChart) || isCreatingHeatmap) && "bg-popover border"
                                     )}
                                 >
-                                    <Grid3x3 className="w-4 h-4" />
+                                    {isCreatingHeatmap ? <Loader2 className="w-4 h-4 animate-spin" /> : <Grid3x3 className="w-4 h-4" />}
                                     Heatmap
                                 </button>
                                 <button
                                     onClick={() => handleCreateLineChart(config)}
-                                    disabled={config.token.targetIds.length === 0}
+                                    disabled={isExecuting || isCreatingLineChart || isCreatingHeatmap || config.token.targetIds.length === 0}
                                     className={cn(
-                                        "flex items-center gap-3 px-3 py-0.5 rounded text-xs bg-transparent",
-                                        chartType === "line" && "bg-popover border"
+                                        "relative overflow-hidden flex items-center gap-2 px-3 py-0.5 rounded text-xs bg-transparent",
+                                        ((chartType === "line" && !isCreatingHeatmap) || isCreatingLineChart) && "bg-popover border"
                                     )}
                                 >
-                                    <ChartLine className="w-4 h-4" />
+                                    {isCreatingLineChart ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChartLine className="w-4 h-4" />}
                                     Line
                                 </button>
                             </div>
 
-                            <DecoderSelector />
+                            {/* <DecoderSelector /> */}
                         </div>
 
 

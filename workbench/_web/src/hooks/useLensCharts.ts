@@ -60,6 +60,8 @@ export const useLensCharts = ({ configId }: { configId: string }) => {
 
     return {
         isExecuting,
+        isCreatingHeatmap,
+        isCreatingLineChart,
         handleCreateHeatmap,
         handleCreateLineChart,
     };

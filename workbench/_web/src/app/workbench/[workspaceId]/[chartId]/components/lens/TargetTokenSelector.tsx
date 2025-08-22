@@ -8,6 +8,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Loader2, RotateCcw, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLensCharts } from "@/hooks/useLensCharts";
+import { useIsMutating } from "@tanstack/react-query";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ export const TargetTokenSelector = ({
 }: TargetTokenSelectorProps) => {
     const { handleCreateLineChart, isExecuting } = useLensCharts({ configId });
     const [lineIsPending, setLineIsPending] = useState(false);
+    const globalLineRunning = useIsMutating({ mutationKey: ["lensLine"] }) > 0;
 
     // Debounced function to run line chart 2 seconds after target token IDs change
     const debouncedRunLineChart = useDebouncedCallback(
@@ -232,15 +234,15 @@ export const TargetTokenSelector = ({
                     <button
                         className={cn(
                             "text-xs flex items-center gap-1 text-muted-foreground",
-                            isExecuting || lineIsPending ? "cursor-progress" : "cursor-pointer hover:text-foreground"
+                            (isExecuting || lineIsPending || globalLineRunning) ? "cursor-progress" : "cursor-pointer hover:text-foreground"
                         )}
-                        disabled={isExecuting || lineIsPending}
+                        disabled={isExecuting || lineIsPending || globalLineRunning}
                         onClick={async () => {
                             setLineIsPending(true);
                             await debouncedRunLineChart(config);
                         }}
                     >
-                        {isExecuting || lineIsPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                        {isExecuting || lineIsPending || globalLineRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
                         Rerun
                     </button>
                 </div>

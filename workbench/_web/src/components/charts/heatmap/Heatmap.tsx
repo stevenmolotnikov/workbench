@@ -58,7 +58,12 @@ export function Heatmap({
                     tickPadding: 10,
                     format: (value) => String(value).replace(/-\d+$/, ''),
                 }}
-                label={(cell) => cell.data.label || ''}
+                label={(cell) => {
+                    if (cell.data.label) {
+                        return cell.data.label;
+                    }
+                    return '';
+                }}
                 labelTextColor={(cell) => {
                     // Use white text for dark cells, black for light cells
                     const value = cell.data.y

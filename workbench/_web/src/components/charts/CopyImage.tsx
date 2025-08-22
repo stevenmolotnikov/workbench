@@ -17,7 +17,7 @@ export function CopyImage() {
             onClick={onCopyPng}
         >
             <Copy className="h-4 w-4" />
-            <span>Copy Chart</span>
+            <span>Copy Image</span>
         </Button>
     )
 }
