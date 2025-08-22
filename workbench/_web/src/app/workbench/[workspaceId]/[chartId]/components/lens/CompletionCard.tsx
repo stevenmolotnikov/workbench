@@ -35,7 +35,9 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
     const [tokenData, setTokenData] = useState<Token[]>([]);
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
-    const [promptHasChanged, setPromptHasChanged] = useState(false);
+    const [promptHasChangedState, setPromptHasChanged] = useState(false);
+
+    const promptHasChanged = promptHasChangedState || config.model !== selectedModel;
 
     const { mutateAsync: getPrediction, isPending: isExecuting } = usePrediction();
     const { mutateAsync: updateChartConfigMutation } = useUpdateChartConfig();
