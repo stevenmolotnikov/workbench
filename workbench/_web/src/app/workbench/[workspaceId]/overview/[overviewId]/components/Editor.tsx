@@ -101,6 +101,8 @@ export function Editor() {
     }, 5000, { leading: false, trailing: true });
 
     const onChange = useCallback((editorState: EditorState) => {
+
+        console.log('onChange', "PENIS");
         editorStateRef.current = editorState;
         setHasChanges(true);
         // Cancel any pending save and schedule a new one

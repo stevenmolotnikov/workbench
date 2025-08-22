@@ -3,7 +3,7 @@ import { lineMargin as margin } from "../theming";
 import { useDpr } from "../useDpr";
 import { SelectionBounds } from "@/types/charts";
 import { useLineData } from "./LineDataProvider";
-import { clear, drawRectPx } from "./draw";
+import { clear, drawRectData, drawRectPx } from "./draw";
 
 interface LineCanvasContextValue {
     lineCanvasRef: React.RefObject<HTMLCanvasElement>;
@@ -36,22 +36,21 @@ export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children
     // Keep ref in sync with state for use in callbacks
     activeSelectionRef.current = activeSelection;
 
-    // Redraw function for resize events
+    const { xRange, yRange, uniqueSortedX } = useLineData();
+
     const handleResize = useCallback(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
             if (activeSelectionRef.current) {
-                drawRectPx(lineCanvasRef, activeSelectionRef.current.xMin, activeSelectionRef.current.yMin, activeSelectionRef.current.xMax, activeSelectionRef.current.yMax);
+                drawRectData(lineCanvasRef, activeSelectionRef.current, xRange, yRange);
             } else {
                 clear(lineCanvasRef);
             }
         });
-    }, []);
+    }, [xRange, yRange, lineCanvasRef]);
 
     // DPR + resize handling
     useDpr(lineCanvasRef, handleResize);
-
-    const { xRange, uniqueSortedX } = useLineData();
 
     const getNearestX = useCallback((px: number, returnPixelValue: boolean = false): number => {
         const canvas = lineCanvasRef.current;
@@ -83,12 +82,12 @@ export const LineCanvasProvider: React.FC<LineCanvasProviderProps> = ({ children
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
             if (activeSelection) {
-                drawRectPx(lineCanvasRef, activeSelection.xMin, activeSelection.yMin, activeSelection.xMax, activeSelection.yMax);
+                drawRectData(lineCanvasRef, activeSelection, xRange, yRange);
             } else {
                 clear(lineCanvasRef);
             }
         });
-    }, [activeSelection, rafRef, lineCanvasRef]);
+    }, [activeSelection, rafRef, lineCanvasRef, xRange, yRange]);
 
     const contextValue: LineCanvasContextValue = {
         lineCanvasRef,
