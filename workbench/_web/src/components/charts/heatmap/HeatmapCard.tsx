@@ -98,8 +98,7 @@ const HeatmapCardContent = ({ captureRef, chart }: HeatmapCardContentProps) => {
     const handleReset = async () => {
         await clearSelection()
         setXRange([bounds.minCol, bounds.maxCol]);
-        const start = Math.max(bounds.minRow, bounds.maxRow - 9);
-        setYRange([start, bounds.maxRow]);
+        setYRange([bounds.minRow, bounds.maxRow]);
         setXStep(defaultXStep);
     }
 
