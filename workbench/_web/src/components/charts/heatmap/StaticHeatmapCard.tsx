@@ -6,6 +6,7 @@ import { HeatmapHoverProvider, useHeatmapHover } from "./HeatmapHoverProvider";
 import { useAnnotationSelection } from "./useAnnotationSelection";
 import { ViewProvider } from "../ViewProvider";
 
+
 interface StaticHeatmapCardProps {
     chart: HeatmapChart;
 }
