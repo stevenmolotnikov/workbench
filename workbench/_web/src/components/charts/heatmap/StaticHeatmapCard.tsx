@@ -12,7 +12,7 @@ interface StaticHeatmapCardProps {
 
 export const StaticHeatmapCard = ({ chart }: StaticHeatmapCardProps) => {
     return (
-        <div className="h-full rounded bg-muted">
+        <div className="h-full rounded bg-card">
             <ViewProvider chartId={chart.id}>
                 <HeatmapDataProvider chart={chart}>
                     <HeatmapCanvasProvider>
