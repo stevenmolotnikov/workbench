@@ -7,6 +7,8 @@ from nnsight import LanguageModel, CONFIG
 from nnsight.intervention.backends.remote import RemoteBackend
 from pydantic import BaseModel
 
+from dotenv import load_dotenv; load_dotenv()
+
 class ModelConfig(BaseModel):
     """Configuration for an individual model."""
 
@@ -35,12 +37,11 @@ class ModelsConfig(BaseModel):
 
 class AppState:
     def __init__(self):
-        # Set NDIF key
-        CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
+        
+        self.remote = self._load_backend_config()
 
         # Defaults
         self.models: dict[str, LanguageModel] = {}
-        self.remote = False
 
         self.config = self._load()
 
@@ -61,6 +62,21 @@ class AppState:
     def __getitem__(self, model_name: str):
         return self.get_model(model_name)
 
+    def _load_backend_config(self):
+        remote = os.environ.get("REMOTE", "true").lower() == "true"
+        print(f"Remote: {remote}")
+        if remote:
+            ndif_backend = os.environ.get("NDIF_API_HOST")
+            print(f"NDIF_API_HOST: {ndif_backend}")
+            if ndif_backend is not None:
+                print(f"Setting NDIF_API_HOST to {ndif_backend}")
+                CONFIG.API.HOST = ndif_backend
+                CONFIG.API.SSL = False
+
+        CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
+
+        return remote
+
     def _load(self):
         env = os.environ.get("ENVIRONMENT", "local")
         print(f"Loading {env} config")
@@ -71,7 +87,7 @@ class AppState:
         with open(config_path, "r") as f:
             config = ModelsConfig(**toml.load(f))
 
-        self.remote = config.remote
+        # self.remote = config.remote
 
         for _, cfg in config.models.items():
             model = LanguageModel(
