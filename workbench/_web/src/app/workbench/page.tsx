@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { ModelsDisplay } from "@/app/workbench/components/ModelsDisplay";
 import { WorkspaceList } from "@/app/workbench/components/WorkspaceList";
 import { getWorkspaces, createWorkspace } from "@/lib/queries/workspaceQueries";
+import { AutoWorkspaceCreator } from "@/app/workbench/components/AutoWorkspaceCreator";
 
 import { redirect } from "next/navigation";
 export const dynamic = 'force-dynamic'
@@ -21,11 +22,8 @@ export default async function WorkbenchPage() {
     // Check if user has any workspaces
     const workspaces = await getWorkspaces(user.id);
     
-    // If no workspaces exist, create one and redirect
-    if (!workspaces || workspaces.length === 0) {
-        const newWorkspace = await createWorkspace(user.id, "Default Workspace");
-        redirect(`/workbench/${newWorkspace.id}`);
-    }
+    // If no workspaces exist, we'll show the page with a message and option to create
+    let shouldCreateWorkspace = !workspaces || workspaces.length === 0;
 
     return (
         <>
@@ -39,7 +37,11 @@ export default async function WorkbenchPage() {
                 
                 <ModelsDisplay />
                 
-                <WorkspaceList userId={user.id} />
+                {shouldCreateWorkspace ? (
+                    <AutoWorkspaceCreator userId={user.id} />
+                ) : (
+                    <WorkspaceList userId={user.id} />
+                )}
             </div>
         </>
     );

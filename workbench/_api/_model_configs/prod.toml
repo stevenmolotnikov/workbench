@@ -28,19 +28,8 @@ out_proj = "o_proj"
 n_heads = 16
 n_layers = 28
 
-# [models.two]
-# name = "meta-llama/Meta-Llama-3.1-8B"
-# chat = false
-
-# [models.two.rename]
-# norm = "ln_f"
-# self_attn = "attn"
-
-# [models.two.config]
-# n_heads = 32
-
 [models.three]
-name = "meta-llama/Meta-Llama-3.1-70B"
+name = "meta-llama/Meta-Llama-3.1-8B"
 chat = false
 
 [models.three.rename]
@@ -48,6 +37,18 @@ norm = "ln_f"
 self_attn = "attn"
 
 [models.three.config]
+n_heads = 32
+n_layers = 32
+
+[models.four]
+name = "meta-llama/Meta-Llama-3.1-70B"
+chat = false
+
+[models.four.rename]
+norm = "ln_f"
+self_attn = "attn"
+
+[models.four.config]
 n_heads = 64
 n_layers = 80
 

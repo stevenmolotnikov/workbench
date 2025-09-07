@@ -3,13 +3,16 @@
 import config from "@/lib/config";
 import type { Token } from "@/types/models";
 import { toast } from "sonner";
+import { createUserHeadersAction } from "@/actions/auth";
 
 export async function encodeText(text: string, model: string, addSpecialTokens: boolean = true): Promise<Token[]> {
     try {
+        const userHeaders = await createUserHeadersAction();
         const response = await fetch(config.getApiUrl(config.endpoints.encode), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                ...userHeaders,
             },
             body: JSON.stringify({
                 text: text,
@@ -39,10 +42,12 @@ export async function decodeText(
     batch: boolean = false
 ): Promise<DecodeResponse | BatchDecodeResponse> {
     try {
+        const userHeaders = await createUserHeadersAction();
         const response = await fetch(config.getApiUrl(config.endpoints.decode), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                ...userHeaders,
             },
             body: JSON.stringify({ tokenIds, model, batch }),
         });

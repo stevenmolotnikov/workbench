@@ -4,6 +4,8 @@ import torch as t
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
+from ..auth import require_user_email
+from ..telemetry import TelemetryClient, RequestStatus
 
 
 class LensLineRequest(BaseModel):
@@ -103,10 +105,42 @@ def process_line_results(
 
 @router.post("/start-line", response_model=LensLineResponse)
 async def start_line(
-    req: LensLineRequest, state: AppState = Depends(get_state)
+    req: LensLineRequest, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
-    result = line(req, state)
+
+    TelemetryClient.log_request(
+        state,
+        RequestStatus.READY, 
+        user_email,
+        method="LENS",
+        type="LINE"
+    )
+
+    try:
+        result = line(req, state)
+    except Exception as e:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.ERROR, 
+            user_email, 
+            method="LENS",
+            type="LINE",
+            msg=str(e)
+        )
+        # TODO: Add logging here
+        raise e
+
     if state.remote:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.READY, 
+            user_email,
+            method="LENS",
+            type="LINE",
+            job_id=result
+        )
         return {"job_id": result}
 
     return {"data": process_line_results(result, req, state)}
@@ -117,8 +151,33 @@ async def collect_line(
     job_id: str,
     req: LensLineRequest,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
-    results = get_remote_line(job_id, state)
+
+    try:
+        results = get_remote_line(job_id, state)
+    except Exception as e:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.ERROR, 
+            user_email, 
+            job_id=job_id, 
+            method="LENS",
+            type="LINE",
+            msg=str(e)
+        )
+        # TODO: Add logging here
+        raise e
+
+    TelemetryClient.log_request(
+        state,
+        RequestStatus.COMPLETE, 
+        user_email, 
+        job_id=job_id, 
+        method="LENS",
+        type="LINE"
+    )
+
     return {"data": process_line_results(results, req, state)}
 
 
@@ -231,9 +290,42 @@ def process_grid_results(
 
 
 @router.post("/start-grid", response_model=GridLensResponse)
-async def get_grid(req: GridLensRequest, state: AppState = Depends(get_state)):
-    result = heatmap(req, state)
+async def get_grid(
+    req: GridLensRequest, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)   
+):
+
+    TelemetryClient.log_request(
+        state,
+        RequestStatus.STARTED, 
+        user_email,
+        method="LENS",
+        type="GRID"
+    )
+    
+    try:
+        result = heatmap(req, state)
+    except Exception as e:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.ERROR, 
+            user_email, 
+            method="LENS",
+            type="GRID",
+            msg=str(e)
+        )
+        raise e
+
     if state.remote:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.READY, 
+            user_email,
+            method="LENS",
+            type="GRID",
+            job_id=result
+        )
         return {"job_id": result}
 
     probs, pred_ids = result
@@ -245,6 +337,28 @@ async def collect_grid(
     job_id: str,
     lens_request: GridLensRequest,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
-    probs, pred_ids = get_remote_heatmap(job_id, state)
+    try:
+        probs, pred_ids = get_remote_heatmap(job_id, state)
+    except Exception as e:
+        TelemetryClient.log_request(
+            state,
+            RequestStatus.ERROR, 
+            user_email, 
+            job_id=job_id, 
+            method="LENS",
+            type="GRID",
+            msg=str(e)
+        )
+        raise e
+    
+    TelemetryClient.log_request(
+        state,
+        RequestStatus.COMPLETE, 
+        user_email,
+        job_id=job_id,
+        method="LENS",
+        type="GRID"
+    )
     return {"data": process_grid_results(probs, pred_ids, lens_request, state)}

@@ -35,12 +35,11 @@ class ModelsConfig(BaseModel):
 
 class AppState:
     def __init__(self):
-        # Set NDIF key
-        CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
+        
+        self.remote = self._load_backend_config()
 
         # Defaults
         self.models: dict[str, LanguageModel] = {}
-        self.remote = False
 
         self.config = self._load()
 
@@ -61,6 +60,28 @@ class AppState:
     def __getitem__(self, model_name: str):
         return self.get_model(model_name)
 
+    def _load_backend_config(self):
+
+        # TODO: add logging here
+        remote = os.environ.get("REMOTE", "true").lower() == "true"
+        print(f"Remote: {remote}")
+        if remote:
+            ndif_backend = os.environ.get("NDIF_API_HOST")
+            if ndif_backend is not None:
+                print(f"Setting NDIF_API_HOST to {ndif_backend}")
+                CONFIG.API.HOST = ndif_backend
+                CONFIG.API.SSL = False
+            else:
+                CONFIG.API.HOST = "api.ndif.us"
+                CONFIG.API.SSL = True
+
+        CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
+
+        self.ndif_backend_url = f"http{'s' if CONFIG.API.SSL else ''}://{CONFIG.API.HOST}"
+        self.telemetry_url = f"http://{CONFIG.API.HOST.split(':')[0]}:{os.environ.get('INFLUXDB_PORT', '8086')}"
+
+        return remote
+
     def _load(self):
         env = os.environ.get("ENVIRONMENT", "local")
         print(f"Loading {env} config")
@@ -71,7 +92,7 @@ class AppState:
         with open(config_path, "r") as f:
             config = ModelsConfig(**toml.load(f))
 
-        self.remote = config.remote
+        # self.remote = config.remote
 
         for _, cfg in config.models.items():
             model = LanguageModel(
