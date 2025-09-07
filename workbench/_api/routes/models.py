@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import torch as t
+import time
+import requests
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
@@ -8,13 +10,60 @@ from ..auth import require_user_email
 
 router = APIRouter()
 
+MODELS = list()
+MODELS_LAST_UPDATED = 0
+MODEL_INTERVAL = 60
+
+def get_remot_models(state: AppState):
+
+    global MODELS, MODELS_LAST_UPDATED
+
+    if MODELS_LAST_UPDATED == 0 or time.time() - MODELS_LAST_UPDATED > 60:
+
+        ping_resp = requests.get(f"{state.ndif_backend_url}/ping", timeout=10)
+
+        if ping_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="NDIF backend is not responding")
+
+        stats_resp = requests.get(f"{state.ndif_backend_url}/status", timeout=10)
+
+        if stats_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to fetch NDIF backend status")
+
+        data = stats_resp.json()
+
+        running_deployments = []
+
+        for deployment_name, deployment_state in data["deployments"].items():
+            if deployment_state['deployment_level'] == "HOT" and deployment_state['application_state'] == "RUNNING":
+                running_deployments.append(deployment_state['repo_id'])
+
+        model_configs = state.get_config().get_model_list()
+
+        running_model_configs = []
+
+        for model_config in model_configs:
+            if model_config['name'] in running_deployments:
+                running_model_configs.append(model_config)
+
+        MODELS = running_model_configs
+        MODELS_LAST_UPDATED = time.time()
+
+    return MODELS
 
 @router.get("/")
 async def get_models(
     state: AppState = Depends(get_state),
     user_email: str = Depends(require_user_email)
 ):
-    return state.get_config().get_model_list()
+    
+    if state.remote:
+        models = get_remot_models(state)
+
+        return models
+
+    else:
+        return state.get_config().get_model_list()
 
 
 class LensCompletion(BaseModel):

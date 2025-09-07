@@ -111,6 +111,7 @@ async def start_line(
 ):
 
     TelemetryClient.log_request(
+        state,
         RequestStatus.READY, 
         user_email,
         method="LENS",
@@ -121,6 +122,7 @@ async def start_line(
         result = line(req, state)
     except Exception as e:
         TelemetryClient.log_request(
+            state,
             RequestStatus.ERROR, 
             user_email, 
             method="LENS",
@@ -132,6 +134,7 @@ async def start_line(
 
     if state.remote:
         TelemetryClient.log_request(
+            state,
             RequestStatus.READY, 
             user_email,
             method="LENS",
@@ -155,6 +158,7 @@ async def collect_line(
         results = get_remote_line(job_id, state)
     except Exception as e:
         TelemetryClient.log_request(
+            state,
             RequestStatus.ERROR, 
             user_email, 
             job_id=job_id, 
@@ -166,6 +170,7 @@ async def collect_line(
         raise e
 
     TelemetryClient.log_request(
+        state,
         RequestStatus.COMPLETE, 
         user_email, 
         job_id=job_id, 
@@ -292,6 +297,7 @@ async def get_grid(
 ):
 
     TelemetryClient.log_request(
+        state,
         RequestStatus.STARTED, 
         user_email,
         method="LENS",
@@ -302,6 +308,7 @@ async def get_grid(
         result = heatmap(req, state)
     except Exception as e:
         TelemetryClient.log_request(
+            state,
             RequestStatus.ERROR, 
             user_email, 
             method="LENS",
@@ -312,6 +319,7 @@ async def get_grid(
 
     if state.remote:
         TelemetryClient.log_request(
+            state,
             RequestStatus.READY, 
             user_email,
             method="LENS",
@@ -335,6 +343,7 @@ async def collect_grid(
         probs, pred_ids = get_remote_heatmap(job_id, state)
     except Exception as e:
         TelemetryClient.log_request(
+            state,
             RequestStatus.ERROR, 
             user_email, 
             job_id=job_id, 
@@ -345,6 +354,7 @@ async def collect_grid(
         raise e
     
     TelemetryClient.log_request(
+        state,
         RequestStatus.COMPLETE, 
         user_email,
         job_id=job_id,

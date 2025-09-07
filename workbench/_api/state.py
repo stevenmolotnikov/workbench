@@ -67,13 +67,18 @@ class AppState:
         print(f"Remote: {remote}")
         if remote:
             ndif_backend = os.environ.get("NDIF_API_HOST")
-            print(f"NDIF_API_HOST: {ndif_backend}")
             if ndif_backend is not None:
                 print(f"Setting NDIF_API_HOST to {ndif_backend}")
                 CONFIG.API.HOST = ndif_backend
                 CONFIG.API.SSL = False
+            else:
+                CONFIG.API.HOST = "api.ndif.us"
+                CONFIG.API.SSL = True
 
         CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
+
+        self.ndif_backend_url = f"http{'s' if CONFIG.API.SSL else ''}://{CONFIG.API.HOST}"
+        self.telemetry_url = f"http://{CONFIG.API.HOST.split(':')[0]}:{os.environ.get('INFLUXDB_PORT', '8086')}"
 
         return remote
 

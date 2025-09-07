@@ -28,7 +28,7 @@ n_layers = 12
 # n_layers = 28
 
 [models.two]
-name = "meta-llama/Llama-3.1-8B"
+name = "meta-llama/Meta-Llama-3.1-8B"
 chat = false
 
 [models.two.rename]
