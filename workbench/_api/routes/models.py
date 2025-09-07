@@ -4,12 +4,16 @@ import torch as t
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
+from ..auth import require_user_email
 
 router = APIRouter()
 
 
 @router.get("/")
-async def get_models(state: AppState = Depends(get_state)):
+async def get_models(
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
+):
     return state.get_config().get_model_list()
 
 
@@ -94,7 +98,9 @@ def process_prediction(
 
 @router.post("/start-prediction", response_model=PredictionResponse)
 async def start_prediction(
-    prediction_request: LensCompletion, state: AppState = Depends(get_state)
+    prediction_request: LensCompletion, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     result = prediction(prediction_request, state)
     if state.remote:
@@ -110,6 +116,7 @@ async def results_prediction(
     job_id: str,
     prediction_request: LensCompletion,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     values_LV, indices_LV = get_remote_prediction(job_id, state)
     data = process_prediction(values_LV, indices_LV, prediction_request, state)
@@ -202,7 +209,9 @@ def process_generation_results(
 
 @router.post("/start-generate", response_model=GenerationResponse)
 async def start_generate(
-    req: Completion, state: AppState = Depends(get_state)
+    req: Completion, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     result = generate(req, state)
     if state.remote:
@@ -221,6 +230,7 @@ async def results_generate(
     job_id: str,
     req: Completion,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     values_V, indices_V, new_token_ids = get_remote_generate(job_id, state)
     data = process_generation_results(

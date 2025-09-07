@@ -38,10 +38,13 @@ async function awaitNDIFJob(jobId: string): Promise<void> {
 
 type JobStartResponse<T> = { job_id: string | null } & { data?: T } & Record<string, unknown>;
 
-async function startJob<T>(url: string, body: unknown): Promise<JobStartResponse<T>> {
+async function startJob<T>(url: string, body: unknown, headers?: Record<string, string>): Promise<JobStartResponse<T>> {
     const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            ...headers 
+        },
         body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("Failed to start job");
@@ -50,11 +53,15 @@ async function startJob<T>(url: string, body: unknown): Promise<JobStartResponse
 
 async function fetchResults<T>(
     url: string,
-    body: unknown
+    body: unknown,
+    headers?: Record<string, string>
 ): Promise<T> {
     const resp = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+            "Content-Type": "application/json",
+            ...headers 
+        },
         body: JSON.stringify(body),
     });
     if (!resp.ok) throw new Error("Failed to fetch results");
@@ -65,16 +72,17 @@ export async function startAndPoll<T>(
     startEndpoint: string,
     body: unknown,
     resultsEndpoint: (jobId: string) => string,
+    headers?: Record<string, string>
 ): Promise<T> {
 
     const startUrl = config.getApiUrl(startEndpoint);
-    const response = await startJob<T>(startUrl, body);
+    const response = await startJob<T>(startUrl, body, headers);
     const jobId = response?.job_id ?? null;
     if (jobId) {
         await awaitNDIFJob(jobId);
 
         const resultsUrl = config.getApiUrl(resultsEndpoint(jobId));
-        const results = await fetchResults<unknown>(resultsUrl, body);
+        const results = await fetchResults<unknown>(resultsUrl, body, headers);
         if (results && typeof results === "object" && "data" in results) {
             return (results as { data: T }).data;
         }

@@ -5,6 +5,7 @@ import { startAndPoll } from "../startAndPoll";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useWorkspace } from "@/stores/useWorkspace";
+import { createUserHeadersAction } from "@/actions/auth";
 
 interface Prediction {
     idx: number;
@@ -14,10 +15,12 @@ interface Prediction {
 }
 
 const getPrediction = async (request: LensConfigData): Promise<Prediction> => {
+    const headers = await createUserHeadersAction();
     return await startAndPoll<Prediction>(
         config.endpoints.startPrediction,
         request,
-        config.endpoints.resultsPrediction
+        config.endpoints.resultsPrediction,
+        headers
     );
 };
 
@@ -43,10 +46,12 @@ export interface GenerationResponse {
 }
 
 const generate = async (request: Completion): Promise<GenerationResponse> => {
+    const headers = await createUserHeadersAction();
     return await startAndPoll<GenerationResponse>(
         config.endpoints.startGenerate,
         request,
-        config.endpoints.resultsGenerate
+        config.endpoints.resultsGenerate,
+        headers
     );
 }
 
@@ -61,7 +66,13 @@ export const useGenerate = () => {
 
 
 export const getModels = async (): Promise<Model[]> => {
-    const response = await fetch(config.getApiUrl(config.endpoints.models));
+    const headers = await createUserHeadersAction();
+    const response = await fetch(config.getApiUrl(config.endpoints.models), {
+        headers: {
+            "Content-Type": "application/json",
+            ...headers
+        }
+    });
     
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

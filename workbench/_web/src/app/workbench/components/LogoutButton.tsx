@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { getSupabaseClient, resetSupabaseClient } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -12,7 +12,7 @@ export function LogoutButton() {
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
-        const supabase = createClient();
+        const supabase = getSupabaseClient();
         
         const { error } = await supabase.auth.signOut();
         
@@ -20,6 +20,8 @@ export function LogoutButton() {
             console.error("Logout error:", error);
             setIsLoggingOut(false);
         } else {
+            // Reset the client after logout to clear any cached user data
+            resetSupabaseClient();
             router.push("/login");
             router.refresh();
         }

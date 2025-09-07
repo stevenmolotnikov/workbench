@@ -7,8 +7,6 @@ from nnsight import LanguageModel, CONFIG
 from nnsight.intervention.backends.remote import RemoteBackend
 from pydantic import BaseModel
 
-from dotenv import load_dotenv; load_dotenv()
-
 class ModelConfig(BaseModel):
     """Configuration for an individual model."""
 
@@ -63,6 +61,8 @@ class AppState:
         return self.get_model(model_name)
 
     def _load_backend_config(self):
+
+        # TODO: add logging here
         remote = os.environ.get("REMOTE", "true").lower() == "true"
         print(f"Remote: {remote}")
         if remote:

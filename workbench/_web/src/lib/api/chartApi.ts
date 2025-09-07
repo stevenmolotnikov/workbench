@@ -17,12 +17,15 @@ import { queryKeys } from "../queryKeys";
 import { toast } from "sonner";
 import { startAndPoll } from "../startAndPoll";
 import { useHeatmapView, useLineView } from "@/components/charts/ViewProvider";
+import { createUserHeadersAction } from "@/actions/auth";
 
 const getLensLine = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
+    const headers = await createUserHeadersAction();
     return await startAndPoll<Line[]>(
         config.endpoints.startLensLine,
         lensRequest.completion,
-        config.endpoints.resultsLensLine
+        config.endpoints.resultsLensLine,
+        headers
     );
 };
 
@@ -76,10 +79,12 @@ export const useLensLine = () => {
 };
 
 const getLensGrid = async (lensRequest: { completion: LensConfigData; chartId: string }) => {
+    const headers = await createUserHeadersAction();
     return await startAndPoll<HeatmapRow[]>(
         config.endpoints.startLensGrid,
         lensRequest.completion,
-        config.endpoints.resultsLensGrid
+        config.endpoints.resultsLensGrid,
+        headers
     );
 };
 
