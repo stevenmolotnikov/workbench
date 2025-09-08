@@ -8,6 +8,10 @@ from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
 from ..auth import require_user_email
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 MODELS = list()
@@ -21,11 +25,14 @@ def get_remot_models(state: AppState):
     if MODELS_LAST_UPDATED == 0 or time.time() - MODELS_LAST_UPDATED > 60:
 
         ping_resp = requests.get(f"{state.ndif_backend_url}/ping", timeout=10)
+        logger.info(f"Call NDIF_BACKEND/ping: {ping_resp.status_code}")
 
         if ping_resp.status_code != 200:
             raise HTTPException(status_code=500, detail="NDIF backend is not responding")
 
         stats_resp = requests.get(f"{state.ndif_backend_url}/status", timeout=10)
+
+        logger.info(f"Call NDIF_BACKEND/status: {stats_resp.status_code}")
 
         if stats_resp.status_code != 200:
             raise HTTPException(status_code=500, detail="Failed to fetch NDIF backend status")

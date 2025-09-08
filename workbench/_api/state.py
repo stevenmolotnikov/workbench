@@ -1,3 +1,4 @@
+import logging
 import os
 import torch
 import toml
@@ -6,6 +7,9 @@ from fastapi import Request
 from nnsight import LanguageModel, CONFIG
 from nnsight.intervention.backends.remote import RemoteBackend
 from pydantic import BaseModel
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
 
 class ModelConfig(BaseModel):
     """Configuration for an individual model."""
@@ -62,13 +66,11 @@ class AppState:
 
     def _load_backend_config(self):
 
-        # TODO: add logging here
         remote = os.environ.get("REMOTE", "true").lower() == "true"
-        print(f"Remote: {remote}")
+        logger.info(f"Using Local Deployment? {not remote}")
         if remote:
             ndif_backend = os.environ.get("NDIF_API_HOST")
             if ndif_backend is not None:
-                print(f"Setting NDIF_API_HOST to {ndif_backend}")
                 CONFIG.API.HOST = ndif_backend
                 CONFIG.API.SSL = False
             else:
@@ -78,13 +80,15 @@ class AppState:
         CONFIG.set_default_api_key(os.environ.get("NDIF_API_KEY"))
 
         self.ndif_backend_url = f"http{'s' if CONFIG.API.SSL else ''}://{CONFIG.API.HOST}"
+        logger.info(f"Backend URL: {self.ndif_backend_url}")
         self.telemetry_url = f"http://{CONFIG.API.HOST.split(':')[0]}:{os.environ.get('INFLUXDB_PORT', '8086')}"
+        logger.info(f"Telemetry URL: {self.telemetry_url}")
 
         return remote
 
     def _load(self):
         env = os.environ.get("ENVIRONMENT", "local")
-        print(f"Loading {env} config")
+        logger.info(f'Loading "{env}" config')
         
         current_path = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_path, f"_model_configs/{env}.toml")
