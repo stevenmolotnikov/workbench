@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import os
 
 from .routes import lens, patch, models
 from .state import AppState
@@ -18,7 +19,7 @@ ALLOWED_ORIGINS = [
     # Local development
     "http://localhost:3000",
     # Prod
-    "https://workbench.ndif.us"
+    os.environ.get("WORKBENCH_URL", "https://workbench.ndif.us")
 ]
 
 
