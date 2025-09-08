@@ -19,8 +19,14 @@ ALLOWED_ORIGINS = [
     # Local development
     "http://localhost:3000",
     # Prod
-    os.environ.get("WORKBENCH_URL", "https://workbench.ndif.us")
+    "https://workbench.ndif.us"
 ]
+
+ALLOWED_ORIGIN_REGEX = (
+    r"^https://workbench-env[a-z0-9\-]*\.vercel\.app$"  # dev/staging previews
+    if os.environ.get('ENVIRONMENT') != "prod"
+    else None  # in prod, rely on the fixed list above
+)
 
 
 def fastapi_app():
@@ -29,6 +35,7 @@ def fastapi_app():
     app.add_middleware(
         CORSMiddleware,
         allow_origins=ALLOWED_ORIGINS,
+        allow_origin_regex=ALLOWED_ORIGIN_REGEX,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
