@@ -60,6 +60,7 @@ export async function encodeText(
         return tokens;
     } catch (error) {
         // Mirror tokenize.ts behavior: return [] on failure
+        console.error(error);
         return [];
     }
 }
