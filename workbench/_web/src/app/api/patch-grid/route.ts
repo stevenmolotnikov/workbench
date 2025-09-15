@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import config from "@/lib/config";
 import type { ActivationPatchingRequest } from "@/types/patching";
 import type { HeatmapData } from "@/types/charts";
+import { createUserHeadersAction } from "@/actions/auth";
 
 export interface ActivationPatchingResponse {
     results: number[][];
@@ -38,10 +39,12 @@ export async function POST(request: NextRequest) {
     }
     
     try {
+        const userHeaders = await createUserHeadersAction();
         const response = await fetch(config.getApiUrl(config.endpoints.patch), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                ...userHeaders,
             },
             body: JSON.stringify(patchingRequest),
         });

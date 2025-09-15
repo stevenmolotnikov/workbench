@@ -67,34 +67,36 @@ export function CreateWorkspaceDialog({ userId }: CreateWorkspaceDialogProps) {
                         Create a new workspace to start exploring your model's behavior. You can add Logit Lens and Activation Patching collections after creation.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid gap-3">
-                        <Label htmlFor="name">Workspace Name</Label>
-                        <Input
-                            id="name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Enter workspace name..."
-                            required
-                        />
+                <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="name">Workspace Name</Label>
+                            <Input
+                                id="name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Enter workspace name..."
+                                required
+                            />
+                        </div>
                     </div>
-                </div>
-                <DialogFooter>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setOpen(false)}
-                        disabled={createWorkspaceMutation.isPending}
-                    >
-                        Cancel
-                    </Button>
-                    <Button 
-                        onClick={handleSubmit}
-                        disabled={!name.trim() || createWorkspaceMutation.isPending}
-                    >
-                        {createWorkspaceMutation.isPending ? "Creating..." : "Create Workspace"}
-                    </Button>
-                </DialogFooter>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setOpen(false)}
+                            disabled={createWorkspaceMutation.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            type="submit"
+                            disabled={!name.trim() || createWorkspaceMutation.isPending}
+                        >
+                            {createWorkspaceMutation.isPending ? "Creating..." : "Create Workspace"}
+                        </Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
     );

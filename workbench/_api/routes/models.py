@@ -1,16 +1,76 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import torch as t
+import time
+import requests
 
 from ..state import AppState, get_state
 from ..data_models import Token, NDIFResponse
+from ..auth import require_user_email
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+MODELS = list()
+MODELS_LAST_UPDATED = 0
+MODEL_INTERVAL = 60
+
+def get_remot_models(state: AppState):
+
+    global MODELS, MODELS_LAST_UPDATED
+
+    if MODELS_LAST_UPDATED == 0 or time.time() - MODELS_LAST_UPDATED > 60:
+
+        ping_resp = requests.get(f"{state.ndif_backend_url}/ping", timeout=10)
+        logger.info(f"Call NDIF_BACKEND/ping: {ping_resp.status_code}")
+
+        if ping_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="NDIF backend is not responding")
+
+        stats_resp = requests.get(f"{state.ndif_backend_url}/status", timeout=10)
+
+        logger.info(f"Call NDIF_BACKEND/status: {stats_resp.status_code}")
+
+        if stats_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to fetch NDIF backend status")
+
+        data = stats_resp.json()
+
+        running_deployments = []
+
+        for deployment_name, deployment_state in data["deployments"].items():
+            if deployment_state['deployment_level'] == "HOT" and deployment_state['application_state'] == "RUNNING":
+                running_deployments.append(deployment_state['repo_id'])
+
+        model_configs = state.get_config().get_model_list()
+
+        running_model_configs = []
+
+        for model_config in model_configs:
+            if model_config['name'] in running_deployments:
+                running_model_configs.append(model_config)
+
+        MODELS = running_model_configs
+        MODELS_LAST_UPDATED = time.time()
+
+    return MODELS
 
 @router.get("/")
-async def get_models(state: AppState = Depends(get_state)):
-    return state.get_config().get_model_list()
+async def get_models(
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
+):
+    
+    if state.remote:
+        models = get_remot_models(state)
+
+        return models
+
+    else:
+        return state.get_config().get_model_list()
 
 
 class LensCompletion(BaseModel):
@@ -94,7 +154,9 @@ def process_prediction(
 
 @router.post("/start-prediction", response_model=PredictionResponse)
 async def start_prediction(
-    prediction_request: LensCompletion, state: AppState = Depends(get_state)
+    prediction_request: LensCompletion, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     result = prediction(prediction_request, state)
     if state.remote:
@@ -110,6 +172,7 @@ async def results_prediction(
     job_id: str,
     prediction_request: LensCompletion,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     values_LV, indices_LV = get_remote_prediction(job_id, state)
     data = process_prediction(values_LV, indices_LV, prediction_request, state)
@@ -202,7 +265,9 @@ def process_generation_results(
 
 @router.post("/start-generate", response_model=GenerationResponse)
 async def start_generate(
-    req: Completion, state: AppState = Depends(get_state)
+    req: Completion, 
+    state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     result = generate(req, state)
     if state.remote:
@@ -221,6 +286,7 @@ async def results_generate(
     job_id: str,
     req: Completion,
     state: AppState = Depends(get_state),
+    user_email: str = Depends(require_user_email)
 ):
     values_V, indices_V, new_token_ids = get_remote_generate(job_id, state)
     data = process_generation_results(
