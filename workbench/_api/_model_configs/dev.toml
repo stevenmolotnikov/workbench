@@ -41,7 +41,7 @@ n_heads = 16
 n_layers = 28
 
 [models.three]
-name = "meta-llama/Meta-Llama-3.1-8B"
+name = "meta-llama/Llama-3.1-8B"
 chat = false
 
 [models.three.rename]
@@ -53,7 +53,7 @@ n_heads = 32
 n_layers = 32
 
 [models.four]
-name = "meta-llama/Meta-Llama-3.1-70B"
+name = "meta-llama/Llama-3.1-70B"
 chat = false
 
 [models.four.rename]
@@ -90,7 +90,7 @@ n_layers = 80
 
 
 [models.seven]
-name = "meta-llama/Meta-Llama-3.1-405B-Instruct"
+name = "meta-llama/Llama-3.1-405B-Instruct"
 chat = true
 
 [models.seven.rename]

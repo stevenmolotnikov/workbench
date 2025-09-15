@@ -53,7 +53,7 @@ class TelemetryClient:
                 point = point.tag("msg", msg)
 
             cls._client.write(
-                bucket=os.getenv("INFLUXDB_BUCKET", "workbench"),
+                bucket=os.getenv("INFLUXDB_BUCKET", "workbench-dev"),
                 org=os.getenv("INFLUXDB_ORG", "NDIF"),
                 record=point,
             )

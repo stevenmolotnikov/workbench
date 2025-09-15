@@ -87,7 +87,7 @@ class AppState:
         return remote
 
     def _load(self):
-        env = os.environ.get("ENVIRONMENT", "local")
+        env = os.environ.get("ENVIRONMENT", "dev")
         logger.info(f'Loading "{env}" config')
         
         current_path = os.path.dirname(os.path.abspath(__file__))
