@@ -1,13 +1,14 @@
 "use server";
 
-import type { ChartData, ChartMetadata, ChartView } from "@/types/charts";
+import type { ChartData, ChartMetadata, ChartView, ChartType } from "@/types/charts";
 import { db } from "@/db/client";
 import { charts, configs, chartConfigLinks, Chart, LensConfig, Config } from "@/db/schema";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
+import { PerplexConfigData } from "@/types/perplex";
 import { eq, desc } from "drizzle-orm";
 
-export const setChartData = async (chartId: string, chartData: ChartData, chartType: "line" | "heatmap") => {
+export const setChartData = async (chartId: string, chartData: ChartData, chartType: ChartType) => {
     await db.update(charts).set({ data: chartData, type: chartType }).where(eq(charts.id, chartId));
 };
 
@@ -84,6 +85,26 @@ export const createPatchChartPair = async (
     return { chart: newChart as Chart, config: newConfig as Config };
 };
 
+// Create a new perplex chart and config pair
+export const createPerplexChartPair = async (
+    workspaceId: string,
+    defaultConfig: PerplexConfigData
+): Promise<{ chart: Chart; config: Config }> => {
+    const [newChart] = await db.insert(charts).values({ workspaceId, type: "perplex" }).returning();
+    const [newConfig] = await db
+        .insert(configs)
+        .values({ workspaceId, type: "perplex", data: defaultConfig })
+        .returning();
+    
+    // Create the link between chart and config
+    await db.insert(chartConfigLinks).values({
+        chartId: newChart.id,
+        configId: newConfig.id,
+    });
+    
+    return { chart: newChart as Chart, config: newConfig as Config };
+};
+
 export const getAllChartsByType = async (workspaceId?: string): Promise<Record<string, Chart[]>> => {
     // Join charts with their configs to get the config type
     const query = db
@@ -130,11 +151,11 @@ export const getChartsMetadata = async (workspaceId: string): Promise<ChartMetad
         .groupBy(charts.id, charts.createdAt, charts.updatedAt, charts.type, configs.type)
         .orderBy(desc(charts.updatedAt));
 
-    return rows.map((r) => ({
+    return rows.map((r: any) => ({
         id: r.id,
         name: r.name,
         chartType: (r.chartType as "line" | "heatmap" | null) ?? null,
-        toolType: (r.toolType as "lens" | "patch" | null) ?? null,
+        toolType: (r.toolType as "lens" | "patch" | "perplex" | null) ?? null,
         createdAt: r.createdAt as Date,
         updatedAt: r.updatedAt as Date,
     } as ChartMetadata));

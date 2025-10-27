@@ -183,6 +183,7 @@ class Completion(BaseModel):
     prompt: str
     max_new_tokens: int
     model: str
+    temperature: float = 1.0
 
 
 class Generation(BaseModel):
@@ -200,6 +201,8 @@ def generate(req: Completion, state: AppState):
     with model.generate(
         req.prompt,
         max_new_tokens=req.max_new_tokens,
+        temperature=req.temperature,
+        do_sample=True,
         remote=state.remote,
         backend=state.make_backend(model=model),
     ) as generator:
@@ -236,6 +239,17 @@ def process_generation_results(
     state: AppState,
 ):
     tok = state[req.model].tokenizer
+    
+    # Ensure we only get the newly generated tokens, not the prompt
+    # Get prompt length to skip those tokens if they're included
+    prompt_token_ids = tok.encode(req.prompt, return_tensors="pt")[0]
+    prompt_length = len(prompt_token_ids)
+    
+    # If new_token_ids includes the prompt, skip it
+    if len(new_token_ids) > req.max_new_tokens:
+        # Generator output includes prompt, so slice to get only new tokens
+        new_token_ids = new_token_ids[prompt_length:]
+    
     new_token_text = tok.batch_decode(new_token_ids)
     tokens = [
         Token(idx=i, id=id, text=text, targetIds=[])

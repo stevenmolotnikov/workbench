@@ -11,7 +11,7 @@ import { TargetTokenSelector } from "./TargetTokenSelector";
 
 import { encodeText } from "@/actions/tok";
 import { useUpdateChartConfig } from "@/lib/api/configApi";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useLensCharts } from "@/hooks/useLensCharts";
 import { cn } from "@/lib/utils";
 
@@ -31,11 +31,13 @@ interface CompletionCardProps {
 
 export function CompletionCard({ initialConfig, chartType, selectedModel }: CompletionCardProps) {
     const { workspaceId } = useParams<{ workspaceId: string }>();
+    const searchParams = useSearchParams();
 
     const [tokenData, setTokenData] = useState<Token[]>([]);
     const [config, setConfig] = useState<LensConfigData>(initialConfig.data);
     const [editingText, setEditingText] = useState(initialConfig.data.prediction === undefined);
     const [promptHasChangedState, setPromptHasChanged] = useState(false);
+    const [hasAutoTokenized, setHasAutoTokenized] = useState(false);
 
     const promptHasChanged = promptHasChangedState || config.model !== selectedModel;
 
@@ -59,6 +61,19 @@ export function CompletionCard({ initialConfig, chartType, selectedModel }: Comp
         }
         fetchTokens();
     }, [initialConfig.id, config.prediction, config.prompt, selectedModel]);
+
+    // Auto-tokenize when navigating from probability monitor  
+    useEffect(() => {
+        const autoTokenize = searchParams.get('autoTokenize');
+        if (autoTokenize === 'true' && !hasAutoTokenized && config.prompt && !isExecuting && selectedModel) {
+            setHasAutoTokenized(true);
+            setPromptHasChanged(true);
+            // Trigger the existing tokenize function
+            setTimeout(() => {
+                handleTokenize();
+            }, 100);
+        }
+    }, [searchParams, hasAutoTokenized]);
 
     // Toggle the TokenArea component to the TextArea component
     const textareaRef = useRef<HTMLTextAreaElement>(null);

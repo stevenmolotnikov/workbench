@@ -5,12 +5,14 @@ import {
     deleteChart,
     createLensChartPair,
     createPatchChartPair,
+    createPerplexChartPair,
     updateChartName,
     updateChartView,
     copyChart,
 } from "@/lib/queries/chartQueries";
 import { LensConfigData } from "@/types/lens";
 import { PatchingConfig } from "@/types/patching";
+import { PerplexConfigData } from "@/types/perplex";
 import { useCapture } from "@/components/providers/CaptureProvider";
 import { Line, HeatmapRow, ChartView } from "@/types/charts";
 import { queryKeys } from "../queryKeys";
@@ -229,6 +231,33 @@ export const useCreatePatchChartPair = () => {
             queryClient.invalidateQueries({ queryKey: ["patchCharts"] });
             queryClient.invalidateQueries({ queryKey: ["chartConfig"] });
             queryClient.invalidateQueries({ queryKey: ["chartsForSidebar"] });
+        },
+    });
+};
+
+// Create perplex chart pair
+export const useCreatePerplexChartPair = () => {
+    const queryClient = useQueryClient();
+
+    const defaultConfig = {
+        model: "",
+        prompt: "",
+        output: "",
+        top_k: 3,
+    } as PerplexConfigData;
+
+    return useMutation({
+        mutationFn: async ({
+            workspaceId,
+            config = defaultConfig,
+        }: {
+            workspaceId: string;
+            config?: PerplexConfigData;
+        }) => {
+            return await createPerplexChartPair(workspaceId, config);
+        },
+        onSuccess: ({ chart }) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.charts.sidebar() });
         },
     });
 };

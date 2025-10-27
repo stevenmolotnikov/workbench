@@ -15,6 +15,7 @@ import {
     documents as pgDocuments,
 } from './schema.pg';
 import type { LensConfigData } from '@/types/lens';
+import type { PerplexConfigData, PerplexResults } from '@/types/perplex';
 import type { HeatmapRow, HeatmapViewData, LineViewData, Line } from '@/types/charts';
 
 // Conditionally export the appropriate schema based on environment
@@ -62,7 +63,15 @@ export type LineChart = Omit<Chart, 'data'> & {
     data: Line[];
 };
 
+export type PerplexChart = Omit<Chart, 'data'> & {
+    data: PerplexResults;
+};
+
 // Specific chart config types
 export type LensConfig = Omit<Config, 'data'> & {
     data: LensConfigData;
+};
+
+export type PerplexConfig = Omit<Config, 'data'> & {
+    data: PerplexConfigData;
 };

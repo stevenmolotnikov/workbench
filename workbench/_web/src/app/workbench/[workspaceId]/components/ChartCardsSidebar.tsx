@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getChartsMetadata } from "@/lib/queries/chartQueries";
 import { useParams, useRouter } from "next/navigation";
-import { useCreateLensChartPair, useCreatePatchChartPair, useDeleteChart } from "@/lib/api/chartApi";
+import { useCreateLensChartPair, useCreatePerplexChartPair, useDeleteChart } from "@/lib/api/chartApi";
 import { useCreateDocument, useDeleteDocument, useGetDocumentsForWorkspace } from "@/lib/api/documentApi";
 import ChartCard from "./ChartCard";
 import ReportCard from "./ReportCard";
@@ -25,7 +25,7 @@ export default function ChartCardsSidebar() {
     const { data: reports, isLoading: isReportsLoading } = useGetDocumentsForWorkspace(workspaceId as string);
 
     const { mutate: createLensPair, isPending: isCreatingLens } = useCreateLensChartPair();
-    const { mutate: createPatchPair, isPending: isCreatingPatch } = useCreatePatchChartPair();
+    const { mutate: createPerplexPair, isPending: isCreatingPerplex } = useCreatePerplexChartPair();
     const { mutate: deleteChart } = useDeleteChart();
     const { mutate: createDocument, isPending: isCreatingDocument } = useCreateDocument();
     const { mutate: deleteDocument } = useDeleteDocument();
@@ -74,8 +74,8 @@ export default function ChartCardsSidebar() {
         router.push(`/workbench/${workspaceId}/overview/${documentId}`);
     };
 
-    const handleCreate = (toolType: "lens" | "patch") => {
-        const mutation = toolType === "lens" ? createLensPair : createPatchPair;
+    const handleCreate = (toolType: "lens" | "perplex") => {
+        const mutation = toolType === "lens" ? createLensPair : createPerplexPair;
         mutation({
             workspaceId: workspaceId as string,
         }, {
@@ -124,29 +124,44 @@ export default function ChartCardsSidebar() {
     };
 
     const ActionButtons = () => (
-        <div className="flex flex-row w-full gap-3 text-sm">
-            <Button
-                variant="outline"
-                onClick={() => handleCreate("lens")}
-                disabled={isCreatingPatch}
-                className="flex-1"
-            >
-                {
-                    isCreatingLens ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
-                }
-                <span>Lens</span>
-            </Button>
-            <Button
-                variant="outline"
-                onClick={handleOverviewClick}
-                disabled={isCreatingLens}
-                className="flex-1"
-            >
-                {
-                    isCreatingDocument ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
-                }
-                <span>Report</span>
-            </Button>
+        <div className="flex flex-col w-full gap-3 text-sm">
+            <div className="flex flex-row w-full gap-3">
+                <Button
+                    variant="outline"
+                    onClick={() => handleCreate("lens")}
+                    disabled={isCreatingPerplex || isCreatingDocument}
+                    className="flex-1"
+                >
+                    {
+                        isCreatingLens ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
+                    }
+                    <span>Lens</span>
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => handleCreate("perplex")}
+                    disabled={isCreatingLens || isCreatingDocument}
+                    className="flex-1"
+                >
+                    {
+                        isCreatingPerplex ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
+                    }
+                    <span>Perplex</span>
+                </Button>
+            </div>
+            <div className="flex flex-row w-full gap-3">
+                <Button
+                    variant="outline"
+                    onClick={handleOverviewClick}
+                    disabled={isCreatingLens || isCreatingPerplex}
+                    className="flex-1"
+                >
+                    {
+                        isCreatingDocument ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />
+                    }
+                    <span>Report</span>
+                </Button>
+            </div>
         </div>
     );
 

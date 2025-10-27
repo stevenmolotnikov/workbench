@@ -20,6 +20,7 @@ export const workspaces = sqliteTable("workspaces", {
 export const chartTypes = [
     "line",
     "heatmap",
+    "perplex",
 ] as const;
 
 export const charts = sqliteTable("charts", {
@@ -37,6 +38,7 @@ export const charts = sqliteTable("charts", {
 export const configTypes = [
     "lens",
     "patch",
+    "perplex",
 ] as const;
 
 export const configs = sqliteTable("configs", {

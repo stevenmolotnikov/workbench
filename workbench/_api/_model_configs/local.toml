@@ -1,4 +1,4 @@
-remote = true
+remote = false
 
 [models]
 
@@ -27,88 +27,88 @@ n_layers = 12
 # n_heads = 16
 # n_layers = 28
 
-[models.two]
-name = "EleutherAI/gpt-j-6b"
-chat = false
+# [models.two]
+# name = "EleutherAI/gpt-j-6b"
+# chat = false
 
-[models.two.rename]
-transformer = "model"
-h = "layers"
-out_proj = "o_proj"
+# [models.two.rename]
+# transformer = "model"
+# h = "layers"
+# out_proj = "o_proj"
 
-[models.two.config]
-n_heads = 16
-n_layers = 28
+# [models.two.config]
+# n_heads = 16
+# n_layers = 28
 
-[models.three]
-name = "meta-llama/Meta-Llama-3.1-8B"
-chat = false
+# [models.three]
+# name = "meta-llama/Meta-Llama-3.1-8B"
+# chat = false
 
-[models.three.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.three.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.three.config]
-n_heads = 32
-n_layers = 32
+# [models.three.config]
+# n_heads = 32
+# n_layers = 32
 
-[models.four]
-name = "meta-llama/Meta-Llama-3.1-70B"
-chat = false
+# [models.four]
+# name = "meta-llama/Meta-Llama-3.1-70B"
+# chat = false
 
-[models.four.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.four.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.four.config]
-n_heads = 64
-n_layers = 80
+# [models.four.config]
+# n_heads = 64
+# n_layers = 80
 
-[models.five]
-name = "meta-llama/Llama-3.2-1B-Instruct"
-chat = true
+# [models.five]
+# name = "meta-llama/Llama-3.2-1B-Instruct"
+# chat = true
 
-[models.five.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.five.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.five.config]
-n_heads = 32
-n_layers = 16
+# [models.five.config]
+# n_heads = 32
+# n_layers = 16
 
-[models.six]
-name = "meta-llama/Llama-3.3-70B-Instruct"
-chat = true
+# [models.six]
+# name = "meta-llama/Llama-3.3-70B-Instruct"
+# chat = true
 
-[models.six.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.six.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.six.config]
-n_heads = 64
-n_layers = 80
+# [models.six.config]
+# n_heads = 64
+# n_layers = 80
 
 
-[models.seven]
-name = "meta-llama/Meta-Llama-3.1-405B-Instruct"
-chat = true
+# [models.seven]
+# name = "meta-llama/Meta-Llama-3.1-405B-Instruct"
+# chat = true
 
-[models.seven.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.seven.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.seven.config]
-n_heads = 128
-n_layers = 126
+# [models.seven.config]
+# n_heads = 128
+# n_layers = 126
 
-[models.eight]
-name = "meta-llama/Meta-Llama-3.1-405B"
-chat = false
+# [models.eight]
+# name = "meta-llama/Meta-Llama-3.1-405B"
+# chat = false
 
-[models.eight.rename]
-norm = "ln_f"
-self_attn = "attn"
+# [models.eight.rename]
+# norm = "ln_f"
+# self_attn = "attn"
 
-[models.eight.config]
-n_heads = 128
-n_layers = 126
+# [models.eight.config]
+# n_heads = 128
+# n_layers = 126

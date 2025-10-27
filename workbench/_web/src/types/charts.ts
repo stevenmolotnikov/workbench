@@ -1,5 +1,6 @@
 import { LensConfigData } from "./lens";
 import { PatchingConfig } from "./patching";
+import { PerplexConfigData, PerplexResults } from "./perplex";
 
 // Heatmap Data Types
 
@@ -60,12 +61,12 @@ export interface LineViewData {
 
 // Combined Types
 
-export type ChartData = Line[] | HeatmapRow[];
+export type ChartData = Line[] | HeatmapRow[] | PerplexResults;
 export type ChartView = HeatmapViewData | LineViewData;
-export type ConfigData = LensConfigData | PatchingConfig;
+export type ConfigData = LensConfigData | PatchingConfig | PerplexConfigData;
 
-export type ChartType = "line" | "heatmap";
-export type ToolType = "lens" | "patch";
+export type ChartType = "line" | "heatmap" | "perplex";
+export type ToolType = "lens" | "patch" | "perplex";
 
 export type ChartMetadata = {
     id: string;

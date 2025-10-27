@@ -12,6 +12,7 @@ export const workspaces = pgTable("workspaces", {
 export const chartTypes = [
     "line",
     "heatmap",
+    "perplex",
 ] as const;
 
 export const charts = pgTable("charts", {
@@ -29,6 +30,7 @@ export const charts = pgTable("charts", {
 export const configTypes = [
     "lens",
     "patch",
+    "perplex",
 ] as const;
 
 export const configs = pgTable("configs", {

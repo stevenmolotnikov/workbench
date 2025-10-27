@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import os
 
-from .routes import lens, patch, models
+from .routes import lens, patch, models, perplex
 from .state import AppState
 
 from dotenv import load_dotenv; load_dotenv()
@@ -46,6 +46,7 @@ def fastapi_app():
     app.include_router(lens, prefix="/lens")
     app.include_router(patch, prefix="/patch")
     app.include_router(models, prefix="/models")
+    app.include_router(perplex, prefix="/perplex")
 
     app.state.m = AppState()
 

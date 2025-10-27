@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Grid3X3, ChartLine, Trash2, Copy, MoreVertical } from "lucide-react";
+import { Grid3X3, ChartLine, Trash2, Copy, MoreVertical, Percent } from "lucide-react";
 import Image from "next/image";
 import { ChartMetadata } from "@/types/charts";
 import { cn } from "@/lib/utils";
@@ -63,6 +63,12 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                 <span>Heatmap</span>
             </span>
         );
+        if (chartType === "perplex") return (
+            <span className="inline-flex items-center gap-1">
+                <Percent className="h-3 w-3" />
+                <span>Perplex</span>
+            </span>
+        );
         return (
             <span className="inline-flex items-center gap-1 opacity-60">
                 <Grid3X3 className="h-3 w-3" />
@@ -87,6 +93,8 @@ export default function ChartCard({ metadata, handleDelete, canDelete }: ChartCa
                         <ChartLine className="h-4 w-4" />
                     ) : metadata.chartType === "heatmap" ? (
                         <Grid3X3 className="h-4 w-4" />
+                    ) : metadata.chartType === "perplex" ? (
+                        <Percent className="h-4 w-4" />
                     ) : (
                         <Grid3X3 className="h-4 w-4" />
                     )}

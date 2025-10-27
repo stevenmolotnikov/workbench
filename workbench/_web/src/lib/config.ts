@@ -16,6 +16,8 @@ const config = {
         startGenerate: '/models/start-generate',
         resultsGenerate: (jobId: string) => `/models/results-generate/${jobId}`,
         
+        perplexCalculate: '/perplex/calculate',
+        
         models: '/models/',
     },
     getApiUrl: (endpoint: string) => `${config.backendUrl}${endpoint}`,

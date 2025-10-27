@@ -40,7 +40,7 @@ class ModelsConfig(BaseModel):
 class AppState:
     def __init__(self):
         
-        self.remote = self._load_backend_config()
+        # self.remote = self._load_backend_config()
 
         # Defaults
         self.models: dict[str, LanguageModel] = {}
@@ -92,11 +92,12 @@ class AppState:
         
         current_path = os.path.dirname(os.path.abspath(__file__))
         config_path = os.path.join(current_path, f"_model_configs/{env}.toml")
+        print(config_path)
 
         with open(config_path, "r") as f:
             config = ModelsConfig(**toml.load(f))
 
-        # self.remote = config.remote
+        self.remote = config.remote
 
         for _, cfg in config.models.items():
             model = LanguageModel(
